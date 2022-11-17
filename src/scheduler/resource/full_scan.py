@@ -1,0 +1,47 @@
+from typing import List, Callable
+
+import numpy as np
+
+from scheduler.resource.base import ResourceOptimizer
+from scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
+from schemas.contractor import WorkerContractorPool, Contractor
+from schemas.resources import Worker
+from schemas.time import Time
+from utilities.base_opt import dichotomy_int
+
+
+class FullScanResourceOptimizer(ResourceOptimizer):
+
+    _coordinate_descent_optimizer = CoordinateDescentResourceOptimizer(dichotomy_int)
+
+    def optimize_resources(self,
+                           agents: WorkerContractorPool,
+                           contractors: List[Contractor],
+                           worker_team: List[Worker],
+                           down_border: np.ndarray,
+                           up_border: np.ndarray,
+                           get_finish_time: Callable[[List[Worker]], Time]):
+
+        def fitness(worker_count: np.ndarray):
+            for worker_ind in range(len(worker_team)):
+                worker_team[worker_ind].count = worker_count[worker_ind]
+            return get_finish_time(worker_team)
+
+        cur = down_border.copy()
+        cur_ft = fitness(cur)
+
+        # Trying to +1 to all workers
+        while (up_border > cur).all():
+            cur += 1
+            next_ft = fitness(cur)
+            if next_ft >= cur_ft:
+                cur -= 1
+                break
+
+        # Insert cur into coordinate-descent optimizer as down_border
+        self._coordinate_descent_optimizer.optimize_resources(agents,
+                                                              contractors,
+                                                              worker_team,
+                                                              cur,
+                                                              up_border,
+                                                              get_finish_time)

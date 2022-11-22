@@ -1,12 +1,14 @@
 from random import Random
 from typing import Dict, List, Optional, Tuple
 
-from sampo import generator as gen_c, generator as wr
+from sampo import generator as gen_c
 from sampo.generator.config.worker_req import scale_reqs
-from sampo.schemas import IntervalUniform
+from sampo.schemas.interval import IntervalUniform
 from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.graph import GraphNode, EdgeType
+
+import sampo.generator.config.worker_req as wr
 
 
 def get_start_stage(work_id: Optional[str] = "", rand: Optional[Random] = None) -> GraphNode:

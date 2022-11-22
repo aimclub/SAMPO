@@ -4,7 +4,7 @@ from typing import Optional
 
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.topological import TopologicalScheduler
+from sampo.scheduler.topological.base import TopologicalScheduler
 
 
 def test_comparing_to_heft(setup_wg, setup_contractors, setup_start_date):

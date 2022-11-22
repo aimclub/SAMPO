@@ -1,4 +1,4 @@
-from sampo.schemas import IntervalUniform
+from sampo.schemas.interval import IntervalUniform
 
 ONE_SECTION_PIPE = IntervalUniform(0.5, 3)
 DIST_TO_PARENT = IntervalUniform(5, 15)

@@ -8,7 +8,7 @@ from typing import Union, Tuple
 from sampo.metrics.resources_in_time.binary_search import BinarySearchOptimizationType, BinarySearchOptimizer
 from sampo.metrics.resources_in_time.newton_conjugate_gradient import NewtonCGOptimizer
 from sampo.scheduler import Scheduler
-from sampo.schemas import Time
+from sampo.schemas.time import Time
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import WorkGraph
 

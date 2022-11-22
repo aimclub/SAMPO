@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from sampo.schemas.requirements import WorkerReq
-from sampo.schemas import Time
+from sampo.schemas.time import Time
 
 
 def scale_reqs(req_list: List[WorkerReq], scalar: float, new_name: Optional[str] = None) -> List[WorkerReq]:

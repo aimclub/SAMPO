@@ -8,7 +8,7 @@ from sampo.metrics.resources_in_time.base import ResourceOptimizer, is_resources
 from sampo.scheduler import Scheduler
 from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph
-from sampo.schemas import Time
+from sampo.schemas.time import Time
 
 
 class BinarySearchOptimizationType(Enum):

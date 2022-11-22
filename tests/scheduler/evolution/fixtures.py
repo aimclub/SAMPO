@@ -8,7 +8,7 @@ from pytest import fixture
 
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
-from sampo.scheduler import init_toolbox
+from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule

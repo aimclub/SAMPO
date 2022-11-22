@@ -5,9 +5,9 @@ from uuid import uuid4
 
 import numpy as np
 
-from sampo.scheduler import Scheduler
+from sampo.scheduler.base import Scheduler
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
-from sampo.schemas import Time
+from sampo.schemas.time import Time
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.graph import WorkGraph

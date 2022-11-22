@@ -3,7 +3,7 @@ from typing import Optional, Dict, List
 
 from sampo.generator.config.gen_counts import WORKER_PROPORTIONS
 from sampo.schemas.contractor import Contractor
-from sampo.schemas import IntervalGaussian
+from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.resources import Worker
 from sampo.schemas.utils import uuid_str
 

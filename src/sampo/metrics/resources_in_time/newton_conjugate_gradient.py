@@ -9,7 +9,7 @@ import scipy.optimize
 
 from sampo.metrics.resources_in_time.base import ResourceOptimizer, init_borders, prepare_answer, is_resources_good
 from sampo.scheduler import Scheduler
-from sampo.schemas import Time
+from sampo.schemas.time import Time
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph
 

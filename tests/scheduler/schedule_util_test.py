@@ -2,14 +2,14 @@ from operator import attrgetter
 from typing import Dict
 from uuid import uuid4
 
-from scheduler.heft.prioritization import prioritization
-from scheduler.utils.just_in_time_timeline import create_timeline, update_timeline, schedule
-from schemas.contractor import ContractorName
-from schemas.resources import Worker
-from schemas.scheduled_work import ScheduledWork
-from schemas.time import Time
-from schemas.types import WorkerName
-from utilities.collections import build_index
+from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.utils.just_in_time_timeline import create_timeline, update_timeline, schedule
+from sampo.schemas.contractor import ContractorName
+from sampo.schemas.resources import Worker
+from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas import Time
+from sampo.schemas.types import WorkerName
+from sampo.utilities.collections import build_index
 
 
 def test_init_resource_structure(setup_agents):

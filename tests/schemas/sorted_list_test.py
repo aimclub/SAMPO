@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Tuple
 
-from schemas.sorted_list import ExtendedSortedList
+from sampo.schemas.sorted_list import ExtendedSortedList
 
 
 def merger(old: Tuple[int, int], new: Tuple[int, int]) -> Tuple[int, int]:

@@ -5,8 +5,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from schemas.serializable import AutoJSONSerializable, JSONSerializable, T, JS, StrSerializable, SS
-from utilities.serializers import custom_serializer, custom_type_serializer, custom_type_deserializer
+from sampo.schemas.serializable import AutoJSONSerializable, JSONSerializable, T, JS, StrSerializable, SS
+from sampo.utilities.serializers import custom_serializer, custom_type_serializer, custom_type_deserializer
 
 
 class TestSimpleSerialization(AutoJSONSerializable['TestSimpleSerialization']):

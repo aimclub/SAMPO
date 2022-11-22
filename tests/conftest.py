@@ -2,19 +2,20 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from pytest import fixture
-from utilities.generation.work_graph import generate_resources_pool
-from utilities.sampler import Sampler
 
-from external.estimate_time import WorkTimeEstimator
-from generator.pipeline.cluster import get_start_stage, get_finish_stage
-from scheduler.base import SchedulerType
-from scheduler.generate import generate_schedule
-from scheduler.heft.base import HEFTScheduler
-from scheduler.heft_between.base import HEFTBetweenScheduler
-from schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
-from schemas.graph import WorkGraph, EdgeType
-from schemas.resources import Worker
-from structurator.base import graph_restructuring
+from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.utilities.generation.work_graph import generate_resources_pool
+from sampo.utilities.sampler import Sampler
+
+from sampo.generator.pipeline.cluster import get_start_stage, get_finish_stage
+from sampo.scheduler.base import SchedulerType
+from sampo.scheduler.generate import generate_schedule
+from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
+from sampo.schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
+from sampo.schemas.graph import WorkGraph, EdgeType
+from sampo.schemas.resources import Worker
+from sampo.structurator.base import graph_restructuring
 
 pytest_plugins = ("tests.schema", "tests.models", )
 

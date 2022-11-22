@@ -1,6 +1,5 @@
-from scheduler.heft.base import HEFTScheduler
-from utilities.validation import validate_schedule
-from fixtures import *
+from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.utilities.validation import validate_schedule
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox, setup_wg, setup_contractors, setup_start_date):

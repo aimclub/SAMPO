@@ -3,10 +3,10 @@ from random import Random
 from typing import List, Tuple, Optional
 
 from generator.enviroment.contractor import get_contractor, get_contractor_with_equal_proportions
-from schemas.contractor import Contractor, ContractorType
-from structurator.base import graph_restructuring
 from generator.pipeline.project import get_graph, SyntheticGraphType
+from schemas.contractor import Contractor
 from schemas.graph import WorkGraph
+from structurator.base import graph_restructuring
 
 
 def graph_from_file(filepath: str, number_of_workers_in_contractors: int) -> Tuple[WorkGraph, List[Contractor]]:
@@ -29,5 +29,5 @@ def generate_work_graph(graph_mode: SyntheticGraphType, bottom_border: int, use_
     return graph_restructuring(work_graph, use_lag_edge_optimization=use_lag_edge_optimization)
 
 
-def generate_resources_pool(contractor_type: ContractorType, num_contractors: int = 1) -> List[Contractor]:
-    return [get_contractor(pack_size, index=i) for i, pack_size in enumerate([contractor_type.command_capacity()] * num_contractors)]
+def generate_resources_pool(contractor_capacity: int, num_contractors: int = 1) -> List[Contractor]:
+    return [get_contractor(pack_size, index=i) for i, pack_size in enumerate([contractor_capacity] * num_contractors)]

@@ -11,7 +11,7 @@ from scheduler.base import SchedulerType
 from scheduler.generate import generate_schedule
 from scheduler.heft.base import HEFTScheduler
 from scheduler.heft_between.base import HEFTBetweenScheduler
-from schemas.contractor import WorkerContractorPool, Contractor, ContractorType
+from schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
 from schemas.graph import WorkGraph, EdgeType
 from schemas.resources import Worker
 from structurator.base import graph_restructuring
@@ -99,7 +99,7 @@ def setup_start_date() -> str:
 @fixture(scope='module')
 def setup_scheduling_inner_params(request, setup_wg, setup_start_date):
     work_graph = setup_wg
-    contractor_list = generate_resources_pool(ContractorType.Average)
+    contractor_list = generate_resources_pool(DefaultContractorCapacity)
 
     return work_graph, contractor_list, setup_start_date
 

@@ -3,9 +3,6 @@ from typing import Dict
 
 import pandas as pd
 
-RESOURCES = '../../../resources/'
-DICT = 'unique_tasks_dict.csv'
-
 
 def get_task_name_unique_mapping(path: str) -> 'NameMapper':
     """

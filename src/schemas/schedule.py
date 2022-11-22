@@ -11,7 +11,7 @@ from schemas.serializable import JSONSerializable, T
 from schemas.time import Time
 from schemas.works import WorkUnit
 from utilities.datetime import add_time_delta
-from utilities.schedule import fix_baps_tasks
+from utilities.schedule import fix_split_tasks
 
 ResourceSchedule = Dict[str, List[Tuple[Time, Time]]]
 ScheduleWorkDict = Dict[str, ScheduledWork]
@@ -102,7 +102,7 @@ class Schedule(JSONSerializable['Schedule']):
         :param offset: Start of schedule, to add as an offset.
         :return: Shifted schedule DataFrame with merged tasks.
         """
-        result = fix_baps_tasks(self.offset_schedule(offset))
+        result = fix_split_tasks(self.offset_schedule(offset))
         return result
 
     def offset_schedule(self, offset: Union[datetime, str]) -> DataFrame:

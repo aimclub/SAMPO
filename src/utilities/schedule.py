@@ -4,9 +4,9 @@ from typing import Dict, Any
 from schemas.time import Time
 
 
-def fix_baps_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
+def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Process and merge information for all tasks, which were separated on the several stages during baps
+    Process and merge information for all tasks, which were separated on the several stages during split
     :param baps_schedule_df: pd.DataFrame: schedule with info for tasks separated on stages
     :return: pd.DataFrame: schedule with merged info for all real tasks
     """
@@ -18,7 +18,7 @@ def fix_baps_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
 
     for task_id in unique_ids:
         task_stages_df = baps_schedule_df.loc[baps_schedule_df.loc[:, 'task_id'].str.contains(task_id)]
-        task_series = merge_baps_stages(task_stages_df.reset_index(drop=True))
+        task_series = merge_split_stages(task_stages_df.reset_index(drop=True))
         df.loc[df.shape[0]] = task_series  # append
 
     df = df.sort_values(by=['start', 'task_name'])
@@ -27,9 +27,9 @@ def fix_baps_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def merge_baps_stages(task_df: pd.DataFrame) -> pd.Series:
+def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     """
-    Merge baps stages of the same real task into one
+    Merge split stages of the same real task into one
     :param task_df: pd.DataFrame: one real task's stages dataframe, sorted by start time
     :return: pd.Series with the full information about the task
     """

@@ -59,7 +59,6 @@ def setup_inherited_resources(request, setup_scheduling_inner_params, setup_sche
     work_graph, contractor_list, _ = setup_scheduling_inner_params
     return {
         'work_graph': work_graph,
-        'contractor_list': contractor_list,
         'schedule': schedule
     }
 

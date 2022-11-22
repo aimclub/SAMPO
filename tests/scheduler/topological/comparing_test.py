@@ -2,7 +2,7 @@ from datetime import time
 from time import time
 from typing import Optional
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.heft.base import HEFTScheduler
 from scheduler.topological.base import TopologicalScheduler
 

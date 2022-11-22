@@ -1,8 +1,6 @@
-import time
 from datetime import datetime, timedelta
-from typing import Tuple, Union
-
-import pandas as pd
+from datetime import datetime, timedelta
+from typing import Union, Optional
 
 from schemas.time import Time
 
@@ -11,64 +9,32 @@ def ftime(dt: datetime, f: str = '%y-%m-%d %H:%M:%S') -> str:
     return dt.strftime(f)
 
 
-def transform_timestamp(schedule_time: Union[float, Time], start: str, time_unit='day') -> float:
+def parse_datetime(dts: str, f: Optional[str] = None) -> datetime:
     """
-    Transform timestamp according to the given time unit and start date
-    :param schedule_time: original timestamp
-    :param start: str start date in the format "%Y-%m-%d"
-    :param time_unit: unit of time for the timestamp: 'day' or 'hour' [otherwise]
-    :return: updated timestamp
+    Parses datetime from string.
+    :param dts: String datetime
+    :param f: String format. If not provided, '%Y-%m-%d' and then '%y-%m-%d %H:%M:%S' are tried.
+    :return:
     """
-    schedule_time = schedule_time.value if isinstance(schedule_time, Time) else schedule_time
-    start_timestamp = time.mktime(datetime.strptime(start, "%Y-%m-%d").timetuple())
-    return (schedule_time * 60 * 60 * 24 if time_unit == 'day' else schedule_time * 60 * 60) + start_timestamp
+    if f is None:
+        try:
+            return datetime.strptime(dts, '%Y-%m-%d')
+        except ValueError:
+            return datetime.strptime(dts, '%y-%m-%d %H:%M:%S')
+    return datetime.strptime(dts, f)
 
 
-def timestamp_to_date(timestamp: float) -> datetime:
+def add_time_delta(base_datetime: Union[datetime, str],
+                   time_delta: Union[Time, float],
+                   time_units: Optional[str] = 'days') -> datetime:
     """
-    Convert timestamp to the date and time
-    :param timestamp: original timestamp
-    :return: date and time from timestamp
+    Adds time delta to base datetime.
+    :param base_datetime:
+    :param time_delta:
+    :param time_units: can be days, seconds, microseconds, milliseconds, minutes, hours, weeks
+    :return:
     """
-    return datetime.fromtimestamp(timestamp)
+    base = parse_datetime(base_datetime) if isinstance(base_datetime, str) else base_datetime
+    delta = timedelta(**{time_units: (time_delta.value if isinstance(time_delta, Time) else time_delta)})
 
-
-def timedelta_to_days(td: timedelta) -> int:
-    """
-    Round given timedelta to days
-    :param td: original timestamp
-    :return: date and time from timestamp
-    """
-    return td.days
-
-
-def fix_time_order(times_df: pd.DataFrame, right_column_order: Tuple[str, str] = ('start', 'finish')) -> pd.DataFrame:
-    """
-    Fix order of the start and finish for the milestone timestamps in the schedule
-    :param times_df: DataFrame with two columns 'start' and 'finish' timestamps of the scheduled tasks
-    :param right_column_order: Names of columns, which contain times,
-    that should be ordered with respect to the column order
-    :return: DataFrame with fixed timestamp columns
-    """
-    assert len(right_column_order) == 2, 'Wrong column order. Should be 2 existing columns.'
-    start, finish = right_column_order
-
-    df = pd.DataFrame(columns=[start, finish])
-    df.loc[:, start] = times_df.min(axis=1)
-    df.loc[:, finish] = times_df.max(axis=1)
-
-    # print(df)
-
-    time_delta = df.loc[0, finish] - df.loc[0, start]
-    for i in range(1, len(df.loc[:, start])):
-        df.loc[i, start] = df.loc[i, start] - i * time_delta
-        df.loc[i, finish] = df.loc[i, 'finish'] - i * time_delta
-    return df
-
-# def remove_time_delta(times_df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Remove technical time delta (necessary for the algorithms) for all tasks
-#     :param times_df: DataFrame with two columns 'start' and 'finish' timestamps of the scheduled tasks
-#     :return: DataFrame with fixed timestamp columns
-#     """
-#     times_df = times_df.reset_index()
+    return base + delta

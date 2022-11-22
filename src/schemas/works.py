@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from random import Random
 from typing import List, Optional, Callable
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from schemas.identifiable import Identifiable
 from schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
 from schemas.serializable import AutoJSONSerializable

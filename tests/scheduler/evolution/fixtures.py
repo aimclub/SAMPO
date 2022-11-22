@@ -6,7 +6,7 @@ import numpy as np
 from deap.base import Toolbox
 from pytest import fixture
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
 from scheduler.genetic.operators import init_toolbox
 from schemas.contractor import Contractor, WorkerContractorPool
@@ -79,7 +79,6 @@ def create_toolbox(wg: WorkGraph,
                         index2contractor,
                         index2contractor_obj,
                         init_chromosomes,
-                        start,
                         mutate_order,
                         mutate_resources,
                         selection_size,

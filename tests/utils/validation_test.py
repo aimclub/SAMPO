@@ -98,4 +98,4 @@ def break_schedule(break_type: BreakType, schedule: Schedule, wg: WorkGraph, sta
             for worker in swork.workers:
                 worker.count = agents[worker.name][worker.contractor_id].count + 1
 
-    return Schedule.from_scheduled_works(broken.values(), start, wg)
+    return Schedule.from_scheduled_works(broken.values(), wg)

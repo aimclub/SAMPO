@@ -1,7 +1,7 @@
 from typing import Callable, List
 from uuid import uuid4
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from schemas.resources import Worker
 from schemas.time import Time
 from schemas.works import WorkUnit

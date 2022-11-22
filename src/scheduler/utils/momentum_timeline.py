@@ -3,7 +3,7 @@ from typing import Optional, List, Union, Tuple, Dict
 
 from sortedcontainers import SortedList
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from schemas.contractor import Contractor, WorkerContractorPool
 from schemas.graph import GraphNode
 from schemas.requirements import WorkerReq

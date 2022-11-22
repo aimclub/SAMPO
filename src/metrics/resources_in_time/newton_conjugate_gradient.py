@@ -41,7 +41,6 @@ class NewtonCGOptimizer(ResourceOptimizer):
 
     def optimize(self, wg: WorkGraph,
                  deadline: Time,
-                 ksg_info: Dict[str, Any], start: str,
                  worker_weights: Dict[str, Union[int, float]] = None,
                  agents: Optional[WorkerContractorPool] = None,
                  dry_resources: Optional[bool] = False) -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
@@ -74,7 +73,7 @@ class NewtonCGOptimizer(ResourceOptimizer):
         self._opt_result = (opt * self.gradient_scale).astype(int)
         print(f'NewtonCG resource optimizer: {self._nfev} fev; {self._opt_result.mean()} mean res')
 
-        return prepare_answer(self._opt_result, agents, wg, self.scheduler, ksg_info, start, dry_resources)
+        return prepare_answer(self._opt_result, agents, wg, self.scheduler, dry_resources)
 
     def _is_resource_good(self, x: ndarray):
         # TODO: simplify code, when tested

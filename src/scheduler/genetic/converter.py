@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.utils.just_in_time_timeline import update_timeline, schedule, create_timeline
 from schemas.contractor import WorkerContractorPool, Contractor
 from schemas.graph import GraphNode

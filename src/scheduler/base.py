@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Optional, Dict, Any
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.resource.base import ResourceOptimizer
 from scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from schemas.contractor import Contractor
@@ -35,7 +35,6 @@ class Scheduler(ABC):
     @abstractmethod
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
-                 start: str,
                  validate_schedule: Optional[bool] = False) \
             -> Schedule:
         ...

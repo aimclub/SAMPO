@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from schemas.contractor import Contractor
 from schemas.resources import Equipment, ConstructionObject, Worker
 from schemas.serializable import AutoJSONSerializable

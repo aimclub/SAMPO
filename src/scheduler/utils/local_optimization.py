@@ -1,7 +1,7 @@
 from operator import attrgetter
 from typing import List, Dict, Set, Iterable
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.utils.just_in_time_timeline import create_timeline, find_min_start_time, update_timeline
 from schemas.contractor import WorkerContractorPool
 from schemas.graph import GraphNode

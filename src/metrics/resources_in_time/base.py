@@ -16,7 +16,7 @@ from utilities.visualization.resources import get_workers_intervals, SPLITTER
 
 class ResourceOptimizer(ABC):
     @abstractmethod
-    def optimize(self, wg: WorkGraph, deadline: Time, start: str) -> Tuple[Contractor, Time]:
+    def optimize(self, wg: WorkGraph, deadline: Time) -> Tuple[Contractor, Time]:
         ...
 
 
@@ -28,9 +28,8 @@ def max_time_schedule(schedule: Union[ScheduleWorkDict, Schedule]):
 
 
 def get_schedule_with_time(scheduler: Scheduler, wg: WorkGraph,
-                           agent_counts: np.array, agent_names: List[str],
-                           start: str) -> Tuple[Schedule, Time]:
-    scheduled_works = scheduler.schedule(wg, agents_to_contractors(agent_counts, agent_names), start)
+                           agent_counts: np.array, agent_names: List[str]) -> Tuple[Schedule, Time]:
+    scheduled_works = scheduler.schedule(wg, agents_to_contractors(agent_counts, agent_names))
     max_time = max_time_schedule(scheduled_works)
     return scheduled_works, max_time
 
@@ -104,8 +103,8 @@ def init_borders(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
 
 
 def prepare_answer(counts: np.array, agent_names: List[str], wg: WorkGraph, scheduler: Scheduler,
-                   start: str, dry_resources: bool):
-    schedule, max_time = get_schedule_with_time(scheduler, wg, counts, agent_names, start)
+                   dry_resources: bool):
+    schedule, max_time = get_schedule_with_time(scheduler, wg, counts, agent_names)
     if dry_resources:
         optimal_counts = get_minimal_counts_by_schedule(schedule, agent_names)
     else:

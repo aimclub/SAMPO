@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional, Tuple
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.heft.time_computaion import work_priority, calculate_working_time_cascade
 from schemas.graph import GraphNode, WorkGraph
 

@@ -1,18 +1,17 @@
 import random
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Iterable
 
 import numpy as np
 from deap import creator, base, tools
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.genetic.converter import convert_chromosome_to_schedule
 from scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
 from scheduler.topological.base import RandomizedTopologicalScheduler
 from schemas.contractor import Contractor, WorkerContractorPool
+from schemas.graph import GraphNode, WorkGraph
 from schemas.schedule import ScheduledWork
 from schemas.time import Time
-from schemas.graph import GraphNode, WorkGraph
-
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
 from utilities.collections import reverse_dictionary
 
@@ -27,7 +26,6 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], agents: WorkerCon
                  index2contractor: Dict[int, str],
                  index2contractor_obj: Dict[int, Contractor],
                  init_chromosomes: Dict[str, ChromosomeType],
-                 start: str,
                  mutate_order: float, mutate_resources: float, selection_size: int,
                  rand: random.Random,
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
@@ -36,8 +34,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], agents: WorkerCon
     toolbox.register("n_per_product", n_per_product, wg=wg, contractors=contractors, index2node=index2node,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=reverse_dictionary(index2contractor),
-                     init_chromosomes=init_chromosomes,
-                     start=start, rand=rand, work_estimator=work_estimator)
+                     init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator)
 
     # create from n_per_product function one individual
     toolbox.register("individual", tools.initRepeat, Individual, toolbox.n_per_product, n=1)
@@ -77,7 +74,7 @@ def n_per_product(wg: WorkGraph, contractors: List[Contractor], index2node: Dict
                   work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
                   contractor2index: Dict[str, int],
                   init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
-                  start: str, work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
+                  work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)
@@ -86,7 +83,6 @@ def n_per_product(wg: WorkGraph, contractors: List[Contractor], index2node: Dict
     HEFT we will choose in 30% of attempts
     Topological in others
     :param contractor2index:
-    :param start:
     :param work_estimator:
     :param contractors:
     :param wg:
@@ -107,7 +103,7 @@ def n_per_product(wg: WorkGraph, contractors: List[Contractor], index2node: Dict
     else:
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, start)
+            .schedule(wg, contractors)
         chromosome = convert_schedule_to_chromosome(index2node, work_id2index, worker_name2index,
                                                     contractor2index, schedule)
     return chromosome

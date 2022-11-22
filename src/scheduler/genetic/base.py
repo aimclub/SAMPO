@@ -1,7 +1,7 @@
 import random
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.base import Scheduler, SchedulerType
 from scheduler.genetic.schedule_builder import build_schedule
 from scheduler.heft.base import HEFTScheduler
@@ -67,11 +67,10 @@ class GeneticScheduler(Scheduler):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
-                 start: str,
                  validate: bool = False) \
             -> Schedule:
         def init_schedule(scheduler_class):
-            return scheduler_class(self.work_estimator).schedule(wg, contractors, start)
+            return scheduler_class(self.work_estimator).schedule(wg, contractors)
 
         init_schedules: Dict[str, Schedule] = {
             "heft_end": init_schedule(HEFTScheduler),
@@ -90,10 +89,9 @@ class GeneticScheduler(Scheduler):
                                          mutate_order,
                                          mutate_resources,
                                          init_schedules,
-                                         start,
                                          self.rand,
                                          self.work_estimator)
-        schedule = Schedule.from_scheduled_works(scheduled_works.values(), start, wg)
+        schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)

@@ -1,6 +1,6 @@
-from typing import List, Optional, Dict, Any, Iterable
+from typing import List, Optional, Dict, Iterable
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from metrics.resources_in_time.base import ResourceOptimizer
 from scheduler.base import SchedulerType
 from scheduler.heft.base import HEFTScheduler
@@ -27,7 +27,6 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
-                 start: str,
                  validate: bool = False) \
             -> Schedule:
         agents = get_worker_contractor_pool(contractors)
@@ -35,7 +34,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
         schedule = Schedule.from_scheduled_works(
             self.build_scheduler(ordered_nodes, agents, contractors, self.work_estimator),
-            start, wg
+            wg
         )
 
         if validate:

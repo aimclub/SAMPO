@@ -2,8 +2,10 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from pytest import fixture
+from utilities.generation.work_graph import generate_resources_pool
+from utilities.sampler import Sampler
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from generator.pipeline.cluster import get_start_stage, get_finish_stage
 from scheduler.base import SchedulerType
 from scheduler.generate import generate_schedule
@@ -13,8 +15,6 @@ from schemas.contractor import WorkerContractorPool, Contractor, ContractorType
 from schemas.graph import WorkGraph, EdgeType
 from schemas.resources import Worker
 from structurator.base import graph_restructuring
-from utilities.generation.work_graph import generate_resources_pool
-from utilities.sampler import Sampler
 
 pytest_plugins = ("tests.schema", "tests.models", )
 
@@ -83,7 +83,7 @@ def setup_default_schedules(setup_wg, setup_contractors, setup_start_date):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors, setup_start_date)
+        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors)
 
     return {
         "heft_end": init_schedule(HEFTScheduler),
@@ -112,5 +112,4 @@ def setup_schedule(request, setup_scheduling_inner_params):
                              work_time_estimator=None,
                              work_graph=work_graph,
                              contractors=contractors,
-                             start=start,
                              validate_schedule=False), scheduler_type

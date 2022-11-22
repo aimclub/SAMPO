@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import Optional, Tuple, Union
 
 import numpy as np
 
 from metrics.resources_in_time.base import ResourceOptimizer, is_resources_good, init_borders, prepare_answer
 from scheduler.base import Scheduler
-from schemas.time import Time
 from schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from schemas.graph import WorkGraph
+from schemas.time import Time
 
 
 class BinarySearchOptimizationType(Enum):
@@ -25,7 +25,6 @@ class BinarySearchOptimizer(ResourceOptimizer):
     max_workers: Optional[int] = 1000
 
     def optimize(self, wg: WorkGraph, deadline: Time,
-                 start: str,
                  agents: Optional[WorkerContractorPool] = None,
                  dry_resources: Optional[bool] = True) \
             -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
@@ -37,12 +36,11 @@ class BinarySearchOptimizer(ResourceOptimizer):
             optimize_func = item_by_item_fast_init_search
         else:
             raise Exception(f'Unknown Binary Search type: {self.method}')
-        return optimize_func(wg, self.scheduler, deadline, start, self.worker_factor, self.max_workers,
+        return optimize_func(wg, self.scheduler, deadline, self.worker_factor, self.max_workers,
                              agents, dry_resources=dry_resources)
 
 
 def union_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
-                 start: str,
                  worker_factor: Optional[int] = 1000,
                  max_workers: Optional[int] = 1000,
                  right_agents: Optional[WorkerContractorPool] = None,
@@ -50,9 +48,9 @@ def union_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
     left_counts, right_counts, agent_names = \
         init_borders(wg, scheduler, deadline, worker_factor, max_workers, right_agents)
     if right_counts is None:
-        return prepare_answer(left_counts, agent_names, wg, scheduler, start, False)
+        return prepare_answer(left_counts, agent_names, wg, scheduler, False)
     if left_counts is None:
-        return prepare_answer(right_counts, agent_names, wg, scheduler, start, False)
+        return prepare_answer(right_counts, agent_names, wg, scheduler, False)
 
     while True:
         mid_counts: np.array = ((left_counts + right_counts) / 2).astype(int)
@@ -67,24 +65,22 @@ def union_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
 
 
 def item_by_item_fast_init_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
-                                  start: str,
                                   worker_factor: Optional[int] = 1000,
                                   max_workers: Optional[int] = 1000,
                                   right_agents: Optional[WorkerContractorPool] = None,
                                   dry_resources: Optional[bool] = False) -> (Contractor, Time) or (None, None):
-    contractor, max_time = union_search(wg, scheduler, deadline, start,
+    contractor, max_time = union_search(wg, scheduler, deadline,
                                         worker_factor, max_workers, right_agents,
                                         dry_resources=False)
     if contractor is None:
         return None, None
     agents = get_worker_contractor_pool([contractor])
-    contractor, max_time = item_by_item_search(wg, scheduler, deadline, start, worker_factor, max_workers, agents,
+    contractor, max_time = item_by_item_search(wg, scheduler, deadline, worker_factor, max_workers, agents,
                                                dry_resources)
     return contractor, max_time
 
 
 def item_by_item_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
-                        start: str,
                         worker_factor: Optional[int] = 1000,
                         max_workers: Optional[int] = 1000,
                         right_agents: Optional[WorkerContractorPool] = None,
@@ -92,9 +88,9 @@ def item_by_item_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
     left_counts, right_counts, agent_names = \
         init_borders(wg, scheduler, deadline, worker_factor, max_workers, right_agents)
     if right_counts is None:
-        return prepare_answer(left_counts, agent_names, wg, scheduler, start, False)
+        return prepare_answer(left_counts, agent_names, wg, scheduler, False)
     if left_counts is None:
-        return prepare_answer(right_counts, agent_names, wg, scheduler, start, True)
+        return prepare_answer(right_counts, agent_names, wg, scheduler, True)
 
     for index in range(len(left_counts)):
         while True:
@@ -107,4 +103,4 @@ def item_by_item_search(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
             else:
                 left_counts[index] = mid_counts[index]
 
-    return prepare_answer(right_counts, agent_names, wg, scheduler, start, dry_resources)
+    return prepare_answer(right_counts, agent_names, wg, scheduler, dry_resources)

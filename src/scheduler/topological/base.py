@@ -3,7 +3,7 @@ from typing import List, Dict, Set, Optional, Any, Iterable
 import numpy as np
 from toposort import toposort_flatten, toposort
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.base import Scheduler
 from scheduler.base import SchedulerType
 from scheduler.utils.momentum_timeline import schedule, prepare_worker, create_timeline
@@ -26,7 +26,6 @@ class TopologicalScheduler(Scheduler):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
-                 start: str,
                  validate: bool = False) \
             -> Schedule:
         # Checking pre-conditions for this scheduler_topological to be applied
@@ -35,8 +34,7 @@ class TopologicalScheduler(Scheduler):
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
         schedule = Schedule.from_scheduled_works(
-            self.build_scheduler(tsorted_nodes, contractors, self.work_estimator),
-            start, wg
+            self.build_scheduler(tsorted_nodes, contractors, self.work_estimator), wg
         )
 
         # check the validity received scheduler

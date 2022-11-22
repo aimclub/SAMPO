@@ -9,7 +9,7 @@ from deap import tools
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from scheduler.genetic.operators import init_toolbox, ChromosomeType
 from schemas.contractor import Contractor, WorkerContractorPool
@@ -27,7 +27,6 @@ def build_schedule(wg: WorkGraph,
                    mutate_order: float,
                    mutate_resources: float,
                    init_schedules: Dict[str, Schedule],
-                   start: str,
                    rand: random.Random,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False) \
@@ -40,7 +39,6 @@ def build_schedule(wg: WorkGraph,
     Generate order of job by prioritization from HEFT and from Topological
     Generate resources from min to max
     Overall initial population is valid
-    :param start:
     :param show_fitness_graph:
     :param agents:
     :param work_estimator:
@@ -80,7 +78,7 @@ def build_schedule(wg: WorkGraph,
 
     toolbox = init_toolbox(wg, contractors, agents, index2node,
                            work_id2index, worker_name2index,
-                           index2contractor, index2contractor_obj, init_chromosomes, start,
+                           index2contractor, index2contractor_obj, init_chromosomes,
                            mutate_order, mutate_resources, selection_size, rand, work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)

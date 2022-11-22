@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple, Optional, Iterable, Set
 
-from utilities.time_estimator import WorkTimeEstimator
+from external.estimate_time import WorkTimeEstimator
 from scheduler.heft.time_computaion import calculate_working_time
 from schemas.contractor import WorkerContractorPool, Contractor
 from schemas.graph import GraphNode, WorkGraph

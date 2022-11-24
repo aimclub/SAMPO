@@ -1,6 +1,6 @@
 from collections import defaultdict
 from copy import copy
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union, Tuple
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
@@ -18,7 +18,7 @@ class WorkSpec:
     :param: assigned_time: predefined work time (scheduler should schedule this work with this execution time)
     """
     chain: Optional[List[WorkUnit]] = None  # TODO Add support
-    assigned_workers: Optional[Dict[WorkerName, int]] = None
+    assigned_workers: Dict[WorkerName, int] = {}
     assigned_time: Optional[Time] = None
 
 
@@ -30,14 +30,24 @@ class ScheduleSpec:
     """
     _work2spec: Dict[str, WorkSpec] = defaultdict(WorkSpec)
 
-    def set_exec_time(self, work_id, time: Time) -> 'ScheduleSpec':
-        self._work2spec[work_id].assigned_time = time
+    def set_exec_time(self, work: Union[str, WorkUnit], time: Time) -> 'ScheduleSpec':
+        if isinstance(work, WorkUnit):
+            work = work.id
+        self._work2spec[work].assigned_time = time
         return self
 
-    def assign_workers_dict(self, work_id, workers: Dict[WorkerName, int]) -> 'ScheduleSpec':
-        self._work2spec[work_id].assigned_workers = copy(workers)
+    def assign_workers_dict(self, work: str, workers: Dict[WorkerName, int]) -> 'ScheduleSpec':
+        if isinstance(work, WorkUnit):
+            work = work.id
+        self._work2spec[work].assigned_workers = copy(workers)
         return self
 
-    def assign_workers(self, work_id, workers: List[Worker]) -> 'ScheduleSpec':
-        self._work2spec[work_id].assigned_workers = {worker.name: worker.count for worker in workers}
+    def assign_workers(self, work: str, workers: List[Worker]) -> 'ScheduleSpec':
+        if isinstance(work, WorkUnit):
+            work = work.id
+        self._work2spec[work].assigned_workers = {worker.name: worker.count for worker in workers}
         return self
+
+    def get_work_spec(self, work_id: str) -> WorkSpec:
+        return self._work2spec[work_id]
+

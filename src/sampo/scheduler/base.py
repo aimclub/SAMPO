@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Optional
 
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
@@ -35,6 +36,7 @@ class Scheduler(ABC):
     @abstractmethod
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
+                 spec: ScheduleSpec = ScheduleSpec(),
                  validate_schedule: Optional[bool] = False) \
             -> Schedule:
         ...

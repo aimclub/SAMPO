@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from sampo.metrics.resources_in_time.base import ResourceOptimizer, is_resources_good, init_borders, prepare_answer
-from sampo.scheduler import Scheduler
+from sampo.scheduler.base import Scheduler
 from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.time import Time

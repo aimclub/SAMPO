@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sampo"
-version = "0.1.0"
+version = "0.1.0.2"
 description = ""
 authors = ["Your Name <you@example.com>"]
 license = "GPL v.3"

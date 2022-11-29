@@ -1,6 +1,6 @@
 import pytest
 
-from scheduler.base import SchedulerType
+from sampo.scheduler.base import SchedulerType
 
 
 @pytest.mark.parametrize('setup_schedule', list(SchedulerType), indirect=True)

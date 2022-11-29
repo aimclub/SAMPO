@@ -1,7 +1,7 @@
 from typing import Set
 
-from scheduler.heft.prioritization import prioritization
-from schemas.graph import GraphNode
+from sampo.scheduler.heft.prioritization import prioritization
+from sampo.schemas.graph import GraphNode
 
 
 def test_correct_order(setup_wg):

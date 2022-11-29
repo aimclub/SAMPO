@@ -3,18 +3,19 @@ from uuid import uuid4
 
 from pytest import fixture
 
-from utilities.time_estimator import WorkTimeEstimator
-from generator.pipeline.cluster import get_start_stage, get_finish_stage
-from scheduler.base import SchedulerType
-from scheduler.generate import generate_schedule
-from scheduler.heft.base import HEFTScheduler
-from scheduler.heft_between.base import HEFTBetweenScheduler
-from schemas.contractor import WorkerContractorPool, Contractor, ContractorType
-from schemas.graph import WorkGraph, EdgeType
-from schemas.resources import Worker
-from structurator.base import graph_restructuring
-from utilities.generation.work_graph import generate_resources_pool
-from utilities.sampler import Sampler
+from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.utilities.generation.work_graph import generate_resources_pool
+from sampo.utilities.sampler import Sampler
+
+from sampo.generator.pipeline.cluster import get_start_stage, get_finish_stage
+from sampo.scheduler.base import SchedulerType
+from sampo.scheduler.generate import generate_schedule
+from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
+from sampo.schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
+from sampo.schemas.graph import WorkGraph, EdgeType
+from sampo.schemas.resources import Worker
+from sampo.structurator.base import graph_restructuring
 
 pytest_plugins = ("tests.schema", "tests.models", )
 
@@ -83,7 +84,7 @@ def setup_default_schedules(setup_wg, setup_contractors, setup_start_date):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors, setup_start_date)
+        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors)
 
     return {
         "heft_end": init_schedule(HEFTScheduler),
@@ -99,7 +100,7 @@ def setup_start_date() -> str:
 @fixture(scope='module')
 def setup_scheduling_inner_params(request, setup_wg, setup_start_date):
     work_graph = setup_wg
-    contractor_list = generate_resources_pool(ContractorType.Average)
+    contractor_list = generate_resources_pool(DefaultContractorCapacity)
 
     return work_graph, contractor_list, setup_start_date
 
@@ -112,5 +113,4 @@ def setup_schedule(request, setup_scheduling_inner_params):
                              work_time_estimator=None,
                              work_graph=work_graph,
                              contractors=contractors,
-                             start=start,
                              validate_schedule=False), scheduler_type

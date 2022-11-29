@@ -1,5 +1,5 @@
 from fixtures import *
-from scheduler.genetic.converter import ChromosomeType
+from sampo.scheduler.genetic.converter import ChromosomeType
 
 
 TEST_ITERATIONS = 1000

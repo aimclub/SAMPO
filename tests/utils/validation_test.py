@@ -3,11 +3,11 @@ from enum import Enum
 from operator import attrgetter
 from typing import Optional
 
-from schemas.contractor import WorkerContractorPool
-from schemas.graph import WorkGraph
-from schemas.schedule import Schedule
-from utilities.collections import build_index
-from utilities.validation import _check_all_allocated_workers_do_not_exceed_capacity_of_contractors, \
+from sampo.schemas.contractor import WorkerContractorPool
+from sampo.schemas.graph import WorkGraph
+from sampo.schemas.schedule import Schedule
+from sampo.utilities.collections import build_index
+from sampo.utilities.validation import _check_all_allocated_workers_do_not_exceed_capacity_of_contractors, \
     _check_all_tasks_scheduled, _check_parent_dependencies, _check_all_workers_correspond_to_worker_reqs
 
 
@@ -98,4 +98,4 @@ def break_schedule(break_type: BreakType, schedule: Schedule, wg: WorkGraph, sta
             for worker in swork.workers:
                 worker.count = agents[worker.name][worker.contractor_id].count + 1
 
-    return Schedule.from_scheduled_works(broken.values(), start, wg)
+    return Schedule.from_scheduled_works(broken.values(), wg)

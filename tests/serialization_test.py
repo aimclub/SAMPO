@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from schemas.graph import WorkGraph
-from schemas.schedule import Schedule
-from schemas.serializable import S
+from sampo.schemas.graph import WorkGraph
+from sampo.schemas.schedule import Schedule
+from sampo.schemas.serializable import S
 from tests.models.serialization import TestSimpleSerialization, TestAutoJSONSerializable, TestJSONSerializable, \
     TestStrSerializable
 
@@ -59,7 +59,6 @@ def setup_inherited_resources(request, setup_scheduling_inner_params, setup_sche
     work_graph, contractor_list, _ = setup_scheduling_inner_params
     return {
         'work_graph': work_graph,
-        'contractor_list': contractor_list,
         'schedule': schedule
     }
 

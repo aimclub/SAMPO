@@ -1,18 +1,18 @@
 from operator import attrgetter
 from random import Random
-from typing import List, Dict, Tuple, Any, Optional
+from typing import List, Dict, Tuple, Optional
 
 import numpy as np
 from deap.base import Toolbox
 from pytest import fixture
 
-from utilities.time_estimator import WorkTimeEstimator
-from scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
-from scheduler.genetic.operators import init_toolbox
-from schemas.contractor import Contractor, WorkerContractorPool
-from schemas.graph import WorkGraph, GraphNode
-from schemas.schedule import Schedule
-from utilities.collections import reverse_dictionary
+from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
+from sampo.scheduler.genetic.operators import init_toolbox
+from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.schedule import Schedule
+from sampo.utilities.collections import reverse_dictionary
 
 
 def get_params(works_count: int) -> Tuple[int, float, float, int]:
@@ -79,7 +79,6 @@ def create_toolbox(wg: WorkGraph,
                         index2contractor,
                         index2contractor_obj,
                         init_chromosomes,
-                        start,
                         mutate_order,
                         mutate_resources,
                         selection_size,

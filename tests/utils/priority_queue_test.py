@@ -1,6 +1,6 @@
 from random import Random
 
-from utilities.priority_queue import PriorityQueue
+from sampo.utilities.priority_queue import PriorityQueue
 
 
 def test_extract_max():

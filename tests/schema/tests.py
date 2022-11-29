@@ -7,7 +7,7 @@ from typing import Any, Dict, Union, List, Optional
 
 from pandas import DataFrame
 
-from utilities.visualization.base import VisualizationMode
+from sampo.utilities.visualization.base import VisualizationMode
 from tests.schema.reports import TestReport
 
 

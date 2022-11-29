@@ -32,6 +32,10 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
                                                self.one_dimension_optimizer,
                                                fitness,
                                                optimize_array)
-        for i in range(len(worker_team)):
-            if optimize_array[i]:
+        if optimize_array:
+            for i in range(len(worker_team)):
+                if optimize_array[i]:
+                    worker_team[i].count = count_worker_team[i]
+        else:
+            for i in range(len(worker_team)):
                 worker_team[i].count = count_worker_team[i]

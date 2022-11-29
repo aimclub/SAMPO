@@ -21,12 +21,12 @@ class ResourceOptimizer(ABC):
                            get_finish_time: Callable[[List[Worker]], Time]):
         """
         Base resource optimization method. Optimizes `worker_team` using `get_finish_time` metric.
-        :param: worker_pool: globally available workers
-        :param: contractors: listed contractors
-        :param: worker_team: the team to optimize. Optimizing performs in-place
-        :param: optimize_array: a boolean array that says what positions should be optimized
-        :param: down_border: down-border for resource optimizer
-        :param: up_border: up-border for resource optimizer
-        :param: get_finish_time: metric
+        :param worker_pool: globally available workers
+        :param contractors: listed contractors
+        :param worker_team: the team to optimize. Optimizing performs in-place
+        :param optimize_array: a boolean array that says what positions should be optimized
+        :param down_border: down-border for resource optimizer
+        :param up_border: up-border for resource optimizer
+        :param get_finish_time: metric
         """
         ...

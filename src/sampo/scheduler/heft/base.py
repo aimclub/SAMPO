@@ -8,7 +8,7 @@ from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.utils.just_in_time_timeline import find_min_start_time, update_timeline, schedule, \
-    create_timeline, make_and_cache_schedule
+    create_timeline, make_and_cache_schedule, schedule_with_time_spec
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -55,9 +55,10 @@ class HEFTScheduler(Scheduler):
         Find optimal number of workers who ensure the nearest finish time.
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
-        :param: contractors:
-        :param: work_estimator:
-        :param: ordered_nodes:
+        :param contractors:
+        :param work_estimator:
+        :param spec: spec for current scheduling
+        :param ordered_nodes:
         :return:
         """
         worker_pool = get_worker_contractor_pool(contractors)
@@ -70,8 +71,11 @@ class HEFTScheduler(Scheduler):
         for node in reversed(ordered_nodes):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
-            if node.is_inseparable_son() or node.id in node2swork:  # here
+            if node.id in node2swork:  # here
                 continue
+
+            inseparable_chain = node.get_inseparable_chain()
+            inseparable_chain = inseparable_chain if inseparable_chain else [node]
 
             min_count_worker_team, max_count_worker_team, contractor, workers \
                 = get_best_contractor_and_worker_borders(worker_pool, contractors, work_unit.worker_reqs)
@@ -93,12 +97,8 @@ class HEFTScheduler(Scheduler):
                                                    get_finish_time))
 
             # apply time spec
-            if work_spec.assigned_time:
-                st = find_min_start_time(node, workers, timeline, node2swork)
-                c_ft = make_and_cache_schedule(node, node2swork, workers, contractor,
-                                               (st, st + work_spec.assigned_time), work_estimator)
-            else:
-                c_ft = schedule(node, node2swork, best_worker_team, contractor, timeline, work_estimator)
+            c_ft = schedule_with_time_spec(node, node2swork, workers, contractor, inseparable_chain, timeline,
+                                           work_spec.assigned_time, work_estimator)
 
             # add using resources in queue for workers
             update_timeline(c_ft, timeline, best_worker_team)

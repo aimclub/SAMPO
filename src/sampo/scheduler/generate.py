@@ -33,6 +33,6 @@ def generate_schedule(scheduling_algorithm_type: SchedulerType,
     start_time = time.time()
     schedule = scheduler.schedule(work_graph,
                                   [contractors] if isinstance(contractors, Contractor) else contractors,
-                                  validate_schedule)
+                                  validate=validate_schedule)
     print(f'Time: {(time.time() - start_time) * 1000} ms')
     return schedule

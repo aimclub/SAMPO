@@ -3,8 +3,11 @@ from uuid import uuid4
 
 import numpy as np
 
+from sampo.scheduler.base import Scheduler
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.scheduler.utils.just_in_time_timeline import update_timeline, schedule, create_timeline
+from sampo.scheduler.utils.just_in_time_timeline import update_timeline, schedule, create_timeline, \
+    schedule_with_time_spec
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
@@ -23,9 +26,9 @@ def convert_schedule_to_chromosome(index2node: Dict[int, GraphNode],
     received result of scheduling algorithm and transform it to chromosome
     :param contractor2index:
     :param work_id2index:
-    :param schedule:
     :param index2node:
     :param worker_name2index:
+    :param schedule:
     :return:
     """
 
@@ -57,6 +60,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, agents: WorkerCon
                                    index2node: Dict[int, GraphNode],
                                    worker_name2index: Dict[str, int],
                                    index2contractor: Dict[int, Contractor],
+                                   spec: ScheduleSpec,
                                    work_estimator: WorkTimeEstimator = None) -> Dict[str, ScheduledWork]:
     id2swork: Dict[str, ScheduledWork] = {}
 
@@ -64,8 +68,15 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, agents: WorkerCon
     works_order = chromosome[0]
     works_resources = chromosome[1]
     for index in works_order:
-        if index2node[index].id in id2swork and not index2node[index].is_inseparable_son():
+        node = index2node[index]
+        if node.id in id2swork and not node.is_inseparable_son():
             continue
+
+        work_spec = spec.get_work_spec(node.id)
+
+        inseparable_chain = node.get_inseparable_chain()
+        inseparable_chain = inseparable_chain if inseparable_chain else [node]
+
         resources = works_resources[:-1, index]
         contractor = index2contractor[works_resources[-1, index]]
         worker_team: List[Worker] = [Worker(str(uuid4()), worker_name, resources[worker_index],
@@ -73,8 +84,12 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, agents: WorkerCon
                                      for worker_name, worker_index in worker_name2index.items()
                                      if resources[worker_index] > 0]
 
-        finish_time = schedule(index2node[index], id2swork, worker_team, contractor,
-                               time_resources_queue, work_estimator)
+        # apply worker spec
+        Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
+
+        # finish using time spec
+        finish_time = schedule_with_time_spec(node, id2swork, worker_team, contractor, inseparable_chain,
+                                              time_resources_queue, work_spec.assigned_time, work_estimator)
 
         update_timeline(finish_time, time_resources_queue, worker_team)
     return id2swork

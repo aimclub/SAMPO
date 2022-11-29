@@ -20,9 +20,9 @@ DefaultContractorCapacity = 25
 class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     """
     Used to store information about the contractor and its resources
-    :param: workers: dictionary, where the key is the employee's specialty, and the value is the pool of employees of
+    :param workers: dictionary, where the key is the employee's specialty, and the value is the pool of employees of
     this specialty
-    :param: equipments: dictionary, where the key is the type of technique, and the value is the pool of techniques of
+    :param equipments: dictionary, where the key is the type of technique, and the value is the pool of techniques of
     that type
     """
     workers: Dict[str, Worker]

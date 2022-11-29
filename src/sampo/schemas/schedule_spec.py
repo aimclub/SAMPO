@@ -12,10 +12,10 @@ class WorkSpec:
     """
     Here are the container for externally given terms, that the resulting `ScheduledWork` should satisfy.
     Must be used in schedulers.
-    :param: chain: the chain of works, that should be scheduled one after another, e.g. inseparable,
+    :param chain: the chain of works, that should be scheduled one after another, e.g. inseparable,
     that starts from this work. Now unsupported.
-    :param: assigned_workers: predefined worker team (scheduler should assign this worker team to this work)
-    :param: assigned_time: predefined work time (scheduler should schedule this work with this execution time)
+    :param assigned_workers: predefined worker team (scheduler should assign this worker team to this work)
+    :param assigned_time: predefined work time (scheduler should schedule this work with this execution time)
     """
     chain: Optional[List[WorkUnit]] = None  # TODO Add support
     assigned_workers: Dict[WorkerName, int] = {}
@@ -26,7 +26,7 @@ class ScheduleSpec:
     """
     Here are the container for externally given terms, that Schedule should satisfy.
     Must be used in schedulers.
-    :param: work2spec: work specs
+    :param work2spec: work specs
     """
     _work2spec: Dict[str, WorkSpec] = defaultdict(WorkSpec)
 

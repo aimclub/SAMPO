@@ -41,21 +41,22 @@ class Scheduler(ABC):
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),
-                 validate_schedule: Optional[bool] = False) \
+                 validate: Optional[bool] = False) \
             -> Schedule:
         ...
 
     @staticmethod
     def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: List[Worker], work_spec: WorkSpec,
-                                      optimize_lambda: Callable[[np.ndarray], None]):
+                                      optimize_lambda: Callable[[np.ndarray], None] = lambda _: None):
         """
         Applies worker team spec to optimization process.
         Can use arbitrary heuristics to increase spec handling efficiency.
-        :param: work_unit: current work unit
-        :param: worker_tam: current worker team from chosen contractor
-        :param: work_spec: spec for given work unit
-        :param: optimize_lambda: optimization func that should hold optimization
-            data in its closure and run optimization process when receives `optimize_array`
+        :param work_unit: current work unit
+        :param worker_team: current worker team from chosen contractor
+        :param work_spec: spec for given work unit
+        :param optimize_lambda: optimization func that should hold optimization
+            data in its closure and run optimization process when receives `optimize_array`.
+            Passing None or default value means this function should only apply spec.
         """
         if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
             # all resources passed in spec, skipping optimize_resources step

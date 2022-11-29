@@ -13,7 +13,6 @@ from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType, WorkerName, ContractorName
 from sampo.utilities.collections import build_index
 
-
 MomentumResourceTimeline = Dict[WorkerName, SortedList[ScheduleEvent]]
 MomentumTimeline = Dict[ContractorName, MomentumResourceTimeline]
 
@@ -103,9 +102,21 @@ def schedule(task_index: int,
     start_time, max_parent_time, exec_times = find_min_start_time(timeline[contractor.id], node, node2swork,
                                                                   inseparable_chain, passed_agents, work_estimator)
 
+    make_and_cache_schedule(task_index, node, node2swork, inseparable_chain, timeline, passed_agents,
+                            contractor, start_time, exec_times)
+
+
+def make_and_cache_schedule(task_index: int,
+                            node: GraphNode,
+                            node2swork: Dict[GraphNode, ScheduledWork],
+                            inseparable_chain: List[GraphNode],
+                            timeline: MomentumTimeline,
+                            passed_agents: List[Worker],
+                            contractor: Contractor,
+                            start_time: Time,
+                            exec_times: Dict[GraphNode, Tuple[Time, Time]]):
     # 6. create a schedule entry for the task
 
-    max_parent_time: Time = max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
     nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].finish_time
                                                         if pnode in node2swork else Time(0)
                                                         for pnode in n.parents),
@@ -181,6 +192,28 @@ def update_timeline(task_index: int,
 
         state.add(ScheduleEvent(task_index, EventType.Start, start, swork, available_workers_count - w.count))
         state.add(ScheduleEvent(task_index, EventType.End, end, swork, end_count))
+
+
+def schedule_with_time_spec(task_index: int,
+                            node: GraphNode,
+                            node2swork: Dict[GraphNode, ScheduledWork],
+                            inseparable_chain: List[GraphNode],
+                            timeline: MomentumTimeline,
+                            workers: List[Worker],
+                            contractor: Contractor,
+                            assigned_time: Optional[Time],
+                            work_estimator: Optional[WorkTimeEstimator] = None):
+    if assigned_time:
+        st, _, _ = find_min_start_time(timeline[contractor.id], node, node2swork,
+                                       inseparable_chain, workers, work_estimator)
+        exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
+                      for n in inseparable_chain}
+
+        make_and_cache_schedule(task_index, node, node2swork, inseparable_chain, timeline,
+                                workers, contractor, st, exec_times)
+    else:
+        schedule(task_index, node, node2swork, inseparable_chain, timeline,
+                 workers, contractor, work_estimator)
 
 
 def find_min_start_time(resource_timeline: MomentumResourceTimeline,

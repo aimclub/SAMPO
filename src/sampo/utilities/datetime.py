@@ -34,6 +34,6 @@ def add_time_delta(base_datetime: Union[datetime, str],
     :return:
     """
     base = parse_datetime(base_datetime) if isinstance(base_datetime, str) else base_datetime
-    delta = timedelta(**{time_units: (time_delta.value if isinstance(time_delta, Time) else int(time_delta))})
+    delta = timedelta(**{time_units: (time_delta.value if isinstance(time_delta, Time) else time_delta)})
 
     return base + delta

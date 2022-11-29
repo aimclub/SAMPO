@@ -1,6 +1,6 @@
 from collections import defaultdict
 from copy import copy
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time

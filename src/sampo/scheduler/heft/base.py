@@ -85,31 +85,12 @@ class HEFTScheduler(Scheduler):
                                                                                         work_estimator)
 
             # apply worker team spec
-
-            if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
-                # all resources passed in spec, skipping optimize_resources step
-                for w in best_worker_team:
-                    w.count = work_spec.assigned_workers[w.name]
-            else:
-                # create optimize array to save optimizing time
-                # this array should contain True if position should be optimized or False if shouldn't
-                optimize_array = None
-                if work_spec.assigned_workers:
-                    optimize_array = []
-                    for w in best_worker_team:
-                        spec_count = work_spec.assigned_workers.get(w.name, 0)
-                        if spec_count > 0:
-                            w.count = spec_count
-                            optimize_array.append(False)
-                        else:
-                            optimize_array.append(True)
-
-                    optimize_array = np.array(optimize_array)
-
-                self.resource_optimizer.optimize_resources(worker_pool, contractors, best_worker_team,
-                                                           optimize_array,
-                                                           min_count_worker_team, max_count_worker_team,
-                                                           get_finish_time)
+            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
+                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                   worker_pool, contractors, best_worker_team,
+                                                   optimize_array,
+                                                   min_count_worker_team, max_count_worker_team,
+                                                   get_finish_time))
 
             # apply time spec
             if work_spec.assigned_time:

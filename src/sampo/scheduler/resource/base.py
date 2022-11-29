@@ -3,7 +3,7 @@ from typing import List, Callable
 
 import numpy as np
 
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 
@@ -12,10 +12,17 @@ class ResourceOptimizer(ABC):
 
     @abstractmethod
     def optimize_resources(self,
-                           agents: WorkerContractorPool,
-                           contractors: List[Contractor],
+                           worker_pool: WorkerContractorPool,
                            worker_team: List[Worker],
                            down_border: np.ndarray,
                            up_border: np.ndarray,
                            get_finish_time: Callable[[List[Worker]], Time]):
+        """
+        The resource optimization module. Should optimize `worker_team` in-place.
+        :param worker_pool: global resources pool
+        :param worker_team: worker team to optimize
+        :param down_border: down border of optimization
+        :param up_border: up border of optimization
+        :param get_finish_time: optimization function that should give execution time based on worker team
+        """
         ...

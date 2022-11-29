@@ -4,7 +4,7 @@ import numpy as np
 
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 from sampo.utilities.base_opt import dichotomy_int
@@ -16,7 +16,6 @@ class FullScanResourceOptimizer(ResourceOptimizer):
 
     def optimize_resources(self,
                            agents: WorkerContractorPool,
-                           contractors: List[Contractor],
                            worker_team: List[Worker],
                            down_border: np.ndarray,
                            up_border: np.ndarray,
@@ -40,7 +39,6 @@ class FullScanResourceOptimizer(ResourceOptimizer):
 
         # Insert cur into coordinate-descent optimizer as down_border
         self._coordinate_descent_optimizer.optimize_resources(agents,
-                                                              contractors,
                                                               worker_team,
                                                               cur,
                                                               up_border,

@@ -2,15 +2,13 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Optional
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.schedule import Schedule
 from sampo.schemas.graph import WorkGraph
+from sampo.schemas.schedule import Schedule
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
-
-TIME_SHIFT = 0.05
 
 
 class SchedulerType(Enum):

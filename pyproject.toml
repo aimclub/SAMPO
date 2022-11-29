@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "sampo"
-version = "0.1.0.2"
+version = "0.1.0.3"
 description = ""
-authors = ["Your Name <you@example.com>"]
-license = "GPL v.3"
+authors = ["iAirLab <iairlab@yandex.ru>"]
+license = "GPLv3"
 readme = "README.md"
 
 [tool.poetry.dependencies]

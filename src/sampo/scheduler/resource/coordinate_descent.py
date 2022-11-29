@@ -3,7 +3,7 @@ from typing import List, Callable
 import numpy as np
 
 from sampo.scheduler.resource.base import ResourceOptimizer
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 from sampo.utilities.base_opt import coordinate_descent
@@ -16,7 +16,6 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
 
     def optimize_resources(self,
                            worker_pool: WorkerContractorPool,
-                           contractors: List[Contractor],
                            worker_team: List[Worker],
                            optimize_array: np.ndarray,
                            down_border: np.ndarray,

@@ -15,8 +15,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.base_opt import dichotomy_int
 
-TIME_SHIFT = 0.05
-
 
 class SchedulerType(Enum):
     Topological = 'topological'

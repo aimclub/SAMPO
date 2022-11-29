@@ -79,13 +79,12 @@ def get_contractor_for_resources_schedule(resources: Union[DataFrame, List[Dict[
     :return: A new contractor of the given type
     """
 
-    # TODO: describe the return type
     def aggregate_resources(resources_in: DataFrame, contractor_capacity_in: int) -> Series:
         """
-        Aggregates resources based on the contractor's type
+        Aggregates resources based on the contractor's capacity
         :param resources_in: DataFrame with the (possibly sparse) resource grid
-        :param contractor_capacity_in: Type of the generated contractor
-        :return:
+        :param contractor_capacity_in: Capacity of the generated contractor
+        :return: Series with resources count
         """
         min_contractor = resources_in.max(axis=0, skipna=True, numeric_only=True)
 

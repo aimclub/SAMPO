@@ -1,14 +1,12 @@
 from typing import List, Optional, Dict, Iterable
 
-import numpy as np
-
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.scheduler.utils.just_in_time_timeline import find_min_start_time, update_timeline, schedule, \
-    create_timeline, make_and_cache_schedule, schedule_with_time_spec
+from sampo.scheduler.utils.just_in_time_timeline import find_min_start_time, update_timeline, create_timeline, \
+    schedule_with_time_spec
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -91,7 +89,7 @@ class HEFTScheduler(Scheduler):
             # apply worker team spec
             self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
                                                lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, contractors, best_worker_team,
+                                                   worker_pool, best_worker_team,
                                                    optimize_array,
                                                    min_count_worker_team, max_count_worker_team,
                                                    get_finish_time))

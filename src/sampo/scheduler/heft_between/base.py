@@ -1,21 +1,19 @@
 from typing import List, Optional, Dict, Iterable
 
-from sampo.schemas.schedule_spec import ScheduleSpec
-from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.metrics.resources_in_time.base import ResourceOptimizer
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.scheduler.utils.momentum_timeline import create_timeline, find_min_start_time, schedule, \
-    make_and_cache_schedule, schedule_with_time_spec
+from sampo.scheduler.utils.momentum_timeline import create_timeline, find_min_start_time, schedule_with_time_spec
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool, WorkerContractorPool
+from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
 from sampo.utilities.validation import validate_schedule
 
@@ -88,7 +86,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
             # apply worker team spec
             self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
                                                lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, contractors, best_worker_team,
+                                                   worker_pool, best_worker_team,
                                                    optimize_array,
                                                    min_count_worker_team, max_count_worker_team,
                                                    get_finish_time))

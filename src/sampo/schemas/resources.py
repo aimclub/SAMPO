@@ -21,12 +21,23 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
 class Worker(Resource):
     """
     A class dedicated to human resources
-    :param :count: the number of people in this resource
-    :param :contractor_id: Contractor id if resources are added directly to the contractor
+    :param count: the number of people in this resource
+    :param contractor_id: Contractor id if resources are added directly to the contractor
+    :param productivity: Contractor id if resources are added directly to the contractor
     """
-    count: int
-    contractor_id: Optional[str] = ""
-    productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1)
+
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 count: int,
+                 contractor_id: Optional[str] = "",
+                 productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
+                 cost_one_unit: Optional[float] = None):
+        super(Worker, self).__init__(id, name)
+        self.count = count
+        self.contractor_id = contractor_id
+        self.productivity = productivity
+        self.cost_one_unit = cost_one_unit if cost_one_unit is not None else productivity.mean * 10
 
     ignored_fields = ['productivity']
 
@@ -37,6 +48,10 @@ class Worker(Resource):
                       count=self.count,
                       contractor_id=self.contractor_id,
                       productivity=self.productivity)
+
+    def get_cost(self) -> float:
+        """Returns cost of this worker entry"""
+        return self.cost_one_unit * self.count
 
     # TODO: describe the function (description, return type)
     def get_agent_id(self) -> AgentId:

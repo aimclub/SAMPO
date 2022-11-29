@@ -15,13 +15,15 @@ class FullScanResourceOptimizer(ResourceOptimizer):
     _coordinate_descent_optimizer = CoordinateDescentResourceOptimizer(dichotomy_int)
 
     def optimize_resources(self,
-                           agents: WorkerContractorPool,
+                           worker_pool: WorkerContractorPool,
                            contractors: List[Contractor],
                            worker_team: List[Worker],
+                           optimize_array: np.ndarray,
                            down_border: np.ndarray,
                            up_border: np.ndarray,
                            get_finish_time: Callable[[List[Worker]], Time]):
 
+        # TODO Handle optimize_array
         def fitness(worker_count: np.ndarray):
             for worker_ind in range(len(worker_team)):
                 worker_team[worker_ind].count = worker_count[worker_ind]
@@ -39,9 +41,10 @@ class FullScanResourceOptimizer(ResourceOptimizer):
                 break
 
         # Insert cur into coordinate-descent optimizer as down_border
-        self._coordinate_descent_optimizer.optimize_resources(agents,
+        self._coordinate_descent_optimizer.optimize_resources(worker_pool,
                                                               contractors,
                                                               worker_team,
+                                                              optimize_array,
                                                               cur,
                                                               up_border,
                                                               get_finish_time)

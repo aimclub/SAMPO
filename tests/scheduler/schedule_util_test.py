@@ -52,8 +52,11 @@ def test_schedule(setup_wg, setup_agents, setup_contractors):
     contractor_index = build_index(setup_contractors, attrgetter('id'))
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
+    inseparable_chain = node.get_inseparable_chain()
+    inseparable_chain = inseparable_chain if inseparable_chain else [node]
+
     id2swork: Dict[str, ScheduledWork] = {}
-    ft = schedule(node, id2swork, worker_team, contractor, resources_timeline)
+    ft = schedule(node, id2swork, worker_team, contractor, inseparable_chain, resources_timeline)
 
     assert not ft.is_inf()
     assert len(id2swork) == 1

@@ -13,11 +13,12 @@ from sampo.schemas.types import AgentId
 JustInTimeTimeline = Dict[AgentId, List[Tuple[Time, int]]]
 
 
-def make_and_cache_schedule(node: GraphNode,
-                            id2swork: Dict[str, ScheduledWork],
+def make_and_cache_schedule(id2swork: Dict[str, ScheduledWork],
                             workers: List[Worker],
                             contractor: Contractor,
-                            start_end_time: Tuple[Time, Time],
+                            inseparable_chain: List[GraphNode],
+                            start_time: Time,
+                            exec_times: Dict[GraphNode, Tuple[Time, Time]],
                             work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
     """
     Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
@@ -26,25 +27,14 @@ def make_and_cache_schedule(node: GraphNode,
     :param id2swork:
     :param workers:
     :param contractor:
-    :param start_end_time:
+    :param inseparable_chain:
+    :param start_time:
+    :param exec_times:
     :param work_estimator:
     :return:
     """
-    id2swork[node.id] = ScheduledWork(work_unit=node.work_unit,
-                                      start_end_time=start_end_time,
-                                      workers=workers,
-                                      contractor=contractor)
-
-    def get_dep_node():
-        work = node.inseparable_son
-        if work is not None and work.id not in id2swork:
-            return work
-        else:
-            return None
-
-    c_ft = start_end_time[1]
-    dep_node = get_dep_node()
-    while dep_node is not None:
+    c_ft = start_time
+    for dep_node in inseparable_chain:
         # set start time as finish time of original work
         # set finish time as finish time + working time of current node with identical resources
         # (the same as in original work)
@@ -53,7 +43,9 @@ def make_and_cache_schedule(node: GraphNode,
         max_parent_time = max((id2swork[pnode.id].finish_time
                                for pnode in dep_node.parents),
                               default=Time(0))
-        working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
+        working_time = exec_times.get(dep_node, None)
+        if working_time is None:
+            working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
         new_finish_time = max_parent_time + working_time
 
         id2swork[dep_node.id] = ScheduledWork(work_unit=dep_node.work_unit,
@@ -62,10 +54,26 @@ def make_and_cache_schedule(node: GraphNode,
                                               contractor=contractor)
         # change finish time for using workers
         c_ft = new_finish_time
-        node = dep_node
-        dep_node = get_dep_node()
 
     return c_ft
+
+
+def schedule_with_time_spec(node: GraphNode,
+                            id2swork: Dict[str, ScheduledWork],
+                            workers: List[Worker],
+                            contractor: Contractor,
+                            inseparable_chain: List[GraphNode],
+                            timeline: JustInTimeTimeline,
+                            assigned_time: Optional[Time],
+                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+    if assigned_time:
+        st = find_min_start_time(node, workers, timeline, id2swork)
+        exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
+                      for n in inseparable_chain}
+        return make_and_cache_schedule(id2swork, workers, contractor, inseparable_chain,
+                                       st, exec_times, work_estimator)
+    else:
+        return schedule(node, id2swork, workers, contractor, inseparable_chain, timeline, work_estimator)
 
 
 def find_min_start_time(node: GraphNode, worker_team: List[Worker],
@@ -161,6 +169,7 @@ def schedule(node: GraphNode,
              id2swork: Dict[str, ScheduledWork],
              workers: List[Worker],
              contractor: Contractor,
+             inseparable_chain: List[GraphNode],
              timeline: JustInTimeTimeline,
              work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
     """
@@ -170,13 +179,13 @@ def schedule(node: GraphNode,
     :param id2swork:
     :param workers:
     :param contractor:
+    :param inseparable_chain:
     :param timeline:
     :param work_estimator:
     :return:
     """
     st = find_min_start_time(node, workers, timeline, id2swork)
-    ft = st + calculate_working_time(node.work_unit, workers, work_estimator)
-    return make_and_cache_schedule(node, id2swork, workers, contractor, (st, ft), work_estimator)
+    return make_and_cache_schedule(id2swork, workers, contractor, inseparable_chain, st, {}, work_estimator)
 
 
 def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:

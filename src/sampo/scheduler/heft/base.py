@@ -1,18 +1,21 @@
 from typing import List, Optional, Dict, Iterable
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
+import numpy as np
+
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.utils.just_in_time_timeline import find_min_start_time, update_timeline, schedule, \
-    create_timeline
+    create_timeline, make_and_cache_schedule, schedule_with_time_spec
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool, WorkerContractorPool
+from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
 from sampo.utilities.validation import validate_schedule
 
@@ -27,14 +30,13 @@ class HEFTScheduler(Scheduler):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
+                 spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False) \
             -> Schedule:
-        worker_pool = get_worker_contractor_pool(contractors)
-
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule = Schedule.from_scheduled_works(
-            self.build_scheduler(ordered_nodes, worker_pool, contractors, self.work_estimator),
+            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator),
             wg
         )
 
@@ -43,8 +45,10 @@ class HEFTScheduler(Scheduler):
 
         return schedule
 
-    def build_scheduler(self, ordered_nodes: List[GraphNode],
-                        worker_pool: WorkerContractorPool, contractors: List[Contractor],
+    def build_scheduler(self,
+                        ordered_nodes: List[GraphNode],
+                        contractors: List[Contractor],
+                        spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None) \
             -> Iterable[ScheduledWork]:
         """
@@ -53,10 +57,11 @@ class HEFTScheduler(Scheduler):
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
         :param contractors:
         :param work_estimator:
+        :param spec: spec for current scheduling
         :param ordered_nodes:
-        :param worker_pool:
         :return:
         """
+        worker_pool = get_worker_contractor_pool(contractors)
         # dict for writing parameters of completed_jobs
         node2swork: Dict[str, ScheduledWork] = {}
         # list for support the queue of workers
@@ -65,8 +70,12 @@ class HEFTScheduler(Scheduler):
 
         for node in reversed(ordered_nodes):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
-            if node.is_inseparable_son() or node.id in node2swork:  # here
+            work_spec = spec.get_work_spec(work_unit.id)
+            if node.id in node2swork:  # here
                 continue
+
+            inseparable_chain = node.get_inseparable_chain()
+            inseparable_chain = inseparable_chain if inseparable_chain else [node]
 
             min_count_worker_team, max_count_worker_team, contractor, workers \
                 = get_best_contractor_and_worker_borders(worker_pool, contractors, work_unit.worker_reqs)
@@ -79,10 +88,17 @@ class HEFTScheduler(Scheduler):
                                            node2swork) + calculate_working_time_cascade(node, worker_team,
                                                                                         work_estimator)
 
-            self.resource_optimizer.optimize_resources(worker_pool, contractors, best_worker_team,
-                                                       min_count_worker_team, max_count_worker_team, get_finish_time)
+            # apply worker team spec
+            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
+                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                   worker_pool, contractors, best_worker_team,
+                                                   optimize_array,
+                                                   min_count_worker_team, max_count_worker_team,
+                                                   get_finish_time))
 
-            c_ft = schedule(node, node2swork, best_worker_team, contractor, timeline, work_estimator)
+            # apply time spec
+            c_ft = schedule_with_time_spec(node, node2swork, workers, contractor, inseparable_chain, timeline,
+                                           work_spec.assigned_time, work_estimator)
 
             # add using resources in queue for workers
             update_timeline(c_ft, timeline, best_worker_team)

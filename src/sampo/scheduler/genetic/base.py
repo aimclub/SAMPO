@@ -1,6 +1,8 @@
 import random
 from typing import Dict, List, Tuple, Optional
 
+from sampo.scheduler.resource.identity import IdentityResourceOptimizer
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.schedule_builder import build_schedule
@@ -24,7 +26,9 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
-        super().__init__(scheduler_type=scheduler_type, work_estimator=work_estimator)
+        super().__init__(scheduler_type=scheduler_type,
+                         resource_optimizer=IdentityResourceOptimizer(),
+                         work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
         self.size_selection = size_selection
         self.mutate_order = mutate_order
@@ -67,6 +71,7 @@ class GeneticScheduler(Scheduler):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
+                 spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False) \
             -> Schedule:
         def init_schedule(scheduler_class):
@@ -90,6 +95,7 @@ class GeneticScheduler(Scheduler):
                                          mutate_resources,
                                          init_schedules,
                                          self.rand,
+                                         spec,
                                          self.work_estimator)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 

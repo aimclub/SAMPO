@@ -9,7 +9,7 @@ def test_generate_individual(setup_toolbox):
     tb, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
-        chromosome: ChromosomeType = tb.n_per_product()
+        chromosome: ChromosomeType = tb.generate_chromosome()
         assert tb.validate(chromosome)
 
 
@@ -17,7 +17,7 @@ def test_mutate_order(setup_toolbox):
     tb, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
-        individual = tb.n_per_product()
+        individual = tb.generate_chromosome()
         mutant = tb.mutate(individual[0])
         order = mutant[0]
 
@@ -31,7 +31,7 @@ def test_mutate_resources(setup_toolbox):
     rand = Random()
 
     for i in range(TEST_ITERATIONS):
-        individual = tb.n_per_product()
+        individual = tb.generate_chromosome()
         type_of_resource = rand.randint(0, len(resources_border[0]) - 1)
         mutant = tb.mutate_resources(individual,
                                      resources_border[0][type_of_resource],

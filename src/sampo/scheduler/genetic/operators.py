@@ -33,13 +33,13 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], agents: WorkerCon
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     toolbox = base.Toolbox()
     # generate initial population
-    toolbox.register("n_per_product", n_per_product, wg=wg, contractors=contractors, index2node=index2node,
+    toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors, index2node=index2node,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=reverse_dictionary(index2contractor),
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator)
 
-    # create from n_per_product function one individual
-    toolbox.register("individual", tools.initRepeat, Individual, toolbox.n_per_product, n=1)
+    # create from generate_chromosome function one individual
+    toolbox.register("individual", tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
     # create population from individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     # evaluation function
@@ -73,7 +73,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], agents: WorkerCon
     return toolbox
 
 
-def n_per_product(wg: WorkGraph, contractors: List[Contractor], index2node: Dict[int, GraphNode],
+def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node: Dict[int, GraphNode],
                   work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
                   contractor2index: Dict[str, int],
                   init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,

@@ -3,10 +3,14 @@ from typing import List, Dict, Set, Optional, Iterable
 import numpy as np
 from toposort import toposort_flatten, toposort
 
+from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.base import SchedulerType
-from sampo.scheduler.utils.momentum_timeline import schedule, prepare_worker, create_timeline
+from sampo.scheduler.utils.momentum_timeline import schedule, prepare_worker, create_timeline, find_min_start_time, \
+    make_and_cache_schedule, schedule_with_time_spec
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -22,10 +26,12 @@ class TopologicalScheduler(Scheduler):
     def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
+                         resource_optimizer=AverageReqResourceOptimizer(),
                          work_estimator=work_estimator)
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
+                 spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False) \
             -> Schedule:
         # Checking pre-conditions for this scheduler_topological to be applied
@@ -34,7 +40,7 @@ class TopologicalScheduler(Scheduler):
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
         schedule = Schedule.from_scheduled_works(
-            self.build_scheduler(tsorted_nodes, contractors, self.work_estimator), wg
+            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator), wg
         )
 
         # check the validity received scheduler
@@ -58,6 +64,7 @@ class TopologicalScheduler(Scheduler):
 
     # noinspection PyMethodMayBeStatic
     def build_scheduler(self, tasks: List[GraphNode], contractors: List[Contractor],
+                        spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None) \
             -> Iterable[ScheduledWork]:
         """
@@ -65,14 +72,10 @@ class TopologicalScheduler(Scheduler):
         in the sequence than their dependencies
         :param work_estimator:
         :param tasks: list of tasks ordered by some algorithm according to their dependencies and priorities
-        :param wg: graph of tasks to be executed
+        :param spec: spec for current scheduling
         :param contractors: pools of workers available for execution
         :return: a schedule
         """
-        # now we may work only with workers that have
-        # only workers with the same productivity
-        # (e.g. for each specialization each contractor has only one worker object)
-        # check_all_workers_have_same_qualification(wg, contractors)
 
         # data structure to hold scheduled tasks
         node2swork: Dict[GraphNode, ScheduledWork] = dict()
@@ -80,7 +83,7 @@ class TopologicalScheduler(Scheduler):
         timeline = create_timeline(tasks, contractors)
 
         # we can get agents here, because they are always same and not updated
-        agents = get_worker_contractor_pool(contractors)
+        worker_pool = get_worker_contractor_pool(contractors)
 
         # We allocate resources for the whole inseparable chain, when we process the first node in it.
         # So, we will store IDs of non-head nodes in such chains to skip them.
@@ -89,10 +92,12 @@ class TopologicalScheduler(Scheduler):
 
         skipped_inseparable_children: Set[str] = set()
         # scheduling all the tasks in a one-by-one manner
-        for i, node in enumerate(tasks):
+        for index, node in enumerate(tasks):
             # skip, if this node was processed as a part of an inseparable chin previously
             if node.id in skipped_inseparable_children:
                 continue
+            work_unit = node.work_unit
+            work_spec = spec.get_work_spec(work_unit.id)
 
             # 0. find, if the node starts an inseparable chain
 
@@ -101,20 +106,25 @@ class TopologicalScheduler(Scheduler):
                 skipped_inseparable_children.update((ch.id for ch in inseparable_chain))
             whole_work_nodes = inseparable_chain if inseparable_chain else [node]
 
-            _, _, contractor, _ = \
-                get_best_contractor_and_worker_borders(agents, contractors, node.work_unit.worker_reqs)
+            min_count_worker_team, max_count_worker_team, contractor, workers = \
+                get_best_contractor_and_worker_borders(worker_pool, contractors, node.work_unit.worker_reqs)
 
-            passed_agents = [prepare_worker(agents, req, contractor.id, count_getter=get_worker_count)
-                             for i, req in enumerate(node.work_unit.worker_reqs)]
+            best_worker_team = [worker.copy() for worker in workers]
 
-            schedule(i, node, node2swork, whole_work_nodes, timeline, passed_agents, contractor, work_estimator)
+            # apply worker team spec
+            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
+                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                   worker_pool, contractors, best_worker_team,
+                                                   optimize_array,
+                                                   min_count_worker_team, max_count_worker_team,
+                                                   # dummy
+                                                   lambda _: Time(0)))
+
+            # finish scheduling with time spec
+            schedule_with_time_spec(index, node, node2swork, whole_work_nodes, timeline, best_worker_team, contractor,
+                                    work_spec.assigned_time, work_estimator)
 
         return node2swork.values()
-
-
-def get_worker_count(req: WorkerReq, worker_of_contractor: Worker):
-    return (req.min_count + min(worker_of_contractor.count, req.max_count)) // 2
-    # return min_req
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):

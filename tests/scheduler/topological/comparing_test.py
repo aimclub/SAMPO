@@ -11,7 +11,7 @@ def test_comparing_to_heft(setup_wg, setup_contractors, setup_start_date):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors, setup_start_date)
+        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors)
 
     start_time = time()
     init_schedule(HEFTScheduler)

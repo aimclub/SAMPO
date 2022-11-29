@@ -10,7 +10,7 @@ import pandas as pd
 
 from sampo.utilities.serializers import CUSTOM_FIELD_SERIALIZER, CUSTOM_FIELD_DESERIALIZER, CUSTOM_TYPE_SERIALIZER, \
     CUSTOM_TYPE_DESERIALIZER, default_ndarray_serializer, default_dataframe_serializer, default_ndarray_deserializer, \
-    default_dataframe_deserializer
+    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer
 
 # TODO: describe constants
 T = TypeVar('T', str, dict, list, tuple, str, bool, None)
@@ -204,12 +204,14 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
         'serializers':
             {
                 str(np.ndarray): default_ndarray_serializer,
-                str(pd.DataFrame): default_dataframe_serializer
+                str(pd.DataFrame): default_dataframe_serializer,
+                str(np.int32): default_np_int_serializer
             },
         'deserializer':
             {
                 str(np.ndarray): default_ndarray_deserializer,
-                str(pd.DataFrame): default_dataframe_deserializer
+                str(pd.DataFrame): default_dataframe_deserializer,
+                str(np.int32): default_np_int_deserializer
             }
     }
 

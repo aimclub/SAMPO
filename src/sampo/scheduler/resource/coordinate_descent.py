@@ -15,8 +15,9 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
         self.one_dimension_optimizer = one_dimension_optimizer
 
     def optimize_resources(self,
-                           agents: WorkerContractorPool,
+                           worker_pool: WorkerContractorPool,
                            worker_team: List[Worker],
+                           optimize_array: np.ndarray,
                            down_border: np.ndarray,
                            up_border: np.ndarray,
                            get_finish_time: Callable[[List[Worker]], Time]):
@@ -28,6 +29,12 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
 
         count_worker_team = coordinate_descent(down_border, up_border,
                                                self.one_dimension_optimizer,
-                                               fitness)
-        for i in range(len(worker_team)):
-            worker_team[i].count = count_worker_team[i]
+                                               fitness,
+                                               optimize_array)
+        if optimize_array:
+            for i in range(len(worker_team)):
+                if optimize_array[i]:
+                    worker_team[i].count = count_worker_team[i]
+        else:
+            for i in range(len(worker_team)):
+                worker_team[i].count = count_worker_team[i]

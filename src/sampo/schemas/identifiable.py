@@ -11,3 +11,6 @@ class Identifiable:
     """
     id: str
     name: Optional[str]
+
+    def __hash__(self):
+        return hash(self.id)

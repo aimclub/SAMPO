@@ -9,6 +9,7 @@ from deap import tools
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType
@@ -28,6 +29,7 @@ def build_schedule(wg: WorkGraph,
                    mutate_resources: float,
                    init_schedules: Dict[str, Schedule],
                    rand: random.Random,
+                   spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False) \
         -> ScheduleWorkDict:
@@ -50,6 +52,7 @@ def build_schedule(wg: WorkGraph,
     :param mutate_order:
     :param mutate_resources:
     :param rand:
+    :param spec: spec for current scheduling
     :param init_schedules:
     :return: scheduler
     """
@@ -77,9 +80,9 @@ def build_schedule(wg: WorkGraph,
                 min(req.max_count, max(list(map(attrgetter('count'), agents[req.kind].values()))))
 
     toolbox = init_toolbox(wg, contractors, agents, index2node,
-                           work_id2index, worker_name2index,
-                           index2contractor, index2contractor_obj, init_chromosomes,
-                           mutate_order, mutate_resources, selection_size, rand, work_estimator)
+                           work_id2index, worker_name2index, index2contractor,
+                           index2contractor_obj, init_chromosomes, mutate_order,
+                           mutate_resources, selection_size, rand, spec, work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
@@ -192,7 +195,7 @@ def build_schedule(wg: WorkGraph,
     scheduled_works = convert_chromosome_to_schedule(chromosome, agents, index2node,
                                                      worker_name2index,
                                                      index2contractor_obj,
-                                                     work_estimator)
+                                                     spec, work_estimator)
 
     if show_fitness_graph:
         sns.lineplot(

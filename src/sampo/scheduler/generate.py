@@ -1,7 +1,6 @@
 import time
 from typing import Union, List, Callable
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.base import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
@@ -11,6 +10,8 @@ from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.utilities.resource_cost import schedule_cost
 
 
 def get_scheduler_ctor(scheduling_algorithm_type: SchedulerType) \
@@ -33,6 +34,7 @@ def generate_schedule(scheduling_algorithm_type: SchedulerType,
     start_time = time.time()
     schedule = scheduler.schedule(work_graph,
                                   [contractors] if isinstance(contractors, Contractor) else contractors,
-                                  validate_schedule)
+                                  validate=validate_schedule)
     print(f'Time: {(time.time() - start_time) * 1000} ms')
+    print(f'Cost: {schedule_cost(schedule)}')
     return schedule

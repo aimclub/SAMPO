@@ -6,6 +6,7 @@ import numpy as np
 from deap.base import Toolbox
 from pytest import fixture
 
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox
@@ -47,8 +48,8 @@ def create_toolbox(wg: WorkGraph,
                    mutate_order: float,
                    mutate_resources: float,
                    init_schedules: Dict[str, Schedule],
-                   start: str,
                    rand: Random,
+                   spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None) -> Tuple[Toolbox, np.ndarray]:
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
     work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
@@ -83,6 +84,7 @@ def create_toolbox(wg: WorkGraph,
                         mutate_resources,
                         selection_size,
                         rand,
+                        spec,
                         work_estimator), resources_border
 
 
@@ -100,6 +102,5 @@ def setup_toolbox(setup_wg, setup_contractors, setup_agents,
                           mutate_order,
                           mutate_resources,
                           setup_default_schedules,
-                          setup_start_date,
                           rand,
-                          work_estimator)
+                          work_estimator=work_estimator)

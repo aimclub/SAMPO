@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -38,9 +38,13 @@ def dichotomy_int(lo: int, hi: int, func: Callable[[int], Time]):
 
 def coordinate_descent(lo: np.ndarray, hi: np.ndarray,
                        method: Callable[[int, int, Callable[[int], Time]], Time],
-                       fitness: Callable[[np.ndarray], Time]) -> np.ndarray:
+                       fitness: Callable[[np.ndarray], Time],
+                       optimize_array: Optional[np.ndarray]) -> np.ndarray:
     cur = lo.copy()
     for i in range(lo.size):
+        if optimize_array and not optimize_array[i]:
+            continue
+
         def part(x):
             cur[i] = x
             return fitness(cur)

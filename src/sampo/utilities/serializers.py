@@ -93,3 +93,12 @@ def default_dataframe_serializer(df: pd.DataFrame):
 
 def default_dataframe_deserializer(str_repr: str):
     return pd.read_csv(StringIO(str_repr), encoding='utf-8')
+
+
+def default_np_int_serializer(n):
+    return int(n)
+
+
+def default_np_int_deserializer(n):
+    return np.int32(n)
+

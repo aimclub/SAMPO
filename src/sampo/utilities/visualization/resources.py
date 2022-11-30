@@ -119,6 +119,14 @@ def create_employment_fig(resources: Union[DataFrame, ResourceSchedule],
     return visualize(fig, vis_mode, file_name)
 
 
+def get_resources(item):
+    workers: Union[str, Dict[str, int]] = item['workers']
+    resources: Dict[str, int] = item['workers_dict'] \
+        if 'workers_dict' in item.index \
+        else (literal_eval(workers) if isinstance(workers, str) else workers)
+    return resources
+
+
 def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType) -> DataFrame:
     first_day = schedule['start'].min()
     first_day = datetime(year=first_day.year, month=first_day.month, day=first_day.day)
@@ -129,8 +137,7 @@ def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType) -> Dat
         for _, item in schedule.iterrows():
             start: Timestamp = (item['start'] - first_day).days
             finish: Timestamp = (item['finish'] - first_day).days
-            workers: Union[str, Dict[str, int]] = item['workers']
-            resources: Dict[str, int] = literal_eval(workers) if isinstance(workers, str) else workers
+            resources: Dict[str, int] = get_resources(item)
             for name in resources:
                 if name not in resource_schedule:
                     resource_schedule[name] = np.array([0] * total_days)
@@ -148,8 +155,7 @@ def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType) -> Dat
 
         i = 0
         for _, item in schedule.iterrows():
-            workers: Union[str, Dict[str, int]] = item['workers']
-            resources: Dict[str, int] = literal_eval(workers) if isinstance(workers, str) else workers
+            resources = get_resources(item)
             if len(resources) == 0:
                 continue
             w_name = item['task_name']

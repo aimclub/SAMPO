@@ -112,9 +112,12 @@ class Schedule(JSONSerializable['Schedule']):
         :return: Shifted schedule DataFrame.
         """
         r = self._schedule.loc[:, :]
-        r[['start_offset', 'finish_offset']] = r[['start', 'finish']].apply(partial(add_time_delta, offset))
-        return r.rename({'start': 'start_', 'finish': 'finish_',
-                         'start_offset': 'start', 'finish_offset': 'finish'})
+        r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
+        r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
+        r = r.rename({'start': 'start_', 'finish': 'finish_',
+                      'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
+            .drop(['start_', 'finish_'], axis=1)
+        return r
 
     @staticmethod
     def from_scheduled_works(works: Iterable[ScheduledWork],

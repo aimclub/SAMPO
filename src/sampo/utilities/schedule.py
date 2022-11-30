@@ -41,5 +41,5 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         # fix task's start time and duration
         df.loc[0, 'start'] = task_df.loc[0, 'start']
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
-        df.loc[0, 'duration'] = df.loc[0, 'finish'] - df.loc[0, 'start'] + Time(24)
+        df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
         return df.loc[0, :]

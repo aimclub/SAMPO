@@ -24,8 +24,8 @@ class Schedule(JSONSerializable['Schedule']):
     """
     _schedule: DataFrame
 
-    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'contractor', 'volume',
-                                'measurement', 'successors', 'start',
+    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'contractor', 'cost',
+                                'volume', 'measurement', 'successors', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
 
@@ -148,12 +148,13 @@ class Schedule(JSONSerializable['Schedule']):
             s, e = tuple(sorted((t1, t2)))
             return s, e, e - s
 
-        df = [(i,  # idx
-               w.work_unit.id,  # task_id
-               w.work_unit.name,  # task_name
-               w.contractor,  # contractor info
-               *info(w.work_unit),  # volume, measurement, successors
-               *sed(*(t.value for t in w.start_end_time)),  # start, end, duration
+        df = [(i,                                                 # idx
+               w.work_unit.id,                                    # task_id
+               w.work_unit.name,                                  # task_name
+               w.contractor,                                      # contractor info
+               w.cost,                                            # work cost
+               *info(w.work_unit),                                # volume, measurement, successors
+               *sed(*(t.value for t in w.start_end_time)),        # start, end, duration
                repr(dict((i.name, i.count) for i in w.workers)),  # workers
                w  # full ScheduledWork info
                ) for i, w in enumerate(works)]

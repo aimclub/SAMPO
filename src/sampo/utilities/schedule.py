@@ -33,13 +33,13 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     :return: pd.Series with the full information about the task
     """
     if len(task_df) == 1:
-        print(task_df.loc[0, 'workers'])
         return task_df.loc[0, :]
     else:
         df = task_df.iloc[-1:].reset_index(drop=True)
         for column in ['task_id', 'task_name']:
             df.loc[0, column] = df.loc[0, column].split('_')[0]  # fix task id and name
 
+        # sum up volumes through all stages
         df.loc[0, 'volume'] = sum(task_df.loc[:, 'volume'])
         df.loc[0, 'workers'] = task_df.loc[0, 'workers']
 
@@ -48,6 +48,4 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
         df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
 
-        # print("Названия колонок df:", df.columns)
-        print(df.loc[0, 'workers'])
         return df.loc[0, :]

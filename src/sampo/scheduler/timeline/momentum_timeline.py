@@ -60,14 +60,13 @@ class MomentumTimeline(Timeline):
         }
 
     def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
-                            node2swork: Dict[GraphNode, ScheduledWork]) -> Time:
+                            node2swork: Dict[GraphNode, ScheduledWork],
+                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         """
         Computes start time, max parent time, contractor and exec times for given node
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node:
         :param node2swork:
-        :param inseparable_chain:
-        :param work_estimator:
         :return:
         """
         # 1. identify earliest possible start time by max parent's end time

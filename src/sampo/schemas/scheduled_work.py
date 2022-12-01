@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Equipment, ConstructionObject, Worker
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
-from sampo.schemas.types import ContractorName
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.serializers import custom_serializer
 
@@ -14,13 +13,6 @@ from sampo.utilities.serializers import custom_serializer
 # TODO: describe the class (description, parameters)
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
-    work_unit: WorkUnit
-    start_end_time: Tuple[Time, Time]
-    workers: List[Worker]
-    equipments: Optional[List[Equipment]] = None
-    materials: Optional[List[Equipment]] = None
-    object: Optional[ConstructionObject] = None
-    contractor: Optional[ContractorName] = None
 
     ignored_fields = ['equipments', 'materials', 'object']
 
@@ -42,6 +34,10 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             self.contractor = contractor.name if contractor.name else contractor.id
         else:
             self.contractor = ""
+
+        self.cost = 0
+        for worker in self.workers:
+            self.cost += worker.get_cost() * self.duration.value
 
     @custom_serializer('workers')
     @custom_serializer('start_end_time')

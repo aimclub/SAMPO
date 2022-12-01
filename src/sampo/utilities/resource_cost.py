@@ -5,6 +5,5 @@ def schedule_cost(schedule: Schedule) -> float:
     cost: float = 0
 
     for work in schedule.works:
-        for worker in work.workers:
-            cost += worker.get_cost() * work.duration.value
+        cost += work.cost
     return cost

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sampo"
-version = "0.1.0.37"
+version = "0.1.0.40"
 description = ""
 authors = ["iAirLab <iairlab@yandex.ru>"]
 license = "GPLv3"

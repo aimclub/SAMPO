@@ -95,7 +95,7 @@ class HEFTScheduler(Scheduler):
                                                    get_finish_time))
 
             # apply time spec
-            c_ft = schedule_with_time_spec(node, node2swork, workers, contractor, inseparable_chain, timeline,
+            c_ft = schedule_with_time_spec(node, node2swork, best_worker_team, contractor, inseparable_chain, timeline,
                                            work_spec.assigned_time, work_estimator)
 
             # add using resources in queue for workers

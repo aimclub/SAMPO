@@ -6,7 +6,7 @@ from toposort import toposort_flatten, toposort
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
-from sampo.scheduler.utils.momentum_timeline import create_timeline, schedule_with_time_spec
+from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -77,7 +77,7 @@ class TopologicalScheduler(Scheduler):
         # data structure to hold scheduled tasks
         node2swork: Dict[GraphNode, ScheduledWork] = dict()
 
-        timeline = create_timeline(tasks, contractors)
+        timeline = MomentumTimeline(tasks, contractors)
 
         # we can get agents here, because they are always same and not updated
         worker_pool = get_worker_contractor_pool(contractors)
@@ -98,11 +98,6 @@ class TopologicalScheduler(Scheduler):
 
             # 0. find, if the node starts an inseparable chain
 
-            inseparable_chain = node.get_inseparable_chain()
-            if inseparable_chain:
-                skipped_inseparable_children.update((ch.id for ch in inseparable_chain))
-            whole_work_nodes = inseparable_chain if inseparable_chain else [node]
-
             min_count_worker_team, max_count_worker_team, contractor, workers = \
                 get_best_contractor_and_worker_borders(worker_pool, contractors, node.work_unit.worker_reqs)
 
@@ -118,8 +113,8 @@ class TopologicalScheduler(Scheduler):
                                                    lambda _: Time(0)))
 
             # finish scheduling with time spec
-            schedule_with_time_spec(index, node, node2swork, whole_work_nodes, timeline, best_worker_team, contractor,
-                                    work_spec.assigned_time, work_estimator)
+            timeline.schedule(index, node, node2swork, best_worker_team, contractor,
+                              work_spec.assigned_time, work_estimator)
 
         return node2swork.values()
 

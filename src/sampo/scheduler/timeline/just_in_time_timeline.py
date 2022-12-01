@@ -1,9 +1,9 @@
-from typing import Dict, List, Tuple, Optional, Iterable, Set
+from typing import Dict, List, Tuple, Optional
 
 from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
-from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
@@ -21,7 +21,8 @@ class JustInTimeTimeline(Timeline):
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
     def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
-                            id2swork: Dict[GraphNode, ScheduledWork]) -> Time:
+                            id2swork: Dict[GraphNode, ScheduledWork],
+                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         """
         Define the nearest possible start time for current job. It is equal the max value from:
         1. end time of all parent tasks
@@ -29,6 +30,7 @@ class JustInTimeTimeline(Timeline):
         :param node: target node
         :param worker_team: worker team under testing
         :param id2swork:
+        :param work_estimator:
         :return: found time, queue of employees without assigned workers
         """
         # if current job is the first
@@ -57,10 +59,18 @@ class JustInTimeTimeline(Timeline):
 
         return max(max_agent_time, max_parent_time)
 
-    def update_timeline(self, finish: Time, worker_team: List[Worker]):
+    def update_timeline(self,
+                        task_index: int,
+                        finish_time: Time,
+                        node: GraphNode,
+                        node2swork: Dict[GraphNode, ScheduledWork],
+                        worker_team: List[Worker]):
         """
         Adds given `worker_team` to the timeline at the moment `finish`
-        :param finish:
+        :param task_index:
+        :param finish_time:
+        :param node:
+        :param node2swork:
         :param worker_team:
         :return:
         """
@@ -81,21 +91,21 @@ class JustInTimeTimeline(Timeline):
             # Add to the right place
             # worker_timeline.append((finish, worker.count))
             # worker_timeline.sort(reverse=True)
-            worker_timeline.append((finish, worker.count))
+            worker_timeline.append((finish_time, worker.count))
             ind = len(worker_timeline) - 1
             while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
 
-    def schedule_impl(self,
-                      task_index: int,
-                      node: GraphNode,
-                      id2swork: Dict[GraphNode, ScheduledWork],
-                      workers: List[Worker],
-                      contractor: Contractor,
-                      inseparable_chain: List[GraphNode],
-                      assigned_time: Optional[Time],
-                      work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+    def schedule(self,
+                 task_index: int,
+                 node: GraphNode,
+                 id2swork: Dict[GraphNode, ScheduledWork],
+                 workers: List[Worker],
+                 contractor: Contractor,
+                 assigned_time: Optional[Time],
+                 work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+        inseparable_chain = node.get_inseparable_chain_with_self()
         st = self.find_min_start_time(node, workers, id2swork)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
@@ -153,49 +163,3 @@ class JustInTimeTimeline(Timeline):
             c_ft = new_finish_time
 
         return c_ft
-
-
-def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:
-    """
-    Makes ScheduledWorks' ordering that satisfies:
-    1. Ascending order by start time
-    2. Toposort
-    :param works:
-    :param wg:
-    :return:
-    """
-    res = []
-    order_by_start_time = [(item.start_time, item.work_unit.id) for item in
-                           sorted(works, key=lambda item: item.start_time)]
-
-    cur_time = 0
-    cur_class: Set[GraphNode] = set()
-    for start_time, work in order_by_start_time:
-        node = wg[work]
-        if len(cur_class) == 0:
-            cur_time = start_time
-        if start_time == cur_time:
-            cur_class.add(node)
-            continue
-        # TODO Perform real toposort
-        cur_not_added: Set[GraphNode] = set(cur_class)
-        while len(cur_not_added) > 0:
-            for cur_node in cur_class:
-                if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
-                    continue  # we add this node later
-                res.append(cur_node.id)
-                cur_not_added.remove(cur_node)
-            cur_class = set(cur_not_added)
-        cur_time = start_time
-        cur_class = {node}
-
-    cur_not_added: Set[GraphNode] = set(cur_class)
-    while len(cur_not_added) > 0:
-        for cur_node in cur_class:
-            if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
-                continue  # we add this node later
-            res.append(cur_node.id)
-            cur_not_added.remove(cur_node)
-        cur_class = set(cur_not_added)
-
-    return res

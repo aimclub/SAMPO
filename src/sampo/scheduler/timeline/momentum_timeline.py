@@ -1,11 +1,11 @@
 from collections import deque
-from typing import Dict, List, Tuple, Optional, Iterable, Set, Union
+from typing import Dict, List, Tuple, Optional, Union
 
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
@@ -74,8 +74,9 @@ class MomentumTimeline(Timeline):
         """
         return self.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)[0]
 
-    def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
-                                            contractor_id: str,
+    def find_min_start_time_with_additional(self,
+                                            node: GraphNode,
+                                            worker_team: List[Worker],
                                             node2swork: Dict[GraphNode, ScheduledWork],
                                             work_estimator: Optional[WorkTimeEstimator] = None) \
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
@@ -88,6 +89,7 @@ class MomentumTimeline(Timeline):
         :return:
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
+        contractor_id = worker_team[0].contractor_id if worker_team else ""
         # 1. identify earliest possible start time by max parent's end time
 
         max_parent_time: Time = max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
@@ -188,8 +190,8 @@ class MomentumTimeline(Timeline):
 
         return start
 
-    def _find_earliest_time_slot(self,
-                                 state: SortedList[ScheduleEvent],
+    @staticmethod
+    def _find_earliest_time_slot(state: SortedList[ScheduleEvent],
                                  parent_time: Time,
                                  exec_time: Time,
                                  required_worker_count: int) -> Time:
@@ -234,100 +236,107 @@ class MomentumTimeline(Timeline):
 
         return current_start_time
 
-    def update_timeline(self, finish: Time, worker_team: List[Worker]):
+    def update_timeline(self,
+                        task_index: int,
+                        finish_time: Time,
+                        node: GraphNode,
+                        node2swork: Dict[GraphNode, ScheduledWork],
+                        worker_team: List[Worker]):
         """
-        Adds given `worker_team` to the timeline at the moment `finish`
-        :param finish:
+        Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
+        :param task_index:
+        :param finish_time:
+        :param node:
+        :param node2swork:
         :param worker_team:
         :return:
         """
-        # For each worker type consume the nearest available needed worker amount
-        # and re-add it to the time when current work should be finished.
-        # Addition performed as step in bubble-sort algorithm.
-        for worker in worker_team:
-            needed_count = worker.count
-            worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
-            # Consume needed workers
-            while needed_count > 0:
-                next_time, next_count = worker_timeline.pop()
-                if next_count > needed_count:
-                    worker_timeline.append((next_time, next_count - needed_count))
-                    break
-                needed_count -= next_count
+        # 7. for each worker's specialization of the chosen contractor being used by the task
+        # we update counts of available workers on previously scheduled events
+        # that lie between start and end of the task
+        # Also, add events of the start and the end to worker's specializations
+        # of the chosen contractor.
 
-            # Add to the right place
-            # worker_timeline.append((finish, worker.count))
-            # worker_timeline.sort(reverse=True)
-            worker_timeline.append((finish, worker.count))
-            ind = len(worker_timeline) - 1
-            while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
-                worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
-                ind -= 1
+        # experimental logics lightening. debugging showed its efficiency.
+
+        swork = node2swork[node]  # masking the whole chain ScheduleEvent with the first node
+        start = swork.start_time
+        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time
+        for w in worker_team:
+            state = self._timeline[w.contractor_id][w.name]
+            start_idx = state.bisect_right(start)
+            end_idx = state.bisect_right(end)
+            available_workers_count = state[start_idx - 1].available_workers_count
+            # updating all events in between the start and the end of our current task
+            for event in state[start_idx: end_idx]:
+                # assert event.available_workers_count >= w.count
+                event.available_workers_count -= w.count
+
+            # assert available_workers_count >= w.count
+
+            if start_idx < end_idx:
+                event: ScheduleEvent = state[end_idx - 1]
+                # assert state[0].available_workers_count >= event.available_workers_count + w.count
+                end_count = event.available_workers_count + w.count
+            else:
+                # assert state[0].available_workers_count >= available_workers_count
+                end_count = available_workers_count
+
+            state.add(ScheduleEvent(task_index, EventType.Start, start, swork, available_workers_count - w.count))
+            state.add(ScheduleEvent(task_index, EventType.End, end, swork, end_count))
 
     def schedule(self,
                  task_index: int,
                  node: GraphNode,
-                 id2swork: Dict[GraphNode, ScheduledWork],
+                 node2swork: Dict[GraphNode, ScheduledWork],
                  workers: List[Worker],
                  contractor: Contractor,
                  assigned_time: Optional[Time],
-                 work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+                 work_estimator: Optional[WorkTimeEstimator] = None):
         inseparable_chain = node.get_inseparable_chain_with_self()
-        st = self.find_min_start_time(node, workers, id2swork)
+        st, _, exec_times = self.find_min_start_time_with_additional(node, workers, node2swork, work_estimator)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
-            return self._schedule_with_inseparables(id2swork, workers, contractor, inseparable_chain, st, exec_times,
-                                                    work_estimator)
-        else:
-            return self._schedule_with_inseparables(id2swork, workers, contractor, inseparable_chain, st, {},
-                                                    work_estimator)
+
+        self._schedule_with_inseparables(task_index, node, node2swork, inseparable_chain,
+                                         workers, contractor, st, exec_times)
+
+    def _schedule_with_inseparables(self,
+                                    task_index: int,
+                                    node: GraphNode,
+                                    node2swork: Dict[GraphNode, ScheduledWork],
+                                    inseparable_chain: List[GraphNode],
+                                    worker_team: List[Worker],
+                                    contractor: Contractor,
+                                    start_time: Time,
+                                    exec_times: Dict[GraphNode, Tuple[Time, Time]]):
+        # 6. create a schedule entry for the task
+
+        nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].finish_time
+                                                            if pnode in node2swork else Time(0)
+                                                            for pnode in n.parents),
+                                                           default=Time(0))
+                                                    for n in inseparable_chain}
+
+        curr_time = start_time
+        for i, chain_node in enumerate(inseparable_chain):
+            _, node_time = exec_times[chain_node]
+
+            lag_req = nodes_start_times[chain_node] - start_time - node_time
+            node_lag = lag_req if lag_req > 0 else 0
+
+            start_work = curr_time + node_lag
+            swork = ScheduledWork(
+                work_unit=chain_node.work_unit,
+                start_end_time=(start_work, start_work + node_time),
+                workers=worker_team,
+                contractor=contractor
+            )
+            curr_time += node_time + node_lag
+            node2swork[chain_node] = swork
+
+        self.update_timeline(task_index, curr_time, node, node2swork, worker_team)
 
     def __getitem__(self, item: AgentId):
-        return self._timeline[item]
-
-
-def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:
-    """
-    Makes ScheduledWorks' ordering that satisfies:
-    1. Ascending order by start time
-    2. Toposort
-    :param works:
-    :param wg:
-    :return:
-    """
-    res = []
-    order_by_start_time = [(item.start_time, item.work_unit.id) for item in
-                           sorted(works, key=lambda item: item.start_time)]
-
-    cur_time = 0
-    cur_class: Set[GraphNode] = set()
-    for start_time, work in order_by_start_time:
-        node = wg[work]
-        if len(cur_class) == 0:
-            cur_time = start_time
-        if start_time == cur_time:
-            cur_class.add(node)
-            continue
-        # TODO Perform real toposort
-        cur_not_added: Set[GraphNode] = set(cur_class)
-        while len(cur_not_added) > 0:
-            for cur_node in cur_class:
-                if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
-                    continue  # we add this node later
-                res.append(cur_node.id)
-                cur_not_added.remove(cur_node)
-            cur_class = set(cur_not_added)
-        cur_time = start_time
-        cur_class = {node}
-
-    cur_not_added: Set[GraphNode] = set(cur_class)
-    while len(cur_not_added) > 0:
-        for cur_node in cur_class:
-            if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
-                continue  # we add this node later
-            res.append(cur_node.id)
-            cur_not_added.remove(cur_node)
-        cur_class = set(cur_not_added)
-
-    return res
+        return self._timeline[item[0]][item[1]]

@@ -6,7 +6,7 @@ from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.scheduler.utils.momentum_timeline import create_timeline, find_min_start_time, schedule_with_time_spec
+from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -62,7 +62,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
         # dict for writing parameters of completed_jobs
         node2swork: Dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
-        timeline = create_timeline(ordered_nodes, contractors)
+        timeline = MomentumTimeline(ordered_nodes, contractors)
         # add to queue all available workers
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
@@ -71,16 +71,13 @@ class HEFTBetweenScheduler(HEFTScheduler):
             if node in node2swork:  # here
                 continue
 
-            inseparable_chain = node.get_inseparable_chain() if node.get_inseparable_chain() is not None else [node]
-
             min_count_worker_team, max_count_worker_team, contractor, workers \
                 = get_best_contractor_and_worker_borders(worker_pool, contractors, work_unit.worker_reqs)
 
             best_worker_team = [worker.copy() for worker in workers]
 
             def get_finish_time(worker_team):
-                return find_min_start_time(timeline[contractor.id], node, node2swork, inseparable_chain,
-                                           best_worker_team, work_estimator)[0] \
+                return timeline.find_min_start_time(node, best_worker_team, node2swork, work_estimator) \
                        + calculate_working_time_cascade(node, worker_team, work_estimator)
 
             # apply worker team spec
@@ -92,8 +89,8 @@ class HEFTBetweenScheduler(HEFTScheduler):
                                                    get_finish_time))
 
             # finish scheduling with time spec
-            schedule_with_time_spec(index, node, node2swork, inseparable_chain, timeline, best_worker_team, contractor,
-                                    work_spec.assigned_time, work_estimator)
+            timeline.schedule(index, node, node2swork, best_worker_team, contractor,
+                              work_spec.assigned_time, work_estimator)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), node2swork)
         # recalc_schedule(reversed(ordered_nodes), node2swork, agents, work_estimator)

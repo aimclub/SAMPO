@@ -92,7 +92,7 @@ class HEFTScheduler(Scheduler):
                                      work_spec.assigned_time, work_estimator)
 
             # add using resources in queue for workers
-            timeline.update_timeline(c_ft, best_worker_team)
+            timeline.update_timeline(index, c_ft, node, node2swork, best_worker_team)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), work_id2schedule_unit)
         # recalc_schedule(reversed(ordered_nodes), work_id2schedule_unit, worker_pool, work_estimator)

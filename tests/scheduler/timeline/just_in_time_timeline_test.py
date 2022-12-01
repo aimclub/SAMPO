@@ -29,7 +29,7 @@ def test_update_resource_structure(setup_worker_pool):
 
     # mutate
     worker = Worker(str(uuid4()), mut_name, 1, contractor_id=mut_contractor)
-    timeline.update_timeline(Time(1), [worker])
+    timeline.update_timeline(0, Time(1), None, {}, [worker])
 
     worker_timeline = timeline[worker.get_agent_id()]
 

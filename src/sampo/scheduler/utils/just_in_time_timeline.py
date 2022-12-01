@@ -1,12 +1,12 @@
 from typing import Dict, List, Tuple, Optional, Iterable, Set
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.types import AgentId
 
 # stacks of time(Time) and count[int]
@@ -44,12 +44,13 @@ def make_and_cache_schedule(id2swork: Dict[str, ScheduledWork],
                                for pnode in dep_node.parents),
                               default=Time(0))
         working_time = exec_times.get(dep_node, None)
+        start_time = max(c_ft, max_parent_time)
         if working_time is None:
             working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
-        new_finish_time = max_parent_time + working_time
+        new_finish_time = start_time + working_time
 
         id2swork[dep_node.id] = ScheduledWork(work_unit=dep_node.work_unit,
-                                              start_end_time=(max_parent_time, new_finish_time),
+                                              start_end_time=(start_time, new_finish_time),
                                               workers=workers,
                                               contractor=contractor)
         # change finish time for using workers

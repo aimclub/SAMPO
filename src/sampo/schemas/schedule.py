@@ -4,7 +4,7 @@ from typing import Tuple, List, Dict, Iterable, Union
 
 from pandas import DataFrame
 
-from sampo.scheduler.utils.just_in_time_timeline import order_nodes_by_start_time
+from sampo.scheduler.timeline.just_in_time_timeline import order_nodes_by_start_time
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T

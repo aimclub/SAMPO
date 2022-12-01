@@ -1,13 +1,13 @@
 from operator import attrgetter
 from typing import List, Dict, Set, Iterable
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.scheduler.utils.just_in_time_timeline import create_timeline, find_min_start_time, update_timeline
+from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import build_index
 
 PRIORITY_SHUFFLE_RADIUS = 0.5
@@ -176,29 +176,29 @@ def parallelize_local_sequence(seq: List[GraphNode],
 
 
 def recalc_schedule(seq: Iterable[GraphNode],
-                    id2scheduled_work: Dict[str, ScheduledWork],
-                    agents: WorkerContractorPool,
+                    node2swork: Dict[GraphNode, ScheduledWork],
+                    worker_pool: WorkerContractorPool,
                     work_estimator: WorkTimeEstimator = None):
     """
     Recalculates duration and start-finish times in the whole given `seq`.
     This will be useful to call after `parallelize_local_sequence` method
     or other methods that can change the appointed set of workers.
     :param seq: scheduled works to process
-    :param id2scheduled_work:
-    :param agents:
+    :param node2swork:
+    :param worker_pool:
     :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
     """
 
-    timeline = create_timeline(agents)
-    id2scheduled_work_new: Dict[str, ScheduledWork] = {}
+    timeline = JustInTimeTimeline(worker_pool)
+    node2swork_new: Dict[GraphNode, ScheduledWork] = {}
 
     for node in seq:
-        node_schedule = id2scheduled_work[node.id]
-        st = find_min_start_time(node, node_schedule.workers, timeline, id2scheduled_work_new)
+        node_schedule = node2swork[node]
+        st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
         ft = st + node_schedule.get_actual_duration(work_estimator)
-        update_timeline(ft, timeline, node_schedule.workers)
+        timeline.update_timeline(ft, node_schedule.workers)
         node_schedule.start_end_time = (st, ft)
-        id2scheduled_work_new[node.id] = node_schedule
+        node2swork_new[node] = node_schedule
 
 
 def optimize_local_sequence(seq: List[GraphNode],

@@ -6,13 +6,13 @@ import numpy as np
 from deap.base import Toolbox
 from pytest import fixture
 
-from sampo.schemas.schedule_spec import ScheduleSpec
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
 
@@ -89,7 +89,7 @@ def create_toolbox(wg: WorkGraph,
 
 
 @fixture(scope='function')
-def setup_toolbox(setup_wg, setup_contractors, setup_agents,
+def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
                   setup_start_date, setup_default_schedules) -> Tuple[Toolbox, np.ndarray]:
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
@@ -97,7 +97,7 @@ def setup_toolbox(setup_wg, setup_contractors, setup_agents,
 
     return create_toolbox(setup_wg,
                           setup_contractors,
-                          setup_agents,
+                          setup_worker_pool,
                           selection_size,
                           mutate_order,
                           mutate_resources,

@@ -9,13 +9,13 @@ from deap import tools
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
-from sampo.schemas.schedule_spec import ScheduleSpec
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
 
@@ -206,7 +206,7 @@ def build_schedule(wg: WorkGraph,
             palette='r')
         plt.show()
 
-    return scheduled_works
+    return {node.id: work for node, work in scheduled_works.items()}
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):

@@ -3,10 +3,6 @@ from uuid import uuid4
 
 from pytest import fixture
 
-from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.generation.work_graph import generate_resources_pool
-from sampo.utilities.sampler import Sampler
-
 from sampo.generator.pipeline.cluster import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
@@ -15,7 +11,10 @@ from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.resources import Worker
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.structurator.base import graph_restructuring
+from sampo.utilities.generation.work_graph import generate_resources_pool
+from sampo.utilities.sampler import Sampler
 
 pytest_plugins = ("tests.schema", "tests.models", )
 
@@ -51,7 +50,7 @@ def setup_wg(request, setup_sampler):
 
 
 @fixture(scope='module')
-def setup_agents(setup_contractors) -> WorkerContractorPool:
+def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     return {worker.name: {worker.contractor_id: worker}
             for contractor in setup_contractors for worker in contractor.workers.values()}
 

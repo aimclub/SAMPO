@@ -39,7 +39,8 @@ class Timeline(ABC):
 
     @abstractmethod
     def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
-                            id2swork: Dict[str, ScheduledWork]) -> Time:
+                            id2swork: Dict[str, ScheduledWork],
+                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         ...
 
     @abstractmethod

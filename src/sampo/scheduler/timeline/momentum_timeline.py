@@ -1,16 +1,18 @@
+from collections import deque
 from typing import Dict, List, Tuple, Optional, Iterable, Set, Union
 
 from sortedcontainers import SortedList
 
-from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
+from sampo.utilities.collections import build_index
 
 
 class MomentumTimeline(Timeline):
@@ -67,8 +69,25 @@ class MomentumTimeline(Timeline):
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node:
         :param node2swork:
+        :param work_estimator:
         :return:
         """
+        return self.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)[0]
+
+    def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
+                                            contractor_id: str,
+                                            node2swork: Dict[GraphNode, ScheduledWork],
+                                            work_estimator: Optional[WorkTimeEstimator] = None) \
+            -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
+        """
+        Computes start time, max parent time, contractor and exec times for given node
+        :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
+        :param node:
+        :param node2swork:
+        :param work_estimator:
+        :return:
+        """
+        inseparable_chain = node.get_inseparable_chain_with_self()
         # 1. identify earliest possible start time by max parent's end time
 
         max_parent_time: Time = max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
@@ -83,7 +102,7 @@ class MomentumTimeline(Timeline):
         exec_time: Time = Time(0)
         exec_times: Dict[GraphNode, Tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for chain_node in inseparable_chain:
-            passed_agents_new = [agent.copy() for agent in passed_agents]
+            passed_agents_new = [agent.copy() for agent in worker_team]
 
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(passed_agents_new, work_estimator)
@@ -93,11 +112,11 @@ class MomentumTimeline(Timeline):
             exec_times[chain_node] = lag, node_exec_time
             exec_time += lag + node_exec_time
 
-        if len(passed_agents) == 0:
+        if len(worker_team) == 0:
             return max_parent_time, max_parent_time, exec_times
 
-        return _find_min_start_time(resource_timeline, inseparable_chain, max_parent_time, exec_time, passed_agents), \
-               max_parent_time, exec_times
+        return self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, max_parent_time,
+                                         exec_time, worker_team), max_parent_time, exec_times
 
     def _find_min_start_time(self,
                              resource_timeline: Dict[str, SortedList[ScheduleEvent]],
@@ -147,7 +166,7 @@ class MomentumTimeline(Timeline):
             # we look for the earliest time slot starting from 'start' time moment
             # if we have found a time slot for the previous task,
             # we should start to find for the earliest time slot of other task since this new time
-            found_start = _find_earliest_time_slot(state, start, exec_time, type2count[wreq.kind])
+            found_start = self._find_earliest_time_slot(state, start, exec_time, type2count[wreq.kind])
 
             assert found_start >= start
 
@@ -169,11 +188,11 @@ class MomentumTimeline(Timeline):
 
         return start
 
-    def _find_earliest_time_slot(
-            state: SortedList[ScheduleEvent],
-            parent_time: Time,
-            exec_time: Time,
-            required_worker_count: int) -> Time:
+    def _find_earliest_time_slot(self,
+                                 state: SortedList[ScheduleEvent],
+                                 parent_time: Time,
+                                 exec_time: Time,
+                                 required_worker_count: int) -> Time:
         current_start_time = parent_time
         current_start_idx = state.bisect_right(current_start_time) - 1
 
@@ -245,15 +264,15 @@ class MomentumTimeline(Timeline):
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
 
-    def schedule_impl(self,
-                      task_index: int,
-                      node: GraphNode,
-                      id2swork: Dict[GraphNode, ScheduledWork],
-                      workers: List[Worker],
-                      contractor: Contractor,
-                      inseparable_chain: List[GraphNode],
-                      assigned_time: Optional[Time],
-                      work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+    def schedule(self,
+                 task_index: int,
+                 node: GraphNode,
+                 id2swork: Dict[GraphNode, ScheduledWork],
+                 workers: List[Worker],
+                 contractor: Contractor,
+                 assigned_time: Optional[Time],
+                 work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+        inseparable_chain = node.get_inseparable_chain_with_self()
         st = self.find_min_start_time(node, workers, id2swork)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
@@ -266,51 +285,6 @@ class MomentumTimeline(Timeline):
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item]
-
-    @staticmethod
-    def _schedule_with_inseparables(id2swork: Dict[GraphNode, ScheduledWork],
-                                    workers: List[Worker],
-                                    contractor: Contractor,
-                                    inseparable_chain: List[GraphNode],
-                                    start_time: Time,
-                                    exec_times: Dict[GraphNode, Tuple[Time, Time]],
-                                    work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
-        """
-        Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
-        and adds it ti given `id2swork`. Also does the same for all inseparable nodes starts from this one
-        :param id2swork:
-        :param workers:
-        :param contractor:
-        :param inseparable_chain:
-        :param start_time:
-        :param exec_times:
-        :param work_estimator:
-        :return:
-        """
-        c_ft = start_time
-        for dep_node in inseparable_chain:
-            # set start time as finish time of original work
-            # set finish time as finish time + working time of current node with identical resources
-            # (the same as in original work)
-            # set the same workers on it
-            # TODO Decide where this should be
-            max_parent_time = max((id2swork[pnode].finish_time
-                                   for pnode in dep_node.parents),
-                                  default=Time(0))
-            working_time = exec_times.get(dep_node, None)
-            start_time = max(c_ft, max_parent_time)
-            if working_time is None:
-                working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
-            new_finish_time = start_time + working_time
-
-            id2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
-                                               start_end_time=(start_time, new_finish_time),
-                                               workers=workers,
-                                               contractor=contractor)
-            # change finish time for using workers
-            c_ft = new_finish_time
-
-        return c_ft
 
 
 def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:

@@ -173,6 +173,12 @@ class GraphNode(JSONSerializable['GraphNode']):
             else None
 
     def get_inseparable_chain_with_self(self) -> List['GraphNode']:
+        """
+        Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
+        'INSEPARABLE'.
+        :return: List of `inseparable chain` with starting node
+        """
+        return self.get_inseparable_chain() if self.get_inseparable_chain() else [self]
 
     def _get_inseparable_children(self) -> List['GraphNode']:
         """

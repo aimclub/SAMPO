@@ -56,4 +56,7 @@ def get_best_contractor_and_worker_borders(agents: WorkerContractorPool,
             min_sum = cur_sum
             contractor = c
 
+    if len(max_worker_team) > 0 and (max_worker_team == 0).all():
+        raise Exception(f'There is no contractor that can satisfy worker reqs: {work_reqs}')
+
     return min_worker_team, max_worker_team, contractor, workers

@@ -102,3 +102,10 @@ def default_np_int_serializer(n):
 def default_np_int_deserializer(n):
     return np.int32(n)
 
+
+def default_np_long_serializer(n):
+    return int(n)
+
+
+def default_np_long_deserializer(n):
+    return np.int64(n)

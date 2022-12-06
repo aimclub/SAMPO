@@ -1,18 +1,12 @@
-from enum import auto, Enum
 from random import Random
 from typing import Callable
 
 from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER_PROBABILITY, GRAPH_COUNTS, \
     MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
 from sampo.generator.pipeline.cluster import get_start_stage, get_cluster_works, get_finish_stage, add_addition_work
+from sampo.generator.types import SyntheticGraphType, StageType
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.utils import count_node_ancestors
-
-
-class SyntheticGraphType(Enum):
-    General = auto()
-    Parallel = auto()
-    Sequential = auto()
 
 
 def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
@@ -65,9 +59,6 @@ def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count:
                                        roads=roads, rand=rand)
         checkpoints.append(c_slave)
     return checkpoints, roads
-
-
-StageType = tuple[GraphNode, dict[str, GraphNode]]
 
 
 def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,

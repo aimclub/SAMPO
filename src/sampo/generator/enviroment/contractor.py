@@ -1,8 +1,14 @@
+from collections import defaultdict
+from itertools import chain, groupby
+from operator import itemgetter
 from random import Random
+from typing import Iterable
 
 from sampo.generator.config.gen_counts import WORKER_PROPORTIONS
 from sampo.schemas.contractor import Contractor
+from sampo.schemas.graph import WorkGraph
 from sampo.schemas.interval import IntervalGaussian
+from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.utils import uuid_str
 
@@ -47,7 +53,7 @@ def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int 
 def get_contractor(pack_worker_count: float,
                    sigma_scaler: float | None = 0.1,
                    index: int = 0,
-                   worker_proportions: dict[str, float] | None = WORKER_PROPORTIONS,
+                   worker_proportions: dict[str, int] | None = WORKER_PROPORTIONS,
                    available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
     contractor_id = uuid_str(rand)
 
@@ -64,3 +70,14 @@ def get_contractor(pack_worker_count: float,
                                count=worker_counts[name])
 
     return Contractor(contractor_id, f"Подрядчик {index}", workers, {})
+
+
+def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1) -> Contractor:
+    if scaler < 1:
+        assert "scaler should be greater than 1"
+    wg_reqs = list(chain(*[n.work_unit.worker_reqs for n in wg.nodes]))
+    min_wg_reqs = [(req.kind, req.min_count) for req in wg_reqs]
+    maximal_min_req: dict[str, int] = \
+        dict(list(group[1])[-1] for group in groupby(sorted(min_wg_reqs), itemgetter(0)))
+    c = get_contractor(scaler, sigma_scaler=0, worker_proportions=maximal_min_req)
+    return c

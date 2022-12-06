@@ -1,5 +1,4 @@
 from random import Random
-from typing import Optional, Dict, List
 
 from sampo.generator.config.gen_counts import WORKER_PROPORTIONS
 from sampo.schemas.contractor import Contractor
@@ -8,8 +7,8 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.utils import uuid_str
 
 
-def get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: Optional[Dict[str, float]],
-                          available_types: Optional[List] = None, rand: Optional[Random] = None) -> Dict[str, int]:
+def get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: dict[str, float] | None,
+                          available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
     available_types = available_types or list(proportions.keys())
     counts = {name: prop * pack_count for name, prop in proportions.items() if name in available_types}
     stochastic_counts = {
@@ -19,21 +18,21 @@ def get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: O
     return stochastic_counts
 
 
-def dict_subtract(d: Dict[str, float], subtractor: float) -> Dict[str, float]:
+def dict_subtract(d: dict[str, float], subtractor: float) -> dict[str, float]:
     for name in d.keys():
         d[name] -= subtractor
     return d
 
 
-def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int or List[int],
+def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int or list[int],
                                           number_of_contractors: int = 1) \
-        -> List[Contractor]:
+        -> list[Contractor]:
     """
     Generates a contractors list of specified length with specified capacities
     :param number_of_workers_in_contractors: How many workers of all each contractor contains in itself.
-    One int for all or List[int] for each contractor. If List, its length should be equal to number_of_contractors.
+    One int for all or list[int] for each contractor. If list, its length should be equal to number_of_contractors.
     :param number_of_contractors: Number of generated contractors.
-    :return: List with contractors
+    :return: list with contractors
     """
     assert isinstance(number_of_workers_in_contractors, int) \
            or len(number_of_workers_in_contractors) == number_of_contractors, \
@@ -46,10 +45,10 @@ def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int 
 
 
 def get_contractor(pack_worker_count: float,
-                   sigma_scaler: Optional[float] = 0.1,
+                   sigma_scaler: float | None = 0.1,
                    index: int = 0,
-                   worker_proportions: Optional[Dict[str, float]] = WORKER_PROPORTIONS,
-                   available_worker_types: Optional[List] = None, rand: Optional[Random] = None) -> Contractor:
+                   worker_proportions: dict[str, float] | None = WORKER_PROPORTIONS,
+                   available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
     contractor_id = uuid_str(rand)
 
     worker_counts = get_stochastic_counts(pack_worker_count, sigma_scaler, worker_proportions,

@@ -1,14 +1,12 @@
-from typing import List, Optional
-
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.time import Time
 
 
-def scale_reqs(req_list: List[WorkerReq], scalar: float, new_name: Optional[str] = None) -> List[WorkerReq]:
+def scale_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
     return [work_req.scale_all(scalar, new_name) for work_req in req_list]
 
 
-def mul_volume_reqs(req_list: List[WorkerReq], scalar: float, new_name: Optional[str] = None) -> List[WorkerReq]:
+def mul_volume_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
     return [work_req.scale_volume(scalar, new_name) for work_req in req_list]
 
 
@@ -16,7 +14,7 @@ def get_borehole_volume(borehole_count: int, base: (float, float)) -> float:
     return base[0] + base[1] * borehole_count
 
 
-def mul_borehole_volume(req_list: List[WorkerReq], borehole_count: int, base: (float, float)) -> List[WorkerReq]:
+def mul_borehole_volume(req_list: list[WorkerReq], borehole_count: int, base: (float, float)) -> list[WorkerReq]:
     return mul_volume_reqs(req_list, get_borehole_volume(borehole_count, base))
 
 

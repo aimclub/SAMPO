@@ -1,6 +1,6 @@
 from enum import auto, Enum
 from random import Random
-from typing import Optional, Dict, List, Tuple, Callable
+from typing import Callable
 
 from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER_PROBABILITY, GRAPH_COUNTS, \
     MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
@@ -15,7 +15,7 @@ class SyntheticGraphType(Enum):
     Sequential = auto()
 
 
-def get_small_graph(cluster_name: Optional[str] = 'C1', rand: Optional[Random] = None) -> WorkGraph:
+def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
     """
     Creates a small graph of works consisting of 30-50 vertices;
     :param cluster_name: str - the first cluster name
@@ -38,11 +38,11 @@ def get_small_graph(cluster_name: Optional[str] = 'C1', rand: Optional[Random] =
     return graph
 
 
-def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count: Optional[int] = None,
-                      pipe_net_count: Optional[int] = None, light_masts_count: Optional[int] = None,
-                      borehole_counts: Optional[List[int]] = None, add_addition_cluster: Optional[bool] = False,
-                      addition_cluster_probability: Optional[float] = ADDITION_CLUSTER_PROBABILITY,
-                      rand: Optional[Random] = None) -> ([GraphNode], Dict[str, GraphNode]):
+def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count: int | None = None,
+                      pipe_net_count: int | None = None, light_masts_count: int | None = None,
+                      borehole_counts: list[int] | None = None, add_addition_cluster: bool | None = False,
+                      addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
+                      rand: Random | None = None) -> (list[GraphNode], dict[str, GraphNode]):
     pipe_nodes_count = pipe_nodes_count or GRAPH_COUNTS['pipe_nodes'].rand_int(rand)
     pipe_net_count = pipe_net_count or GRAPH_COUNTS['pipe_net'].rand_int(rand)
     light_masts_count = light_masts_count or GRAPH_COUNTS['light_masts'].rand_int(rand)
@@ -67,17 +67,17 @@ def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count:
     return checkpoints, roads
 
 
-StageType = Tuple[GraphNode, Dict[str, GraphNode]]
+StageType = tuple[GraphNode, dict[str, GraphNode]]
 
 
-def get_graph(mode: Optional[SyntheticGraphType] = SyntheticGraphType.General,
-              cluster_name_prefix: Optional[str] = 'C',
-              cluster_counts: Optional[int] = 0,
-              branching_probability: Optional[float] = BRANCHING_PROBABILITY,
-              addition_cluster_probability: Optional[float] = ADDITION_CLUSTER_PROBABILITY,
-              bottom_border: Optional[int] = 0,
-              top_border: Optional[int] = 0,
-              rand: Optional[Random] = None) -> WorkGraph:
+def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
+              cluster_name_prefix: str | None = 'C',
+              cluster_counts: int | None = 0,
+              branching_probability: float | None = BRANCHING_PROBABILITY,
+              addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
+              bottom_border: int | None = 0,
+              top_border: int | None = 0,
+              rand: Random | None = None) -> WorkGraph:
     """
     Invokes a graph of the given type if at least one positive value of
         cluster_counts, addition_cluster_probability, bottom_border is given;
@@ -99,14 +99,14 @@ def get_graph(mode: Optional[SyntheticGraphType] = SyntheticGraphType.General,
     assert cluster_counts >= 0 and branching_probability >= 0 and top_border >= 0, 'Params should not be negative'
 
     rand = rand or Random()
-    get_root_stage: Callable[[List[StageType], float, Random], GraphNode] = graph_mode_to_callable(mode)
+    get_root_stage: Callable[[list[StageType], float, Random], GraphNode] = graph_mode_to_callable(mode)
 
     if bottom_border > 0:
         top_border = 0
     masters_clusters_ind = 1
     works_generated = 0
     s = get_start_stage()
-    stages: List[StageType] = [(s, {'min': s})]
+    stages: list[StageType] = [(s, {'min': s})]
 
     while True:
         if cluster_counts > 0 and (cluster_counts == len(stages) - 1):
@@ -136,7 +136,7 @@ def get_graph(mode: Optional[SyntheticGraphType] = SyntheticGraphType.General,
 
 
 def graph_mode_to_callable(mode: SyntheticGraphType) -> \
-        Callable[[List[Tuple[GraphNode, Dict[str, GraphNode]]], float, Random], GraphNode]:
+        Callable[[list[tuple[GraphNode, dict[str, GraphNode]]], float, Random], GraphNode]:
     if mode is SyntheticGraphType.General:
         return general_graph_mode
     if mode is SyntheticGraphType.Parallel:
@@ -144,17 +144,17 @@ def graph_mode_to_callable(mode: SyntheticGraphType) -> \
     return sequence_graph_mode_get_root
 
 
-def parallel_graph_mode_get_root(stages: List[Tuple[GraphNode, Dict[str, GraphNode]]],
+def parallel_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
                                  branching_probability: float, rand: Random) -> GraphNode:
     return stages[0][0]
 
 
-def sequence_graph_mode_get_root(stages: List[Tuple[GraphNode, Dict[str, GraphNode]]],
+def sequence_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
                                  branching_probability: float, rand: Random) -> GraphNode:
     return stages[-1][0]
 
 
-def general_graph_mode(stages: List[Tuple[GraphNode, Dict[str, GraphNode]]],
+def general_graph_mode(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
                        branching_probability: float, rand: Random) -> GraphNode:
     is_branching = rand.random() <= branching_probability
     ind = len(stages) - 1

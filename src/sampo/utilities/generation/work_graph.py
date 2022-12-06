@@ -2,7 +2,7 @@ import pickle
 from random import Random
 from typing import List, Tuple, Optional
 
-from sampo.generator.enviroment.contractor import get_contractor, get_contractor_with_equal_proportions
+from sampo.generator.environment.contractor import get_contractor, get_contractor_with_equal_proportions
 from sampo.generator.pipeline.project import get_graph, SyntheticGraphType
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph

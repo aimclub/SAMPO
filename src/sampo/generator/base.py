@@ -1,7 +1,7 @@
-from enum import Enum
 from random import Random
 
-from sampo.generator.enviroment.contractor import get_contractor
+from sampo.generator.environment.contractor import get_contractor
+from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.generator.pipeline.project import get_small_graph, get_graph
 from sampo.generator.types import SyntheticGraphType
 from sampo.schemas.graph import WorkGraph
@@ -21,3 +21,9 @@ class SimpleSynthetic:
 
     def contactor(self, pack_worker_count: float):
         return get_contractor(pack_worker_count, rand=self._rand)
+
+    def advanced_work_graph(self, works_count_top_border: int, uniq_works: int, uniq_resources: int, scaler: int = 5):
+        wg = self.work_graph(top_border=works_count_top_border)
+        wg = extend_names(uniq_works, wg, self._rand)
+        wg = extend_resources(uniq_resources, wg, self._rand)
+        return wg

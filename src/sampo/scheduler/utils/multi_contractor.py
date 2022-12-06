@@ -1,62 +1,75 @@
-from typing import List
+from typing import List, Callable
 
 import numpy as np
 
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.time import Time
 
 
-def get_best_contractor_and_worker_borders(agents: WorkerContractorPool,
-                                           contractors: List[Contractor],
-                                           work_reqs: List[WorkerReq]) \
-        -> (np.ndarray, np.ndarray, Contractor, List[Worker]):
+def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, work_reqs: List[WorkerReq]) \
+        -> (np.ndarray, np.ndarray, List[Worker]):
     """
     Define for each job each type of workers the min and max possible number of workers
     For max number of workers max is define as minimum from max possible numbers at all and max possible for current job
-    :param agents: from all project
-    :param contractors:
+    :param agents: from all projects
+    :param contractor:
     :param work_reqs:
-    :param timeline:
     :return:
     """
     n = len(work_reqs)
     min_worker_team = np.zeros(n, dtype=int)
     max_worker_team = np.zeros(n, dtype=int)
     workers: List[Worker] = []
-    contractor: Contractor = contractors[0]
-    min_sum = 1e50
 
-    # TODO Entry point for multi-contractor
-    # TODO When starting implementation of multi-contractor,
-    #  see this algo about searching the most relevant contractor
-    for c in contractors:
-        cur_min_worker_team = np.zeros(n, dtype=int)
-        cur_max_worker_team = np.zeros(n, dtype=int)
-        cur_workers = []
-        satisfied = True
+    for i, req in enumerate(work_reqs):
+        w = agents[req.kind].get(contractor.id, None)
 
-        for i, req in enumerate(work_reqs):
-            offers = agents[req.kind]
+        if w is None or w.count < req.min_count:
+            # can't satisfy requirements, return empty to say it
+            return [], [], []
 
-            cur_offers = list(filter(lambda x: x.contractor_id == c.id, offers.values()))
-            if len(cur_offers) == 0 or cur_offers[0].count < req.min_count:
-                satisfied = False
-                break
+        min_worker_team[i] = req.min_count
+        max_worker_team[i] = min(req.max_count, w.count)
+        workers.append(w)
 
-            cur_min_worker_team[i] = req.min_count
-            cur_max_worker_team[i] = min(req.max_count, cur_offers[0].count)
-            cur_workers.append(cur_offers[0])
+    return min_worker_team, max_worker_team, workers
 
-        cur_sum = np.sum(cur_max_worker_team - cur_min_worker_team)
-        if satisfied and cur_sum < min_sum:
-            min_worker_team = cur_min_worker_team
-            max_worker_team = cur_max_worker_team
-            workers = cur_workers
-            min_sum = cur_sum
-            contractor = c
 
-    if len(max_worker_team) > 0 and (max_worker_team == 0).all():
-        raise Exception(f'There is no contractor that can satisfy worker reqs: {work_reqs}')
+def run_contractor_search(contractors: List[Contractor],
+                          runner: Callable[[Contractor], tuple[Time, Time, List[Worker]]]) \
+        -> tuple[Time, Time, Contractor, List[Worker]]:
+    """
+    Performs the best contractor search.
+    :param contractors: contractors' list
+    :param runner: a runner function, should be inner of the calling code.
+        Calculates Tuple[start time, finish time, worker team] from given contractor object.
+    :return: start time, finish time, best contractor, worker team with the best contractor
+    """
+    # TODO Parallelize
 
-    return min_worker_team, max_worker_team, contractor, workers
+    # optimization metric
+    best_finish_time = Time.inf()
+    best_start_time = None
+    best_contractor = None
+    best_worker_team = None
+    # heuristic: if contractors' finish times are equal, we prefer smaller one
+    best_contractor_size = float('inf')
+
+    for contractor in contractors:
+        start_time, finish_time, worker_team = runner(contractor)
+        contractor_size = sum([w.count for w in contractor.workers.values()])
+
+        if finish_time < best_finish_time \
+                or (finish_time == best_finish_time and contractor_size < best_contractor_size):
+            best_start_time = start_time
+            best_finish_time = finish_time
+            best_contractor = contractor
+            best_worker_team = worker_team
+            best_contractor_size = contractor_size
+
+    if not best_contractor:
+        raise Exception(f'There is no contractor that can satisfy given search')
+
+    return best_start_time, best_finish_time, best_contractor, best_worker_team

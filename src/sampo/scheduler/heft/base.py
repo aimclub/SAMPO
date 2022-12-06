@@ -5,14 +5,15 @@ from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.scheduler.utils.just_in_time_timeline import find_min_start_time, update_timeline, create_timeline, \
-    schedule_with_time_spec
-from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
+from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
+from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
 from sampo.utilities.validation import validate_schedule
@@ -61,45 +62,47 @@ class HEFTScheduler(Scheduler):
         """
         worker_pool = get_worker_contractor_pool(contractors)
         # dict for writing parameters of completed_jobs
-        node2swork: Dict[str, ScheduledWork] = {}
+        node2swork: Dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
-        timeline = create_timeline(worker_pool)
-        # add to queue all available workers
+        timeline = JustInTimeTimeline(worker_pool)
 
-        for node in reversed(ordered_nodes):  # the tasks with the highest rank will be done first
+        for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
-            if node.id in node2swork:  # here
+            if node in node2swork:  # here
                 continue
 
-            inseparable_chain = node.get_inseparable_chain()
-            inseparable_chain = inseparable_chain if inseparable_chain else [node]
+            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
+                min_count_worker_team, max_count_worker_team, workers \
+                    = get_worker_borders(worker_pool, contractor, work_unit.worker_reqs)
 
-            min_count_worker_team, max_count_worker_team, contractor, workers \
-                = get_best_contractor_and_worker_borders(worker_pool, contractors, work_unit.worker_reqs)
+                workers = [worker.copy() for worker in workers]
 
-            best_worker_team = [worker.copy() for worker in workers]
+                def get_finish_time(worker_team):
+                    return timeline.find_min_start_time(node, worker_team, node2swork) \
+                           + calculate_working_time_cascade(node, worker_team, work_estimator)
 
-            def get_finish_time(worker_team):
-                return find_min_start_time(node, worker_team,
-                                           timeline,
-                                           node2swork) + calculate_working_time_cascade(node, worker_team,
-                                                                                        work_estimator)
+                # apply worker team spec
+                self.optimize_resources_using_spec(work_unit, workers, work_spec,
+                                                   lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                       worker_pool, workers,
+                                                       optimize_array,
+                                                       min_count_worker_team, max_count_worker_team,
+                                                       get_finish_time))
 
-            # apply worker team spec
-            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
-                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, best_worker_team,
-                                                   optimize_array,
-                                                   min_count_worker_team, max_count_worker_team,
-                                                   get_finish_time))
+                c_st = timeline.find_min_start_time(node, workers, node2swork)
+                c_ft = c_st + calculate_working_time_cascade(node, workers, work_estimator)
 
-            # apply time spec
-            c_ft = schedule_with_time_spec(node, node2swork, best_worker_team, contractor, inseparable_chain, timeline,
-                                           work_spec.assigned_time, work_estimator)
+                return c_st, c_ft, workers
 
+            st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
+
+            # apply work to scheduling
+            # TODO Add optional parameter for start time - if it's passed, don't recompute it
+            timeline.schedule(index, node, node2swork, best_worker_team, contractor,
+                              work_spec.assigned_time, work_estimator)
             # add using resources in queue for workers
-            update_timeline(c_ft, timeline, best_worker_team)
+            timeline.update_timeline(index, ft, node, node2swork, best_worker_team)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), work_id2schedule_unit)
         # recalc_schedule(reversed(ordered_nodes), work_id2schedule_unit, worker_pool, work_estimator)

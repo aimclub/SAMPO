@@ -1,11 +1,10 @@
 from datetime import datetime
 from functools import partial, lru_cache
-from typing import Tuple, List, Dict, Iterable, Union
+from typing import Tuple, List, Dict, Iterable, Union, Set
 
 from pandas import DataFrame
 
-from sampo.scheduler.utils.just_in_time_timeline import order_nodes_by_start_time
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T
 from sampo.schemas.time import Time
@@ -172,3 +171,49 @@ class Schedule(JSONSerializable['Schedule']):
         df = df.reset_index(drop=True)
 
         return Schedule(df)
+
+
+def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:
+    """
+    Makes ScheduledWorks' ordering that satisfies:
+    1. Ascending order by start time
+    2. Toposort
+    :param works:
+    :param wg:
+    :return:
+    """
+    res = []
+    order_by_start_time = [(item.start_time, item.work_unit.id) for item in
+                           sorted(works, key=lambda item: item.start_time)]
+
+    cur_time = 0
+    cur_class: Set[GraphNode] = set()
+    for start_time, work in order_by_start_time:
+        node = wg[work]
+        if len(cur_class) == 0:
+            cur_time = start_time
+        if start_time == cur_time:
+            cur_class.add(node)
+            continue
+        # TODO Perform real toposort
+        cur_not_added: Set[GraphNode] = set(cur_class)
+        while len(cur_not_added) > 0:
+            for cur_node in cur_class:
+                if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+                    continue  # we add this node later
+                res.append(cur_node.id)
+                cur_not_added.remove(cur_node)
+            cur_class = set(cur_not_added)
+        cur_time = start_time
+        cur_class = {node}
+
+    cur_not_added: Set[GraphNode] = set(cur_class)
+    while len(cur_not_added) > 0:
+        for cur_node in cur_class:
+            if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+                continue  # we add this node later
+            res.append(cur_node.id)
+            cur_not_added.remove(cur_node)
+        cur_class = set(cur_not_added)
+
+    return res

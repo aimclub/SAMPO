@@ -1,14 +1,15 @@
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, cache
 from typing import List, Union, Tuple, Optional, Dict, Set
-from collections import deque
 
 import numpy as np
 from scipy.sparse import dok_matrix
 
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.works import WorkUnit
+
 
 # TODO: describe the class (description, parameters)
 class EdgeType(Enum):
@@ -170,6 +171,14 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [self] + self._get_inseparable_children() \
             if bool(self.inseparable_son) and not bool(self.inseparable_parent) \
             else None
+
+    def get_inseparable_chain_with_self(self) -> List['GraphNode']:
+        """
+        Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
+        'INSEPARABLE'.
+        :return: List of `inseparable chain` with starting node
+        """
+        return self.get_inseparable_chain() if self.get_inseparable_chain() else [self]
 
     def _get_inseparable_children(self) -> List['GraphNode']:
         """

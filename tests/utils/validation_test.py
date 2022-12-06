@@ -51,12 +51,12 @@ def test_check_resources_validity_right(setup_wg, setup_contractors, setup_defau
         _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, setup_contractors)
 
 
-def test_check_resources_validity_wrong(setup_wg, setup_agents, setup_start_date,
+def test_check_resources_validity_wrong(setup_wg, setup_worker_pool, setup_start_date,
                                         setup_contractors, setup_default_schedules):
     for schedule in setup_default_schedules.values():
         for break_type in BreakType:
             if break_type.is_resources_break():
-                broken = break_schedule(break_type, schedule, setup_wg, setup_start_date, setup_agents)
+                broken = break_schedule(break_type, schedule, setup_wg, setup_start_date, setup_worker_pool)
                 thrown = False
                 try:
                     _check_all_workers_correspond_to_worker_reqs(broken)

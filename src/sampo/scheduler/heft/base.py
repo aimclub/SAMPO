@@ -76,6 +76,9 @@ class HEFTScheduler(Scheduler):
                 min_count_worker_team, max_count_worker_team, workers \
                     = get_worker_borders(worker_pool, contractor, work_unit.worker_reqs)
 
+                if len(workers) != len(work_unit.worker_reqs):
+                    return Time(0), Time.inf(), []
+
                 workers = [worker.copy() for worker in workers]
 
                 def get_finish_time(worker_team):
@@ -98,9 +101,8 @@ class HEFTScheduler(Scheduler):
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
             # apply work to scheduling
-            # TODO Add optional parameter for start time - if it's passed, don't recompute it
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, work_estimator)
             # add using resources in queue for workers
             timeline.update_timeline(index, ft, node, node2swork, best_worker_team)
 

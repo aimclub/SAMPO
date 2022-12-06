@@ -101,6 +101,9 @@ class TopologicalScheduler(Scheduler):
                 min_count_worker_team, max_count_worker_team, workers = \
                     get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
 
+                if len(workers) != len(work_unit.worker_reqs):
+                    return Time(0), Time.inf(), []
+
                 worker_team = [worker.copy() for worker in workers]
 
                 # apply worker team spec
@@ -124,7 +127,7 @@ class TopologicalScheduler(Scheduler):
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, work_estimator)
 
         return node2swork.values()
 

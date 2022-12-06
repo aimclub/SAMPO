@@ -77,6 +77,9 @@ class HEFTBetweenScheduler(HEFTScheduler):
                 min_count_worker_team, max_count_worker_team, workers \
                     = get_worker_borders(worker_pool, contractor, work_unit.worker_reqs)
 
+                if len(workers) != len(work_unit.worker_reqs):
+                    return Time(0), Time.inf(), []
+
                 worker_team = [worker.copy() for worker in workers]
 
                 def get_finish_time(cur_worker_team):
@@ -92,7 +95,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
                                                        get_finish_time))
 
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, None, work_estimator)
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
                     c_ft += node_lag + node_time
@@ -103,7 +106,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, work_estimator)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), node2swork)
         # recalc_schedule(reversed(ordered_nodes), node2swork, agents, work_estimator)

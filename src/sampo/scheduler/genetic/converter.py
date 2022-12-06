@@ -85,7 +85,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
 
         # finish using time spec
         finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
-                                        work_spec.assigned_time, work_estimator)
+                                        None, work_spec.assigned_time, work_estimator)
 
         timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
     return node2swork

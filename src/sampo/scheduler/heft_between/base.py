@@ -6,6 +6,7 @@ from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
+from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
@@ -28,28 +29,31 @@ class HEFTBetweenScheduler(HEFTScheduler):
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
 
-    def schedule(self, wg: WorkGraph,
-                 contractors: List[Contractor],
-                 spec: ScheduleSpec = ScheduleSpec(),
-                 validate: bool = False) \
-            -> Schedule:
+    def schedule_with_cache(self, wg: WorkGraph,
+                            contractors: List[Contractor],
+                            spec: ScheduleSpec = ScheduleSpec(),
+                            validate: bool = False,
+                            timeline: Timeline | None = None) \
+            -> tuple[Schedule, Timeline]:
         ordered_nodes = prioritization(wg, self.work_estimator)
 
+        schedule, timeline = self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, timeline)
         schedule = Schedule.from_scheduled_works(
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator),
+            schedule,
             wg
         )
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule
+        return schedule, timeline
 
     def build_scheduler(self, ordered_nodes: List[GraphNode],
                         contractors: List[Contractor],
                         spec: ScheduleSpec,
-                        work_estimator: WorkTimeEstimator = None) \
-            -> Iterable[ScheduledWork]:
+                        work_estimator: WorkTimeEstimator = None,
+                        timeline: Timeline | None = None) \
+            -> tuple[Iterable[ScheduledWork], MomentumTimeline]:
         """
         Find optimal number of workers who ensure the nearest finish time.
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
@@ -58,13 +62,15 @@ class HEFTBetweenScheduler(HEFTScheduler):
         :param contractors:
         :param spec: spec for current scheduling
         :param work_estimator:
+        :param timeline: the previous used timeline can be specified to handle previously scheduled works
         :return:
         """
         worker_pool = get_worker_contractor_pool(contractors)
         # dict for writing parameters of completed_jobs
         node2swork: Dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
-        timeline = MomentumTimeline(ordered_nodes, contractors)
+        if not isinstance(timeline, MomentumTimeline):
+            timeline = MomentumTimeline(ordered_nodes, contractors)
         # add to queue all available workers
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
@@ -111,4 +117,4 @@ class HEFTBetweenScheduler(HEFTScheduler):
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), node2swork)
         # recalc_schedule(reversed(ordered_nodes), node2swork, agents, work_estimator)
 
-        return node2swork.values()
+        return node2swork.values(), timeline

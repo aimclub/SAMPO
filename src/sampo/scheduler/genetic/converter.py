@@ -4,6 +4,7 @@ from uuid import uuid4
 import numpy as np
 
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
@@ -60,7 +61,8 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    worker_name2index: Dict[str, int],
                                    index2contractor: Dict[int, Contractor],
                                    spec: ScheduleSpec,
-                                   work_estimator: WorkTimeEstimator = None) -> Dict[GraphNode, ScheduledWork]:
+                                   work_estimator: WorkTimeEstimator = None) \
+        -> tuple[Dict[GraphNode, ScheduledWork], Timeline]:
     node2swork: Dict[GraphNode, ScheduledWork] = {}
 
     timeline = JustInTimeTimeline(worker_pool)
@@ -88,7 +90,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                         None, work_spec.assigned_time, work_estimator)
 
         timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
-    return node2swork
+    return node2swork, timeline
 
 
 def init_scheduled_work(start_time: Time, finish_time: Time, worker_team: List[Worker],

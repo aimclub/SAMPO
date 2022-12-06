@@ -6,6 +6,7 @@ import numpy as np
 
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
+from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
@@ -35,12 +36,21 @@ class Scheduler(ABC):
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator
 
-    @abstractmethod
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),
-                 validate: Optional[bool] = False) \
+                 validate: bool = False,
+                 timeline: Timeline | None = None) \
             -> Schedule:
+        return self.schedule_with_cache(wg, contractors, spec, validate, timeline)[0]
+
+    @abstractmethod
+    def schedule_with_cache(self, wg: WorkGraph,
+                            contractors: List[Contractor],
+                            spec: ScheduleSpec = ScheduleSpec(),
+                            validate: bool = False,
+                            timeline: Timeline | None = None) \
+            -> tuple[Schedule, Timeline]:
         ...
 
     @staticmethod

@@ -1,6 +1,6 @@
+from fixtures import *
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.utilities.validation import validate_schedule
-from fixtures import *
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox, setup_wg, setup_contractors, setup_start_date):
@@ -17,6 +17,7 @@ def test_convert_chromosome_to_schedule(setup_toolbox, setup_contractors, setup_
     tb, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
-    schedule = Schedule.from_scheduled_works(tb.chromosome_to_schedule(chromosome).values(), setup_wg)
+    schedule, _ = tb.chromosome_to_schedule(chromosome)
+    schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
     validate_schedule(schedule, setup_wg, setup_contractors)

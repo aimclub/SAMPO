@@ -74,10 +74,10 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
 
 
 def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node: Dict[int, GraphNode],
-                  work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                  contractor2index: Dict[str, int],
-                  init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
-                  work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
+                        work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
+                        contractor2index: Dict[str, int],
+                        init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
+                        work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)
@@ -118,10 +118,10 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
                           spec: ScheduleSpec, work_estimator: WorkTimeEstimator = None) -> Time:
     chromosome = individuals[0]
     if is_chromosome_correct(chromosome, index2node, index2contractor, worker_pool, index2worker_name):
-        scheduled_works = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                         worker_name2index,
-                                                         index2contractor,
-                                                         spec, work_estimator)
+        scheduled_works, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                                            worker_name2index,
+                                                            index2contractor,
+                                                            spec, work_estimator)
         return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
     else:
         return Time.inf()

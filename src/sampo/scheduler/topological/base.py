@@ -6,6 +6,7 @@ from toposort import toposort_flatten, toposort
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
+from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
@@ -27,25 +28,24 @@ class TopologicalScheduler(Scheduler):
                          resource_optimizer=AverageReqResourceOptimizer(),
                          work_estimator=work_estimator)
 
-    def schedule(self, wg: WorkGraph,
-                 contractors: List[Contractor],
-                 spec: ScheduleSpec = ScheduleSpec(),
-                 validate: bool = False) \
-            -> Schedule:
-        # Checking pre-conditions for this scheduler_topological to be applied
-        # check_all_workers_have_same_qualification(wg, contractors)
-
+    def schedule_with_cache(self, wg: WorkGraph,
+                            contractors: List[Contractor],
+                            spec: ScheduleSpec = ScheduleSpec(),
+                            validate: bool = False,
+                            timeline: Timeline | None = None) \
+            -> tuple[Schedule, Timeline]:
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
+        schedule, timeline = self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, timeline)
         schedule = Schedule.from_scheduled_works(
-            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator), wg
+            schedule,
+            wg
         )
 
-        # check the validity received scheduler
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule
+        return schedule, timeline
 
     # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph) -> List[GraphNode]:
@@ -63,8 +63,9 @@ class TopologicalScheduler(Scheduler):
     # noinspection PyMethodMayBeStatic
     def build_scheduler(self, tasks: List[GraphNode], contractors: List[Contractor],
                         spec: ScheduleSpec,
-                        work_estimator: WorkTimeEstimator = None) \
-            -> Iterable[ScheduledWork]:
+                        work_estimator: WorkTimeEstimator = None,
+                        timeline: Timeline | None = None) \
+            -> tuple[Iterable[ScheduledWork], MomentumTimeline]:
         """
         Builds a schedule from a list of tasks where all dependents tasks are guaranteed to be later
         in the sequence than their dependencies
@@ -72,13 +73,15 @@ class TopologicalScheduler(Scheduler):
         :param tasks: list of tasks ordered by some algorithm according to their dependencies and priorities
         :param spec: spec for current scheduling
         :param contractors: pools of workers available for execution
+        :param timeline: the previous used timeline can be specified to handle previously scheduled works
         :return: a schedule
         """
 
         # data structure to hold scheduled tasks
         node2swork: Dict[GraphNode, ScheduledWork] = dict()
 
-        timeline = MomentumTimeline(tasks, contractors)
+        if not isinstance(timeline, MomentumTimeline):
+            timeline = MomentumTimeline(tasks, contractors)
 
         # we can get agents here, because they are always same and not updated
         worker_pool = get_worker_contractor_pool(contractors)
@@ -129,7 +132,7 @@ class TopologicalScheduler(Scheduler):
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, work_estimator)
 
-        return node2swork.values()
+        return node2swork.values(), timeline
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):

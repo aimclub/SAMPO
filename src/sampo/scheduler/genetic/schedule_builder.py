@@ -11,6 +11,7 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType
+from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
@@ -21,7 +22,7 @@ from sampo.utilities.collections import reverse_dictionary
 
 def build_schedule(wg: WorkGraph,
                    contractors: List[Contractor],
-                   agents: WorkerContractorPool,
+                   worker_pool: WorkerContractorPool,
                    population_size: int,
                    generation_number: int,
                    selection_size: int,
@@ -32,7 +33,7 @@ def build_schedule(wg: WorkGraph,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False) \
-        -> ScheduleWorkDict:
+        -> tuple[ScheduleWorkDict, Timeline]:
     """
     Genetic algorithm
     Structure of chromosome:
@@ -42,7 +43,7 @@ def build_schedule(wg: WorkGraph,
     Generate resources from min to max
     Overall initial population is valid
     :param show_fitness_graph:
-    :param agents:
+    :param worker_pool:
     :param work_estimator:
     :param contractors:
     :param wg:
@@ -62,7 +63,7 @@ def build_schedule(wg: WorkGraph,
 
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
     work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
-    worker_name2index = {worker_name: index for index, worker_name in enumerate(agents)}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
 
@@ -71,15 +72,15 @@ def build_schedule(wg: WorkGraph,
                                               reverse_dictionary(index2contractor), schedule)
          for name, schedule in init_schedules.items()}
 
-    resources_border = np.zeros((2, len(agents), len(index2node)))
+    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = \
-                min(req.max_count, max(list(map(attrgetter('count'), agents[req.kind].values()))))
+                min(req.max_count, max(list(map(attrgetter('count'), worker_pool[req.kind].values()))))
 
-    toolbox = init_toolbox(wg, contractors, agents, index2node,
+    toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, work_estimator)
@@ -192,10 +193,10 @@ def build_schedule(wg: WorkGraph,
 
     chromosome = hof[0][0]
 
-    scheduled_works = convert_chromosome_to_schedule(chromosome, agents, index2node,
-                                                     worker_name2index,
-                                                     index2contractor_obj,
-                                                     spec, work_estimator)
+    scheduled_works, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                                               worker_name2index,
+                                                               index2contractor_obj,
+                                                               spec, work_estimator)
 
     if show_fitness_graph:
         sns.lineplot(
@@ -206,7 +207,7 @@ def build_schedule(wg: WorkGraph,
             palette='r')
         plt.show()
 
-    return {node.id: work for node, work in scheduled_works.items()}
+    return {node.id: work for node, work in scheduled_works.items()}, timeline
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):

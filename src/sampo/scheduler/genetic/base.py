@@ -1,16 +1,17 @@
 import random
 from typing import Dict, List, Tuple, Optional
 
-from sampo.scheduler.resource.identity import IdentityResourceOptimizer
-from sampo.schemas.schedule_spec import ScheduleSpec
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
+from sampo.scheduler.resource.identity import IdentityResourceOptimizer
+from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.validation import validate_schedule
 
 
@@ -69,11 +70,13 @@ class GeneticScheduler(Scheduler):
                 size_of_population = works_count // 50
         return size_selection, mutate_order, mutate_resources, size_of_population
 
-    def schedule(self, wg: WorkGraph,
-                 contractors: List[Contractor],
-                 spec: ScheduleSpec = ScheduleSpec(),
-                 validate: bool = False) \
-            -> Schedule:
+    def schedule_with_cache(self, wg: WorkGraph,
+                            contractors: List[Contractor],
+                            spec: ScheduleSpec = ScheduleSpec(),
+                            validate: bool = False,
+                            timeline: Timeline | None = None) \
+            -> tuple[Schedule, Timeline]:
+        # TODO Handle given timeline
         def init_schedule(scheduler_class):
             return scheduler_class(self.work_estimator).schedule(wg, contractors)
 
@@ -85,21 +88,21 @@ class GeneticScheduler(Scheduler):
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)
 
-        scheduled_works = build_schedule(wg,
-                                         contractors,
-                                         agents,
-                                         size_of_population,
-                                         self.number_of_generation,
-                                         size_selection,
-                                         mutate_order,
-                                         mutate_resources,
-                                         init_schedules,
-                                         self.rand,
-                                         spec,
-                                         self.work_estimator)
+        scheduled_works, timeline = build_schedule(wg,
+                                                   contractors,
+                                                   agents,
+                                                   size_of_population,
+                                                   self.number_of_generation,
+                                                   size_selection,
+                                                   mutate_order,
+                                                   mutate_resources,
+                                                   init_schedules,
+                                                   self.rand,
+                                                   spec,
+                                                   self.work_estimator)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule
+        return schedule, timeline

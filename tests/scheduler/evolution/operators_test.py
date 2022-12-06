@@ -70,10 +70,9 @@ def test_mate_resources(setup_toolbox, setup_wg):
         individual1, individual2 = [tb.clone(ind) for ind in tb.select(population, 2)]
 
         workers_for_mate = rand.sample(list(range(len(resources_border) + 1)), 2)
+        tb.mate_resources(individual1[0][1][workers_for_mate], individual2[0][1][workers_for_mate])
 
         for worker in workers_for_mate:
-            tb.mate_resources(individual1[0][1][workers_for_mate], individual2[0][1][workers_for_mate])
-
             # check there are correct resources at mate positions
             assert (resources_border[0][worker] <= individual1[0][1][worker]).all() and \
                    (individual1[0][1][worker] <= resources_border[1][worker]).all()

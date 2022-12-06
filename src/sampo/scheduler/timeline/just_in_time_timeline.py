@@ -103,10 +103,11 @@ class JustInTimeTimeline(Timeline):
                  id2swork: Dict[GraphNode, ScheduledWork],
                  workers: List[Worker],
                  contractor: Contractor,
-                 assigned_time: Optional[Time],
+                 assigned_start_time: Optional[Time] = None,
+                 assigned_time: Optional[Time] = None,
                  work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         inseparable_chain = node.get_inseparable_chain_with_self()
-        st = self.find_min_start_time(node, workers, id2swork)
+        st = assigned_start_time if assigned_start_time else self.find_min_start_time(node, workers, id2swork)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}

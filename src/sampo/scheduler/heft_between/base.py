@@ -7,12 +7,14 @@ from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
-from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
+from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
 from sampo.utilities.validation import validate_schedule
@@ -71,22 +73,33 @@ class HEFTBetweenScheduler(HEFTScheduler):
             if node in node2swork:  # here
                 continue
 
-            min_count_worker_team, max_count_worker_team, contractor, workers \
-                = get_best_contractor_and_worker_borders(worker_pool, contractors, work_unit.worker_reqs)
+            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
+                min_count_worker_team, max_count_worker_team, workers \
+                    = get_worker_borders(worker_pool, contractor, work_unit.worker_reqs)
 
-            best_worker_team = [worker.copy() for worker in workers]
+                worker_team = [worker.copy() for worker in workers]
 
-            def get_finish_time(worker_team):
-                return timeline.find_min_start_time(node, best_worker_team, node2swork, work_estimator) \
-                       + calculate_working_time_cascade(node, worker_team, work_estimator)
+                def get_finish_time(cur_worker_team):
+                    return timeline.find_min_start_time(node, cur_worker_team, node2swork, work_estimator) \
+                           + calculate_working_time_cascade(node, cur_worker_team, work_estimator)
 
-            # apply worker team spec
-            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
-                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, best_worker_team,
-                                                   optimize_array,
-                                                   min_count_worker_team, max_count_worker_team,
-                                                   get_finish_time))
+                # apply worker team spec
+                self.optimize_resources_using_spec(work_unit, worker_team, work_spec,
+                                                   lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                       worker_pool, worker_team,
+                                                       optimize_array,
+                                                       min_count_worker_team, max_count_worker_team,
+                                                       get_finish_time))
+
+                c_st, _, exec_times = \
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)
+                c_ft = c_st
+                for node_lag, node_time in exec_times.values():
+                    c_ft += node_lag + node_time
+
+                return c_st, c_ft, worker_team
+
+            st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,

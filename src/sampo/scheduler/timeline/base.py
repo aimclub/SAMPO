@@ -18,6 +18,7 @@ class Timeline(ABC):
                  node2swork: Dict[GraphNode, ScheduledWork],
                  passed_agents: List[Worker],
                  contractor: Contractor,
+                 assigned_start_time: Optional[Time],
                  assigned_time: Optional[Time],
                  work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         ...

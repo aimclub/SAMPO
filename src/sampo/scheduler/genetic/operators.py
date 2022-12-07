@@ -36,7 +36,6 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
-
     toolbox = base.Toolbox()
     # generate initial population
     toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
@@ -123,9 +122,9 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
                           work_estimator: WorkTimeEstimator = None) -> Time:
     chromosome = individuals[0]
     if is_chromosome_correct(chromosome, index2node, worker_pool_indices, node_indices):
-        scheduled_works, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                            index2contractor, worker_pool_indices,
-                                                            spec, work_estimator)
+        scheduled_works, _, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                                               index2contractor, worker_pool_indices,
+                                                               spec, work_estimator)
         return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
     else:
         return Time.inf()

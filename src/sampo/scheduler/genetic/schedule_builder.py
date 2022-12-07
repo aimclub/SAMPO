@@ -36,7 +36,7 @@ def build_schedule(wg: WorkGraph,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    timeline: Timeline | None = None) \
-        -> tuple[ScheduleWorkDict, Timeline]:
+        -> tuple[ScheduleWorkDict, Time, Timeline]:
     """
     Genetic algorithm
     Structure of chromosome:
@@ -229,9 +229,10 @@ def build_schedule(wg: WorkGraph,
 
     chromosome = hof[0][0]
 
-    scheduled_works, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                               index2contractor_obj, worker_pool_indices,
-                                                               spec, work_estimator, timeline)
+    scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                                                                    index2contractor_obj,
+                                                                                    worker_pool_indices,
+                                                                                    spec, work_estimator, timeline)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 
@@ -244,7 +245,7 @@ def build_schedule(wg: WorkGraph,
             palette='r')
         plt.show()
 
-    return {node.id: work for node, work in scheduled_works.items()}, timeline
+    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):

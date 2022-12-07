@@ -33,10 +33,11 @@ class TopologicalScheduler(Scheduler):
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Timeline]:
+            -> tuple[Schedule, Time, Timeline]:
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
-        schedule, timeline = self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, timeline)
+        schedule, schedule_start_time, timeline = \
+            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -45,7 +46,7 @@ class TopologicalScheduler(Scheduler):
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, timeline
+        return schedule, schedule_start_time, timeline
 
     # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph) -> List[GraphNode]:
@@ -65,7 +66,7 @@ class TopologicalScheduler(Scheduler):
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
                         timeline: Timeline | None = None) \
-            -> tuple[Iterable[ScheduledWork], MomentumTimeline]:
+            -> tuple[Iterable[ScheduledWork], Time, MomentumTimeline]:
         """
         Builds a schedule from a list of tasks where all dependents tasks are guaranteed to be later
         in the sequence than their dependencies
@@ -90,6 +91,8 @@ class TopologicalScheduler(Scheduler):
         # So, we will store IDs of non-head nodes in such chains to skip them.
         # Note that tasks are already topologically ordered,
         # i.e., the first node in a chain is always processed before its children
+
+        schedule_start_time = None
 
         skipped_inseparable_children: Set[str] = set()
         # scheduling all the tasks in a one-by-one manner
@@ -128,11 +131,14 @@ class TopologicalScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
+            if not schedule_start_time:
+                schedule_start_time = st
+
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, work_estimator)
 
-        return node2swork.values(), timeline
+        return node2swork.values(), schedule_start_time, timeline
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):

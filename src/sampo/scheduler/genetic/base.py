@@ -11,6 +11,7 @@ from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.validation import validate_schedule
 
@@ -75,7 +76,7 @@ class GeneticScheduler(Scheduler):
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Timeline]:
+            -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
             return scheduler_class(self.work_estimator).schedule(wg, contractors)
 
@@ -87,22 +88,22 @@ class GeneticScheduler(Scheduler):
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)
 
-        scheduled_works, timeline = build_schedule(wg,
-                                                   contractors,
-                                                   agents,
-                                                   size_of_population,
-                                                   self.number_of_generation,
-                                                   size_selection,
-                                                   mutate_order,
-                                                   mutate_resources,
-                                                   init_schedules,
-                                                   self.rand,
-                                                   spec,
-                                                   self.work_estimator,
-                                                   timeline=timeline)
+        scheduled_works, schedule_start_time, timeline = build_schedule(wg,
+                                                                        contractors,
+                                                                        agents,
+                                                                        size_of_population,
+                                                                        self.number_of_generation,
+                                                                        size_selection,
+                                                                        mutate_order,
+                                                                        mutate_resources,
+                                                                        init_schedules,
+                                                                        self.rand,
+                                                                        spec,
+                                                                        self.work_estimator,
+                                                                        timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, timeline
+        return schedule, schedule_start_time, timeline

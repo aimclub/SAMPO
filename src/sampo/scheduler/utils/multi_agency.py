@@ -25,7 +25,8 @@ class Agent:
 
         To apply returned offer, use `Agent#confirm`.
         """
-        schedule, start_time, timeline = self._scheduler.schedule_with_cache(wg, self._contractors, timeline=self._timeline)
+        schedule, start_time, timeline = \
+            self._scheduler.schedule_with_cache(wg, self._contractors, timeline=self._timeline)
         return start_time, start_time + schedule.execution_time, timeline
 
     def confirm(self, timeline: Timeline):
@@ -35,6 +36,7 @@ class Agent:
         :param timeline: timeline returned from corresponding `Agent#offer`
         """
         self._timeline = timeline
+
 
 @dataclass
 class ScheduledBlock:
@@ -60,18 +62,18 @@ class Manager:
 
     # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, bg: BlockGraph) -> dict[str, ScheduledBlock]:
-        id2blocks = {}
+        id2sblock = {}
         for block in bg.nodes:
             agent_start_time, agent_end_time, agent = self.run_auction(block.wg)
-            max_parent_time = max((parent.end_time for parent in block.blocks_from), default=Time(0))
+            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
             start_time = max(max_parent_time, agent_start_time)
             delta = start_time - agent_start_time
             sblock = ScheduledBlock(wg=block.wg, agent=agent,
                                     start_time=agent_start_time + delta,
                                     end_time=agent_end_time + delta)
-            id2blocks[block.id] = sblock
+            id2sblock[sblock.id] = sblock
 
-        return id2blocks
+        return id2sblock
 
     def run_auction(self, wg: WorkGraph) -> tuple[Time, Time, Agent]:
         """

@@ -10,6 +10,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
 ChromosomeType = Tuple[List[int], np.ndarray]
@@ -54,19 +55,22 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
 
 
 def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: WorkerContractorPool,
-                                   index2node: Dict[int, GraphNode],
-                                   index2contractor: Dict[int, Contractor],
+                                   index2node: dict[int, GraphNode],
+                                   index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    spec: ScheduleSpec,
                                    work_estimator: WorkTimeEstimator = None,
                                    timeline: Timeline | None = None) \
-        -> tuple[Dict[GraphNode, ScheduledWork], Timeline]:
-    node2swork: Dict[GraphNode, ScheduledWork] = {}
+        -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline]:
+    node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
+
+    schedule_start_time = None
+
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
         if node.id in node2swork and not node.is_inseparable_son():
@@ -85,9 +89,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
+        st = timeline.find_min_start_time(node, worker_team, node2swork)
+
+        if not schedule_start_time:
+            schedule_start_time = st
+
         # finish using time spec
         finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
-                                        None, work_spec.assigned_time, work_estimator)
+                                        st, work_spec.assigned_time, work_estimator)
 
         timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
-    return node2swork, timeline
+    return node2swork, schedule_start_time, timeline

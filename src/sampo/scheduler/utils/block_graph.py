@@ -9,8 +9,12 @@ from sampo.schemas.graph import WorkGraph
 class BlockNode:
     def __init__(self, wg: WorkGraph):
         self.wg = wg
-        self.blocks_from = []
-        self.blocks_to = []
+        self.blocks_from: list[BlockNode] = []
+        self.blocks_to: list[BlockNode] = []
+
+    @property
+    def id(self):
+        return self.wg.start.id
 
 
 class BlockGraph:
@@ -38,7 +42,7 @@ def generate_blocks(n_blocks: int, type_prop: list[int],
     """
     ss = SimpleSynthetic(rand)
 
-    modes = rand.sample(list(SyntheticGraphType), counts=type_prop, k=n_blocks)
+    modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
     nodes = [ss.work_graph(mode, *count_supplier(i)) for i, mode in enumerate(modes)]
     bg = BlockGraph(nodes)
 

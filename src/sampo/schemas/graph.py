@@ -221,6 +221,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
 
+    def __hash__(self):
+        return hash(self.start) + hash(self.finish)
+
     def __getitem__(self, item: str) -> GraphNode:
         return self.dict_nodes[item]
 

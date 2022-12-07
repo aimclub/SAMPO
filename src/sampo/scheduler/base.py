@@ -12,6 +12,7 @@ from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.base_opt import dichotomy_int
@@ -50,7 +51,7 @@ class Scheduler(ABC):
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Timeline]:
+            -> tuple[Schedule, Time, Timeline]:
         ...
 
     @staticmethod

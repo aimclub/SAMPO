@@ -8,8 +8,11 @@ from sampo.schemas.graph import WorkGraph
 
 
 class SimpleSynthetic:
-    def __init__(self, seed: int | None) -> None:
-        self._rand = Random(seed)
+    def __init__(self, rand: int | Random | None) -> None:
+        if isinstance(rand, Random):
+            self._rand = rand
+        else:
+            self._rand = Random(rand)
 
     def small_work_graph(self, cluster_name: str | None = 'C1') -> WorkGraph:
         return get_small_graph(cluster_name, self._rand)

@@ -6,7 +6,7 @@ from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.scheduler.heft.base import HEFTScheduler
 
 rand = random.Random(10)
-p_rand = SimpleSynthetic(seed=231)
+p_rand = SimpleSynthetic(rand=231)
 wg = p_rand.work_graph(top_border=3000)
 contractors = [p_rand.contactor(i) for i in range(10, 31, 10)]
 schedule = HEFTScheduler().schedule(wg, contractors)

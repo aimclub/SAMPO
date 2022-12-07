@@ -76,7 +76,6 @@ class GeneticScheduler(Scheduler):
                             validate: bool = False,
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Timeline]:
-        # TODO Handle given timeline
         def init_schedule(scheduler_class):
             return scheduler_class(self.work_estimator).schedule(wg, contractors)
 
@@ -99,7 +98,8 @@ class GeneticScheduler(Scheduler):
                                                    init_schedules,
                                                    self.rand,
                                                    spec,
-                                                   self.work_estimator)
+                                                   self.work_estimator,
+                                                   timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:

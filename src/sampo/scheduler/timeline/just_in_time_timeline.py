@@ -27,6 +27,7 @@ class JustInTimeTimeline(Timeline):
         Define the nearest possible start time for current job. It is equal the max value from:
         1. end time of all parent tasks
         2. time previous job off all needed workers to complete current task
+
         :param node: target node
         :param worker_team: worker team under testing
         :param id2swork:

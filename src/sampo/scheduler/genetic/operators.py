@@ -9,12 +9,13 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, Ch
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
+
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
-from sampo.utilities.collections import reverse_dictionary
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin)
@@ -30,12 +31,17 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  mutate_order: float, mutate_resources: float, selection_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
+                 worker_pool_indices: dict[int, dict[int, Worker]],
+                 contractor2index: dict[str, int],
+                 node_indices: list[int],
+                 index2node_list: list[tuple[int, GraphNode]],
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
+
     toolbox = base.Toolbox()
     # generate initial population
-    toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors, index2node=index2node,
-                     work_id2index=work_id2index, worker_name2index=worker_name2index,
-                     contractor2index=reverse_dictionary(index2contractor),
+    toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
+                     index2node_list=index2node_list, work_id2index=work_id2index, worker_name2index=worker_name2index,
+                     contractor2index=contractor2index,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator)
 
     # create from generate_chromosome function one individual
@@ -44,10 +50,8 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     # evaluation function
     toolbox.register("evaluate", chromosome_evaluation, index2node=index2node,
-                     worker_name2index=worker_name2index,
-                     index2worker_name=reverse_dictionary(worker_name2index),
-                     index2contractor=index2contractor_obj, worker_pool=worker_pool,
-                     spec=spec, work_estimator=work_estimator)
+                     index2contractor=index2contractor_obj, worker_pool=worker_pool, node_indices=node_indices,
+                     worker_pool_indices=worker_pool_indices, spec=spec, work_estimator=work_estimator)
     # crossover for order
     toolbox.register("mate", mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -62,18 +66,18 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     # crossover for resources
     toolbox.register("mate_resources", mate_for_resources, rand=rand)
 
-    toolbox.register("validate", is_chromosome_correct, index2node=index2node, index2contractor=index2contractor_obj,
-                     worker_pool=worker_pool, index2worker=reverse_dictionary(worker_name2index))
-    toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, index2node=index2node,
+    toolbox.register("validate", is_chromosome_correct, index2node=index2node, worker_pool_indices=worker_pool_indices,
+                     node_indices=node_indices)
+    toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, index2node=index2node_list,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
-                     contractor2index=reverse_dictionary(index2contractor))
+                     contractor2index=contractor2index)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
-                     index2node=index2node, worker_name2index=worker_name2index, index2contractor=index2contractor_obj,
-                     spec=spec, work_estimator=work_estimator)
+                     index2node=index2node, index2contractor=index2contractor_obj,
+                     worker_pool_indices=worker_pool_indices, spec=spec, work_estimator=work_estimator)
     return toolbox
 
 
-def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node: Dict[int, GraphNode],
+def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node_list: list[tuple[int, GraphNode]],
                         work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
                         contractor2index: Dict[str, int],
                         init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
@@ -90,7 +94,7 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     :param contractors:
     :param wg:
     :param work_id2index:
-    :param index2node:
+    :param index2node_list:
     :param worker_name2index:
     :param rand:
     :param init_chromosomes:
@@ -107,20 +111,20 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
             .schedule(wg, contractors)
-        chromosome = convert_schedule_to_chromosome(index2node, work_id2index, worker_name2index,
+        chromosome = convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
                                                     contractor2index, schedule)
     return chromosome
 
 
 def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[int, GraphNode],
-                          worker_name2index: Dict[str, int], index2worker_name: Dict[int, str],
-                          index2contractor: Dict[int, Contractor], worker_pool: WorkerContractorPool,
-                          spec: ScheduleSpec, work_estimator: WorkTimeEstimator = None) -> Time:
+                          index2contractor: Dict[int, Contractor],
+                          worker_pool_indices: dict[int, dict[int, Worker]], node_indices: list[int],
+                          worker_pool: WorkerContractorPool, spec: ScheduleSpec,
+                          work_estimator: WorkTimeEstimator = None) -> Time:
     chromosome = individuals[0]
-    if is_chromosome_correct(chromosome, index2node, index2contractor, worker_pool, index2worker_name):
+    if is_chromosome_correct(chromosome, index2node, worker_pool_indices, node_indices):
         scheduled_works, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                            worker_name2index,
-                                                            index2contractor,
+                                                            index2contractor, worker_pool_indices,
                                                             spec, work_estimator)
         return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
     else:
@@ -128,10 +132,9 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
 
 
 def is_chromosome_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode],
-                          index2contractor: Dict[int, Contractor], worker_pool: WorkerContractorPool,
-                          index2worker: Dict[int, str]) -> bool:
+                          worker_pool_indices: dict[int, dict[int, Worker]], node_indices: list[int]) -> bool:
     return is_chromosome_order_correct(chromosome, index2node) and \
-           is_chromosome_contractors_correct(chromosome, index2contractor, worker_pool, index2worker, index2node.keys())
+           is_chromosome_contractors_correct(chromosome, worker_pool_indices, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode]) -> bool:
@@ -147,26 +150,20 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, index2node: Dict[int
 
 
 def is_chromosome_contractors_correct(chromosome: ChromosomeType,
-                                      index2contractor: Dict[int, Contractor],
-                                      worker_pool: WorkerContractorPool,
-                                      index2worker: Dict[int, str],
+                                      worker_pool_indices: dict[int, dict[int, Worker]],
                                       work_indices: Iterable[int]) -> bool:
     """
     Checks that assigned contractors can supply assigned workers
     :param chromosome:
-    :param index2contractor:
-    :param worker_pool:
-    :param index2worker:
+    :param worker_pool_indices:
     :param work_indices:
     :return:
     """
-    for ind in work_indices:
-        resources_count = chromosome[1][:-1, ind]
-        resources_names = [index2worker[i] for i in range(resources_count.size)]
-        contractor_ind = chromosome[1][-1, ind]
-        contractor_id = index2contractor[contractor_ind].id
-        for name, count in zip(resources_names, resources_count):
-            if worker_pool[name][contractor_id].count < count:
+    for work_ind in work_indices:
+        resources_count = chromosome[1][:-1, work_ind]
+        contractor_ind = chromosome[1][-1, work_ind]
+        for ind, count in enumerate(resources_count):
+            if worker_pool_indices[ind][contractor_ind].count < count:
                 return False
     return True
 

@@ -43,7 +43,7 @@ def get_params(works_count: int) -> Tuple[int, float, float, int]:
 
 def create_toolbox(wg: WorkGraph,
                    contractors: List[Contractor],
-                   agents: WorkerContractorPool,
+                   worker_pool: WorkerContractorPool,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
@@ -51,29 +51,35 @@ def create_toolbox(wg: WorkGraph,
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None) -> Tuple[Toolbox, np.ndarray]:
+    # preparing access-optimized data structures
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
     work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
-    worker_name2index = {worker_name: index for index, worker_name in enumerate(agents)}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
     contractor2index = reverse_dictionary(index2contractor)
+    index2node_list = [(index, node) for index, node in index2node.items()]
+    worker_pool_indices = {worker_name2index[worker_name]: {
+        contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
+    } for worker_name, workers_of_type in worker_pool.items()}
+    node_indices = list(index2node.keys())
 
     init_chromosomes: Dict[str, ChromosomeType] = \
-        {name: convert_schedule_to_chromosome(index2node, work_id2index, worker_name2index,
+        {name: convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
                                               contractor2index, schedule)
          for name, schedule in init_schedules.items()}
 
-    resources_border = np.zeros((2, len(agents), len(index2node)))
+    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = \
-                min(req.max_count, max(list(map(attrgetter('count'), agents[req.kind].values()))))
+                min(req.max_count, max(list(map(attrgetter('count'), worker_pool[req.kind].values()))))
 
     return init_toolbox(wg,
                         contractors,
-                        agents,
+                        worker_pool,
                         index2node,
                         work_id2index,
                         worker_name2index,
@@ -85,6 +91,10 @@ def create_toolbox(wg: WorkGraph,
                         selection_size,
                         rand,
                         spec,
+                        worker_pool_indices,
+                        contractor2index,
+                        node_indices,
+                        index2node_list,
                         work_estimator), resources_border
 
 

@@ -49,6 +49,10 @@ class Worker(Resource):
                       contractor_id=self.contractor_id,
                       productivity=self.productivity)
 
+    def with_count(self, count: int) -> 'Worker':
+        self.count = count
+        return self
+
     def get_cost(self) -> float:
         """Returns cost of this worker entry"""
         return self.cost_one_unit * self.count

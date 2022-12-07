@@ -66,6 +66,7 @@ class MomentumTimeline(Timeline):
                             work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         """
         Computes start time, max parent time, contractor and exec times for given node
+
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node:
         :param node2swork:
@@ -163,8 +164,8 @@ class MomentumTimeline(Timeline):
 
         i = 0
         while len(queue) > 0:
-            if i > 0 and i % 50 == 0:
-                print(f"Warning! Probably cycle in looking for diff workers: {i} iteration")
+            # if i > 0 and i % 50 == 0:
+            #     print(f"Warning! Probably cycle in looking for diff workers: {i} iteration")
             i += 1
 
             wreq = queue.popleft()
@@ -207,9 +208,9 @@ class MomentumTimeline(Timeline):
         # we can stop and put the task at the very end
         i = 0
         while len(state[current_start_idx:]) > 0:
-            if i > 0 and i % 50 == 0:
-                print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
-                print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
+            # if i > 0 and i % 50 == 0:
+            #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
+            #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
             i += 1
             end_idx = state.bisect_right(current_start_time + exec_time)
 

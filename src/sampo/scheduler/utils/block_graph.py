@@ -1,10 +1,11 @@
+from copy import deepcopy
 from operator import attrgetter
 from random import Random
 from typing import Callable
 
 from sampo.generator import SimpleSynthetic
 from sampo.generator.types import SyntheticGraphType
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.utilities.collections import build_index
 
 
@@ -34,6 +35,19 @@ class BlockGraph:
 
     def __getitem__(self, item) -> BlockNode:
         return self.node_dict[item]
+
+    def to_work_graph(self) -> WorkGraph:
+        """
+        Creates `WorkGraph` that are equal to this `BlockGraph`.
+        """
+        copied_nodes = deepcopy(self.nodes)
+        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.start
+        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.finish
+
+        for end in copied_nodes:
+            end.wg.start.add_parents([start.wg.finish for start in end.blocks_from])
+
+        return WorkGraph(global_start, global_end)
 
     @staticmethod
     def add_edge(start: BlockNode, end: BlockNode):

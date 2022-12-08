@@ -9,6 +9,10 @@ from sampo.utilities.collections import build_index
 
 
 class BlockNode:
+    """
+    `BlockNode` represents the node of `BlockGraph` and contains corresponding
+    `WorkGraph` and related dependencies between blocks in `BlockGraph`.
+    """
     def __init__(self, wg: WorkGraph):
         self.wg = wg
         self.blocks_from: list[BlockNode] = []
@@ -20,6 +24,10 @@ class BlockNode:
 
 
 class BlockGraph:
+    """
+    Represents the block graph, where blocks are instances of `WorkGraph` and
+    edges are simple *FS* dependencies.
+    """
     def __init__(self, nodes: list[WorkGraph]):
         self.nodes = [BlockNode(node) for node in nodes]
         self.node_dict = build_index(self.nodes, attrgetter('id'))
@@ -37,7 +45,7 @@ def generate_blocks(n_blocks: int, type_prop: list[int],
                     count_supplier: Callable[[int], tuple[int, int]],
                     edge_prob: float, rand: Random | None = Random()) -> BlockGraph:
     """
-    Generate block graph according to given parameters
+    Generate block graph according to given parameters.
 
     :param n_blocks: the count of blocks
     :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential

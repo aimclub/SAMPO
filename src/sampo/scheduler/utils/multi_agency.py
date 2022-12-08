@@ -48,6 +48,11 @@ class Agent:
 
 @dataclass
 class ScheduledBlock:
+    """
+    An object represents scheduled graph block(group of works).
+
+    Contains all data used in scheduling, the agent and resulting information.
+    """
     wg: WorkGraph
     schedule: Schedule
     agent: Agent
@@ -77,9 +82,17 @@ class Manager:
 
     # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, bg: BlockGraph, log: bool = False) -> dict[str, ScheduledBlock]:
+        """
+        Runs multi-agent system based on auction on given BlockGraph.
+        
+        :param bg: 
+        :param log:
+        :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
+        """
         id2sblock = {}
         for i, block in enumerate(bg.nodes):
             if log:
+                print('--------------------------------')
                 print(f'Running auction on block {i}')
             agent_start_time, agent_end_time, agent_schedule, agent = self.run_auction(block.wg)
             if log:

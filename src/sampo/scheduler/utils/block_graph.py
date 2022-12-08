@@ -1,9 +1,11 @@
+from operator import attrgetter
 from random import Random
 from typing import Callable
 
 from sampo.generator import SimpleSynthetic
 from sampo.generator.types import SyntheticGraphType
 from sampo.schemas.graph import WorkGraph
+from sampo.utilities.collections import build_index
 
 
 class BlockNode:
@@ -20,6 +22,10 @@ class BlockNode:
 class BlockGraph:
     def __init__(self, nodes: list[WorkGraph]):
         self.nodes = [BlockNode(node) for node in nodes]
+        self.node_dict = build_index(self.nodes, attrgetter('id'))
+
+    def __getitem__(self, item) -> BlockNode:
+        return self.node_dict[item]
 
     @staticmethod
     def add_edge(start: BlockNode, end: BlockNode):

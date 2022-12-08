@@ -3,8 +3,8 @@ from operator import attrgetter, itemgetter
 from typing import Dict, List
 
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.graph import WorkGraph
+from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.time import Time
 from sampo.utilities.collections import build_index
 
@@ -73,19 +73,8 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
 
 def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: Schedule,
                                                                        contractors: List[Contractor]) -> None:
-    # 4. at each moment sum of allocated workers of all tasks for the same contractor
-    # does not exceed capacity of this contractor
-    ordered_start_end_events = sorted(
-        (el for work in schedule.works
-         for el in [("start", work.start_time, work), ("end", work.finish_time, work)]),
-        key=itemgetter(1)
-    )
-
     # Dict[contractor_id, Dict[worker_name, worker_count]]
     initial_contractors_state: Dict[str, Dict[str, int]] = {}
-    #     contractor.id: {w.name: w.count for _, w in contractor.workers.items()}
-    #     for contractor in schedule.resourcePools
-    # }
     for contractor in contractors:
         initial_contractors_state[contractor.id] = {}
         for w in contractor.workers.values():
@@ -93,8 +82,24 @@ def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule:
                 initial_contractors_state[contractor.id][w.name] += w.count
             else:
                 initial_contractors_state[contractor.id][w.name] = w.count
-
     contractors_state = deepcopy(initial_contractors_state)
+
+    check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule,
+                                                                      initial_contractors_state,
+                                                                      contractors_state)
+
+
+def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: Schedule,
+                                                                      initial_worker_pool: dict[str, dict[str, int]],
+                                                                      cur_worker_pool: dict[str, dict[str, int]]) \
+        -> dict[str, dict[str, int]]:
+    # 4. at each moment sum of allocated workers of all tasks for the same contractor
+    # does not exceed capacity of this contractor
+    ordered_start_end_events = sorted(
+        (el for work in schedule.works
+         for el in [("start", work.start_time, work), ("end", work.finish_time, work)]),
+        key=itemgetter(1)
+    )
 
     moment_pool: Dict[str, Dict[str, int]] = {}
     moment = Time(0)
@@ -109,19 +114,19 @@ def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule:
         if time != moment:
             for contractor_id, contractor_pool in moment_pool.items():
                 for worker_name, worker_count in contractor_pool.items():
-                    available = contractors_state[contractor_id][worker_name]
+                    available = cur_worker_pool[contractor_id][worker_name]
                     # check
                     assert available + worker_count >= 0, \
                         f"Overuse of workers (event type {event_type} at [{time}]) for contractor '{contractor_id}' " \
                         f"and worker type '{worker_name}': available {available}," \
                         f" while being allocated {worker_count}"
-                    assert available + worker_count <= initial_contractors_state[contractor_id][worker_name], \
+                    assert available + worker_count <= initial_worker_pool[contractor_id][worker_name], \
                         f"Excessive workers appear for contractor '{contractor_id}' and worker type '{worker_name}':" \
                         f"available {available}, being returned {worker_count}, " \
-                        f"initial contractor capacity {initial_contractors_state[contractor_id][worker_name]}"
+                        f"initial contractor capacity {initial_worker_pool[contractor_id][worker_name]}"
 
                     # update
-                    contractors_state[contractor_id][worker_name] = available + worker_count
+                    cur_worker_pool[contractor_id][worker_name] = available + worker_count
             moment_pool.clear()
             moment = time
 
@@ -138,6 +143,8 @@ def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule:
                 cpool[w.name] = cpool.get(w.name, 0) + w.count
         else:
             raise ValueError(f"Incorrect event type: {event_type}. Only 'start' and 'end' are supported.")
+
+    return cur_worker_pool
 
 
 def _check_all_workers_correspond_to_worker_reqs(schedule: Schedule):

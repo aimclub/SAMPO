@@ -109,7 +109,7 @@ class HEFTScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if not schedule_start_time:
+            if schedule_start_time is None:
                 schedule_start_time = st
 
             # apply work to scheduling

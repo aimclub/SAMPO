@@ -7,8 +7,9 @@ from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
 from sampo.utilities.collections import build_index
-from sampo.utilities.validation import _check_all_allocated_workers_do_not_exceed_capacity_of_contractors, \
-    _check_all_tasks_scheduled, _check_parent_dependencies, _check_all_workers_correspond_to_worker_reqs
+from sampo.utilities.validation import _check_all_tasks_scheduled, _check_parent_dependencies, \
+    _check_all_workers_correspond_to_worker_reqs, \
+    _check_all_allocated_workers_do_not_exceed_capacity_of_contractors
 
 
 class BreakType(Enum):

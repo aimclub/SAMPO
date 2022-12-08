@@ -131,7 +131,7 @@ class TopologicalScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if not schedule_start_time:
+            if schedule_start_time is None:
                 schedule_start_time = st
 
             # finish scheduling with time spec

@@ -1,7 +1,6 @@
 import math
 import random
 import time
-from operator import attrgetter
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -80,6 +79,23 @@ def build_schedule(wg: WorkGraph,
     } for worker_name, workers_of_type in worker_pool.items()}
     node_indices = [index for index in range(wg.vertex_count)]
 
+    contractors_capacity = np.zeros((len(contractors), len(worker_pool)))
+    for w_ind, cont2worker in worker_pool_indices.items():
+        for c_ind, worker in cont2worker.items():
+            contractors_capacity[c_ind][w_ind] = worker.count
+
+    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
+    for work_index, node in index2node.items():
+        for req in node.work_unit.worker_reqs:
+            worker_index = worker_name2index[req.kind]
+            resources_border[0, worker_index, work_index] = req.min_count
+            resources_border[1, worker_index, work_index] = req.max_count
+
+    contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
+    for ind, contractor in enumerate(contractors):
+        for ind_worker, worker in enumerate(contractor.workers.values()):
+            contractor_borders[ind, ind_worker] = worker.count
+
     print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
 
     start = time.time()
@@ -87,22 +103,14 @@ def build_schedule(wg: WorkGraph,
     # initial chromosomes construction
     init_chromosomes: Dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
-                                              contractor2index, schedule)
+                                              contractor2index, contractor_borders, schedule)
          for name, schedule in init_schedules.items()}
-
-    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
-    for work_index, node in index2node.items():
-        for req in node.work_unit.worker_reqs:
-            worker_index = worker_name2index[req.kind]
-            resources_border[0, worker_index, work_index] = req.min_count
-            resources_border[1, worker_index, work_index] = \
-                min(req.max_count, max(list(map(attrgetter('count'), worker_pool[req.kind].values()))))
 
     toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, node_indices, index2node_list, work_estimator)
+                           contractor2index, contractor_borders, node_indices, index2node_list, work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
@@ -131,7 +139,7 @@ def build_schedule(wg: WorkGraph,
     print(f'First population evaluation took {(time.time() - start) * 1000} ms')
     start = time.time()
 
-    while g < generation_number and best_fitness < prev_best_fitness:
+    while g < generation_number: # and best_fitness < prev_best_fitness:
         print("-- Generation %i --" % g)
         prev_best_fitness = best_fitness
 
@@ -187,15 +195,36 @@ def build_schedule(wg: WorkGraph,
                     toolbox.mutate_resources(mutant[0], low=low, up=up, type_of_worker=worker)
                     del mutant.fitness.values
 
+        # resource borders mutation
+        for worker in workers:
+            if worker == len(worker_name2index):
+                continue
+            for mutant in offspring:
+                if rand.random() < mutpb_res:
+                    toolbox.mutate_resource_borders(mutant[0],
+                                                    contractors_capacity=contractors_capacity,
+                                                    type_of_worker=worker)
+                    del mutant.fitness.values
+
         # for the crossover, we use those types that did not participate in the mutation(+1 means contractor 'resource')
         workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
         # crossover
         # take 2 individuals as input 1 modified individuals
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
             for ind_worker in range(len(workers_for_mate)):
+                # mate resources
                 if rand.random() < cxpb_res:
-                    toolbox.mate_resources(child1[0][1][workers_for_mate[ind_worker]],
-                                           child2[0][1][workers_for_mate[ind_worker]])
+                    toolbox.mate_resources(child1[0], child2[0], workers_for_mate[ind_worker])
+
+                    del child1.fitness.values  # remove prev
+                    del child2.fitness.values
+
+                # mate resource borders
+                if rand.random() < cxpb_res:
+                    if workers_for_mate[ind_worker] == len(worker_name2index):
+                        continue
+                    toolbox.mate_resource_borders(child1[0], child2[0], workers_for_mate[ind_worker])
+
                     del child1.fitness.values  # remove prev
                     del child2.fitness.values
 

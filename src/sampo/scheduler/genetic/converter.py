@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 
@@ -13,19 +13,21 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
-ChromosomeType = Tuple[List[int], np.ndarray]
+ChromosomeType = Tuple[List[int], np.ndarray, np.ndarray]
 
 
 def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
-                                   work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                                   contractor2index: Dict[str, int],
-                                   schedule: Schedule) -> Tuple[List[int], np.ndarray]:
+                                   work_id2index: dict[str, int], worker_name2index: dict[str, int],
+                                   contractor2index: dict[str, int], contractor_borders: np.ndarray,
+                                   schedule: Schedule) -> ChromosomeType:
     """
     received result of scheduling algorithm and transform it to chromosome
-    :param contractor2index:
+
     :param work_id2index:
     :param index2node:
     :param worker_name2index:
+    :param contractor2index:
+    :param contractor_borders:
     :param schedule:
     :return:
     """
@@ -41,6 +43,7 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
     resource_chromosome = np.zeros((len(worker_name2index) + 1, len(order_chromosome)), dtype=int)
 
     for index, node in index2node:
+        # TODO Check that `node_reqs` is really need
         node_reqs = set([req.kind for req in node.work_unit.worker_reqs])
         for resource in schedule[node.id].workers:
             if resource.name in node_reqs:
@@ -51,7 +54,9 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
                 resource_chromosome[res_index, work_index] = res_count
                 resource_chromosome[-1, work_index] = contractor2index[res_contractor]
 
-    return order_chromosome, resource_chromosome
+    resource_border_chromosome = np.copy(contractor_borders)
+
+    return order_chromosome, resource_chromosome, resource_border_chromosome
 
 
 def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: WorkerContractorPool,

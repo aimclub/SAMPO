@@ -6,11 +6,12 @@ from typing import Dict, List, Tuple
 import numpy as np
 import seaborn as sns
 from deap import tools
+from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -85,11 +86,13 @@ def build_schedule(wg: WorkGraph,
             contractors_capacity[c_ind][w_ind] = worker.count
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
+    resources_min_border = np.zeros((len(worker_pool)))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
+            resources_min_border[worker_index] = max(resources_min_border[worker_index], req.min_count)
 
     contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
     for ind, contractor in enumerate(contractors):
@@ -127,56 +130,80 @@ def build_schedule(wg: WorkGraph,
     fitness = list(map(toolbox.evaluate, pop))
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = [fit]
+        ind.fitness.invalid_steps = 1 if fit == Time.inf() else 0
+
+    hof.update(pop)
+    best_fitness = hof[0].fitness.values[0]
 
     if show_fitness_graph:
         fitness_history.append(sum(fitness) / len(fitness))
 
     g = 0
     # the best fitness, track to increase performance by stopping evaluation when not decreasing
-    prev_best_fitness = Time.inf().value
-    best_fitness = prev_best_fitness - 1
+    prev_best_fitness = Time.inf()
 
     print(f'First population evaluation took {(time.time() - start) * 1000} ms')
     start = time.time()
 
-    while g < generation_number: # and best_fitness < prev_best_fitness:
-        print("-- Generation %i --" % g)
+    invalidation_border = 3
+    plateau_steps = 0
+    max_plateau_steps = 3
+
+    while g < generation_number and plateau_steps < max_plateau_steps:
+        print(f"-- Generation {g}, population={len(pop)}, best time={best_fitness} --")
+        if best_fitness == prev_best_fitness:
+            plateau_steps += 1
+        else:
+            plateau_steps = 0
         prev_best_fitness = best_fitness
 
         # select individuals of next generation
-        offspring = toolbox.select(pop, len(pop))
+        offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
         # clone selected individuals
-        offspring = [toolbox.clone(ind) for ind in offspring]
+        # offspring = [toolbox.clone(ind) for ind in offspring]
 
         # operations for ORDER
         # crossover
         # take 2 individuals as input 1 modified individuals
         # take after 1: (1,3,5) and (2,4,6) and get pairs 1,2; 3,4; 5,6
+
+        cur_generation = []
+
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
             if rand.random() < cxpb:
-                toolbox.mate(child1[0][0], child2[0][0])
-                del child1.fitness.values  # remove previous
-                del child2.fitness.values
+                ind1, ind2 = toolbox.mate(child1[0], child2[0])
+                # add to population
+                cur_generation.append(wrap(ind1))
+                cur_generation.append(wrap(ind2))
 
         # mutation
         # take 1 individuals as input and return 1 individuals as output
         for mutant in offspring:
             if rand.random() < mutpb:
-                toolbox.mutate(mutant[0][0])
-                del mutant.fitness.values
+                ind_order = toolbox.mutate(mutant[0][0])
+                ind = copy_chromosome(mutant[0])
+                ind = (ind_order[0], ind[1], ind[2])
+                # add to population
+                cur_generation.append(wrap(ind))
 
+        # add mutant part of generation to offspring
+        # offspring.extend(cur_generation)
+        # cur_generation.clear()
         # gather all the fitness in one list and print the stats
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        # invalid_ind = [ind for ind in offspring
+        #                if not ind.fitness.valid or ind.fitness.invalid_steps < invalidation_border]
         # evaluation for each individual
         # fitness = pool.map(toolbox.evaluate, invalid_ind)
         # pool.join()
-        fitness = list(map(toolbox.evaluate, invalid_ind))
-        for ind, fit in zip(invalid_ind, fitness):
-            ind.fitness.values = [fit]
-
-        # renewing population
-        pop[:] = [ind for ind in offspring if ind.fitness.values[0] != Time.inf().value]
-        hof.update(pop)
+        # fitness = list(map(toolbox.evaluate, invalid_ind))
+        # for ind, fit in zip(invalid_ind, fitness):
+        #     ind.fitness.values = [fit]
+        #     ind.fitness.invalid_steps += 1 if fit == Time.inf() else 0
+        #
+        # # renewing population
+        # addition = [ind for ind in offspring if ind.fitness.invalid_steps < 3]
+        # print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
+        # pop.extend(addition)
 
         # operations for RESOURCES
         # mutation
@@ -192,8 +219,9 @@ def build_schedule(wg: WorkGraph,
             up = resources_border[1, worker] if worker != len(worker_name2index) else 0
             for mutant in offspring:
                 if rand.random() < mutpb_res:
-                    toolbox.mutate_resources(mutant[0], low=low, up=up, type_of_worker=worker)
-                    del mutant.fitness.values
+                    ind = toolbox.mutate_resources(mutant[0], low=low, up=up, type_of_worker=worker)
+                    # add to population
+                    cur_generation.append(wrap(ind))
 
         # resource borders mutation
         for worker in workers:
@@ -201,49 +229,72 @@ def build_schedule(wg: WorkGraph,
                 continue
             for mutant in offspring:
                 if rand.random() < mutpb_res:
-                    toolbox.mutate_resource_borders(mutant[0],
-                                                    contractors_capacity=contractors_capacity,
-                                                    type_of_worker=worker)
-                    del mutant.fitness.values
+                    ind = toolbox.mutate_resource_borders(mutant[0],
+                                                          contractors_capacity=contractors_capacity,
+                                                          resources_min_border=resources_min_border,
+                                                          type_of_worker=worker)
+                    # add to population
+                    cur_generation.append(wrap(ind))
 
         # for the crossover, we use those types that did not participate in the mutation(+1 means contractor 'resource')
-        workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
+        # workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
         # crossover
         # take 2 individuals as input 1 modified individuals
+
+        workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
+
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            for ind_worker in range(len(workers_for_mate)):
+            for ind_worker in workers:
                 # mate resources
                 if rand.random() < cxpb_res:
-                    toolbox.mate_resources(child1[0], child2[0], workers_for_mate[ind_worker])
-
-                    del child1.fitness.values  # remove prev
-                    del child2.fitness.values
+                    ind1, ind2 = toolbox.mate_resources(child1[0], child2[0], ind_worker)
+                    # add to population
+                    cur_generation.append(wrap(ind1))
+                    cur_generation.append(wrap(ind2))
 
                 # mate resource borders
                 if rand.random() < cxpb_res:
-                    if workers_for_mate[ind_worker] == len(worker_name2index):
+                    if ind_worker == len(worker_name2index):
                         continue
-                    toolbox.mate_resource_borders(child1[0], child2[0], workers_for_mate[ind_worker])
+                    ind1, ind2 = toolbox.mate_resource_borders(child1[0], child2[0], ind_worker)
 
-                    del child1.fitness.values  # remove prev
-                    del child2.fitness.values
+                    # add to population
+                    cur_generation.append(wrap(ind1))
+                    cur_generation.append(wrap(ind2))
 
+        # add mutant part of generation to offspring
+        offspring.extend(cur_generation)
+        cur_generation.clear()
         # Gather all the fitness in one list and print the stats
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        invalid_ind = [ind for ind in offspring
+                       if ind.fitness.invalid_steps < invalidation_border]
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        fitness = [toolbox.evaluate(ind) for ind in invalid_ind]
-        for ind, fit in zip(invalid_ind, fitness):
+        for ind in invalid_ind:
+            fit = toolbox.evaluate(ind) if ind.fitness.invalid_steps == 0 else ind.fitness.values[0]
             ind.fitness.values = [fit]
+            if fit == Time.inf() and ind.fitness.invalid_steps == 0:
+                ind.fitness.invalid_steps = 1
 
         if show_fitness_graph:
             _ftn = [f for f in fitness if not math.isinf(f)]
             if len(_ftn) > 0:
                 fitness_history.append(sum(_ftn) / len(_ftn))
 
+        def valid(ind: Individual) -> bool:
+            if ind.fitness.invalid_steps == 0:
+                return True
+            ind.fitness.invalid_steps += 1
+            return ind.fitness.invalid_steps < invalidation_border
+
         # renewing population
-        pop[:] = [ind for ind in offspring if ind.fitness.values[0] != Time.inf().value]
+        addition = [ind for ind in offspring if valid(ind)]
+        print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
+        # pop_size = len(pop)
+        # pop = [ind for ind in pop if valid(ind)]
+        # print(f'----| Filtered out {pop_size - len(pop)} invalid individuals')
+        pop[:] = addition
         hof.update(pop)
 
         best_fitness = hof[0].fitness.values[0]
@@ -278,4 +329,18 @@ def build_schedule(wg: WorkGraph,
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
-    return a[0][0] == b[0][0] and (a[0][1] == b[0][1]).all()
+    return (a[0][0] == b[0][0]).all() and (a[0][1] == b[0][1]).all()
+
+
+def wrap(chromosome: ChromosomeType) -> Individual:
+    """
+    Created an individual from chromosome
+    :param chromosome:
+    :return:
+    """
+    def ind_getter():
+        return chromosome
+
+    ind = initRepeat(Individual, ind_getter, n=1)
+    ind.fitness.invalid_steps = 0
+    return ind

@@ -13,7 +13,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
-ChromosomeType = Tuple[List[int], np.ndarray, np.ndarray]
+ChromosomeType = Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
 def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
@@ -21,7 +21,7 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
                                    contractor2index: dict[str, int], contractor_borders: np.ndarray,
                                    schedule: Schedule) -> ChromosomeType:
     """
-    received result of scheduling algorithm and transform it to chromosome
+    Receive result of scheduling algorithm and transform it to chromosome
 
     :param work_id2index:
     :param index2node:
@@ -33,7 +33,7 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
     """
 
     # order works part of chromosome
-    order_chromosome: List[int] = [work_id2index[swork.work_unit.id] for swork in schedule.works]
+    order_chromosome: np.ndarray = np.array([work_id2index[swork.work_unit.id] for swork in schedule.works])
 
     # convert to convenient form
     schedule = schedule.to_schedule_work_dict

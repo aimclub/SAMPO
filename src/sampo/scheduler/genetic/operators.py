@@ -82,6 +82,10 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     return toolbox
 
 
+def copy_chromosome(c: ChromosomeType) -> ChromosomeType:
+    return c[0].copy(), c[1].copy(), c[2].copy()
+
+
 def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node_list: list[tuple[int, GraphNode]],
                         work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
                         contractor2index: Dict[str, int], contractor_borders: np.ndarray,
@@ -177,12 +181,13 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
     return True
 
 
-def get_order_tail(head_set: List[int], other: List[int]) -> List[int]:
+def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
     head_set = set(head_set)
-    return [node for node in other if node not in head_set]
+    return np.array([node for node in other if node not in head_set])
 
 
-def mate_scheduling_order(ind1: List[int], ind2: List[int], rand: random.Random) -> (List[int], List[int]):
+def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random) \
+        -> (ChromosomeType, ChromosomeType):
     """
     Crossover for order
     Basis crossover is cxOnePoint
@@ -193,26 +198,32 @@ def mate_scheduling_order(ind1: List[int], ind2: List[int], rand: random.Random)
     :param rand:
     :return: two cross individuals
     """
+    ind1 = copy_chromosome(ind1)
+    ind2 = copy_chromosome(ind2)
+
+    order1 = ind1[0]
+    order2 = ind2[0]
+
     # randomly select the point where the crossover will take place
     crossover_point = rand.randint(1, len(ind1))
 
-    ind1_new_tail = get_order_tail(ind1[:crossover_point], ind2)
-    ind2_new_tail = get_order_tail(ind2[:crossover_point], ind1)
+    ind1_new_tail = get_order_tail(order1[:crossover_point], order2)
+    ind2_new_tail = get_order_tail(order2[:crossover_point], order1)
 
-    ind1[crossover_point:] = ind1_new_tail
-    ind2[crossover_point:] = ind2_new_tail
+    order1[crossover_point:] = ind1_new_tail
+    order2[crossover_point:] = ind2_new_tail
 
     return ind1, ind2
 
 
-def mut_uniform_int(chromosome: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,
+def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,
                     probability_mutate_resources: float, contractor_count: int, rand: random.Random) -> ChromosomeType:
     """
     Mutation function for resources
     It changes selected numbers of workers in random work in certain interval for this work
 
     :param contractor_count:
-    :param chromosome:
+    :param ind:
     :param low: lower bound specified by `WorkUnit`
     :param up: upper bound specified by `WorkUnit`
     :param type_of_worker:
@@ -220,47 +231,58 @@ def mut_uniform_int(chromosome: ChromosomeType, low: np.ndarray, up: np.ndarray,
     :param rand:
     :return: mutate individual
     """
-    # select random number from interval from min to max from uniform distribution
-    size = len(chromosome[1][type_of_worker])
+    ind = copy_chromosome(ind)
 
-    if type_of_worker == len(chromosome[1]) - 1:
+    # select random number from interval from min to max from uniform distribution
+    size = len(ind[1][type_of_worker])
+
+    if type_of_worker == len(ind[1]) - 1:
         # print('Contractor mutation!')
         for i in range(size):
             if rand.random() < probability_mutate_resources:
-                chromosome[1][type_of_worker][i] = rand.randint(0, contractor_count - 1)
-        return chromosome
+                ind[1][type_of_worker][i] = rand.randint(0, contractor_count - 1)
+        return ind
 
     # change in this interval in random number from interval
     for i, xl, xu in zip(range(size), low, up):
         if rand.random() < probability_mutate_resources:
             # borders
-            contractor = chromosome[1][-1]
-            border = chromosome[2][contractor][type_of_worker]
-            chromosome[1][type_of_worker][i] = rand.randint(xl, min(xu, border[0]))
+            contractor = ind[1][-1][i]
+            border = ind[2][contractor][type_of_worker]
+            # TODO Debug why min(xu, border) can be lower than xl
+            ind[1][type_of_worker][i] = rand.randint(xl, max(xl, min(xu, border)))
 
-    return chromosome
+    return ind
 
 
-def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarray, type_of_worker: int,
-                            probability_mutate_contractors: float, rand: random.Random) -> (np.ndarray, np.ndarray):
+def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarray, resources_min_border: np.ndarray,
+                            type_of_worker: int, probability_mutate_contractors: float, rand: random.Random) \
+        -> ChromosomeType:
     """
     Mutation for contractors' resource borders.
 
     :param ind:
     :param contractors_capacity:
+    :param resources_min_border:
     :param type_of_worker:
     :param probability_mutate_contractors:
     :param rand:
     :return:
     """
+    ind = copy_chromosome(ind)
+
     num_contractors = len(ind[2])
     for i in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
-            ind[2][i][type_of_worker] = rand.randint(1, contractors_capacity[i][type_of_worker])
+            ind[2][i][type_of_worker] -= rand.randint(1, max(2, ind[2][i][type_of_worker] // 10))
+            if ind[2][i][type_of_worker] < resources_min_border[type_of_worker] + 1:
+                ind[2][i][type_of_worker] = resources_min_border[type_of_worker] + 1
+
+    return ind
 
 
 def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_positions: np.ndarray,
-                       rand: random.Random) -> (np.ndarray, np.ndarray):
+                       rand: random.Random) -> (ChromosomeType, ChromosomeType):
     """
     CxOnePoint for resources
 
@@ -270,6 +292,9 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     :param rand: the rand object used for exchange point selection
     :return: first and second individual
     """
+    ind1 = copy_chromosome(ind1)
+    ind2 = copy_chromosome(ind2)
+
     # exchange work resources
     res1 = ind1[1][mate_positions]
     res2 = ind1[1][mate_positions]
@@ -279,8 +304,10 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
 
 
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
-                              mate_positions: np.ndarray, rand: random.Random) \
-        -> (np.ndarray, np.ndarray):
+                              mate_positions: np.ndarray, rand: random.Random) -> (ChromosomeType, ChromosomeType):
+    ind1 = copy_chromosome(ind1)
+    ind2 = copy_chromosome(ind2)
+
     num_contractors = len(ind1[2])
     contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))
     
@@ -296,5 +323,7 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
         for c_border1, c_border2 in zip(border1, border2):
             # mate_positions = rand.sample(list(range(len(c_border1))), rand.randint(1, len(c_border1)))
             c_border1[mate_positions], c_border2[mate_positions] = c_border2[mate_positions], c_border1[mate_positions]
+
+    return ind1, ind2
 
 

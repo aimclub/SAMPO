@@ -85,25 +85,31 @@ def generate_queues(type_prop: list[int],
         modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
         nodes = [BlockNode(ss.work_graph(mode, *count_supplier(i)), obstruction_getter(i))
                  for i, mode in enumerate(modes)]
+        nodes_all.extend(nodes)
         if not nodes_all:
-            nodes_all = nodes
             nodes_prev = nodes
             print(f'Generated queue 0: blocks={n_blocks}')
             continue
 
         # generate edges
         generated_edges = 0
-        for i, node in enumerate(nodes):
-            for prev in nodes_prev[i:]:
-                BlockGraph.add_edge(node, prev)
-                generated_edges += 1
+        for i, node in enumerate(nodes[:-2]):
+            if i >= len(nodes_prev):
+                break
+            BlockGraph.add_edge(node, nodes_prev[i])
+            generated_edges += 1
 
         for i, node in enumerate(nodes):
+            if i >= len(nodes_prev):
+                break
             # we are going in reverse to fill edges that are not covered by previous cycle
-            for prev in nodes_prev[:i:-1]:
-                BlockGraph.add_edge(node, prev)
-                generated_edges += 1
+            BlockGraph.add_edge(node, nodes_prev[-i])
+            generated_edges += 1
+
+        nodes_prev = nodes
 
         print(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
+
+    return BlockGraph(nodes_all)
 
 

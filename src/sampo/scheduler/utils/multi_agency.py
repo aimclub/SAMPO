@@ -92,6 +92,7 @@ class Manager:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
         """
         id2sblock = {}
+        # TODO Add toposort
         for i, block in enumerate(bg.nodes):
             if log:
                 print('--------------------------------')

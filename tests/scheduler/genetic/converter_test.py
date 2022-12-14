@@ -17,7 +17,7 @@ def test_convert_chromosome_to_schedule(setup_toolbox, setup_contractors, setup_
     tb, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
-    schedule, _ = tb.chromosome_to_schedule(chromosome)
+    schedule, _, _ = tb.chromosome_to_schedule(chromosome)
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
     validate_schedule(schedule, setup_wg, setup_contractors)

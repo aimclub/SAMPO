@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from models.serialization import TestSimpleSerialization, TestAutoJSONSerializable, TestJSONSerializable, \
+from tests.models.serialization import TestSimpleSerialization, TestAutoJSONSerializable, TestJSONSerializable, \
     TestStrSerializable
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule

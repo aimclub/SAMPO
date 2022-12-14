@@ -167,6 +167,8 @@ def build_schedule(wg: WorkGraph,
         # take 2 individuals as input 1 modified individuals
         # take after 1: (1,3,5) and (2,4,6) and get pairs 1,2; 3,4; 5,6
 
+        print([toolbox.evaluate(ind) for ind in offspring])
+
         cur_generation = []
 
         for child1, child2 in zip(offspring[::2], offspring[1::2]):

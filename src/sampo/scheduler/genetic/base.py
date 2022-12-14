@@ -78,7 +78,7 @@ class GeneticScheduler(Scheduler):
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
-            return scheduler_class(self.work_estimator).schedule(wg, contractors)
+            return scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors)
 
         init_schedules: Dict[str, Schedule] = {
             "heft_end": init_schedule(HEFTScheduler),

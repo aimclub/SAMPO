@@ -7,7 +7,7 @@ from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.topological.base import TopologicalScheduler
-from sampo.scheduler.utils.block_graph import generate_blocks
+from sampo.scheduler.utils.block_generator import generate_blocks, SyntheticBlockGraphType
 from sampo.scheduler.utils.block_validation import validate_block_schedule
 from sampo.scheduler.utils.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
@@ -39,7 +39,7 @@ def test_managing_block_graph():
     agents = [Agent(f'Agent {i}', scheduler_constructors[i % len(scheduler_constructors)](), [contractor])
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
-    bg = generate_blocks(10, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
+    bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
 
     scheduled_blocks = manager.manage_blocks(bg, log=True)
 
@@ -65,8 +65,11 @@ def test_managing_with_obstruction():
         return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
 
     for i in range(20):
-        bg_without_obstructions = generate_blocks(1, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
-        bg = generate_blocks(1, [1, 1, 1], lambda x: (100, 200), 0.5, rand, obstruction_getter)
+        bg_without_obstructions = \
+            generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
+        bg = \
+            generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand,
+                            obstruction_getter)
 
         scheduled_blocks = manager.manage_blocks(bg, log=True)
         validate_block_schedule(bg, scheduled_blocks)

@@ -1,10 +1,7 @@
 from copy import deepcopy
 from operator import attrgetter
-from random import Random
 from typing import Callable
 
-from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.utilities.collections import build_index
@@ -31,9 +28,13 @@ class BlockGraph:
     Represents the block graph, where blocks are instances of `WorkGraph` and
     edges are simple *FS* dependencies.
     """
-    def __init__(self, nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None):
-        self.nodes = [BlockNode(node, obstruction_getter(i)) for i, node in enumerate(nodes)]
+    def __init__(self, nodes: list[BlockNode]):
+        self.nodes = nodes
         self.node_dict = build_index(self.nodes, attrgetter('id'))
+
+    @staticmethod
+    def pure(nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None):
+        return BlockGraph([BlockNode(node, obstruction_getter(i)) for i, node in enumerate(nodes)])
 
     def __getitem__(self, item) -> BlockNode:
         return self.node_dict[item]
@@ -55,34 +56,3 @@ class BlockGraph:
     def add_edge(start: BlockNode, end: BlockNode):
         start.blocks_to.append(end)
         end.blocks_from.append(start)
-
-
-def generate_blocks(n_blocks: int, type_prop: list[int],
-                    count_supplier: Callable[[int], tuple[int, int]],
-                    edge_prob: float, rand: Random | None = Random(),
-                    obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None) -> BlockGraph:
-    """
-    Generate synthetic block graph according to given parameters.
-    
-    :param n_blocks: the count of blocks
-    :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential
-    :param count_supplier: function that computes the borders of block size from it's index
-    :param edge_prob: edge existence probability
-    :param rand: a random reference
-    :param obstruction_getter:
-    :return: generated block graph
-    """
-    ss = SimpleSynthetic(rand)
-
-    modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
-    nodes = [ss.work_graph(mode, *count_supplier(i)) for i, mode in enumerate(modes)]
-    bg = BlockGraph(nodes, obstruction_getter)
-
-    rev_edge_prob = int(1 / edge_prob)
-    for idx, start in enumerate(bg.nodes):
-        for end in bg.nodes[idx:]:
-            if start == end or rand.randint(0, rev_edge_prob) != 0:
-                continue
-            bg.add_edge(start, end)
-
-    return bg

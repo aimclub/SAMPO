@@ -53,6 +53,7 @@ class Schedule(JSONSerializable['Schedule']):
     def works(self) -> Iterable[ScheduledWork]:
         """
         Enumerates ScheduledWorks in the Schedule.
+
         :return: Iterable collection of all the scheduled works.
         """
         return self._schedule.scheduled_work_object

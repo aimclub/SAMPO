@@ -61,14 +61,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    index2contractor: Dict[int, Contractor],
                                    spec: ScheduleSpec,
                                    work_estimator: WorkTimeEstimator = None) -> Dict[GraphNode, ScheduledWork]:
-    id2swork: Dict[GraphNode, ScheduledWork] = {}
+    node2swork: Dict[GraphNode, ScheduledWork] = {}
 
     timeline = JustInTimeTimeline(worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
-        if node.id in id2swork and not node.is_inseparable_son():
+        if node.id in node2swork and not node.is_inseparable_son():
             continue
 
         work_spec = spec.get_work_spec(node.id)
@@ -84,11 +84,11 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
         # finish using time spec
-        finish_time = timeline.schedule(order_index, node, id2swork, worker_team, contractor,
+        finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
                                         work_spec.assigned_time, work_estimator)
 
-        timeline.update_timeline(finish_time, worker_team)
-    return id2swork
+        timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
+    return node2swork
 
 
 def init_scheduled_work(start_time: Time, finish_time: Time, worker_team: List[Worker],

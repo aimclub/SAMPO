@@ -6,10 +6,11 @@ from toposort import toposort_flatten, toposort
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
-from sampo.scheduler.utils.momentum_timeline import create_timeline, schedule_with_time_spec
-from sampo.scheduler.utils.multi_contractor import get_best_contractor_and_worker_borders
+from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
@@ -77,7 +78,7 @@ class TopologicalScheduler(Scheduler):
         # data structure to hold scheduled tasks
         node2swork: Dict[GraphNode, ScheduledWork] = dict()
 
-        timeline = create_timeline(tasks, contractors)
+        timeline = MomentumTimeline(tasks, contractors)
 
         # we can get agents here, because they are always same and not updated
         worker_pool = get_worker_contractor_pool(contractors)
@@ -96,30 +97,34 @@ class TopologicalScheduler(Scheduler):
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
 
-            # 0. find, if the node starts an inseparable chain
+            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
+                min_count_worker_team, max_count_worker_team, workers = \
+                    get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
 
-            inseparable_chain = node.get_inseparable_chain()
-            if inseparable_chain:
-                skipped_inseparable_children.update((ch.id for ch in inseparable_chain))
-            whole_work_nodes = inseparable_chain if inseparable_chain else [node]
+                worker_team = [worker.copy() for worker in workers]
 
-            min_count_worker_team, max_count_worker_team, contractor, workers = \
-                get_best_contractor_and_worker_borders(worker_pool, contractors, node.work_unit.worker_reqs)
+                # apply worker team spec
+                self.optimize_resources_using_spec(work_unit, worker_team, work_spec,
+                                                   lambda optimize_array: self.resource_optimizer.optimize_resources(
+                                                       worker_pool, worker_team,
+                                                       optimize_array,
+                                                       min_count_worker_team, max_count_worker_team,
+                                                       # dummy
+                                                       lambda _: Time(0)))
 
-            best_worker_team = [worker.copy() for worker in workers]
+                c_st, _, exec_times = \
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)
+                c_ft = c_st
+                for node_lag, node_time in exec_times.values():
+                    c_ft += node_lag + node_time
 
-            # apply worker team spec
-            self.optimize_resources_using_spec(work_unit, best_worker_team, work_spec,
-                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, best_worker_team,
-                                                   optimize_array,
-                                                   min_count_worker_team, max_count_worker_team,
-                                                   # dummy
-                                                   lambda _: Time(0)))
+                return c_st, c_ft, worker_team
+
+            st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
             # finish scheduling with time spec
-            schedule_with_time_spec(index, node, node2swork, whole_work_nodes, timeline, best_worker_team, contractor,
-                                    work_spec.assigned_time, work_estimator)
+            timeline.schedule(index, node, node2swork, best_worker_team, contractor,
+                              work_spec.assigned_time, work_estimator)
 
         return node2swork.values()
 

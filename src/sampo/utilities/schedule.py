@@ -43,3 +43,29 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
         df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
         return df.loc[0, :]
+
+
+def remove_service_tasks(service_schedule_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Remove 'start', 'finish' and milestone tasks from the schedule
+    :param service_schedule_df: pd.DataFrame: schedule (with merges stages in the case of baps) with service tasks
+    :return: pd.DataFrame: schedule without information about service tasks
+    """
+    schedule_df = service_schedule_df.copy()
+
+    # Prepare list with service tasks ids
+    service_tasks_ids = set(schedule_df.loc[schedule_df.loc[:, 'task_name'].str.contains(
+        'start|finish|марке')].loc[:, 'task_id'])
+
+    # Remove rows with service tasks from DataFrame
+    schedule_df = schedule_df.loc[~schedule_df.loc[:, 'task_name'].str.contains('start|finish|марке')]
+
+    # Fix connections linked to the service tasks
+    fixed_connections_lst = []
+    for connections_lst in schedule_df.loc[:, 'successors']:
+        fixed_connections_lst.append([])
+        for connection in connections_lst:
+            if connection[0] not in service_tasks_ids:
+                fixed_connections_lst[-1].append(connection)
+    schedule_df.loc[:, 'successors'] = fixed_connections_lst
+    return schedule_df

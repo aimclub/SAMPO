@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from typing import Dict
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.block_graph import BlockGraph
+from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
@@ -81,7 +83,7 @@ class Manager:
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, log: bool = False) -> dict[str, ScheduledBlock]:
+    def manage_blocks(self, bg: BlockGraph, log: bool = False) -> Dict[str, ScheduledBlock]:
         """
         Runs multi-agent system based on auction on given BlockGraph.
         
@@ -108,7 +110,11 @@ class Manager:
 
         return id2sblock
 
-    def run_auction(self, wg: WorkGraph) -> tuple[Time, Time, Schedule, Agent]:
+    def run_auction_with_obstructions(self, wg: WorkGraph, obstruction: Obstruction):
+        obstruction.generate(wg)
+        return self.run_auction(wg)
+
+    def run_auction(self, wg: WorkGraph) -> (Time, Time, Schedule, Agent):
         """
         Runs the auction on the given `WorkGraph`.
 

@@ -37,11 +37,11 @@ class Obstruction(ABC):
 
 class OneInsertObstruction(Obstruction):
     """
-    Applying Seeks the random part of given WorkGraph and
+    Applying seeks the random part of given WorkGraph and inserts it into that point
     """
 
     def __init__(self, probability: float, rand: Random, insert_wg_getter: Callable[[Random], WorkGraph]):
-        super(Obstruction).__init__(probability, rand)
+        super().__init__(probability, rand)
         self._insert_wg_getter = insert_wg_getter
 
     @staticmethod

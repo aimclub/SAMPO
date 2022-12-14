@@ -96,7 +96,8 @@ class Manager:
             if log:
                 print('--------------------------------')
                 print(f'Running auction on block {i}')
-            agent_start_time, agent_end_time, agent_schedule, agent = self.run_auction(block.wg)
+            agent_start_time, agent_end_time, agent_schedule, agent \
+                = self.run_auction_with_obstructions(block.wg, block.obstruction)
             if log:
                 print(f'Won agent {agent} with start time {agent_start_time} and end time {agent_end_time}, '
                       f'adding to scheduling history')
@@ -110,8 +111,9 @@ class Manager:
 
         return id2sblock
 
-    def run_auction_with_obstructions(self, wg: WorkGraph, obstruction: Obstruction):
-        obstruction.generate(wg)
+    def run_auction_with_obstructions(self, wg: WorkGraph, obstruction: Obstruction | None):
+        if obstruction:
+            obstruction.generate(wg)
         return self.run_auction(wg)
 
     def run_auction(self, wg: WorkGraph) -> (Time, Time, Schedule, Agent):

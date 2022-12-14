@@ -122,7 +122,7 @@ class TopologicalScheduler(Scheduler):
                                                        lambda _: Time(0)))
 
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, None, work_estimator)
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
                     c_ft += node_lag + node_time

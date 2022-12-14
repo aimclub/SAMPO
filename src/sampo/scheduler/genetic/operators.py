@@ -71,7 +71,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     # crossover for resource borders
     toolbox.register("mate_resource_borders", mate_for_resource_borders, rand=rand)
 
-    toolbox.register("validate", is_chromosome_correct, index2node=index2node, worker_pool_indices=worker_pool_indices,
+    toolbox.register("validate", is_chromosome_correct, index2node=index2node, contractor_borders=contractor_borders,
                      node_indices=node_indices)
     toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, index2node=index2node_list,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
@@ -144,9 +144,9 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
 
 
 def is_chromosome_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode],
-                          contractors_borders: np.ndarray, node_indices: list[int]) -> bool:
+                          contractor_borders: np.ndarray, node_indices: list[int]) -> bool:
     return is_chromosome_order_correct(chromosome, index2node) and \
-           is_chromosome_contractors_correct(chromosome, contractors_borders, node_indices)
+           is_chromosome_contractors_correct(chromosome, contractor_borders, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode]) -> bool:

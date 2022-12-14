@@ -91,7 +91,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
 
         st = timeline.find_min_start_time(node, worker_team, node2swork)
 
-        if not schedule_start_time:
+        if schedule_start_time is None:
             schedule_start_time = st
 
         # finish using time spec

@@ -1,13 +1,16 @@
 from random import Random
+from typing import Iterable
 
 from sampo.generator import SimpleSynthetic
+from sampo.generator.types import SyntheticGraphType
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.block_graph import generate_blocks
 from sampo.scheduler.utils.block_validation import validate_block_schedule
-from sampo.scheduler.utils.multi_agency import Agent, Manager
+from sampo.scheduler.utils.multi_agency import Agent, Manager, ScheduledBlock
+from sampo.scheduler.utils.obstruction import OneInsertObstruction
 
 
 def test_one_auction():
@@ -45,4 +48,38 @@ def test_managing_block_graph():
     for sblock in scheduled_blocks.values():
         print(sblock)
 
+
+def test_managing_with_obstruction():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    rand = Random(r_seed)
+    contractors = [p_rand.contactor(10)]
+
+    scheduler_constructors = [HEFTScheduler]
+
+    agents = [Agent(f'Agent {i}', scheduler_constructors[i % len(scheduler_constructors)](), [contractor])
+              for i, contractor in enumerate(contractors)]
+    manager = Manager(agents)
+
+    def obstruction_getter(i: int):
+        return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
+
+    for i in range(20):
+        bg_without_obstructions = generate_blocks(1, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
+        bg = generate_blocks(1, [1, 1, 1], lambda x: (100, 200), 0.5, rand, obstruction_getter)
+
+        scheduled_blocks = manager.manage_blocks(bg, log=True)
+        validate_block_schedule(bg, scheduled_blocks)
+
+        scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, log=True)
+        validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions)
+
+        def finish_time(schedule: Iterable[ScheduledBlock]):
+            return max([sblock.end_time for sblock in schedule])
+
+        assert finish_time(scheduled_blocks_without_obstructions.values()) \
+               > finish_time(scheduled_blocks.values())
+
+        for sblock in scheduled_blocks.values():
+            print(sblock)
 

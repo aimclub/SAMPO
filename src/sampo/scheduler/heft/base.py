@@ -73,8 +73,6 @@ class HEFTScheduler(Scheduler):
         if not isinstance(timeline, JustInTimeTimeline):
             timeline = JustInTimeTimeline(worker_pool)
 
-        schedule_start_time = None
-
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
@@ -109,9 +107,6 @@ class HEFTScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if schedule_start_time is None:
-                schedule_start_time = st
-
             # apply work to scheduling
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, work_estimator)
@@ -120,5 +115,8 @@ class HEFTScheduler(Scheduler):
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), work_id2schedule_unit)
         # recalc_schedule(reversed(ordered_nodes), work_id2schedule_unit, worker_pool, work_estimator)
+
+        schedule_start_time = min([swork.start_time for swork in node2swork.values() if
+                                   len(swork.work_unit.worker_reqs) != 0])
 
         return node2swork.values(), schedule_start_time, timeline

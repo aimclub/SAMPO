@@ -3,7 +3,7 @@ from typing import Dict
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.block_graph import BlockGraph, BlockNode
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
@@ -92,8 +92,7 @@ class Manager:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
         """
         id2sblock = {}
-        # TODO Add toposort
-        for i, block in enumerate(bg.nodes):
+        for i, block in enumerate(bg.toposort()):
             if log:
                 print('--------------------------------')
                 print(f'Running auction on block {i}')
@@ -133,7 +132,7 @@ class Manager:
         offers = [(agent, agent.offer(wg)) for agent in self._agents]
 
         for offered_agent, (offered_start_time, offered_end_time, offered_schedule, offered_timeline) in offers:
-            if offered_end_time - offered_start_time < best_end_time - best_start_time:
+            if offered_end_time < best_end_time:
                 best_start_time = offered_start_time
                 best_end_time = offered_end_time
                 best_schedule = offered_schedule

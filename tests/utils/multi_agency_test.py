@@ -7,9 +7,9 @@ from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.topological.base import TopologicalScheduler
-from sampo.scheduler.utils.block_generator import generate_blocks, SyntheticBlockGraphType, generate_queues
-from sampo.scheduler.utils.block_validation import validate_block_schedule
-from sampo.scheduler.utils.multi_agency import Agent, Manager, ScheduledBlock
+from sampo.scheduler.multi_agency.block_generator import generate_blocks, SyntheticBlockGraphType, generate_queues
+from sampo.scheduler.multi_agency.block_validation import validate_block_schedule
+from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
 
 

@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Iterable
 
-from sampo.scheduler.utils.block_graph import BlockGraph
-from sampo.scheduler.utils.multi_agency import ScheduledBlock
+from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.multi_agency import ScheduledBlock
 from sampo.schemas.contractor import Contractor
 from sampo.utilities.validation import validate_schedule, \
     check_all_allocated_workers_do_not_exceed_capacity_of_contractors

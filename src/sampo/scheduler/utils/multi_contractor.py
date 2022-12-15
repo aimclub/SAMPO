@@ -13,6 +13,7 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
     """
     Define for each job each type of workers the min and max possible number of workers
     For max number of workers max is define as minimum from max possible numbers at all and max possible for current job
+    
     :param agents: from all projects
     :param contractor:
     :param work_reqs:
@@ -42,10 +43,11 @@ def run_contractor_search(contractors: List[Contractor],
         -> tuple[Time, Time, Contractor, List[Worker]]:
     """
     Performs the best contractor search.
+    
     :param contractors: contractors' list
     :param runner: a runner function, should be inner of the calling code.
         Calculates Tuple[start time, finish time, worker team] from given contractor object.
-    :return: start time, finish time, best contractor, worker team with the best contractor
+    :return: start time, finish time, the best contractor, worker team with the best contractor
     """
     # TODO Parallelize
 

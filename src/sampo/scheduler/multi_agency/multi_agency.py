@@ -3,7 +3,7 @@ from typing import Dict
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.block_graph import BlockGraph
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph

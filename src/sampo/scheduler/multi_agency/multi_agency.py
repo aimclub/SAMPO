@@ -19,7 +19,7 @@ class Agent:
         self._scheduler = scheduler
         self._contractors = contractors
 
-    def offer(self, wg: WorkGraph) -> tuple[Time, Time, Schedule, Timeline]:
+    def offer(self, wg: WorkGraph, parent_time: Time) -> tuple[Time, Time, Schedule, Timeline]:
         """
         Computes the offer from agent to manager. Handles all works from given wg.
 
@@ -29,7 +29,7 @@ class Agent:
         To apply returned offer, use `Agent#confirm`.
         """
         schedule, start_time, timeline = \
-            self._scheduler.schedule_with_cache(wg, self._contractors, timeline=self._timeline)
+            self._scheduler.schedule_with_cache(wg, self._contractors, start_time=parent_time, timeline=self._timeline)
         return start_time, start_time + schedule.execution_time, schedule, timeline
 
     def confirm(self, timeline: Timeline):
@@ -96,31 +96,31 @@ class Manager:
             if log:
                 print('--------------------------------')
                 print(f'Running auction on block {i}')
-            agent_start_time, agent_end_time, agent_schedule, agent \
-                = self.run_auction_with_obstructions(block.wg, block.obstruction)
-            if log:
-                print(f'Won agent {agent} with start time {agent_start_time} and end time {agent_end_time}, '
-                      f'adding to scheduling history')
             max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
-            start_time = max(max_parent_time, agent_start_time)
-            delta = start_time - agent_start_time
+            start_time, end_time, agent_schedule, agent \
+                = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
+            if log:
+                print(f'Won agent {agent} with start time {start_time} and end time {end_time}, '
+                      f'adding to scheduling history')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
-                                    start_time=agent_start_time + delta,
-                                    end_time=agent_end_time + delta)
+                                    start_time=start_time,
+                                    end_time=end_time)
             id2sblock[sblock.id] = sblock
 
         return id2sblock
 
-    def run_auction_with_obstructions(self, wg: WorkGraph, obstruction: Obstruction | None):
+    def run_auction_with_obstructions(self, wg: WorkGraph, parent_time: Time = Time(0),
+                                      obstruction: Obstruction | None = None):
         if obstruction:
             obstruction.generate(wg)
-        return self.run_auction(wg)
+        return self.run_auction(wg, parent_time)
 
-    def run_auction(self, wg: WorkGraph) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
         """
         Runs the auction on the given `WorkGraph`.
 
         :param wg: target `WorkGraph`
+        :param parent_time: max parent time of given block
         :return: best start time, end time and the agent that is able to support this working time
         """
         best_start_time = 0
@@ -129,7 +129,7 @@ class Manager:
         best_timeline = None
         best_agent = None
 
-        offers = [(agent, agent.offer(wg)) for agent in self._agents]
+        offers = [(agent, agent.offer(wg, parent_time)) for agent in self._agents]
 
         for offered_agent, (offered_start_time, offered_end_time, offered_schedule, offered_timeline) in offers:
             if offered_end_time < best_end_time:

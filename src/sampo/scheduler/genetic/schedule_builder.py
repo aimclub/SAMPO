@@ -35,6 +35,7 @@ def build_schedule(wg: WorkGraph,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
+                   start_time: Time = Time(0),
                    timeline: Timeline | None = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline]:
     """
@@ -314,7 +315,8 @@ def build_schedule(wg: WorkGraph,
     scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                                     index2contractor_obj,
                                                                                     worker_pool_indices,
-                                                                                    spec, work_estimator, timeline)
+                                                                                    spec, work_estimator, timeline,
+                                                                                    start_time)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 

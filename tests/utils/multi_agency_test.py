@@ -41,7 +41,7 @@ def test_managing_block_graph():
     manager = Manager(agents)
     bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
 
-    scheduled_blocks = manager.manage_blocks(bg, log=True)
+    scheduled_blocks = manager.manage_blocks(bg, logfile=True)
 
     validate_block_schedule(bg, scheduled_blocks)
 
@@ -71,10 +71,10 @@ def test_managing_with_obstruction():
             generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand,
                             obstruction_getter)
 
-        scheduled_blocks = manager.manage_blocks(bg, log=True)
+        scheduled_blocks = manager.manage_blocks(bg, logfile=True)
         validate_block_schedule(bg, scheduled_blocks)
 
-        scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, log=True)
+        scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, logfile=True)
         validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions)
 
         def finish_time(schedule: Iterable[ScheduledBlock]):
@@ -109,7 +109,7 @@ def test_managing_queues():
                              [3, 4, 6, 8, 10, 3, 4, 8, 9, 9],
                              [3, 4, 6, 8, 10, 3, 4, 8, 9, 9])
 
-        scheduled_blocks = manager.manage_blocks(bg, log=True)
+        scheduled_blocks = manager.manage_blocks(bg, logfile=True)
         validate_block_schedule(bg, scheduled_blocks)
 
         for sblock in scheduled_blocks.values():

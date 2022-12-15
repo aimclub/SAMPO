@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, IO
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
@@ -41,7 +41,7 @@ class Agent:
         self._timeline = timeline
 
     def __str__(self):
-        return f'Agent(name={self.name}, scheduler={self._scheduler.scheduler_type.name})'
+        return f'Agent(name={self.name}, scheduler={self._scheduler})'
 
     @property
     def contractors(self):
@@ -83,25 +83,25 @@ class Manager:
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, log: bool = False) -> Dict[str, ScheduledBlock]:
+    def manage_blocks(self, bg: BlockGraph, logfile: IO | None = None) -> Dict[str, ScheduledBlock]:
         """
         Runs multi-agent system based on auction on given BlockGraph.
         
         :param bg: 
-        :param log:
+        :param logfile:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
         """
         id2sblock = {}
         for i, block in enumerate(bg.toposort()):
-            if log:
-                print('--------------------------------')
-                print(f'Running auction on block {i}')
+            if logfile:
+                logfile.write('--------------------------------')
+                logfile.write(f'Running auction on block {i}')
             max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
             start_time, end_time, agent_schedule, agent \
                 = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
-            if log:
-                print(f'Won agent {agent} with start time {start_time} and end time {end_time}, '
-                      f'adding to scheduling history')
+            if logfile:
+                logfile.write(f'Won agent {agent} with start time {start_time} and end time {end_time}, '
+                              f'adding to scheduling history')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
                                     start_time=start_time,
                                     end_time=end_time)

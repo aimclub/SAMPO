@@ -56,6 +56,20 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     return bg
 
 
+def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, type_prop: list[int],
+                         count_supplier: Callable[[int], tuple[int, int]],
+                         edge_prob: float, rand: Random | None = Random(),
+                         obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
+                         queues_num: int | None = None,
+                         queues_prop: list[int] | None = None,
+                         queues_edges: list[int] | None = None) -> BlockGraph:
+    if graph_type == SyntheticBlockGraphType.Queues:
+        return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_edges)
+    else:
+        return generate_blocks(graph_type, n_blocks, type_prop, count_supplier, edge_prob, rand, obstruction_getter,
+                               queues_num, queues_prop, queues_edges)
+
+
 def generate_queues(type_prop: list[int],
                     count_supplier: Callable[[int], tuple[int, int]],
                     rand: Random | None = Random(),

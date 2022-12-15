@@ -44,7 +44,7 @@ class GeneticScheduler(Scheduler):
                f'generations={self.number_of_generation},' \
                f'size_selection={self.size_selection},' \
                f'mutate_order={self.mutate_order},' \
-               f'mutate_resources={self.mutate_resources},' \
+               f'mutate_resources={self.mutate_resources}' \
                f']'
 
     def get_params(self, works_count: int) -> Tuple[int, float, float, int]:

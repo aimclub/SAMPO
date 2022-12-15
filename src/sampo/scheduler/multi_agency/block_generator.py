@@ -19,9 +19,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
                     count_supplier: Callable[[int], tuple[int, int]],
                     edge_prob: float, rand: Random | None = Random(),
                     obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
-                    queues_num: int | None = None,
-                    queues_prop: list[int] | None = None,
-                    queues_edges: list[int] | None = None) -> BlockGraph:
+                    logger: Callable[[str], None] = print) -> BlockGraph:
     """
     Generate synthetic block graph according to given parameters.
 
@@ -53,6 +51,8 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
                     if start == end or rand.randint(0, rev_edge_prob) != 0:
                         continue
                     bg.add_edge(start, end)
+
+    logger(f'Generated block graph with type {graph_type} and block types={[mode.name for mode in modes]}')
     return bg
 
 
@@ -61,13 +61,15 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
                          edge_prob: float, rand: Random | None = Random(),
                          obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
                          queues_num: int | None = None,
-                         queues_prop: list[int] | None = None,
-                         queues_edges: list[int] | None = None) -> BlockGraph:
+                         queues_blocks: list[int] | None = None,
+                         queues_edges: list[int] | None = None,
+                         logger: Callable[[str], None] = print) -> BlockGraph:
     if graph_type == SyntheticBlockGraphType.Queues:
-        return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_edges)
+        return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
+                               queues_edges, logger)
     else:
         return generate_blocks(graph_type, n_blocks, type_prop, count_supplier, edge_prob, rand, obstruction_getter,
-                               queues_num, queues_prop, queues_edges)
+                               logger)
 
 
 def generate_queues(type_prop: list[int],
@@ -76,7 +78,8 @@ def generate_queues(type_prop: list[int],
                     obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
                     queues_num: int | None = None,
                     queues_blocks: list[int] | None = None,
-                    queues_edges: list[int] | None = None) -> BlockGraph:
+                    queues_edges: list[int] | None = None,
+                    logger: Callable[[str], None] = print) -> BlockGraph:
     """
     Generate synthetic block queues graph according to given parameters.
 
@@ -102,7 +105,7 @@ def generate_queues(type_prop: list[int],
         nodes_all.extend(nodes)
         if not nodes_all:
             nodes_prev = nodes
-            print(f'Generated queue 0: blocks={n_blocks}')
+            logger(f'Generated queue 0: blocks={n_blocks}')
             continue
 
         # generate edges
@@ -122,7 +125,7 @@ def generate_queues(type_prop: list[int],
 
         nodes_prev = nodes
 
-        print(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
+        logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
 
     return BlockGraph(nodes_all)
 

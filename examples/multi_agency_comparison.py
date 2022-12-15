@@ -41,9 +41,9 @@ with open('multi_agency_comparison.txt', 'w') as logfile:
                 manager = Manager(agents)
 
                 bg = generate_block_graph(graph_type, 10, [1, 1, 1], lambda x: (100, 200), 0.5,
-                                          rand, obstruction_getter, 2, [3, 4], [3, 4])
+                                          rand, obstruction_getter, 2, [3, 4], [3, 4], logger=log)
 
-                scheduled_blocks = manager.manage_blocks(bg, logfile=logfile)
+                scheduled_blocks = manager.manage_blocks(bg, logger=log)
                 validate_block_schedule(bg, scheduled_blocks)
 
         log('------ Variation: block size ------')
@@ -59,9 +59,9 @@ with open('multi_agency_comparison.txt', 'w') as logfile:
                 manager = Manager(agents)
 
                 bg = generate_block_graph(graph_type, 10, [1, 1, 1], lambda x: (50 * i, 50 * (i + 1)), 0.5,
-                                          rand, obstruction_getter, 2, [3, 4], [3, 4])
+                                          rand, obstruction_getter, 2, [3, 4], [3, 4], logger=log)
 
-                scheduled_blocks = manager.manage_blocks(bg, logfile=logfile)
+                scheduled_blocks = manager.manage_blocks(bg, logger=log)
                 validate_block_schedule(bg, scheduled_blocks)
 
 

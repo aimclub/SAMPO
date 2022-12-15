@@ -84,6 +84,7 @@ class MomentumTimeline(Timeline):
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
         """
         Computes start time, max parent time, contractor and exec times for given node
+
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node:
         :param node2swork:
@@ -302,10 +303,13 @@ class MomentumTimeline(Timeline):
         inseparable_chain = node.get_inseparable_chain_with_self()
         st, _, exec_times = \
             self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time, work_estimator)
+        if assigned_start_time:
+            st = assigned_start_time
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
 
+        # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
         self._schedule_with_inseparables(task_index, node, node2swork, inseparable_chain,
                                          workers, contractor, st, exec_times)
 

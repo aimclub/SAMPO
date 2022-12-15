@@ -65,14 +65,14 @@ with open('multi_agency_comparison.txt', 'w') as logfile:
                 validate_block_schedule(bg, scheduled_blocks)
 
 
-    log('------------ Genetics tests begin ------------\n')
-
-    schedulers = [GeneticScheduler(5, 50, 0.5, 0.5, 50),
-                  GeneticScheduler(5, 100, 0.5, 0.5, 50),
-                  GeneticScheduler(5, 100, 0.5, 0.5, 100),
-                  GeneticScheduler(5, 100, 0.75, 0.75, 50),
-                  GeneticScheduler(5, 50, 0.9, 0.9, 50)]
-    run_tests(schedulers)
+    # log('------------ Genetics tests begin ------------\n')
+    #
+    # schedulers = [GeneticScheduler(5, 50, 0.5, 0.5, 50),
+    #               GeneticScheduler(5, 100, 0.5, 0.5, 50),
+    #               GeneticScheduler(5, 100, 0.5, 0.5, 100),
+    #               GeneticScheduler(5, 100, 0.75, 0.75, 50),
+    #               GeneticScheduler(5, 50, 0.9, 0.9, 50)]
+    # run_tests(schedulers)
 
     log('------------ All algorithms tests begin ------------\n')
     schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler()]

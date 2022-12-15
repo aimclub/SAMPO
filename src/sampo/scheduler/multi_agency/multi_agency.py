@@ -99,6 +99,9 @@ class Manager:
             max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
             start_time, end_time, agent_schedule, agent \
                 = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
+
+            assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
+
             if logger:
                 logger(f'Won agent {agent} with start time {start_time} and end time {end_time}, '
                        f'adding to scheduling history')

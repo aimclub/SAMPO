@@ -48,11 +48,11 @@ def test_mate_order(setup_toolbox, setup_wg):
     population = tb.population(n=population_size)
 
     for i in range(TEST_ITERATIONS):
-        individual1, individual2 = [tb.clone(ind) for ind in tb.select(population, 2)]
+        individual1, individual2 = tb.select(population, 2)
 
-        tb.mate(individual1[0][0], individual2[0][0])
-        order1 = individual1[0][0]
-        order2 = individual2[0][0]
+        individual1, individual2 = tb.mate(individual1[0], individual2[0])
+        order1 = individual1[0]
+        order2 = individual2[0]
 
         # check there are no duplications
         assert len(order1) == len(set(order1))
@@ -67,20 +67,19 @@ def test_mate_resources(setup_toolbox, setup_wg):
     rand = Random()
 
     for i in range(TEST_ITERATIONS):
-        individual1, individual2 = [tb.clone(ind) for ind in tb.select(population, 2)]
+        individual1, individual2 = tb.select(population, 2)
 
-        workers_for_mate = rand.sample(list(range(len(resources_border) + 1)), 2)
-        tb.mate_resources(individual1[0][1][workers_for_mate], individual2[0][1][workers_for_mate])
+        worker = rand.sample(list(range(len(resources_border) + 1)), 1)[0]
+        individual1, individual2 = tb.mate_resources(individual1[0], individual2[0], worker)
 
-        for worker in workers_for_mate:
-            # check there are correct resources at mate positions
-            assert (resources_border[0][worker] <= individual1[0][1][worker]).all() and \
-                   (individual1[0][1][worker] <= resources_border[1][worker]).all()
-            assert (resources_border[0][worker] <= individual1[0][1][worker]).all() and \
-                   (individual1[0][1][worker] <= resources_border[1][worker]).all()
+        # check there are correct resources at mate positions
+        assert (resources_border[0][worker] <= individual1[1][worker]).all() and \
+               (individual1[1][worker] <= resources_border[1][worker]).all()
+        assert (resources_border[0][worker] <= individual1[1][worker]).all() and \
+               (individual1[1][worker] <= resources_border[1][worker]).all()
 
-            # check the whole chromosomes
-            assert tb.validate(individual1[0])
-            assert tb.validate(individual2[0])
+        # check the whole chromosomes
+        assert tb.validate(individual1)
+        assert tb.validate(individual2)
 
 

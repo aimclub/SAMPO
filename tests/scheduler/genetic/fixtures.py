@@ -64,9 +64,14 @@ def create_toolbox(wg: WorkGraph,
     } for worker_name, workers_of_type in worker_pool.items()}
     node_indices = list(index2node.keys())
 
+    contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
+    for ind, contractor in enumerate(contractors):
+        for ind_worker, worker in enumerate(contractor.workers.values()):
+            contractor_borders[ind, ind_worker] = worker.count
+
     init_chromosomes: Dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
-                                              contractor2index, schedule)
+                                              contractor2index, contractor_borders, schedule)
          for name, schedule in init_schedules.items()}
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
@@ -93,6 +98,7 @@ def create_toolbox(wg: WorkGraph,
                         spec,
                         worker_pool_indices,
                         contractor2index,
+                        contractor_borders,
                         node_indices,
                         index2node_list,
                         work_estimator), resources_border

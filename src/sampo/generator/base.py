@@ -8,7 +8,7 @@ from sampo.schemas.graph import WorkGraph
 
 
 class SimpleSynthetic:
-    def __init__(self, rand: int | Random | None) -> None:
+    def __init__(self, rand: int | Random | None = None) -> None:
         if isinstance(rand, Random):
             self._rand = rand
         else:

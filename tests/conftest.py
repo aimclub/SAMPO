@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from pytest import fixture
 
-from sampo.generator.pipeline.cluster import get_start_stage, get_finish_stage
+from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
 from sampo.scheduler.heft.base import HEFTScheduler

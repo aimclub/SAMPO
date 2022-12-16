@@ -4,7 +4,7 @@ from random import Random
 from typing import Callable
 
 from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.utilities.collections import build_index

@@ -13,8 +13,8 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.utils import uuid_str
 
 
-def get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: dict[str, float] | None,
-                          available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
+def _get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: dict[str, float] | None,
+                           available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
     available_types = available_types or list(proportions.keys())
     counts = {name: prop * pack_count for name, prop in proportions.items() if name in available_types}
     stochastic_counts = {
@@ -24,7 +24,7 @@ def get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: d
     return stochastic_counts
 
 
-def dict_subtract(d: dict[str, float], subtractor: float) -> dict[str, float]:
+def _dict_subtract(d: dict[str, float], subtractor: float) -> dict[str, float]:
     for name in d.keys():
         d[name] -= subtractor
     return d
@@ -36,7 +36,7 @@ def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int 
     """
     Generates a contractors list of specified length with specified capacities
     :param number_of_workers_in_contractors: How many workers of all each contractor contains in itself.
-    One int for all or list[int] for each contractor. If list, its length should be equal to number_of_contractors.
+    One int for all or list[int] for each contractor. If list, its length should be equal to number_of_contractors
     :param number_of_contractors: Number of generated contractors.
     :return: list with contractors
     """
@@ -55,10 +55,22 @@ def get_contractor(pack_worker_count: float,
                    index: int = 0,
                    worker_proportions: dict[str, int] | None = WORKER_PROPORTIONS,
                    available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
+    """
+    Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
+    :param pack_worker_count: The number of resource sets
+    :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
+    transferred proportions
+    :param index: a parameter for naming a contractor
+    :param worker_proportions: proportions of quantity for contractor resources to be scaled by pack_worker_count
+    :param available_worker_types: Worker types for generation,
+    if a subset of worker_proportions is used, if None, all worker_proportions are used
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :return: the contractor
+    """
     contractor_id = uuid_str(rand)
 
-    worker_counts = get_stochastic_counts(pack_worker_count, sigma_scaler, worker_proportions,
-                                          available_worker_types, rand)
+    worker_counts = _get_stochastic_counts(pack_worker_count, sigma_scaler, worker_proportions,
+                                           available_worker_types, rand)
 
     workers = dict()
     for name in worker_counts.keys():
@@ -69,10 +81,16 @@ def get_contractor(pack_worker_count: float,
                                contractor_id=contractor_id,
                                count=worker_counts[name])
 
-    return Contractor(contractor_id, f"Подрядчик {index}", workers, {})
+    return Contractor(contractor_id, f"Contractor {index}", workers, {})
 
 
 def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1) -> Contractor:
+    """
+    Finds the minimum set of resources of each type to execute a graph and multiplying by a scalar creates a contractor
+    :param wg: The graph of works for which it is necessary to find a set of resources
+    :param scaler: Multiplier for the number of resources in the contractor
+    :return: Contractor capable of completing the work schedule
+    """
     if scaler < 1:
         assert "scaler should be greater than 1"
     wg_reqs = list(chain(*[n.work_unit.worker_reqs for n in wg.nodes]))

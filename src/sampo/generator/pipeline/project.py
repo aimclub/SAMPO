@@ -1,12 +1,14 @@
 from random import Random
 from typing import Callable
 
+from sampo.generator.config import worker_req as wr
 from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER_PROBABILITY, GRAPH_COUNTS, \
     MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
-from sampo.generator.pipeline.cluster import get_start_stage, get_cluster_works, get_finish_stage, add_addition_work
-from sampo.generator.types import SyntheticGraphType, StageType
-from sampo.schemas.graph import GraphNode, WorkGraph
-from sampo.schemas.utils import count_node_ancestors
+from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_work
+from sampo.generator.pipeline.types import SyntheticGraphType, StageType
+from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
+from sampo.schemas.utils import count_node_ancestors, uuid_str
+from sampo.schemas.works import WorkUnit
 
 
 def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
@@ -32,11 +34,11 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     return graph
 
 
-def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count: int | None = None,
-                      pipe_net_count: int | None = None, light_masts_count: int | None = None,
-                      borehole_counts: list[int] | None = None, add_addition_cluster: bool | None = False,
-                      addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
-                      rand: Random | None = None) -> (list[GraphNode], dict[str, GraphNode]):
+def _get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count: int | None = None,
+                       pipe_net_count: int | None = None, light_masts_count: int | None = None,
+                       borehole_counts: list[int] | None = None, add_addition_cluster: bool | None = False,
+                       addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
+                       rand: Random | None = None) -> (list[GraphNode], dict[str, GraphNode]):
     pipe_nodes_count = pipe_nodes_count or GRAPH_COUNTS['pipe_nodes'].rand_int(rand)
     pipe_net_count = pipe_net_count or GRAPH_COUNTS['pipe_net'].rand_int(rand)
     light_masts_count = light_masts_count or GRAPH_COUNTS['light_masts'].rand_int(rand)
@@ -52,7 +54,7 @@ def get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count:
                                         light_masts_count=light_masts_count, borehole_counts=borehole_counts, rand=rand)
 
     checkpoints = [c_master]
-    if add_addition_cluster or add_addition_work(addition_cluster_probability, rand):
+    if add_addition_cluster or _add_addition_work(addition_cluster_probability, rand):
         c_slave, _ = get_cluster_works(root_node=root_node, cluster_name=cluster_name,
                                        pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
                                        light_masts_count=light_masts_count, borehole_counts=borehole_counts,
@@ -90,7 +92,7 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
     assert cluster_counts >= 0 and branching_probability >= 0 and top_border >= 0, 'Params should not be negative'
 
     rand = rand or Random()
-    get_root_stage: Callable[[list[StageType], float, Random], GraphNode] = graph_mode_to_callable(mode)
+    get_root_stage: Callable[[list[StageType], float, Random], GraphNode] = _graph_mode_to_callable(mode)
 
     if bottom_border > 0:
         top_border = 0
@@ -104,8 +106,8 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
             addition_cluster_probability = 0
 
         root_stage = get_root_stage(stages, branching_probability, rand)
-        checkpoints, r = get_cluster_graph(root_stage, f'{cluster_name_prefix}{masters_clusters_ind}',
-                                           addition_cluster_probability=addition_cluster_probability, rand=rand)
+        checkpoints, r = _get_cluster_graph(root_stage, f'{cluster_name_prefix}{masters_clusters_ind}',
+                                            addition_cluster_probability=addition_cluster_probability, rand=rand)
         tmp_finish = get_finish_stage(checkpoints)
         count_works = count_node_ancestors(tmp_finish, root_stage)
 
@@ -126,29 +128,59 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
     return graph
 
 
-def graph_mode_to_callable(mode: SyntheticGraphType) -> \
+def _graph_mode_to_callable(mode: SyntheticGraphType) -> \
         Callable[[list[tuple[GraphNode, dict[str, GraphNode]]], float, Random], GraphNode]:
     if mode is SyntheticGraphType.General:
-        return general_graph_mode
+        return _general_graph_mode
     if mode is SyntheticGraphType.Parallel:
-        return parallel_graph_mode_get_root
-    return sequence_graph_mode_get_root
+        return _parallel_graph_mode_get_root
+    return _sequence_graph_mode_get_root
 
 
-def parallel_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
-                                 branching_probability: float, rand: Random) -> GraphNode:
+def _parallel_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
+                                  branching_probability: float, rand: Random) -> GraphNode:
     return stages[0][0]
 
 
-def sequence_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
-                                 branching_probability: float, rand: Random) -> GraphNode:
+def _sequence_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
+                                  branching_probability: float, rand: Random) -> GraphNode:
     return stages[-1][0]
 
 
-def general_graph_mode(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
-                       branching_probability: float, rand: Random) -> GraphNode:
+def _general_graph_mode(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
+                        branching_probability: float, rand: Random) -> GraphNode:
     is_branching = rand.random() <= branching_probability
     ind = len(stages) - 1
     if is_branching and len(stages) > 2:
         ind = rand.randint(1, len(stages) - 2)
     return stages[ind][1]['min']
+
+
+def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without a parent in the graph
+    :param work_id: id for the start node
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(work_id, f"start of project", wr.START_PROJECT, group="service_works", is_service_unit=True)
+    node = GraphNode(work, [])
+    return node
+
+
+def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = "",
+                     rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without children in the graph
+    :param parents: a list of all non-service nodes that do not have children
+    :param work_id: id for the start node
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(str(work_id), f"finish of project", wr.END_PROJECT, group="service_works", is_service_unit=True)
+    node = GraphNode(work, parents)
+    return node

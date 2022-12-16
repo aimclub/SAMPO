@@ -81,22 +81,22 @@ def get_power_lines(parents: list[GraphNode], cluster_name: str, dist_line: floa
 def get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: list[float],
                    rand: Random | None = None) -> list[GraphNode]:
     worker_req_pipe = wr.scale_reqs(wr.PIPE_LINE, pipe_dists[0])
-    first_pipe = WorkUnit(uuid_str(rand), "pipe", worker_req_pipe, group=f"{cluster_name}:oil_gas_pipe:pipe_lines",
+    first_pipe = WorkUnit(uuid_str(rand), "pipe", worker_req_pipe, group=f"{cluster_name}:oil_gas_long_pipes",
                           volume=pipe_dists[0], volume_type="km")
 
     graph_nodes = [GraphNode(first_pipe, parents)]
     for i in range(1, len(pipe_dists)):
         node_work = WorkUnit(uuid_str(rand), "node", wr.PIPE_NODE,
-                             group=f"{cluster_name}:oil_gas_net:pipe_nodes")
+                             group=f"{cluster_name}:oil_gas_long_pipes")
         graph_nodes.append(GraphNode(node_work, parents))
         worker_req_pipe = wr.scale_reqs(wr.PIPE_LINE, pipe_dists[i])
         pipe_work = WorkUnit(uuid_str(rand), "pipe", worker_req_pipe,
-                             group=f"{cluster_name}:oil_gas_net:pipe_lines",
+                             group=f"{cluster_name}:oil_gas_long_pipes",
                              volume=pipe_dists[i], volume_type="km")
         graph_nodes.append(GraphNode(pipe_work, parents))
 
     worker_req_loop = wr.scale_reqs(wr.PIPE_LINE, pipe_dists[0])
-    looping = WorkUnit(uuid_str(rand), "looping", worker_req_loop, group=f"{cluster_name}:oil_gas_net",
+    looping = WorkUnit(uuid_str(rand), "looping", worker_req_loop, group=f"{cluster_name}:oil_gas_long_pipes",
                        volume=pipe_dists[0], volume_type="km")
     graph_nodes.append(GraphNode(looping, graph_nodes[0:1]))
     return graph_nodes
@@ -105,14 +105,14 @@ def get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: list
 def get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, group_ind: int, borehole_count: int,
                                   rand: Random | None = None) -> list[GraphNode]:
     metering_install = WorkUnit(uuid_str(rand), "metering installation",
-                                wr.METERING_INSTALL, group=f"{cluster_name}:borehole_env-{group_ind}-{borehole_count}")
+                                wr.METERING_INSTALL, group=f"{cluster_name}:borehole_env")
     worker_req_ktp_nep = wr.mul_borehole_volume(wr.KTP_NEP, borehole_count, wr.KTP_NEP_BASE)
     ktp_nep = WorkUnit(uuid_str(rand), "KTP and NEP",
-                       worker_req_ktp_nep, group=f"{cluster_name}:borehole_env-{group_ind}-{borehole_count}",
+                       worker_req_ktp_nep, group=f"{cluster_name}:borehole_env",
                        volume=wr.get_borehole_volume(borehole_count, wr.KTP_NEP_BASE))
     worker_req_tank = wr.mul_borehole_volume(wr.DRAINAGE_TANK, borehole_count, wr.DRAINAGE_TANK_BASE)
     drainage_tank = WorkUnit(uuid_str(rand), "drainage tank",
-                             worker_req_tank, group=f"{cluster_name}:borehole_env-{group_ind}-{borehole_count}",
+                             worker_req_tank, group=f"{cluster_name}:borehole_env",
                              volume=wr.get_borehole_volume(borehole_count, wr.DRAINAGE_TANK_BASE))
     nodes = [
         GraphNode(metering_install, parents),
@@ -148,7 +148,7 @@ def get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, b
     nodes = []
     for i in range(borehole_count):
         borehole_work = WorkUnit(uuid_str(rand), "borehole",
-                                 wr.BOREHOLE, group=f"{cluster_name}:borehole_groups:group-{group_ind}")
+                                 wr.BOREHOLE, group=f"{cluster_name}:borehole_groups")
         nodes.append(GraphNode(borehole_work, parents))
     return nodes
 
@@ -162,7 +162,7 @@ def get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str,
         dists_sum += dist
         worker_req_pipe = scale_reqs(wr.POWER_NETWORK, dist)
         pipe_net_work = WorkUnit(uuid_str(rand), "elem of pipe_network", worker_req_pipe,
-                                 group=f"{cluster_name}:oil_gas_net:pipe_net", volume=dist, volume_type="km")
+                                 group=f"{cluster_name}:oil_gas_pipe_net", volume=dist, volume_type="km")
         nodes.append(GraphNode(pipe_net_work, parents))
 
     worker_req_power = scale_reqs(wr.POWER_NETWORK, dists_sum)
@@ -172,7 +172,7 @@ def get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str,
 
     for i in range(masts_count):
         light_mast_work = WorkUnit(uuid_str(rand), "mast", wr.LIGHT_MAST,
-                                   group=f"{cluster_name}:borehole_env:light_masts")
+                                   group=f"{cluster_name}:light_masts")
         nodes.append(GraphNode(light_mast_work, parents))
     return nodes
 

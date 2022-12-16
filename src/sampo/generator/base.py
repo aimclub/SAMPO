@@ -18,9 +18,11 @@ class SimpleSynthetic:
         return get_small_graph(cluster_name, self._rand)
 
     def work_graph(self, mode: SyntheticGraphType | None = SyntheticGraphType.General,
+                   cluster_counts: int | None = 0,
                    bottom_border: int | None = 0,
                    top_border: int | None = 0) -> WorkGraph:
-        return get_graph(mode=mode, bottom_border=bottom_border, top_border=top_border, rand=self._rand)
+        return get_graph(mode=mode, cluster_counts=cluster_counts, bottom_border=bottom_border, top_border=top_border,
+                         rand=self._rand)
 
     def contactor(self, pack_worker_count: float):
         return get_contractor(pack_worker_count, rand=self._rand)

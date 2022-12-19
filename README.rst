@@ -49,8 +49,7 @@ To use the API, follow these steps:
 
 .. code-block:: python
 
-  srand = generator.SimpleSynthetic()
-  wg = srand.advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
+  wg = generator.SimpleSynthetic().advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
   contractors = [generator.get_contractor_by_wg(wg)]
   
   schedule = scheduler.HEFTScheduler().schedule(wg, contractors)

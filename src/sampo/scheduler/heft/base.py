@@ -32,12 +32,13 @@ class HEFTScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
+                            start_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, timeline)
+            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, start_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -53,6 +54,7 @@ class HEFTScheduler(Scheduler):
                         contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
+                        start_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, JustInTimeTimeline]:
         """
@@ -60,6 +62,7 @@ class HEFTScheduler(Scheduler):
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
         :param contractors:
+        :param work_estimator:
         :param work_estimator:
         :param spec: spec for current scheduling
         :param ordered_nodes:
@@ -72,8 +75,6 @@ class HEFTScheduler(Scheduler):
         # list for support the queue of workers
         if not isinstance(timeline, JustInTimeTimeline):
             timeline = JustInTimeTimeline(worker_pool)
-
-        schedule_start_time = None
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
@@ -109,8 +110,9 @@ class HEFTScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if schedule_start_time is None:
-                schedule_start_time = st
+            if index == 0:  # we are scheduling the work `start of the project`
+                st = start_time  # this work should always have st = 0, so we just re-assign it
+                ft += st
 
             # apply work to scheduling
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
@@ -120,5 +122,8 @@ class HEFTScheduler(Scheduler):
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), work_id2schedule_unit)
         # recalc_schedule(reversed(ordered_nodes), work_id2schedule_unit, worker_pool, work_estimator)
+
+        schedule_start_time = min([swork.start_time for swork in node2swork.values() if
+                                   len(swork.work_unit.worker_reqs) != 0])
 
         return node2swork.values(), schedule_start_time, timeline

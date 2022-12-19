@@ -35,6 +35,7 @@ def build_schedule(wg: WorkGraph,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
+                   start_time: Time = Time(0),
                    timeline: Timeline | None = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline]:
     """
@@ -166,8 +167,6 @@ def build_schedule(wg: WorkGraph,
         # crossover
         # take 2 individuals as input 1 modified individuals
         # take after 1: (1,3,5) and (2,4,6) and get pairs 1,2; 3,4; 5,6
-
-        print([toolbox.evaluate(ind) for ind in offspring])
 
         cur_generation = []
 
@@ -314,7 +313,8 @@ def build_schedule(wg: WorkGraph,
     scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                                     index2contractor_obj,
                                                                                     worker_pool_indices,
-                                                                                    spec, work_estimator, timeline)
+                                                                                    spec, work_estimator, timeline,
+                                                                                    start_time)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 

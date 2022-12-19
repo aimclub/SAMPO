@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Iterable
 
-from sampo.scheduler.utils.block_graph import BlockGraph
-from sampo.scheduler.utils.multi_agency import ScheduledBlock
+from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.multi_agency import ScheduledBlock
 from sampo.schemas.contractor import Contractor
 from sampo.utilities.validation import validate_schedule, \
     check_all_allocated_workers_do_not_exceed_capacity_of_contractors
@@ -12,8 +12,11 @@ def validate_block_schedule(bg: BlockGraph, schedule: dict[str, ScheduledBlock])
     _check_block_dependencies(bg, schedule)
     _check_blocks_separately(schedule.values())
 
-    contractors = set([contractor for sblock in schedule.values() for contractor in sblock.agent.contractors])
-    _check_blocks_with_global_timelines(schedule.values(), contractors)
+    # TODO Fix. To fully validate resources usage in the whole multi-agent appearance,
+    #    we should union all agent's ScheduleEvents and go through it in sorted way.
+    #    Now we think that this validation phase is not extremely need.
+    # contractors = set([contractor for sblock in schedule.values() for contractor in sblock.agent.contractors])
+    # _check_blocks_with_global_timelines(schedule.values(), contractors)
 
 
 def _check_block_dependencies(bg: BlockGraph, schedule: dict[str, ScheduledBlock]):

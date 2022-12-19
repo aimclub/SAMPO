@@ -22,6 +22,9 @@ class BlockNode:
     def id(self):
         return self.wg.start.id
 
+    def __hash__(self):
+        return hash(self.id)
+
 
 class BlockGraph:
     """
@@ -39,6 +42,9 @@ class BlockGraph:
     def __getitem__(self, item) -> BlockNode:
         return self.node_dict[item]
 
+    def __len__(self):
+        return len(self.nodes)
+
     def to_work_graph(self) -> WorkGraph:
         """
         Creates `WorkGraph` that are equal to this `BlockGraph`.
@@ -51,6 +57,24 @@ class BlockGraph:
             end.wg.start.add_parents([start.wg.finish for start in end.blocks_from])
 
         return WorkGraph(global_start, global_end)
+
+    def toposort(self) -> list[BlockNode]:
+        visited = set()
+        ans = []
+
+        def dfs(u: BlockNode):
+            visited.add(u)
+            for v in u.blocks_to:
+                if v not in visited:
+                    dfs(v)
+            ans.append(u)
+
+        for node in self.nodes:
+            if node not in visited:
+                dfs(node)
+        ans.reverse()
+
+        return ans
 
     @staticmethod
     def add_edge(start: BlockNode, end: BlockNode):

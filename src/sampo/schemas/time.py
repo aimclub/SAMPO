@@ -1,6 +1,6 @@
 from sampo.schemas.serializable import AutoJSONSerializable
 
-TIME_INF = 2_000_000
+TIME_INF = 2_000_000_000
 
 
 # TODO Consider converting to StrSeriailzable
@@ -18,7 +18,7 @@ class Time(AutoJSONSerializable['Time']):
     def inf():
         return Time(TIME_INF)
 
-    # Copying body between left- and right-associative functions
+    # Copy-paste body between left- and right-associative functions
     # is here to avoid functional call overhead
     # TODO: describe the function (description, parameters, return type)
     def __add__(self, other: 'Time' or int) -> 'Time':

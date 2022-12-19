@@ -39,6 +39,14 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.work_estimator = work_estimator
 
+    def __str__(self) -> str:
+        return f'GeneticScheduler[' \
+               f'generations={self.number_of_generation},' \
+               f'size_selection={self.size_selection},' \
+               f'mutate_order={self.mutate_order},' \
+               f'mutate_resources={self.mutate_resources}' \
+               f']'
+
     def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
         size_selection = self.size_selection
         if size_selection is None:
@@ -75,6 +83,7 @@ class GeneticScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
+                            start_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
@@ -100,6 +109,7 @@ class GeneticScheduler(Scheduler):
                                                                         self.rand,
                                                                         spec,
                                                                         self.work_estimator,
+                                                                        start_time=start_time,
                                                                         timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 

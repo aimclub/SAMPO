@@ -1,11 +1,8 @@
-SAMPO — Scheduler for Adaptive Manufacturing Processes Optimization
-==============
-
-## Описание планировщика
-
-Планировщик для адаптивной оптимизации производственных процессов включает в себя набор алгоритмов интеллектуального анализа и построения расписаний задач производственных процессов с учетом ресурсных и прочих ограничений, накладываемых предметной областью.
-
-Он позволяет эффективно планировать производственные задачи и назначать ресурсы, оптимизируя результат планирования по требуемым метрикам.
+.. image:: docs/sampo_logo.png
+   :alt: Logo of SAMPO framework
+   
+Scheduler for Adaptive Manufacturing Processes Optimization
+======================
 
 .. start-badges
 .. list-table::
@@ -16,19 +13,14 @@ SAMPO — Scheduler for Adaptive Manufacturing Processes Optimization
    * - license
      - | |license|
    * - support
-     - | iairlab@yandex.ru
+     - | |mailto|
 
 
 .. end-badges
 
 **SAMPO** is an open-source framework for adaptive manufacturing processes scheduling. This framework is distributed under the 3-Clause BSD license.
 
-
-
-SAMPO Features
-==============
-
-The main features of the framework are follows:
+It provides toolbox for generating schedules of manufacturing process under the constraints imposed by the subject area. The core of SAMPO is based on the combination of meta-heuristic, genetic and multi-agent algorithms. Taking as input the task graph with tasks connections and resource constraints, as well as the optimization metric, the scheduler builds the optimal tasks sequence and resources assignment according to the given metric.
 
 
 Installation
@@ -57,9 +49,8 @@ To use the API, follow these steps:
 
 .. code-block:: python
 
-  srand = generator.SimpleSynthetic()
-  wg = srand.advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
-  contractors = [get_contractor_by_wg(wg)]
+  wg = generator.SimpleSynthetic().advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
+  contractors = [generator.get_contractor_by_wg(wg)]
   
   schedule = scheduler.HEFTScheduler().schedule(wg, contractors)
   
@@ -76,3 +67,8 @@ To use the API, follow these steps:
 .. |license| image:: https://img.shields.io/github/license/Industrial-AI-Research-Lab/sampo
    :alt: Supported Python Versions
    :target: https://github.com/Industrial-AI-Research-Lab/sampo/blob/master/LICENSE
+
+
+.. |mailto| image:: https://img.shields.io/badge/email-IAIRLab-blueviolet
+   :alt: Framework Support
+   :target: mailto:iairlab@yandex.ru

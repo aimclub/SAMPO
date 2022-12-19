@@ -1,4 +1,6 @@
-  
+.. image:: docs/sampo_logo.png
+   :alt: Logo of SAMPO framework
+   
 Scheduler for Adaptive Manufacturing Processes Optimization
 ======================
 

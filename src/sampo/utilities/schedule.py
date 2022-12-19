@@ -33,15 +33,27 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     :return: pd.Series with the full information about the task
     """
     if len(task_df) == 1:
-        return task_df.loc[0, :]
+        df = task_df.copy()
+        df['successors'] = [[tuple([x[0].split('_')[0], x[1]]) for x in df.loc[0, 'successors']]]
+        return df.loc[0, :]
     else:
-        df = task_df.iloc[-1:].reset_index(drop=True)
+        df = task_df.copy()
+        df = df.iloc[-1:].reset_index(drop=True)
         for column in ['task_id', 'task_name']:
             df.loc[0, column] = df.loc[0, column].split('_')[0]  # fix task id and name
 
         # sum up volumes through all stages
         df.loc[0, 'volume'] = sum(task_df.loc[:, 'volume'])
         df.loc[0, 'workers'] = task_df.loc[0, 'workers']
+
+        # fix connections through all stages
+        fixed_connections_lst = []
+        for connections_lst in task_df.loc[:, 'successors']:
+            for connection in connections_lst:
+                if connection[1] != 'IFS':
+                    fixed_connections_lst.append(tuple([connection[0].split('_')[0], connection[1]]))
+        fixed_connections_lst = list(set(fixed_connections_lst))
+        df.loc[:, 'successors'] = [fixed_connections_lst]
 
         # fix task's start time and duration
         df.loc[0, 'start'] = task_df.loc[0, 'start']
@@ -59,12 +71,13 @@ def remove_service_tasks(service_schedule_df: pd.DataFrame) -> pd.DataFrame:
     """
     schedule_df = service_schedule_df.copy()
 
+    service_df = schedule_df.loc[:, 'task_name'].str.contains('start|finish')
+
     # Prepare list with service tasks ids
-    service_tasks_ids = set(schedule_df.loc[schedule_df.loc[:, 'task_name'].str.contains(
-        'start|finish|марке')].loc[:, 'task_id'])
+    service_tasks_ids = set(schedule_df.loc[service_df].loc[:, 'task_id'])
 
     # Remove rows with service tasks from DataFrame
-    schedule_df = schedule_df.loc[~schedule_df.loc[:, 'task_name'].str.contains('start|finish|марке')]
+    schedule_df = schedule_df.loc[~service_df]
 
     # Fix connections linked to the service tasks
     fixed_connections_lst = []

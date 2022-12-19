@@ -33,12 +33,13 @@ class HEFTBetweenScheduler(HEFTScheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
+                            start_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, timeline)
+            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, start_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -53,6 +54,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
                         contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
+                        start_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, MomentumTimeline]:
         """
@@ -72,9 +74,6 @@ class HEFTBetweenScheduler(HEFTScheduler):
         # list for support the queue of workers
         if not isinstance(timeline, MomentumTimeline):
             timeline = MomentumTimeline(ordered_nodes, contractors)
-        # add to queue all available workers
-
-        schedule_start_time = None
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
@@ -113,8 +112,9 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if schedule_start_time is None:
-                schedule_start_time = st
+            if index == 0:  # we are scheduling the work `start of the project`
+                st = start_time  # this work should always have st = 0, so we just re-assign it
+                ft += st
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
@@ -122,5 +122,8 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), node2swork)
         # recalc_schedule(reversed(ordered_nodes), node2swork, agents, work_estimator)
+
+        schedule_start_time = min([swork.start_time for swork in node2swork.values() if
+                                   len(swork.work_unit.worker_reqs) != 0])
 
         return node2swork.values(), schedule_start_time, timeline

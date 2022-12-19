@@ -41,15 +41,17 @@ class Scheduler(ABC):
                  contractors: List[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
+                 start_time: Time = Time(0),
                  timeline: Timeline | None = None) \
             -> Schedule:
-        return self.schedule_with_cache(wg, contractors, spec, validate, timeline)[0]
+        return self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
 
     @abstractmethod
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
+                            start_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ...
@@ -60,6 +62,7 @@ class Scheduler(ABC):
         """
         Applies worker team spec to optimization process.
         Can use arbitrary heuristics to increase spec handling efficiency.
+
         :param work_unit: current work unit
         :param worker_team: current worker team from chosen contractor
         :param work_spec: spec for given work unit

@@ -83,7 +83,7 @@ def setup_default_schedules(setup_wg, setup_contractors, setup_start_date):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator).schedule(setup_wg, setup_contractors)
+        return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors)
 
     return {
         "heft_end": init_schedule(HEFTScheduler),

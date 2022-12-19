@@ -32,12 +32,13 @@ class TopologicalScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
+                            start_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, timeline)
+            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, start_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -65,6 +66,7 @@ class TopologicalScheduler(Scheduler):
     def build_scheduler(self, tasks: List[GraphNode], contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
+                        start_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, MomentumTimeline]:
         """
@@ -122,7 +124,7 @@ class TopologicalScheduler(Scheduler):
                                                        lambda _: Time(0)))
 
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, None, work_estimator)
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
                     c_ft += node_lag + node_time
@@ -131,12 +133,16 @@ class TopologicalScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
-            if schedule_start_time is None:
-                schedule_start_time = st
+            if index == 0:  # we are scheduling the work `start of the project`
+                st = start_time  # this work should always have st = 0, so we just re-assign it
+                ft += st
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, work_estimator)
+
+        schedule_start_time = min([swork.start_time for swork in node2swork.values() if
+                                   len(swork.work_unit.worker_reqs) != 0])
 
         return node2swork.values(), schedule_start_time, timeline
 

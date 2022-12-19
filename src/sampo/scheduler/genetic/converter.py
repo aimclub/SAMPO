@@ -65,7 +65,8 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    spec: ScheduleSpec,
                                    work_estimator: WorkTimeEstimator = None,
-                                   timeline: Timeline | None = None) \
+                                   timeline: Timeline | None = None,
+                                   start_time: Time = Time(0)) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline]:
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -96,12 +97,16 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
 
         st = timeline.find_min_start_time(node, worker_team, node2swork)
 
-        if schedule_start_time is None:
-            schedule_start_time = st
+        if order_index == 0:  # we are scheduling the work `start of the project`
+            st = start_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
         finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
                                         st, work_spec.assigned_time, work_estimator)
 
         timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
+
+    schedule_start_time = min([swork.start_time for swork in node2swork.values() if
+                               len(swork.work_unit.worker_reqs) != 0])
+
     return node2swork, schedule_start_time, timeline

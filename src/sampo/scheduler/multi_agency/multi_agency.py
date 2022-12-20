@@ -18,12 +18,15 @@ class Agent:
         self._timeline = None
         self._scheduler = scheduler
         self._contractors = contractors
+        self._last_task_executed = Time(0)
+        self._downtime = Time(0)
 
     def offer(self, wg: WorkGraph, parent_time: Time) -> tuple[Time, Time, Schedule, Timeline]:
         """
         Computes the offer from agent to manager. Handles all works from given wg.
 
         :param wg: the given block of tasks
+        :param parent_time: max end time of parent blocks
         :return: offered start time, end time, resulting schedule and timeline before offering
 
         To apply returned offer, use `Agent#confirm`.
@@ -32,19 +35,32 @@ class Agent:
             self._scheduler.schedule_with_cache(wg, self._contractors, start_time=parent_time, timeline=self._timeline)
         return start_time, start_time + schedule.execution_time, schedule, timeline
 
-    def confirm(self, timeline: Timeline):
+    def confirm(self, timeline: Timeline, start: Time, end: Time):
         """
         Applies the given offer.
 
         :param timeline: timeline returned from corresponding `Agent#offer`
+        :param start: global start time of confirmed block
+        :param end: global end time of confirmed block
         """
         self._timeline = timeline
+        self.update_stat(start)
+        # update last task statistic
+        self._last_task_executed = end
+
+    def update_stat(self, start: Time):
+        # count last iteration downtime
+        self._downtime += start - self._last_task_executed
 
     def __str__(self):
-        return f'Agent(name={self.name}, scheduler={self._scheduler})'
+        return f'Agent(name={self.name}, scheduler={self._scheduler}, downtime={self._downtime})'
 
     def __repr__(self):
         return str(self)
+
+    @property
+    def downtime(self) -> Time:
+        return self._downtime
 
     @property
     def contractors(self):
@@ -96,9 +112,6 @@ class Manager:
         """
         id2sblock = {}
         for i, block in enumerate(bg.toposort()):
-            if logger:
-                logger('--------------------------------')
-                logger(f'Running auction on block {i}')
             max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
             start_time, end_time, agent_schedule, agent \
                 = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
@@ -106,8 +119,7 @@ class Manager:
             assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
 
             if logger:
-                logger(f'Won agent {agent} with start time {start_time} and end time {end_time}, '
-                       f'adding to scheduling history')
+                logger(f'{agent._scheduler}')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
                                     start_time=start_time,
                                     end_time=end_time)
@@ -144,6 +156,9 @@ class Manager:
                 best_schedule = offered_schedule
                 best_timeline = offered_timeline
                 best_agent = offered_agent
-        best_agent.confirm(best_timeline)
+        best_agent.confirm(best_timeline, best_start_time, best_end_time)
+        for agent in self._agents:
+            if agent.name != best_agent.name:
+                agent.update_stat(best_start_time)
 
         return best_start_time, best_end_time, best_schedule, best_agent

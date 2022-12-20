@@ -52,7 +52,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
                         continue
                     bg.add_edge(start, end)
 
-    logger(f'Generated block graph with type {graph_type} and block types={[mode.name for mode in modes]}')
+    logger(f'{graph_type.name} ' + ' '.join([str(mode.name) for mode in modes]))
     return bg
 
 
@@ -105,7 +105,7 @@ def generate_queues(type_prop: list[int],
         nodes_all.extend(nodes)
         if not nodes_all:
             nodes_prev = nodes
-            logger(f'Generated queue 0: blocks={n_blocks}')
+            # logger(f'Generated queue 0: blocks={n_blocks}')
             continue
 
         # generate edges
@@ -125,7 +125,8 @@ def generate_queues(type_prop: list[int],
 
         nodes_prev = nodes
 
-        logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
+        # logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
+    logger('Queues')
 
     return BlockGraph(nodes_all)
 

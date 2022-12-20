@@ -37,6 +37,9 @@ class Scheduler(ABC):
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator
 
+    def __str__(self):
+        return str(self.scheduler_type.name)
+
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),

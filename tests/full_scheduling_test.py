@@ -5,7 +5,7 @@ from sampo.scheduler.generate import generate_schedule
 from sampo.schemas.time import Time
 
 
-def test_schedule_object(setup_contractors):
+def test_schedule_synthetic(setup_contractors):
     ss = SimpleSynthetic(rand=231)
     wg = ss.work_graph(SyntheticGraphType.General, 100, 200)
 

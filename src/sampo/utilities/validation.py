@@ -21,6 +21,9 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contr
     # checking preconditions
     # check_all_workers_have_same_qualification(schedule.workGraph, schedule.resourcePools)
 
+    if schedule.execution_time == Time.inf():
+        return
+
     # checking the schedule itself
     _check_all_tasks_scheduled(schedule, wg)
     _check_parent_dependencies(schedule, wg)

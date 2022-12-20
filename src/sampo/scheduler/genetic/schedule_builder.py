@@ -310,6 +310,9 @@ def build_schedule(wg: WorkGraph,
 
     chromosome = hof[0][0]
 
+    # assert that we have valid chromosome
+    assert hof[0].fitness.values[0] != Time.inf()
+
     scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                                     index2contractor_obj,
                                                                                     worker_pool_indices,

@@ -43,6 +43,9 @@ class Agent:
     def __str__(self):
         return f'Agent(name={self.name}, scheduler={self._scheduler})'
 
+    def __repr__(self):
+        return str(self)
+
     @property
     def contractors(self):
         return self._contractors

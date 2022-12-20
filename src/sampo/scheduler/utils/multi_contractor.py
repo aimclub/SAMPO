@@ -63,15 +63,15 @@ def run_contractor_search(contractors: List[Contractor],
         start_time, finish_time, worker_team = runner(contractor)
         contractor_size = sum([w.count for w in contractor.workers.values()])
 
-        if finish_time < best_finish_time \
-                or (finish_time == best_finish_time and contractor_size < best_contractor_size):
+        if finish_time != Time.inf() and (finish_time < best_finish_time or
+                                          (finish_time == best_finish_time and contractor_size < best_contractor_size)):
             best_start_time = start_time
             best_finish_time = finish_time
             best_contractor = contractor
             best_worker_team = worker_team
             best_contractor_size = contractor_size
 
-    if not best_contractor:
+    if best_contractor is None:
         raise Exception(f'There is no contractor that can satisfy given search')
 
     return best_start_time, best_finish_time, best_contractor, best_worker_team

@@ -75,8 +75,6 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
     works_order = chromosome[0]
     works_resources = chromosome[1]
 
-    schedule_start_time = None
-
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
         if node.id in node2swork and not node.is_inseparable_son():

@@ -175,8 +175,9 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
     for work_ind in work_indices:
         resources_count = chromosome[1][:-1, work_ind]
         contractor_ind = chromosome[1][-1, work_ind]
+        contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
-            if contractors_borders[contractor_ind, ind] < count:
+            if contractor_border[ind] < count:
                 return False
     return True
 

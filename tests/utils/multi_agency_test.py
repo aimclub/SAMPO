@@ -11,6 +11,7 @@ from sampo.scheduler.multi_agency.block_validation import validate_block_schedul
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
+from sampo.schemas.contractor import Contractor
 
 
 def test_one_auction():
@@ -25,14 +26,12 @@ def test_one_auction():
         wg = p_rand.work_graph(top_border=200)
         start_time, end_time, schedule, agent = manager.run_auction(wg)
 
-        print(f'Round {i}: wins {agent.name} with submitted time {end_time - start_time}')
+        print(f'Round {i}: wins {agent} with submitted time {end_time - start_time}')
 
 
-def test_managing_block_graph():
+def manage_block_graph(contractors: list[Contractor]):
     r_seed = 231
-    p_rand = SimpleSynthetic(rand=r_seed)
     rand = Random(r_seed)
-    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
 
     scheduler_constructors = [HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, GeneticScheduler]
 
@@ -47,6 +46,20 @@ def test_managing_block_graph():
 
     for sblock in scheduled_blocks.values():
         print(sblock)
+
+
+def test_manage_block_graph_different_contractors():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
+    manage_block_graph(contractors)
+
+
+def test_manage_block_graph_same_contractors():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    contractors = [p_rand.contactor(25) for _ in range(4)]
+    manage_block_graph(contractors)
 
 
 def test_managing_with_obstruction():

@@ -6,11 +6,12 @@ from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
-from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.multi_agency.block_generator import generate_blocks, SyntheticBlockGraphType, generate_queues
 from sampo.scheduler.multi_agency.block_validation import validate_block_schedule
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
+from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
+from sampo.schemas.contractor import Contractor
 
 
 def test_one_auction():
@@ -25,14 +26,12 @@ def test_one_auction():
         wg = p_rand.work_graph(top_border=200)
         start_time, end_time, schedule, agent = manager.run_auction(wg)
 
-        print(f'Round {i}: wins {agent.name} with submitted time {end_time - start_time}')
+        print(f'Round {i}: wins {agent} with submitted time {end_time - start_time}')
 
 
-def test_managing_block_graph():
+def manage_block_graph(contractors: list[Contractor]):
     r_seed = 231
-    p_rand = SimpleSynthetic(rand=r_seed)
     rand = Random(r_seed)
-    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
 
     scheduler_constructors = [HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, GeneticScheduler]
 
@@ -41,12 +40,26 @@ def test_managing_block_graph():
     manager = Manager(agents)
     bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
 
-    scheduled_blocks = manager.manage_blocks(bg, logger=True)
+    scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
     validate_block_schedule(bg, scheduled_blocks)
 
     for sblock in scheduled_blocks.values():
         print(sblock)
+
+
+def test_manage_block_graph_different_contractors():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
+    manage_block_graph(contractors)
+
+
+def test_manage_block_graph_same_contractors():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    contractors = [p_rand.contactor(25) for _ in range(4)]
+    manage_block_graph(contractors)
 
 
 def test_managing_with_obstruction():
@@ -71,10 +84,10 @@ def test_managing_with_obstruction():
             generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand,
                             obstruction_getter)
 
-        scheduled_blocks = manager.manage_blocks(bg, logger=True)
+        scheduled_blocks = manager.manage_blocks(bg, logger=print)
         validate_block_schedule(bg, scheduled_blocks)
 
-        scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, logger=True)
+        scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, logger=print)
         validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions)
 
         def finish_time(schedule: Iterable[ScheduledBlock]):
@@ -109,7 +122,7 @@ def test_managing_queues():
                              [3, 4, 6, 8, 10, 3, 4, 8, 9, 9],
                              [3, 4, 6, 8, 10, 3, 4, 8, 9, 9])
 
-        scheduled_blocks = manager.manage_blocks(bg, logger=True)
+        scheduled_blocks = manager.manage_blocks(bg, logger=print)
         validate_block_schedule(bg, scheduled_blocks)
 
         for sblock in scheduled_blocks.values():

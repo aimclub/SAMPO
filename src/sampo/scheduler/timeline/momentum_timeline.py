@@ -96,23 +96,28 @@ class MomentumTimeline(Timeline):
         contractor_id = worker_team[0].contractor_id if worker_team else ""
         # 1. identify earliest possible start time by max parent's end time
 
-        max_parent_time: Time = max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
-        nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].finish_time
-                                                            if pnode in node2swork else Time(0)
-                                                            for pnode in n.parents),
-                                                           default=Time(0))
-                                                    for n in inseparable_chain}
+        def apply_time_spec(time: Time):
+            return max(time, assigned_start_time) if assigned_start_time else time
+
+        max_parent_time: Time = apply_time_spec(
+            max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
+        )
+        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((apply_time_spec(node2swork[pnode].finish_time)
+                                                                 if pnode in node2swork else Time(0)
+                                                                 for pnode in n.parents),
+                                                                default=Time(0))
+                                                         for n in inseparable_chain}
 
         # 2. calculating execution time of the task
 
         exec_time: Time = Time(0)
         exec_times: Dict[GraphNode, Tuple[Time, Time]] = {}  # node: (lag, exec_time)
-        for chain_node in inseparable_chain:
+        for i, chain_node in enumerate(inseparable_chain):
             passed_agents_new = [agent.copy() for agent in worker_team]
 
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(passed_agents_new, work_estimator)
-            lag_req = nodes_start_times[chain_node] - max_parent_time - exec_time
+            lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 
             exec_times[chain_node] = lag, node_exec_time

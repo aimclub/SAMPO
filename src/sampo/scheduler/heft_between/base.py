@@ -102,8 +102,13 @@ class HEFTBetweenScheduler(HEFTScheduler):
                                                        min_count_worker_team, max_count_worker_team,
                                                        get_finish_time))
 
+                c_st = None
+                if index == 0:  # we are scheduling the work `start of the project`
+                    c_st = start_time  # this work should always have st = 0, so we just re-assign it
+
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, None, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, c_st, work_estimator)
+
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
                     c_ft += node_lag + node_time
@@ -111,10 +116,6 @@ class HEFTBetweenScheduler(HEFTScheduler):
                 return c_st, c_ft, worker_team
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
-
-            if index == 0:  # we are scheduling the work `start of the project`
-                st = start_time  # this work should always have st = 0, so we just re-assign it
-                ft += st
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,

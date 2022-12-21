@@ -22,9 +22,8 @@ global_algo_bg_type_downtime = defaultdict(lambda: defaultdict(int))
 
 run_mode_index = 0
 
-
 algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
-               'GeneticScheduler[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
+               'Genetic[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
 
 
 for run_index in range(5):
@@ -67,6 +66,7 @@ for run_index in range(5):
                 downtimes = [int(downtime) for downtime in line.split(' ')]
                 for algo_ind, algo in enumerate(algos):
                     global_algo_downtime[algo] += downtimes[algo_ind]
+                    global_algo_bg_type_downtime[bg_info[0]][algo] += downtimes[algo_ind]
                 i += 1
                 continue
 
@@ -92,34 +92,40 @@ plt.suptitle('Algorithms block receive count', fontsize=24)
 
 plt.show()
 
-# block graph type comparison
-fig = plt.figure(figsize=(14, 10))
-fig.suptitle('Algorithms with graph types comparison', fontsize=32)
 
-freq = list(global_algo_bg_type_frequencies.items())[0]
-ax1 = fig.add_subplot(221)
-ax1.set(title=freq[0], xticks=[], yticks=[])
-ax1.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-freq = list(global_algo_bg_type_frequencies.items())[1]
-ax2 = fig.add_subplot(222)
-ax2.set(title=freq[0], xticks=[], yticks=[])
-ax2.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-freq = list(global_algo_bg_type_frequencies.items())[2]
-ax3 = fig.add_subplot(223)
-ax3.set(title=freq[0], xticks=[], yticks=[])
-ax3.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-freq = list(global_algo_bg_type_frequencies.items())[3]
-ax4 = fig.add_subplot(224)
-ax4.set(title=freq[0], xticks=[], yticks=[])
-ax4.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+def compare_algos(title, compare_dict):
+    # block graph type comparison
+    fig = plt.figure(figsize=(14, 10))
+    fig.suptitle(title, fontsize=32)
 
-plt.subplots_adjust(left=0.1,
-                    bottom=0.1,
-                    right=0.9,
-                    top=0.9,
-                    wspace=0.4,
-                    hspace=0.4)
-plt.show()
+    freq = list(compare_dict.items())[0]
+    ax1 = fig.add_subplot(221)
+    ax1.set(title=freq[0], xticks=[], yticks=[])
+    ax1.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+    freq = list(compare_dict.items())[1]
+    ax2 = fig.add_subplot(222)
+    ax2.set(title=freq[0], xticks=[], yticks=[])
+    ax2.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+    freq = list(compare_dict.items())[2]
+    ax3 = fig.add_subplot(223)
+    ax3.set(title=freq[0], xticks=[], yticks=[])
+    ax3.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+    freq = list(compare_dict.items())[3]
+    ax4 = fig.add_subplot(224)
+    ax4.set(title=freq[0], xticks=[], yticks=[])
+    ax4.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+
+    plt.subplots_adjust(left=0.1,
+                        bottom=0.1,
+                        right=0.9,
+                        top=0.9,
+                        wspace=0.4,
+                        hspace=0.4)
+    plt.show()
+
+
+compare_algos('Received blocks - algorithms with graph types comparison', global_algo_bg_type_frequencies)
+compare_algos('Downtimes - algorithms with graph types comparison', global_algo_bg_type_downtime)
 
 # block type comparison
 fig = plt.figure(figsize=(14, 10))

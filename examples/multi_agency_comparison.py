@@ -88,10 +88,8 @@ def run_iteration(args):
         variate_block_size(logfile, schedulers)
 
 
-run_iteration([0, 0])
+if __name__ == '__main__':
+    pool = ProcessingPool()
+    args = [[i, mode] for mode in [0, 1] for i in range(5)]
 
-# if __name__ == '__main__':
-#     pool = ProcessingPool()
-#     args = [[i, mode] for mode in [0, 1] for i in range(5)]
-#
-#     pool.map(run_iteration, args)
+    pool.map(run_iteration, args)

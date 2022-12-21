@@ -56,7 +56,7 @@ def variate_block_size(logfile: IO, schedulers: list[Scheduler]):
         logger(f'block_size ~ {50 * i}')
 
         for graph_type in SyntheticBlockGraphType:
-            logger(f'{graph_type.name}')
+            # logger(f'{graph_type.name}')
             contractors = [p_rand.contactor(10) for _ in range(len(schedulers))]
 
             agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
@@ -88,8 +88,10 @@ def run_iteration(args):
         variate_block_size(logfile, schedulers)
 
 
-if __name__ == '__main__':
-    pool = ProcessingPool()
-    args = [[i, mode] for mode in [0, 1] for i in range(5)]
+run_iteration([0, 0])
 
-    pool.map(run_iteration, args)
+# if __name__ == '__main__':
+#     pool = ProcessingPool()
+#     args = [[i, mode] for mode in [0, 1] for i in range(5)]
+#
+#     pool.map(run_iteration, args)

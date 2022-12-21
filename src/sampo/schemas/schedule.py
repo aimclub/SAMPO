@@ -34,6 +34,7 @@ class Schedule(JSONSerializable['Schedule']):
     def full_schedule_df(self) -> DataFrame:
         """
         The full schedule DataFrame with all works, data columns and a distinct column for ScheduledWork objects
+
         :return: Full schedule DataFrame.
         """
         return self._schedule
@@ -42,6 +43,7 @@ class Schedule(JSONSerializable['Schedule']):
     def pure_schedule_df(self) -> DataFrame:
         """
         Schedule DataFrame without service units and containing only original columns (stored in _data_columns field).
+
         :return: Pure schedule DataFrame.
         """
         return self._schedule[~self._schedule.apply(
@@ -62,6 +64,7 @@ class Schedule(JSONSerializable['Schedule']):
     def to_schedule_work_dict(self) -> ScheduleWorkDict:
         """
         Builds a ScheduleWorkDict from the Schedule.
+
         :return: ScheduleWorkDict with all the scheduled works.
         """
         return {r['task_id']: r['scheduled_work_object'] for _, r in self._schedule.iterrows()}
@@ -70,14 +73,16 @@ class Schedule(JSONSerializable['Schedule']):
     def execution_time(self) -> Time:
         """
         Calculates total schedule execution time.
+
         :return: Finish time of the last work.
         """
-        return self._schedule.iloc[-1].finish
+        return Time(self._schedule.iloc[-1].finish)
 
     def __init__(self, schedule: DataFrame) -> None:
         """
         Initializes new `Schedule` object as a wrapper around `DataFrame` with specific structure.
         Don't use manually. Create Schedule `objects` via `from_scheduled_works` factory method.
+
         :param schedule: Prepared schedule `DataFrame`.
         """
         self._schedule = schedule
@@ -179,6 +184,7 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
     Makes ScheduledWorks' ordering that satisfies:
     1. Ascending order by start time
     2. Toposort
+
     :param works:
     :param wg:
     :return:

@@ -33,7 +33,7 @@ class Agent:
         """
         schedule, start_time, timeline = \
             self._scheduler.schedule_with_cache(wg, self._contractors, start_time=parent_time, timeline=self._timeline)
-        return start_time, start_time + schedule.execution_time, schedule, timeline
+        return start_time, schedule.execution_time, schedule, timeline
 
     def confirm(self, timeline: Timeline, start: Time, end: Time):
         """
@@ -50,7 +50,9 @@ class Agent:
 
     def update_stat(self, start: Time):
         # count last iteration downtime
-        self._downtime += start - self._last_task_executed
+        # if given start time is lower than last executed task
+        #   then this downtime are already in self_downtime
+        self._downtime += max(Time(0), start - self._last_task_executed)
 
     def __str__(self):
         return f'Agent(name={self.name}, scheduler={self._scheduler}, downtime={self._downtime})'

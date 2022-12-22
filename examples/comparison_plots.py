@@ -2,10 +2,10 @@ from collections import defaultdict
 from typing import Dict
 
 import matplotlib.pyplot as plt
-# summary
-# algo -> blocks received
 import numpy as np
 
+# summary
+# algo -> blocks received
 global_algo_frequencies = defaultdict(int)
 # algo, block type -> blocks received
 global_algo_block_type_frequencies = defaultdict(lambda: defaultdict(int))
@@ -101,6 +101,9 @@ def compare_algos_general(title: str, compare_dict: Dict, algo_labels: list[str]
     centers = range(len(algo_labels))
     fig, ax = plt.subplots(figsize=(10, 7))
     ax.bar(centers, compare_dict.values(), tick_label=algo_labels)
+    ax.set_xlabel('Algorithm')
+    ax.set_ylabel('Count')
+
     plt.suptitle(title, fontsize=24)
     fig.savefig(f'{title}.jpg')
     plt.show()
@@ -108,7 +111,7 @@ def compare_algos_general(title: str, compare_dict: Dict, algo_labels: list[str]
 
 def boxplot_compare_algos_general(title: str, compare_dict: Dict, algo_labels: list[str]):
     fig, ax = plt.subplots(figsize=(10, 7))
-    fig.suptitle(title, fontsize=14)
+    fig.suptitle(title, fontsize=16)
 
     values = [list(freq.values()) for freq in compare_dict.values()]
     ax.set_xlabel('Algorithm')
@@ -116,9 +119,9 @@ def boxplot_compare_algos_general(title: str, compare_dict: Dict, algo_labels: l
     ax.boxplot(values, labels=algo_labels)
 
     plt.subplots_adjust(left=0.1,
-                        bottom=0.1,
+                        bottom=0.16,
                         right=0.9,
-                        top=0.84,
+                        top=0.94,
                         wspace=0.4,
                         hspace=0.4)
     fig.savefig(f'{title}.jpg')
@@ -130,33 +133,20 @@ def compare_algos_bg_type(title: str, compare_dict: Dict, algo_labels: list[str]
     fig = plt.figure(figsize=(22, 16))
     fig.suptitle(title, fontsize=40)
 
-    freq = list(compare_dict.items())[0]
-    ax1 = fig.add_subplot(221)
-    ax1.set(xticks=[], yticks=[])
-    ax1.set_title(freq[0], size=24)
-    ax1.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-    freq = list(compare_dict.items())[1]
-    ax2 = fig.add_subplot(222)
-    ax2.set(xticks=[], yticks=[])
-    ax2.set_title(freq[0], size=24)
-    ax2.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-    freq = list(compare_dict.items())[2]
-    ax3 = fig.add_subplot(223)
-    ax3.set(xticks=[], yticks=[])
-    ax3.set_title(freq[0], size=24)
-    ax3.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
-    freq = list(compare_dict.items())[3]
-    ax4 = fig.add_subplot(224)
-    ax4.set(xticks=[], yticks=[])
-    ax4.set_title(freq[0], size=24)
-    ax4.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
+    for i, freq in enumerate(compare_dict.items()):
+        ax = fig.add_subplot(220 + i + 1)
+        # ax.set(xticks=[], yticks=[])
+        ax.set_title(freq[0], size=24)
+        ax.set_xlabel('Algorithm', size=16)
+        ax.set_ylabel('Count', size=16)
+        ax.bar(range(len(algo_labels)), [freq[1][algo] for algo in algos], tick_label=algo_labels)
 
     plt.subplots_adjust(left=0.1,
                         bottom=0.1,
                         right=0.9,
                         top=0.9,
                         wspace=0.2,
-                        hspace=0.2)
+                        hspace=0.25)
     fig.savefig(f'{title}.jpg')
     plt.show()
 
@@ -167,7 +157,7 @@ def boxplot_compare_algos_bg_type(title: str, compare_dict: Dict, algo_labels: l
     fig.suptitle(title, fontsize=40)
     for i, freq_by_step in enumerate(compare_dict.items()):
         values = np.array([[freq[algo] for algo in algos] for freq in freq_by_step[1].values()])
-        ax = fig.add_subplot(22 * 10 + i + 1)
+        ax = fig.add_subplot(220 + i + 1)
         ax.set_title(freq_by_step[0], size=24)
         ax.set_xlabel('Algorithm', size=16)
         ax.set_ylabel('Count', size=16)
@@ -187,22 +177,13 @@ def boxplot_compare_algos_bg_type(title: str, compare_dict: Dict, algo_labels: l
 def compare_algos_block_type(title: str, compare_dict: Dict, algo_labels: list[str]):
     fig = plt.figure(figsize=(14, 10))
     fig.suptitle(title, fontsize=32)
-    freq = list(compare_dict.items())[0]
-    ax1 = fig.add_subplot(221)
-    ax1.set(title=algo_labels[0], xticks=[], yticks=[])
-    ax1.bar(range(len(freq[1])), freq[1].values(), tick_label=list(freq[1].keys()))
-    freq = list(compare_dict.items())[1]
-    ax2 = fig.add_subplot(222)
-    ax2.set(title=algo_labels[1], xticks=[], yticks=[])
-    ax2.bar(range(len(freq[1])), freq[1].values(), tick_label=list(freq[1].keys()))
-    freq = list(compare_dict.items())[2]
-    ax3 = fig.add_subplot(223)
-    ax3.set(title=algo_labels[2], xticks=[], yticks=[])
-    ax3.bar(range(len(freq[1])), freq[1].values(), tick_label=list(freq[1].keys()))
-    freq = list(compare_dict.items())[3]
-    ax4 = fig.add_subplot(224)
-    ax4.set(title=algo_labels[3], xticks=[], yticks=[])
-    ax4.bar(range(len(freq[1])), freq[1].values(), tick_label=list(freq[1].keys()))
+
+    for i, freq in enumerate(compare_dict.items()):
+        ax = fig.add_subplot(220 + i + 1)
+        ax.set_title(algo_labels[i], size=14)
+        ax.set_xlabel('Algorithm', size=12)
+        ax.set_ylabel('Count', size=12)
+        ax.bar(range(len(freq[1])), freq[1].values(), tick_label=list(freq[1].keys()))
 
     plt.subplots_adjust(left=0.1,
                         bottom=0.1,
@@ -231,7 +212,7 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
                         right=0.9,
                         top=0.84,
                         wspace=0.4,
-                        hspace=0.4)
+                        hspace=0.45)
     fig.savefig(f'{title}.jpg')
     plt.show()
 
@@ -244,16 +225,16 @@ algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
 
 parse_raw_data(0, 5, algos, algo_labels)
 
-# compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algo_labels)
-# compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algo_labels)
-#
-# compare_algos_bg_type('Received blocks - algorithms with graph types comparison',
-#                       global_algo_bg_type_frequencies, algo_labels)
-# compare_algos_bg_type('Downtimes - algorithms with graph types comparison', global_algo_bg_type_downtimes, algo_labels)
-#
-# compare_algos_block_type('Received blocks - algorithms with block types comparison',
-#                          global_algo_block_type_frequencies, algo_labels)
-#
+compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algo_labels)
+compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algo_labels)
+
+compare_algos_bg_type('Received blocks - algorithms with graph types comparison',
+                      global_algo_bg_type_frequencies, algo_labels)
+compare_algos_bg_type('Downtimes - algorithms with graph types comparison', global_algo_bg_type_downtimes, algo_labels)
+
+compare_algos_block_type('Received blocks - algorithms with block types comparison',
+                         global_algo_block_type_frequencies, algo_labels)
+
 # genetics
 algos = ['Genetic[generations=5,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
          'Genetic[generations=5,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',

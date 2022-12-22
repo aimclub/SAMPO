@@ -82,7 +82,7 @@ def run_iteration(args):
         else:
             schedulers = [GeneticScheduler(5, 50, 0.5, 0.5, 50),
                           GeneticScheduler(5, 100, 0.5, 0.5, 50),
-                          GeneticScheduler(5, 100, 0.5, 0.5, 100),
+                          GeneticScheduler(5, 100, 0.5, 0.75, 50),
                           GeneticScheduler(5, 100, 0.75, 0.75, 50),
                           GeneticScheduler(5, 50, 0.9, 0.9, 50)]
         variate_block_size(logfile, schedulers)

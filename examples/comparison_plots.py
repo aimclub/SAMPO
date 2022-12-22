@@ -261,8 +261,8 @@ launch_algo_block_type_downtimes.clear()
 
 parse_raw_data(1, 5, algos, algo_labels)
 
-boxplot_compare_algos_general('Genetics block receive count comparison', launch_algo_frequencies, algo_labels)
-boxplot_compare_algos_general('Genetics downtimes comparison', launch_algo_downtimes, algo_labels)
+boxplot_compare_algos_general('Received blocks - genetics comparison', launch_algo_frequencies, algo_labels)
+boxplot_compare_algos_general('Downtimes blocks - genetics comparison', launch_algo_downtimes, algo_labels)
 
 boxplot_compare_algos_bg_type('Received blocks - genetics with graph types comparison',
                               launch_algo_bg_type_frequencies, algo_labels)

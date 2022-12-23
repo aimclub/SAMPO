@@ -3,7 +3,7 @@ from random import Random
 from typing import Callable
 
 from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.multi_agency.block_graph import BlockGraph, BlockNode
 from sampo.scheduler.utils.obstruction import Obstruction
 

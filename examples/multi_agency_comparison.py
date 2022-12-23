@@ -5,7 +5,7 @@ from typing import IO
 from pathos.multiprocessing import ProcessingPool
 
 from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler

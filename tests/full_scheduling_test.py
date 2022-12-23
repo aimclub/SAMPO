@@ -1,5 +1,5 @@
 from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
 from sampo.schemas.time import Time

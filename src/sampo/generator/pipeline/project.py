@@ -7,7 +7,8 @@ from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER
 from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_work
 from sampo.generator.pipeline.types import SyntheticGraphType, StageType
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
-from sampo.schemas.utils import count_node_ancestors, uuid_str
+from sampo.schemas.utils import uuid_str
+from sampo.generator.utils.graph_node_operations import count_node_ancestors
 from sampo.schemas.works import WorkUnit
 
 

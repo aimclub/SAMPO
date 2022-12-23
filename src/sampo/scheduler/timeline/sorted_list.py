@@ -3,6 +3,7 @@ from bisect import bisect_left, bisect_right
 
 from sortedcontainers import SortedKeyList
 
+
 # TODO: describe the class (description)
 class ExtendedSortedList(SortedKeyList, ABC):
     # TODO: describe the function (parameters (old), return type)

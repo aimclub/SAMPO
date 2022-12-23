@@ -5,7 +5,7 @@ from typing import Optional
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.schemas.types import AgentId
+from sampo.scheduler.timeline.schedule_event_types import AgentId
 
 
 @dataclass

@@ -9,7 +9,7 @@ from pandas import DataFrame, Series
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.resources import Worker, Equipment
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.schemas.types import WorkerName, ContractorName
+from sampo.scheduler.timeline.schedule_event_types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
 WorkerContractorPool = Dict[WorkerName, Dict[ContractorName, Worker]]
@@ -54,6 +54,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
         return {k: Equipment._deserialize(v) for k, v in value.items()}
 
 
+# TODO move from schemas
 def get_worker_contractor_pool(contractors: Union[List['Contractor'], 'Contractor']) -> WorkerContractorPool:
     """
     Gets agent dictionary from contractors list.
@@ -68,6 +69,7 @@ def get_worker_contractor_pool(contractors: Union[List['Contractor'], 'Contracto
     return agents
 
 
+# TODO move from schemas
 def get_contractor_for_resources_schedule(resources: Union[DataFrame, List[Dict[str, int]]],
                                           contractor_capacity: int = DefaultContractorCapacity,
                                           contractor_id: str = None,

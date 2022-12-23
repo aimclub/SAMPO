@@ -1,34 +1,19 @@
-import queue
 import uuid
 from random import Random
 from typing import Optional
 from uuid import uuid4
 
-from sampo.schemas.graph import GraphNode
 
 # TODO: describe the function (description, parameters, return type)
 def uuid_str(rand: Optional[Random] = None) -> str:
     ans = uuid4() if rand is None else uuid.UUID(int=rand.getrandbits(128))
     return str(ans)
 
+
 # TODO: describe the function (description, parameters, return type)
-def count_node_ancestors(finish: GraphNode, root: GraphNode) -> int:
-    q = queue.Queue()
-    count = 0
-    used = set()
-    used.add(root)
-    q.put(finish)
-    while not q.empty():
-        node = q.get()
-        for parent in node.parents:
-            if parent in used:
-                continue
-            used.add(parent)
-            q.put(parent)
-            count += 1
 
-    return count
 
+"""
 # TODO: describe the function (description, parameters, return type)
 def binary_search(a, x, lo=0, hi=None):
     if hi is None:
@@ -41,6 +26,7 @@ def binary_search(a, x, lo=0, hi=None):
             hi = mid
     return lo
 
+
 # TODO: describe the function (description, parameters, return type)
 def binary_search_reversed(a, x, lo=0, hi=None):
     if hi is None:
@@ -52,3 +38,4 @@ def binary_search_reversed(a, x, lo=0, hi=None):
         else:
             hi = mid
     return lo
+"""

@@ -81,6 +81,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
     return w.get_static_productivity()
 
+
 # TODO: describe the function (description, parameters, return type)
 def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
     return w.get_stochastic_productivity(rand)

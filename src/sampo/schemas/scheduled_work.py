@@ -106,6 +106,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             "task_name": self.work_unit.name,
             "start": self.start_time.value,
             "finish": self.finish_time.value,
-            "conractor_id": self.contractor,
+            "contractor_id": self.contractor,
             "workers": {worker.name: worker.count for worker in self.workers},
         }

@@ -26,6 +26,7 @@ class EventType(Enum):
         value = int(self.value)
         return value
 
+
 # TODO: describe the class (description, parameters)
 @dataclass
 class ScheduleEvent:

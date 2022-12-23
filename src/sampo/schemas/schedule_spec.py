@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Union
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
-from sampo.schemas.types import WorkerName
+from sampo.scheduler.timeline.schedule_event_types import WorkerName
 from sampo.schemas.works import WorkUnit
 
 

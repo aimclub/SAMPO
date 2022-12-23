@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Tuple
 
-from sampo.schemas.sorted_list import ExtendedSortedList
+from sampo.scheduler.timeline.sorted_list import ExtendedSortedList
 
 
 def merger(old: Tuple[int, int], new: Tuple[int, int]) -> Tuple[int, int]:

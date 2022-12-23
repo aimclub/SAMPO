@@ -9,6 +9,7 @@ from sampo.schemas.graph import WorkGraph
 from sampo.structurator.base import graph_restructuring
 
 
+# TODO check outer usage
 def graph_from_file(filepath: str, number_of_workers_in_contractors: int) -> Tuple[WorkGraph, List[Contractor]]:
     with open(filepath, "rb") as f:
         data = pickle.load(f)
@@ -19,6 +20,7 @@ def graph_from_file(filepath: str, number_of_workers_in_contractors: int) -> Tup
     return wg, contractors
 
 
+# TODO check outer usage
 # Functions for generating synthetic graphs
 def generate_work_graph(graph_mode: SyntheticGraphType, bottom_border: int, use_lag_edge_optimization: bool,
                         rand: Optional[Random] = None) -> WorkGraph:

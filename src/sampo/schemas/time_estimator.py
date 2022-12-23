@@ -13,3 +13,6 @@ class WorkTimeEstimator(ABC):
     @abstractmethod
     def estimate_time(self, work_name: str, work_volume: float, resources: WorkerContractorPool) -> Time:
         ...
+
+
+# TODO add simple work_time_estimator based on WorkUnit.estimate_static

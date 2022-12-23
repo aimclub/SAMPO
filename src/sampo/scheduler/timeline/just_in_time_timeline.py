@@ -8,7 +8,7 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.schemas.types import AgentId
+from sampo.scheduler.timeline.schedule_event_types import AgentId
 
 
 class JustInTimeTimeline(Timeline):

@@ -5,7 +5,6 @@ description = ""
 authors = ["iAirLab <iairlab@yandex.ru>"]
 license = "BSD-3-Clause"
 #readme = "README.rst"
-license = "GPLv3"
 readme = "README.md"
 
 [tool.poetry.dependencies]

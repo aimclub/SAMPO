@@ -28,6 +28,7 @@ class Timeline(ABC):
                             node: GraphNode,
                             worker_team: List[Worker],
                             id2swork: Dict[str, ScheduledWork],
+                            parent_time: Time = Time(0),
                             work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         ...
 

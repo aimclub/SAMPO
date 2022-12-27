@@ -32,13 +32,13 @@ class HEFTScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            start_time: Time = Time(0),
+                            assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, start_time, timeline)
+            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -54,19 +54,20 @@ class HEFTScheduler(Scheduler):
                         contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
-                        start_time: Time = Time(0),
+                        assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, JustInTimeTimeline]:
         """
         Find optimal number of workers who ensure the nearest finish time.
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
+
         :param contractors:
-        :param work_estimator:
-        :param work_estimator:
         :param spec: spec for current scheduling
         :param ordered_nodes:
         :param timeline: the previous used timeline can be specified to handle previously scheduled works
+        :param assigned_parent_time: start time of the whole schedule(time shift)
+        :param work_estimator:
         :return:
         """
         worker_pool = get_worker_contractor_pool(contractors)
@@ -111,12 +112,12 @@ class HEFTScheduler(Scheduler):
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
             if index == 0:  # we are scheduling the work `start of the project`
-                st = start_time  # this work should always have st = 0, so we just re-assign it
+                st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
                 ft += st
 
             # apply work to scheduling
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              st, work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, assigned_parent_time, work_estimator)
             # add using resources in queue for workers
             timeline.update_timeline(index, ft, node, node2swork, best_worker_team)
 

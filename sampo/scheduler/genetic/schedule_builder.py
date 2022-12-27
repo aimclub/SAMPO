@@ -35,7 +35,7 @@ def build_schedule(wg: WorkGraph,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
-                   start_time: Time = Time(0),
+                   assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline]:
     """
@@ -49,7 +49,6 @@ def build_schedule(wg: WorkGraph,
 
     :param show_fitness_graph:
     :param worker_pool:
-    :param work_estimator:
     :param contractors:
     :param wg:
     :param population_size:
@@ -61,6 +60,8 @@ def build_schedule(wg: WorkGraph,
     :param spec: spec for current scheduling
     :param init_schedules:
     :param timeline:
+    :param assigned_parent_time: start time of the whole schedule(time shift)
+    :param work_estimator:
     :return: scheduler
     """
 
@@ -114,7 +115,8 @@ def build_schedule(wg: WorkGraph,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, index2node_list, work_estimator)
+                           contractor2index, contractor_borders, node_indices, index2node_list, assigned_parent_time,
+                           work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
@@ -316,8 +318,9 @@ def build_schedule(wg: WorkGraph,
     scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                                     index2contractor_obj,
                                                                                     worker_pool_indices,
-                                                                                    spec, work_estimator, timeline,
-                                                                                    start_time)
+                                                                                    spec, timeline,
+                                                                                    assigned_parent_time,
+                                                                                    work_estimator)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 

@@ -32,13 +32,13 @@ class TopologicalScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            start_time: Time = Time(0),
+                            assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, start_time, timeline)
+            self.build_scheduler(tsorted_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -66,18 +66,20 @@ class TopologicalScheduler(Scheduler):
     def build_scheduler(self, tasks: List[GraphNode], contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
-                        start_time: Time = Time(0),
+                        assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, MomentumTimeline]:
         """
         Builds a schedule from a list of tasks where all dependents tasks are guaranteed to be later
         in the sequence than their dependencies
-        :param work_estimator:
+
         :param tasks: list of tasks ordered by some algorithm according to their dependencies and priorities
         :param spec: spec for current scheduling
         :param contractors: pools of workers available for execution
         :param timeline: the previous used timeline can be specified to handle previously scheduled works
-        :return: a schedule
+        :param assigned_parent_time: start time of the whole schedule(time shift)
+        :param work_estimator:
+        :return: the schedule
         """
 
         # data structure to hold scheduled tasks
@@ -125,10 +127,11 @@ class TopologicalScheduler(Scheduler):
 
                 c_st = None
                 if index == 0:  # we are scheduling the work `start of the project`
-                    c_st = start_time  # this work should always have st = 0, so we just re-assign it
+                    c_st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, c_st, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, c_st,
+                                                                 assigned_parent_time, work_estimator)
 
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
@@ -140,7 +143,7 @@ class TopologicalScheduler(Scheduler):
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              st, work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         schedule_start_time = min([swork.start_time for swork in node2swork.values() if
                                    len(swork.work_unit.worker_reqs) != 0])

@@ -33,13 +33,13 @@ class HEFTBetweenScheduler(HEFTScheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            start_time: Time = Time(0),
+                            assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, start_time, timeline)
+            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -54,7 +54,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
                         contractors: List[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
-                        start_time: Time = Time(0),
+                        assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, MomentumTimeline]:
         """
@@ -64,8 +64,9 @@ class HEFTBetweenScheduler(HEFTScheduler):
         :param ordered_nodes:
         :param contractors:
         :param spec: spec for current scheduling
-        :param work_estimator:
         :param timeline: the previous used timeline can be specified to handle previously scheduled works
+        :param assigned_parent_time: start time of the whole schedule(time shift)
+        :param work_estimator:
         :return:
         """
         worker_pool = get_worker_contractor_pool(contractors)
@@ -91,7 +92,8 @@ class HEFTBetweenScheduler(HEFTScheduler):
                 worker_team = [worker.copy() for worker in workers]
 
                 def get_finish_time(cur_worker_team):
-                    return timeline.find_min_start_time(node, cur_worker_team, node2swork, work_estimator) \
+                    return timeline.find_min_start_time(node, cur_worker_team, node2swork,
+                                                        assigned_parent_time, work_estimator) \
                            + calculate_working_time_cascade(node, cur_worker_team, work_estimator)
 
                 # apply worker team spec
@@ -104,10 +106,11 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
                 c_st = None
                 if index == 0:  # we are scheduling the work `start of the project`
-                    c_st = start_time  # this work should always have st = 0, so we just re-assign it
+                    c_st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
                 c_st, _, exec_times = \
-                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, c_st, work_estimator)
+                    timeline.find_min_start_time_with_additional(node, worker_team, node2swork, c_st,
+                                                                 assigned_parent_time, work_estimator)
 
                 c_ft = c_st
                 for node_lag, node_time in exec_times.values():
@@ -119,7 +122,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
 
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
-                              st, work_spec.assigned_time, work_estimator)
+                              st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), node2swork)
         # recalc_schedule(reversed(ordered_nodes), node2swork, agents, work_estimator)

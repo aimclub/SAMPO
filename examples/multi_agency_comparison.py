@@ -31,12 +31,10 @@ def log(message: str, logfile: IO):
 
 def variate_contractor_size(logfile: IO, schedulers: list[Scheduler]):
     logger = partial(log, logfile=logfile)
-    logger('------ Variation: contractor size ------')
     for i in range(1, 5):
-        logger(f'--| Iteration {i}, contractor_size = {10 * i}\n')
+        logger(f'contractor_size = {10 * i}')
 
         for graph_type in SyntheticBlockGraphType:
-            logger(f'----| Running at BlockGraph type: {graph_type}\n')
             contractors = [p_rand.contactor(10 * i) for _ in range(len(schedulers))]
 
             agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
@@ -56,7 +54,6 @@ def variate_block_size(logfile: IO, schedulers: list[Scheduler]):
         logger(f'block_size ~ {50 * i}')
 
         for graph_type in SyntheticBlockGraphType:
-            # logger(f'{graph_type.name}')
             contractors = [p_rand.contactor(10) for _ in range(len(schedulers))]
 
             agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
@@ -90,6 +87,6 @@ def run_iteration(args):
 
 if __name__ == '__main__':
     pool = ProcessingPool()
-    args = [[i, mode] for mode in [0, 1] for i in range(5)]
+    args = [[i, mode] for mode in [0, 1] for i in range(1)]
 
     pool.map(run_iteration, args)

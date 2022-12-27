@@ -83,7 +83,7 @@ class GeneticScheduler(Scheduler):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            start_time: Time = Time(0),
+                            assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
@@ -109,7 +109,7 @@ class GeneticScheduler(Scheduler):
                                                                         self.rand,
                                                                         spec,
                                                                         self.work_estimator,
-                                                                        start_time=start_time,
+                                                                        assigned_parent_time=assigned_parent_time,
                                                                         timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 

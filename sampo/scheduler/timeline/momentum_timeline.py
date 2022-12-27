@@ -19,11 +19,11 @@ class MomentumTimeline(Timeline):
 
     def __init__(self, tasks: List[GraphNode], contractors: List[Contractor]):
         """
-            This should create empty Timeline from given list of tasks and contractor list
-            :param tasks:
-            :param contractors:
-            :return:
-            """
+        This should create empty Timeline from given list of tasks and contractor list
+        :param tasks:
+        :param contractors:
+        :return:
+        """
 
         # using  time, seq_id and event_type we can guarantee that
         # there may be only one possible order in cases:
@@ -63,6 +63,7 @@ class MomentumTimeline(Timeline):
 
     def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
                             node2swork: Dict[GraphNode, ScheduledWork],
+                            parent_time: Time = Time(0),
                             work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         """
         Computes start time, max parent time, contractor and exec times for given node
@@ -70,16 +71,19 @@ class MomentumTimeline(Timeline):
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node:
         :param node2swork:
+        :param parent_time:
         :param work_estimator:
         :return:
         """
-        return self.find_min_start_time_with_additional(node, worker_team, node2swork, None, work_estimator)[0]
+        return self.find_min_start_time_with_additional(node, worker_team, node2swork, None,
+                                                        parent_time, work_estimator)[0]
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
                                             worker_team: List[Worker],
                                             node2swork: Dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Optional[Time] = None,
+                                            assigned_parent_time: Time = Time(0),
                                             work_estimator: Optional[WorkTimeEstimator] = None) \
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
         """
@@ -89,6 +93,7 @@ class MomentumTimeline(Timeline):
         :param node:
         :param node2swork:
         :param assigned_start_time:
+        :param assigned_parent_time:
         :param work_estimator:
         :return:
         """
@@ -99,10 +104,11 @@ class MomentumTimeline(Timeline):
         def apply_time_spec(time: Time):
             return max(time, assigned_start_time) if assigned_start_time else time
 
-        max_parent_time: Time = apply_time_spec(
+        max_parent_time: Time = max(apply_time_spec(
             max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
-        )
-        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((apply_time_spec(node2swork[pnode].finish_time)
+        ), assigned_parent_time)
+        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].finish_time),
+                                                                     assigned_parent_time)
                                                                  if pnode in node2swork else Time(0)
                                                                  for pnode in n.parents),
                                                                 default=Time(0))
@@ -129,6 +135,9 @@ class MomentumTimeline(Timeline):
         st = assigned_start_time if assigned_start_time else self._find_min_start_time(
             self._timeline[contractor_id], inseparable_chain, max_parent_time, exec_time, worker_team
         )
+
+        assert st >= assigned_parent_time
+
         return st, max_parent_time, exec_times
 
     def _find_min_start_time(self,
@@ -304,10 +313,12 @@ class MomentumTimeline(Timeline):
                  contractor: Contractor,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
+                 assigned_parent_time: Time = Time(0),
                  work_estimator: Optional[WorkTimeEstimator] = None):
         inseparable_chain = node.get_inseparable_chain_with_self()
         st, _, exec_times = \
-            self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time, work_estimator)
+            self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,
+                                                     assigned_parent_time, work_estimator)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}

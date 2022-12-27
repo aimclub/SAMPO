@@ -36,6 +36,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
+                 assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     toolbox = base.Toolbox()
     # generate initial population
@@ -78,7 +79,8 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                      contractor2index=contractor2index, contractor_borders=contractor_borders)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
-                     worker_pool_indices=worker_pool_indices, spec=spec, work_estimator=work_estimator)
+                     worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
+                     work_estimator=work_estimator)
     return toolbox
 
 

@@ -12,6 +12,7 @@ from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
@@ -101,6 +102,7 @@ def create_toolbox(wg: WorkGraph,
                         contractor_borders,
                         node_indices,
                         index2node_list,
+                        Time(0),
                         work_estimator), resources_border
 
 

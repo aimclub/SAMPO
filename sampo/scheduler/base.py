@@ -54,7 +54,7 @@ class Scheduler(ABC):
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            start_time: Time = Time(0),
+                            assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         ...

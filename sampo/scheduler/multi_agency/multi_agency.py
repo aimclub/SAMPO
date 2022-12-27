@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Dict, Callable
 
@@ -32,7 +33,8 @@ class Agent:
         To apply returned offer, use `Agent#confirm`.
         """
         schedule, start_time, timeline = \
-            self._scheduler.schedule_with_cache(wg, self._contractors, start_time=parent_time, timeline=self._timeline)
+            self._scheduler.schedule_with_cache(wg, self._contractors,
+                                                assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))
         return start_time, schedule.execution_time, schedule, timeline
 
     def confirm(self, timeline: Timeline, start: Time, end: Time):

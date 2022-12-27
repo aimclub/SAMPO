@@ -64,9 +64,9 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    spec: ScheduleSpec,
-                                   work_estimator: WorkTimeEstimator = None,
                                    timeline: Timeline | None = None,
-                                   start_time: Time = Time(0)) \
+                                   assigned_parent_time: Time = Time(0),
+                                   work_estimator: WorkTimeEstimator = None,) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline]:
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -93,14 +93,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
-        st = timeline.find_min_start_time(node, worker_team, node2swork)
+        st = timeline.find_min_start_time(node, worker_team, node2swork, assigned_parent_time, work_estimator)
 
         if order_index == 0:  # we are scheduling the work `start of the project`
-            st = start_time  # this work should always have st = 0, so we just re-assign it
+            st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
         finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
-                                        st, work_spec.assigned_time, work_estimator)
+                                        st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
 

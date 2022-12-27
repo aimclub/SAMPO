@@ -22,6 +22,7 @@ class JustInTimeTimeline(Timeline):
 
     def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
                             id2swork: Dict[GraphNode, ScheduledWork],
+                            assigned_parent_time: Time = Time(0),
                             work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         """
         Define the nearest possible start time for current job. It is equal the max value from:
@@ -36,10 +37,10 @@ class JustInTimeTimeline(Timeline):
         """
         # if current job is the first
         if len(id2swork) == 0:
-            return Time(0)
+            return assigned_parent_time
         # define the max end time of all parent tasks
-        max_parent_time = max([id2swork[parent_node].finish_time
-                               for parent_node in node.parents], default=Time(0))
+        max_parent_time = max(max([id2swork[parent_node].finish_time
+                                   for parent_node in node.parents], default=Time(0)), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
 
@@ -106,9 +107,12 @@ class JustInTimeTimeline(Timeline):
                  contractor: Contractor,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
+                 assigned_parent_time: Time = Time(0),
                  work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         inseparable_chain = node.get_inseparable_chain_with_self()
-        st = assigned_start_time if assigned_start_time else self.find_min_start_time(node, workers, id2swork)
+        st = assigned_start_time if assigned_start_time is None else self.find_min_start_time(node, workers, id2swork,
+                                                                                              assigned_parent_time,
+                                                                                              work_estimator)
         if assigned_time:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}

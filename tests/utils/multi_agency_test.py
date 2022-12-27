@@ -2,7 +2,7 @@ from random import Random
 from typing import Iterable
 
 from sampo.generator import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler

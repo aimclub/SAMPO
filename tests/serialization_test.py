@@ -19,14 +19,6 @@ def stored_file(name):
     return os.path.join(STORAGE, name)
 
 
-@pytest.yield_fixture(scope='module', autouse=True)
-def setup_storage(request):
-    if not os.path.exists(STORAGE):
-        os.mkdir(STORAGE)
-    yield
-    shutil.rmtree(STORAGE)
-
-
 @pytest.yield_fixture(scope='class')
 def setup_core_resources(request):
     array_sample = [-100, 200.2, 'True', False]
@@ -64,9 +56,8 @@ def setup_inherited_resources(request, setup_scheduling_inner_params, setup_sche
 
 
 def perform_generalized_serializable_test(resource: S, name: str = None, verbose: bool = True) -> S:
-    name = name or str(uuid4())
-    resource.dump(STORAGE, name)
-    new_resource = type(resource).load(STORAGE, name)
+    serialized = resource._serialize()
+    new_resource = type(resource)._deserialize(serialized)
     if verbose:
         for k, v in new_resource.__dict__.items():
             print(f'---\n{k}:\n{v}', end='\n\n')

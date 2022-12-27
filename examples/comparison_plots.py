@@ -201,7 +201,7 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
     fig.suptitle(title, fontsize=32)
     for i, freq_by_step in enumerate(compare_dict.items()):
         values = np.array([[f for f in freq.values()] for freq in freq_by_step[1].values()])
-        ax = fig.add_subplot(22 * 10 + i + 1)
+        ax = fig.add_subplot(23 * 10 + i + 1)
         ax.set(title=algo_labels[i])
         ax.set_xlabel('Block type')
         ax.set_ylabel('Count')
@@ -223,7 +223,7 @@ algos = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
 algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
                'Genetic[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
 
-parse_raw_data(0, 5, algos, algo_labels)
+parse_raw_data(0, 1, algos, algo_labels)
 
 compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algo_labels)
 compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algo_labels)
@@ -238,10 +238,12 @@ compare_algos_block_type('Received blocks - algorithms with block types comparis
 # genetics
 algos = ['Genetic[generations=5,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
          'Genetic[generations=5,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',
+         'Genetic[generations=5,size_selection=100,mutate_order=0.5,mutate_resources=0.75]',
          'Genetic[generations=5,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
          'Genetic[generations=5,size_selection=50,mutate_order=0.9,mutate_resources=0.9]']
 algo_labels = ['generations=5,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.5',
                'generations=5,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.5',
+               'generations=5,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.75',
                'generations=5,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75',
                'generations=5,\nsize_selection=50,\nmutate_order=0.9\n,mutate_resources=0.9']
 
@@ -259,7 +261,7 @@ launch_algo_bg_type_downtimes.clear()
 launch_algo_block_type_frequencies.clear()
 launch_algo_block_type_downtimes.clear()
 
-parse_raw_data(1, 5, algos, algo_labels)
+parse_raw_data(1, 1, algos, algo_labels)
 
 boxplot_compare_algos_general('Received blocks - genetics comparison', launch_algo_frequencies, algo_labels)
 boxplot_compare_algos_general('Downtimes blocks - genetics comparison', launch_algo_downtimes, algo_labels)

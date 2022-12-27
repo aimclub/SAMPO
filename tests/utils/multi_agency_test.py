@@ -58,7 +58,7 @@ def test_manage_block_graph_different_contractors():
 def test_manage_block_graph_same_contractors():
     r_seed = 231
     p_rand = SimpleSynthetic(rand=r_seed)
-    contractors = [p_rand.contactor(25) for _ in range(4)]
+    contractors = [p_rand.contactor(25) for _ in range(2)]
     manage_block_graph(contractors)
 
 

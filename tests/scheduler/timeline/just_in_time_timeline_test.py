@@ -9,7 +9,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.scheduler.timeline.schedule_event_types import WorkerName
+from sampo.schemas.types import WorkerName
 from sampo.utilities.collections import build_index
 
 

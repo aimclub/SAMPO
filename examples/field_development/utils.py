@@ -2,6 +2,74 @@ from operator import itemgetter
 from sampo.schemas.graph import WorkGraph
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 
+import logging
+
+logger = logging.getLogger("uvicorn")
+
+
+def get_all_nodes(graph):
+    list_of_nodes = []
+    for i in graph['upper_works']:
+        if not i['is_service']:
+            list_of_nodes.append(i)
+        list_of_nodes.extend(get_nodes(i))
+    return list_of_nodes
+
+
+def get_nodes(item):
+    local_list = []
+    for i in item.children:
+        if not i.is_service:
+            local_list.append(i)
+        local_list.extend(get_nodes(i))
+    return local_list
+
+
+def get_all_indexes(graph):
+    list_of_ind = []
+    for i in graph.upper_works:
+        list_of_ind.append(i.outer_id)
+        list_of_ind.extend(get_index(i))
+    return list_of_ind
+
+
+def get_index(item):
+    local_list = []
+    for i in item.children:
+        local_list.append(i.outer_id)
+        local_list.extend(get_index(i))
+    return local_list
+
+
+def edges_indexes(list_of_nodes):
+    parent = []
+    son = []
+    for i in list_of_nodes:
+        for j in i.edges:
+            parent.append(j.parent_id)  # все вершины, которые являются родителями
+            son.append(j.son_id)  # все вершины, которые являются наследниками
+
+    parent = list(set(parent))
+    son = list(set(son))
+    return parent, son
+
+
+def make_extreme_lists(graph):
+    all_nodes = get_all_nodes(graph)
+    all_index = get_all_indexes(graph)
+    parent, son = edges_indexes(all_nodes)
+    no_son = list_differences(all_index, parent)  # все вершины без наследников
+    no_parent = list_differences(all_index, son)  # все вершины без детей
+    return no_parent, no_son
+
+
+def list_differences(hole_list, part_list):
+    exit = []
+    for i in hole_list:
+        if not i in part_list:
+            exit.append(i)
+    return exit
+
 
 def data_to_work_graph(obj):
     no_parent, no_son = make_extreme_lists(obj)

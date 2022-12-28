@@ -4,6 +4,7 @@ import pandas as pd
 def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
     """
     Process and merge information for all tasks, which were separated on the several stages during split
+
     :param baps_schedule_df: pd.DataFrame: schedule with info for tasks separated on stages
     :return: pd.DataFrame: schedule with merged info for all real tasks
     """
@@ -27,6 +28,7 @@ def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
 def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     """
     Merge split stages of the same real task into one
+
     :param task_df: pd.DataFrame: one real task's stages dataframe, sorted by start time
     :return: pd.Series with the full information about the task
     """
@@ -64,6 +66,7 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
 def remove_service_tasks(service_schedule_df: pd.DataFrame) -> pd.DataFrame:
     """
     Remove 'start', 'finish' and milestone tasks from the schedule
+
     :param service_schedule_df: pd.DataFrame: schedule (with merges stages in the case of baps) with service tasks
     :return: pd.DataFrame: schedule without information about service tasks
     """

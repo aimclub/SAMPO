@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from random import Random
 from typing import Optional
 
+import numpy as np
+
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
@@ -36,8 +38,8 @@ class Worker(Resource):
         super(Worker, self).__init__(id, name)
         self.count = count
         self.contractor_id = contractor_id
-        self.productivity = productivity
-        self.cost_one_unit = cost_one_unit if cost_one_unit is not None else productivity.mean * 10
+        self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
+        self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
     ignored_fields = ['productivity']
 

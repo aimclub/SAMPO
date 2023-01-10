@@ -102,16 +102,16 @@ class MomentumTimeline(Timeline):
         # 1. identify earliest possible start time by max parent's end time
 
         def apply_time_spec(time: Time):
-            return max(time, assigned_start_time) if assigned_start_time else time
+            return max(time, assigned_start_time) if assigned_start_time is not None else time
 
         max_parent_time: Time = max(apply_time_spec(
             max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
         ), assigned_parent_time)
         nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].finish_time),
                                                                      assigned_parent_time)
-                                                                 if pnode in node2swork else Time(0)
+                                                                 if pnode in node2swork else assigned_parent_time
                                                                  for pnode in n.parents),
-                                                                default=Time(0))
+                                                                default=assigned_parent_time)
                                                          for n in inseparable_chain}
 
         # 2. calculating execution time of the task
@@ -132,7 +132,7 @@ class MomentumTimeline(Timeline):
         if len(worker_team) == 0:
             return max_parent_time, max_parent_time, exec_times
 
-        st = assigned_start_time if assigned_start_time else self._find_min_start_time(
+        st = assigned_start_time if assigned_start_time is not None else self._find_min_start_time(
             self._timeline[contractor_id], inseparable_chain, max_parent_time, exec_time, worker_team
         )
 
@@ -319,7 +319,7 @@ class MomentumTimeline(Timeline):
         st, _, exec_times = \
             self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,
                                                      assigned_parent_time, work_estimator)
-        if assigned_time:
+        if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
 

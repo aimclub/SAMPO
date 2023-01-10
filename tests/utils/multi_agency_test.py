@@ -11,7 +11,7 @@ from sampo.scheduler.multi_agency.block_validation import validate_block_schedul
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
-from sampo.schemas.contractor import Contractor
+from sampo.schemas.contractor import Contractor, DefaultContractorCapacity
 
 
 def test_one_auction():
@@ -55,11 +55,11 @@ def test_manage_block_graph_different_contractors():
     manage_block_graph(contractors)
 
 
-# def test_manage_block_graph_same_contractors():
-#     r_seed = 231
-#     p_rand = SimpleSynthetic(rand=r_seed)
-#     contractors = [p_rand.contactor(DefaultContractorCapacity) for _ in range(3)]
-#     manage_block_graph(contractors)
+def test_manage_block_graph_same_contractors():
+    r_seed = 231
+    p_rand = SimpleSynthetic(rand=r_seed)
+    contractors = [p_rand.contactor(DefaultContractorCapacity) for _ in range(4)]
+    manage_block_graph(contractors)
 
 
 def test_managing_with_obstruction():

@@ -113,13 +113,17 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     :param init_chromosomes:
     :return: chromosome
     """
-
-    # do random choice to choose type of generation current chromosome (HEFT or Topological type)
-    schedule = RandomizedTopologicalScheduler(work_estimator,
-                                              int(rand.random() * 1000000)) \
-        .schedule(wg, contractors)
-    chromosome = convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
-                                                contractor2index, contractor_borders, schedule)
+    chance = rand.random()
+    if chance < 0.2:
+        chromosome = init_chromosomes["heft_end"]
+    elif chance < 0.4:
+        chromosome = init_chromosomes["heft_between"]
+    else:
+        schedule = RandomizedTopologicalScheduler(work_estimator,
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors)
+        chromosome = convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
+                                                    contractor2index, contractor_borders, schedule)
     return chromosome
 
 

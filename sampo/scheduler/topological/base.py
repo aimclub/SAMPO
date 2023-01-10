@@ -96,8 +96,6 @@ class TopologicalScheduler(Scheduler):
         # Note that tasks are already topologically ordered,
         # i.e., the first node in a chain is always processed before its children
 
-        schedule_start_time = None
-
         skipped_inseparable_children: Set[str] = set()
         # scheduling all the tasks in a one-by-one manner
         for index, node in enumerate(tasks):

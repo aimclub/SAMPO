@@ -54,7 +54,7 @@ def test_schedule(setup_wg, setup_worker_pool, setup_contractors):
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    ft = timeline.schedule(0, node, node2swork, worker_team, contractor, None)
+    ft = timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
 
     assert not ft.is_inf()
     assert len(node2swork) == 1

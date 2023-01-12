@@ -9,13 +9,17 @@ from sampo.utilities.validation import validate_schedule, \
 
 
 def validate_block_schedule(bg: BlockGraph, schedule: dict[str, ScheduledBlock]):
+    contractors = [contractor for sblock in schedule.values() for contractor in sblock.agent.contractors]
+    contractors_set = set(contractors)
+
+    assert len(contractors) != len(contractors_set), 'There are contractor collisions between agents'
+
     _check_block_dependencies(bg, schedule)
     _check_blocks_separately(schedule.values())
 
     # TODO Fix. To fully validate resources usage in the whole multi-agent appearance,
     #    we should union all agent's ScheduleEvents and go through it in sorted way.
     #    Now we think that this validation phase is not extremely need.
-    # contractors = set([contractor for sblock in schedule.values() for contractor in sblock.agent.contractors])
     # _check_blocks_with_global_timelines(schedule.values(), contractors)
 
 
@@ -31,7 +35,7 @@ def _check_blocks_separately(sblocks: Iterable[ScheduledBlock]):
         try:
             validate_schedule(sblock.schedule, sblock.wg, sblock.agent.contractors)
         except AssertionError as e:
-            raise AssertionError(f'Agent {sblock.agent} supplied invalid schedule of block {sblock}', e)
+            raise AssertionError(f'Agent {sblock.agent} supplied an invalid schedule', e)
 
 
 def _check_blocks_with_global_timelines(sblocks: Iterable[ScheduledBlock], contractors: Iterable[Contractor]):

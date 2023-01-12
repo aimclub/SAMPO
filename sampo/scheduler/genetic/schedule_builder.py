@@ -30,7 +30,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: Dict[str, Schedule],
+                   init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
@@ -101,6 +101,16 @@ def build_schedule(wg: WorkGraph,
         for ind_worker, worker in enumerate(contractor.workers.values()):
             contractor_borders[ind, ind_worker] = worker.count
 
+    # here we aggregate information about relationships from the whole inseparable chain
+    children = {work_id2index[node.id]: [work_id2index[child.id]
+                                         for inseparable in node.get_inseparable_chain_with_self()
+                                         for child in inseparable.children]
+                for node in wg.nodes}
+    parents = {work_id2index[node.id]: [] for node in wg.nodes}
+    for node, node_children in children.items():
+        for child in node_children:
+            parents[child].append(node)
+
     print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
 
     start = time.time()
@@ -108,15 +118,15 @@ def build_schedule(wg: WorkGraph,
     # initial chromosomes construction
     init_chromosomes: Dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule)
-         for name, schedule in init_schedules.items()}
+                                              contractor2index, contractor_borders, schedule, order)
+         for name, (schedule, order) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, index2node_list, assigned_parent_time,
-                           work_estimator)
+                           contractor2index, contractor_borders, node_indices, index2node_list, parents,
+                           assigned_parent_time, work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
@@ -188,25 +198,6 @@ def build_schedule(wg: WorkGraph,
                 ind = (ind_order[0], ind[1], ind[2])
                 # add to population
                 cur_generation.append(wrap(ind))
-
-        # add mutant part of generation to offspring
-        # offspring.extend(cur_generation)
-        # cur_generation.clear()
-        # gather all the fitness in one list and print the stats
-        # invalid_ind = [ind for ind in offspring
-        #                if not ind.fitness.valid or ind.fitness.invalid_steps < invalidation_border]
-        # evaluation for each individual
-        # fitness = pool.map(toolbox.evaluate, invalid_ind)
-        # pool.join()
-        # fitness = list(map(toolbox.evaluate, invalid_ind))
-        # for ind, fit in zip(invalid_ind, fitness):
-        #     ind.fitness.values = [fit]
-        #     ind.fitness.invalid_steps += 1 if fit == Time.inf() else 0
-        #
-        # # renewing population
-        # addition = [ind for ind in offspring if ind.fitness.invalid_steps < 3]
-        # print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
-        # pop.extend(addition)
 
         # operations for RESOURCES
         # mutation
@@ -343,9 +334,11 @@ def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
 def wrap(chromosome: ChromosomeType) -> Individual:
     """
     Created an individual from chromosome
+
     :param chromosome:
     :return:
     """
+
     def ind_getter():
         return chromosome
 

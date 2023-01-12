@@ -4,11 +4,12 @@ from typing import Dict, List, Tuple, Optional
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -87,9 +88,10 @@ class GeneticScheduler(Scheduler):
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
-            return scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors)
+            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                    prioritization(wg, self.work_estimator))
 
-        init_schedules: Dict[str, Schedule] = {
+        init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
             "heft_end": init_schedule(HEFTScheduler),
             "heft_between": init_schedule(HEFTBetweenScheduler)
         }

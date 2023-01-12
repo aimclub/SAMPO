@@ -2,17 +2,19 @@ from copy import deepcopy
 from typing import Iterable
 
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
-from sampo.scheduler.multi_agency.multi_agency import ScheduledBlock
+from sampo.scheduler.multi_agency.multi_agency import ScheduledBlock, Agent
 from sampo.schemas.contractor import Contractor
 from sampo.utilities.validation import validate_schedule, \
     check_all_allocated_workers_do_not_exceed_capacity_of_contractors
 
 
-def validate_block_schedule(bg: BlockGraph, schedule: dict[str, ScheduledBlock]):
-    contractors = [contractor for sblock in schedule.values() for contractor in sblock.agent.contractors]
+def validate_block_schedule(bg: BlockGraph, schedule: dict[str, ScheduledBlock], agents: Iterable[Agent]):
+    contractors = [contractor for agent in agents for contractor in agent.contractors]
     contractors_set = set(contractors)
 
-    assert len(contractors) != len(contractors_set), 'There are contractor collisions between agents'
+    assert len(contractors) == len(contractors_set), \
+        f'There are contractor collisions between agents: ' \
+        f'{[c.id for c in contractors]} != {[c.id for c in contractors_set]}'
 
     _check_block_dependencies(bg, schedule)
     _check_blocks_separately(schedule.values())

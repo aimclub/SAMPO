@@ -42,7 +42,7 @@ def manage_block_graph(contractors: list[Contractor]):
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
-    validate_block_schedule(bg, scheduled_blocks)
+    validate_block_schedule(bg, scheduled_blocks, agents)
 
     for sblock in scheduled_blocks.values():
         print(sblock)
@@ -85,10 +85,10 @@ def test_managing_with_obstruction():
                             obstruction_getter)
 
         scheduled_blocks = manager.manage_blocks(bg, logger=print)
-        validate_block_schedule(bg, scheduled_blocks)
+        validate_block_schedule(bg, scheduled_blocks, agents)
 
         scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, logger=print)
-        validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions)
+        validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions, agents)
 
         def finish_time(schedule: Iterable[ScheduledBlock]):
             return max([sblock.end_time for sblock in schedule])
@@ -123,7 +123,7 @@ def test_managing_queues():
                              [3, 4, 6, 8, 10, 3, 4, 8, 9, 9])
 
         scheduled_blocks = manager.manage_blocks(bg, logger=print)
-        validate_block_schedule(bg, scheduled_blocks)
+        validate_block_schedule(bg, scheduled_blocks, agents)
 
         for sblock in scheduled_blocks.values():
             print(sblock)

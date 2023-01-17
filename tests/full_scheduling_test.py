@@ -12,6 +12,9 @@ def test_schedule_synthetic(setup_contractors):
     wg = graph_restructuring(wg, use_lag_edge_optimization=True)
 
     for scheduler_type in list(SchedulerType):
-        schedule = generate_schedule(scheduler_type, None, wg, setup_contractors, validate_schedule=True)
+        try:
+            schedule = generate_schedule(scheduler_type, None, wg, setup_contractors, validate_schedule=True)
+        except AssertionError as e:
+            raise AssertionError(f'Scheduler {scheduler_type} failed validation', e)
 
         assert schedule.execution_time != Time.inf(), f'Scheduling failed on {scheduler_type.name}'

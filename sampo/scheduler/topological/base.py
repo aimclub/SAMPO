@@ -139,6 +139,10 @@ class TopologicalScheduler(Scheduler):
 
             st, ft, contractor, best_worker_team = run_contractor_search(contractors, run_with_contractor)
 
+            inseparable_chain = node.get_inseparable_chain()
+            if inseparable_chain:
+                skipped_inseparable_children.update((ch.id for ch in inseparable_chain))
+
             # finish scheduling with time spec
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)

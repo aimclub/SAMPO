@@ -89,7 +89,7 @@ class GeneticScheduler(Scheduler):
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
             return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
-                    prioritization(wg, self.work_estimator))
+                    list(reversed(prioritization(wg, self.work_estimator))))
 
         init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
             "heft_end": init_schedule(HEFTScheduler),

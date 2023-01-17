@@ -6,7 +6,7 @@ from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
-from sampo.schemas.graph import GraphNode
+from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -16,15 +16,15 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 ChromosomeType = Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
-def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
+def convert_schedule_to_chromosome(wg: WorkGraph,
                                    work_id2index: dict[str, int], worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int], contractor_borders: np.ndarray,
                                    schedule: Schedule, order: list[GraphNode] | None = None) -> ChromosomeType:
     """
     Receive result of scheduling algorithm and transform it to chromosome
 
+    :param wg:
     :param work_id2index:
-    :param index2node:
     :param worker_name2index:
     :param contractor2index:
     :param contractor_borders:
@@ -33,7 +33,8 @@ def convert_schedule_to_chromosome(index2node: list[tuple[int, GraphNode]],
     :return:
     """
 
-    order: list[GraphNode] = order if order is not None else schedule.works
+    order: list[GraphNode] = order if order is not None else [work for work in schedule.works
+                                                              if not wg[work.work_unit.id].is_inseparable_son()]
 
     # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])

@@ -30,7 +30,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: Dict[str, Schedule],
+                   init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    work_estimator: WorkTimeEstimator = None,
@@ -70,17 +70,19 @@ def build_schedule(wg: WorkGraph,
 
     start = time.time()
     # preparing access-optimized data structures
-    index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
+    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+
+    index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
     work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
     contractor2index = reverse_dictionary(index2contractor)
-    index2node_list = [(index, node) for index, node in enumerate(wg.nodes)]
+    index2node_list = [(index, node) for index, node in enumerate(nodes)]
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}
-    node_indices = [index for index in range(wg.vertex_count)]
+    node_indices = list(range(len(nodes)))
 
     contractors_capacity = np.zeros((len(contractors), len(worker_pool)))
     for w_ind, cont2worker in worker_pool_indices.items():
@@ -101,22 +103,39 @@ def build_schedule(wg: WorkGraph,
         for ind_worker, worker in enumerate(contractor.workers.values()):
             contractor_borders[ind, ind_worker] = worker.count
 
+    # construct inseparable_child -> inseparable_parent mapping
+    inseparable_parents = {}
+    for node in nodes:
+        for child in node.get_inseparable_chain_with_self():
+            inseparable_parents[child] = node
+
+    # here we aggregate information about relationships from the whole inseparable chain
+    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
+                                         for inseparable in node.get_inseparable_chain_with_self()
+                                         for child in inseparable.children]
+                for node in nodes}
+
+    parents = {work_id2index[node.id]: [] for node in nodes}
+    for node, node_children in children.items():
+        for child in node_children:
+            parents[child].append(node)
+
     print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
 
     start = time.time()
 
     # initial chromosomes construction
     init_chromosomes: Dict[str, ChromosomeType] = \
-        {name: convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule)
-         for name, schedule in init_schedules.items()}
+        {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                              contractor2index, contractor_borders, schedule, order)
+         for name, (schedule, order) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, index2node_list, assigned_parent_time,
-                           work_estimator)
+                           contractor2index, contractor_borders, node_indices, index2node_list, parents,
+                           assigned_parent_time, work_estimator)
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
@@ -188,25 +207,6 @@ def build_schedule(wg: WorkGraph,
                 ind = (ind_order[0], ind[1], ind[2])
                 # add to population
                 cur_generation.append(wrap(ind))
-
-        # add mutant part of generation to offspring
-        # offspring.extend(cur_generation)
-        # cur_generation.clear()
-        # gather all the fitness in one list and print the stats
-        # invalid_ind = [ind for ind in offspring
-        #                if not ind.fitness.valid or ind.fitness.invalid_steps < invalidation_border]
-        # evaluation for each individual
-        # fitness = pool.map(toolbox.evaluate, invalid_ind)
-        # pool.join()
-        # fitness = list(map(toolbox.evaluate, invalid_ind))
-        # for ind, fit in zip(invalid_ind, fitness):
-        #     ind.fitness.values = [fit]
-        #     ind.fitness.invalid_steps += 1 if fit == Time.inf() else 0
-        #
-        # # renewing population
-        # addition = [ind for ind in offspring if ind.fitness.invalid_steps < 3]
-        # print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
-        # pop.extend(addition)
 
         # operations for RESOURCES
         # mutation
@@ -343,9 +343,11 @@ def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
 def wrap(chromosome: ChromosomeType) -> Individual:
     """
     Created an individual from chromosome
+
     :param chromosome:
     :return:
     """
+
     def ind_getter():
         return chromosome
 

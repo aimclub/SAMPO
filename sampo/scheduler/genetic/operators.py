@@ -36,6 +36,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
+                 parents: Dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     toolbox = base.Toolbox()
@@ -52,7 +53,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     # evaluation function
     toolbox.register("evaluate", chromosome_evaluation, index2node=index2node, contractors_borders=contractor_borders,
                      index2contractor=index2contractor_obj, worker_pool=worker_pool, node_indices=node_indices,
-                     worker_pool_indices=worker_pool_indices, spec=spec, work_estimator=work_estimator)
+                     worker_pool_indices=worker_pool_indices, spec=spec, parents=parents, work_estimator=work_estimator)
     # crossover for order
     toolbox.register("mate", mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -72,9 +73,9 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     # crossover for resource borders
     toolbox.register("mate_resource_borders", mate_for_resource_borders, rand=rand)
 
-    toolbox.register("validate", is_chromosome_correct, index2node=index2node, contractor_borders=contractor_borders,
-                     node_indices=node_indices)
-    toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, index2node=index2node_list,
+    toolbox.register("validate", is_chromosome_correct, contractor_borders=contractor_borders,
+                     node_indices=node_indices, parents=parents)
+    toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, wg=wg,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
@@ -122,7 +123,7 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
             .schedule(wg, contractors)
-        chromosome = convert_schedule_to_chromosome(index2node_list, work_id2index, worker_name2index,
+        chromosome = convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                                     contractor2index, contractor_borders, schedule)
     return chromosome
 
@@ -131,9 +132,9 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
                           index2contractor: Dict[int, Contractor], contractors_borders: np.ndarray,
                           worker_pool_indices: dict[int, dict[int, Worker]], node_indices: list[int],
                           worker_pool: WorkerContractorPool, spec: ScheduleSpec,
-                          work_estimator: WorkTimeEstimator = None) -> Time:
+                          parents: Dict[int, list[int]], work_estimator: WorkTimeEstimator = None) -> Time:
     chromosome = individuals[0]
-    if is_chromosome_correct(chromosome, index2node, contractors_borders, node_indices):
+    if is_chromosome_correct(chromosome, contractors_borders, node_indices, parents):
         scheduled_works, _, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                index2contractor, worker_pool_indices,
                                                                spec, work_estimator)
@@ -143,21 +144,21 @@ def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[in
         return Time.inf()
 
 
-def is_chromosome_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode],
-                          contractor_borders: np.ndarray, node_indices: list[int]) -> bool:
-    return is_chromosome_order_correct(chromosome, index2node) and \
+def is_chromosome_correct(chromosome: ChromosomeType,
+                          contractor_borders: np.ndarray, node_indices: list[int],
+                          parents: Dict[int, list[int]]) -> bool:
+    return is_chromosome_order_correct(chromosome, parents) and \
            is_chromosome_contractors_correct(chromosome, contractor_borders, node_indices)
 
 
-def is_chromosome_order_correct(chromosome: ChromosomeType, index2node: Dict[int, GraphNode]) -> bool:
+def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, list[int]]) -> bool:
     work_order = chromosome[0]
     used = set()
     for work_index in work_order:
-        node = index2node[work_index]
-        for parent in node.parents:
-            if parent.id not in used:
+        used.add(work_index)
+        for parent in parents[work_index]:
+            if parent not in used:
                 return False
-        used.add(node.id)
     return True
 
 
@@ -177,6 +178,7 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
         contractor_ind = chromosome[1][-1, work_ind]
         contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
+            # TODO Add contractor lower border check
             if contractor_border[ind] < count:
                 return False
     return True

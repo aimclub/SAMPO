@@ -35,7 +35,7 @@ def variate_contractor_size(logfile: IO, schedulers: list[Scheduler]):
         logger(f'contractor_size = {10 * i}')
 
         for graph_type in SyntheticBlockGraphType:
-            contractors = [p_rand.contactor(10 * i) for _ in range(len(schedulers))]
+            contractors = [p_rand.contractor(10 * i) for _ in range(len(schedulers))]
 
             agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
                       for i, contractor in enumerate(contractors)]
@@ -54,7 +54,7 @@ def variate_block_size(logfile: IO, schedulers: list[Scheduler]):
         logger(f'block_size ~ {50 * i}')
 
         for graph_type in SyntheticBlockGraphType:
-            contractors = [p_rand.contactor(10) for _ in range(len(schedulers))]
+            contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 
             agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
                       for i, contractor in enumerate(contractors)]

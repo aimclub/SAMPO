@@ -40,7 +40,7 @@ class SimpleSynthetic:
         return get_graph(mode=mode, cluster_counts=cluster_counts, bottom_border=bottom_border, top_border=top_border,
                          rand=self._rand)
 
-    def contactor(self, pack_worker_count: float):
+    def contractor(self, pack_worker_count: float):
         """
         Generates a contractor by pack_worker_count and from sampo.generator.environment.contractor.get_contractor
         with default optional parameters

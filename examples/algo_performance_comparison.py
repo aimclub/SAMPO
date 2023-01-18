@@ -14,7 +14,7 @@ def run_iteration(args) -> int:
     algo_ind, graph_size = args
     ss = SimpleSynthetic(rand=231)
     wg = ss.work_graph(SyntheticGraphType.Parallel, graph_size - 50, graph_size + 50)
-    contractors = [ss.contactor(DefaultContractorCapacity)]
+    contractors = [ss.contractor(DefaultContractorCapacity)]
 
     scheduler_type = list(SchedulerType)[algo_ind]
 

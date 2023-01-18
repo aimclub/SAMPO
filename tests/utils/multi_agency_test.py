@@ -16,7 +16,7 @@ from sampo.schemas.contractor import Contractor, DefaultContractorCapacity
 
 def test_one_auction():
     p_rand = SimpleSynthetic(rand=231)
-    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
+    contractors = [p_rand.contractor(i) for i in range(10, 101, 10)]
 
     agents = [Agent(f'Agent {i}', HEFTScheduler(), [contractor]) for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
@@ -51,14 +51,14 @@ def manage_block_graph(contractors: list[Contractor]):
 def test_manage_block_graph_different_contractors():
     r_seed = 231
     p_rand = SimpleSynthetic(rand=r_seed)
-    contractors = [p_rand.contactor(i) for i in range(10, 101, 10)]
+    contractors = [p_rand.contractor(i) for i in range(10, 101, 10)]
     manage_block_graph(contractors)
 
 
 def test_manage_block_graph_same_contractors():
     r_seed = 231
     p_rand = SimpleSynthetic(rand=r_seed)
-    contractors = [p_rand.contactor(DefaultContractorCapacity) for _ in range(4)]
+    contractors = [p_rand.contractor(DefaultContractorCapacity) for _ in range(4)]
     manage_block_graph(contractors)
 
 
@@ -66,7 +66,7 @@ def test_managing_with_obstruction():
     r_seed = 231
     p_rand = SimpleSynthetic(rand=r_seed)
     rand = Random(r_seed)
-    contractors = [p_rand.contactor(10)]
+    contractors = [p_rand.contractor(10)]
 
     scheduler_constructors = [HEFTScheduler]
 
@@ -109,7 +109,7 @@ def test_managing_queues():
         return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
 
     for i in range(20):
-        contractors = [p_rand.contactor(10)]
+        contractors = [p_rand.contractor(10)]
 
         scheduler_constructors = [HEFTScheduler]
 

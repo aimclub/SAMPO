@@ -11,7 +11,7 @@ from sampo.utilities.visualization.work_graph import work_graph_fig
 rand = random.Random(10)
 p_rand = SimpleSynthetic(rand=231)
 wg = p_rand.work_graph(top_border=3000)
-contractors = [p_rand.contactor(i) for i in range(10, 31, 10)]
+contractors = [p_rand.contractor(i) for i in range(10, 31, 10)]
 schedule = HEFTScheduler().schedule(wg, contractors)
 
 print(len(wg.nodes))

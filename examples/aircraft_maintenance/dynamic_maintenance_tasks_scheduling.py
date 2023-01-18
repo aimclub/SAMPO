@@ -45,12 +45,18 @@ def load_queues_bg(queues: list[list[(WorkGraph, WorkGraph)]], obstruction_prob:
 
 def run_example(obstruction_prob: float, rand: Random, queues_with_obstructions: list[list[(WorkGraph, WorkGraph)]],
                 schedulers: list[Scheduler], contractors: list[Contractor]) -> Dict[str, ScheduledBlock]:
+
+    # Scheduling agents and manager initialization
     agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
+    # Upload information about routine tasks, obstruction tasks, related to them and probabilities
     bg = load_queues_bg(queues_with_obstructions, obstruction_prob, rand)
 
-    return manager.manage_blocks(bg, logger=print)
+    # Schedule blocks of tasks using multiagent modelling
+    blocks_schedules = manager.manage_blocks(bg, logger=print)
+
+    return blocks_schedules
 
 

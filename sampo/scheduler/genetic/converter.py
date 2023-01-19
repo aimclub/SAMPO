@@ -49,15 +49,12 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     for node in order:
         node_id = node.work_unit.id
         index = work_id2index[node_id]
-        # TODO Check that `node_reqs` is really need
-        node_reqs = set([req.kind for req in node.work_unit.worker_reqs])
         for resource in schedule[node_id].workers:
-            if resource.name in node_reqs:
-                res_count = resource.count
-                res_index = worker_name2index[resource.name]
-                res_contractor = resource.contractor_id
-                resource_chromosome[res_index, index] = res_count
-                resource_chromosome[-1, index] = contractor2index[res_contractor]
+            res_count = resource.count
+            res_index = worker_name2index[resource.name]
+            res_contractor = resource.contractor_id
+            resource_chromosome[res_index, index] = res_count
+            resource_chromosome[-1, index] = contractor2index[res_contractor]
 
     resource_border_chromosome = np.copy(contractor_borders)
 

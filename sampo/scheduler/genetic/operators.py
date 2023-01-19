@@ -300,7 +300,7 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     res2 = ind2[1][mate_positions]
     cxpoint = rand.randint(1, len(res1))
 
-    mate_positions = rand.sample(list(range(1, len(res1))), cxpoint)
+    mate_positions = rand.sample(list(range(len(res1))), cxpoint)
 
     res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
     return ind1, ind2

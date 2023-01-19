@@ -19,6 +19,7 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
     def name(self) -> str:
         """
         Returns the name of the claim if it exists, e.g. 'dig work claim'.
+
         :return name: the name of req
         """
         ...
@@ -28,6 +29,7 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
 class WorkerReq(BaseReq):
     """
     Requirements related to renewable human resources
+
     :param kind: type of resource/profession
     :param volume: volume of work in time units
     :param min_count: minimum number of employees needed to perform the work
@@ -44,6 +46,7 @@ class WorkerReq(BaseReq):
         """
         The function scales the requirement to the size of the work including the total
         volume and the maximum number of personnel involved.
+
         :param scalar: scalar for multiplication
         :param new_name: name for new req
         :return new_req: new object with new volume of the work and extended max_count_commands
@@ -55,6 +58,7 @@ class WorkerReq(BaseReq):
     def scale_volume(self, scalar: float, new_name: Optional[str] = None) -> 'WorkerReq':
         """
         The function scales only volume of the work for the requirement.
+
         :param scalar: scalar for multiplication
         :param new_name: name for new req
         :return new_req: new object with new volume of the work.
@@ -67,6 +71,7 @@ class WorkerReq(BaseReq):
 class EquipmentReq(BaseReq):
     """
     Requirements for renewable non-human resources: equipment, trucks, machines, etc
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """
@@ -78,6 +83,7 @@ class EquipmentReq(BaseReq):
 class MaterialReq(BaseReq):
     """
     Requirements for non-renewable materials: consumables, spare parts, construction materials
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """
@@ -89,6 +95,7 @@ class MaterialReq(BaseReq):
 class ConstructionObjectReq(BaseReq):
     """
     Requirements for infrastructure and the construction of other facilities: electricity, pipelines, roads, etc
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """

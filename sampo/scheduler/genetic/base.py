@@ -1,7 +1,10 @@
 import random
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Callable
+
+from deap.base import Toolbox
 
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
@@ -27,6 +30,7 @@ class GeneticScheduler(Scheduler):
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
+                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
@@ -38,6 +42,7 @@ class GeneticScheduler(Scheduler):
         self.mutate_resources = mutate_resources
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
+        self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
 
     def __str__(self) -> str:
@@ -110,6 +115,7 @@ class GeneticScheduler(Scheduler):
                                                                         init_schedules,
                                                                         self.rand,
                                                                         spec,
+                                                                        self.fitness_constructor,
                                                                         self.work_estimator,
                                                                         assigned_parent_time=assigned_parent_time,
                                                                         timeline=timeline)

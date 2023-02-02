@@ -1,8 +1,11 @@
 import random
-from typing import List, Dict, Iterable
+from abc import ABC, abstractmethod
+from functools import partial
+from typing import List, Dict, Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
+from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
@@ -14,6 +17,61 @@ from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
+
+
+class FitnessFunction(ABC):
+
+    def __init__(self, tb: Toolbox):
+        self._tb = tb
+
+    @abstractmethod
+    def evaluate(self, chromosome: ChromosomeType) -> int:
+        ...
+
+
+class TimeFitness(FitnessFunction):
+
+    def __init__(self, tb: Toolbox):
+        super().__init__(tb)
+
+    def evaluate(self, chromosome: ChromosomeType) -> int:
+        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
+        return finish_time
+
+
+class TimeAndResourcesFitness(FitnessFunction):
+
+    def __init__(self, tb: Toolbox):
+        super().__init__(tb)
+
+    def evaluate(self, chromosome: ChromosomeType) -> int:
+        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        workers_weight = int(np.sum(chromosome[2]))
+        return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time + Time(workers_weight)
+
+
+class DeadlineResourcesFitness(FitnessFunction):
+
+    def __init__(self, deadline: Time, tb: Toolbox):
+        super().__init__(tb)
+        self._deadline = deadline
+
+    @staticmethod
+    def prepare(deadline: Time):
+        """
+        Returns the constructor of that fitness function prepared to use in Genetic
+        """
+        return partial(DeadlineResourcesFitness, deadline)
+
+    def evaluate(self, chromosome: ChromosomeType) -> int:
+        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
+        if finish_time > self._deadline:
+            return Time.inf()
+        else:
+            return int(np.sum(chromosome[2]))  # count of workers used in border
+
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
 
@@ -37,6 +95,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
                  parents: Dict[int, list[int]],
+                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     toolbox = base.Toolbox()
@@ -50,10 +109,11 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("individual", tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
     # create population from individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    # construct fitness
+    fitness = fitness_constructor(toolbox)
     # evaluation function
-    toolbox.register("evaluate", chromosome_evaluation, index2node=index2node, contractors_borders=contractor_borders,
-                     index2contractor=index2contractor_obj, worker_pool=worker_pool, node_indices=node_indices,
-                     worker_pool_indices=worker_pool_indices, spec=spec, parents=parents, work_estimator=work_estimator)
+    toolbox.register("evaluate",
+                     lambda chromosome: fitness.evaluate(chromosome[0]) if toolbox.validate(chromosome[0]) else Time.inf())
     # crossover for order
     toolbox.register("mate", mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -126,22 +186,6 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
         chromosome = convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                                     contractor2index, contractor_borders, schedule)
     return chromosome
-
-
-def chromosome_evaluation(individuals: List[ChromosomeType], index2node: Dict[int, GraphNode],
-                          index2contractor: Dict[int, Contractor], contractors_borders: np.ndarray,
-                          worker_pool_indices: dict[int, dict[int, Worker]], node_indices: list[int],
-                          worker_pool: WorkerContractorPool, spec: ScheduleSpec,
-                          parents: Dict[int, list[int]], work_estimator: WorkTimeEstimator = None) -> Time:
-    chromosome = individuals[0]
-    if is_chromosome_correct(chromosome, contractors_borders, node_indices, parents):
-        scheduled_works, _, _ = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                               index2contractor, worker_pool_indices,
-                                                               spec, work_estimator)
-        workers_weight = int(np.sum(chromosome[2]))
-        return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time + Time(workers_weight)
-    else:
-        return Time.inf()
 
 
 def is_chromosome_correct(chromosome: ChromosomeType,
@@ -313,7 +357,7 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
 
     num_contractors = len(ind1[2])
     contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))
-    
+
     if rand.randint(0, 2) == 0:
         # trying to mate whole contractors
         border1 = ind1[2][contractors_to_mate]
@@ -328,5 +372,3 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
             c_border1[mate_positions], c_border2[mate_positions] = c_border2[mate_positions], c_border1[mate_positions]
 
     return ind1, ind2
-
-

@@ -156,7 +156,7 @@ class TopologicalScheduler(Scheduler):
 class RandomizedTopologicalScheduler(TopologicalScheduler):
     def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
-        super().__init__(work_estimator)
+        super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
     def _topological_sort(self, wg: WorkGraph) -> List[GraphNode]:

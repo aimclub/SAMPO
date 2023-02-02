@@ -80,8 +80,8 @@ class HEFTScheduler(Scheduler):
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
-            if node in node2swork:  # here
-                continue
+            # if node in node2swork:  # here
+            #     continue
 
             def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
                 min_count_worker_team, max_count_worker_team, workers \
@@ -93,7 +93,8 @@ class HEFTScheduler(Scheduler):
                 workers = [worker.copy() for worker in workers]
 
                 def get_finish_time(worker_team):
-                    return timeline.find_min_start_time(node, worker_team, node2swork) \
+                    return timeline.find_min_start_time(node, worker_team, node2swork,
+                                                        assigned_parent_time, work_estimator) \
                            + calculate_working_time_cascade(node, worker_team, work_estimator)
 
                 # apply worker team spec
@@ -104,7 +105,7 @@ class HEFTScheduler(Scheduler):
                                                        min_count_worker_team, max_count_worker_team,
                                                        get_finish_time))
 
-                c_st = timeline.find_min_start_time(node, workers, node2swork)
+                c_st = timeline.find_min_start_time(node, workers, node2swork, assigned_parent_time, work_estimator)
                 c_ft = c_st + calculate_working_time_cascade(node, workers, work_estimator)
 
                 return c_st, c_ft, workers

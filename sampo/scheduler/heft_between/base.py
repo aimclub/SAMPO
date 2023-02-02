@@ -3,22 +3,19 @@ from typing import List, Optional, Dict, Iterable
 from sampo.metrics.resources_in_time.base import ResourceOptimizer
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
-from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
-from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
-from sampo.utilities.validation import validate_schedule
 
 
 class HEFTBetweenScheduler(HEFTScheduler):
@@ -28,27 +25,6 @@ class HEFTBetweenScheduler(HEFTScheduler):
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
-
-    def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
-                            spec: ScheduleSpec = ScheduleSpec(),
-                            validate: bool = False,
-                            assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
-        ordered_nodes = prioritization(wg, self.work_estimator)
-
-        schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
-        schedule = Schedule.from_scheduled_works(
-            schedule,
-            wg
-        )
-
-        if validate:
-            validate_schedule(schedule, wg, contractors)
-
-        return schedule, schedule_start_time, timeline
 
     def build_scheduler(self, ordered_nodes: List[GraphNode],
                         contractors: List[Contractor],
@@ -61,6 +37,7 @@ class HEFTBetweenScheduler(HEFTScheduler):
         Find optimal number of workers who ensure the nearest finish time.
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
+
         :param ordered_nodes:
         :param contractors:
         :param spec: spec for current scheduling

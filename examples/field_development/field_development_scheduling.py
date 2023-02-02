@@ -1,9 +1,13 @@
 from matplotlib import pyplot as plt
+
+from sampo.utilities.schedule import remove_service_tasks
+
 from sampo.utilities.visualization.base import VisualizationMode
 
 from sampo.generator import get_contractor_by_wg  # Warning!!! sampo~=0.1.1.77
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.graph import WorkGraph
+from sampo.schemas.contractor import Contractor
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.visualization.work_graph import work_graph_fig
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
@@ -12,11 +16,19 @@ import warnings
 
 warnings.filterwarnings("ignore")  # for matplotlib warning suppression
 
-# Uploading WorkGraph data from prepared JSON file
+# Set this flag if you want to use manually prepared contractors' info
+# (otherwise, contractors will be generated automatically to satisfy the uploaded WorkGraph's requirements)
+use_contractors_from_file = False
+
+# Uploading WorkGraph's data from prepared JSON file
 field_development_wg = WorkGraph.load("./", "field_development_tasks_structure")
 
-# Use this code for automated contractors' generation by the uploaded WorkGraph
-contractors = [get_contractor_by_wg(field_development_wg, scaler=3)]
+if use_contractors_from_file:
+    # Uploading Contractor's data from prepared JSON file
+    contractors = Contractor.load("./", "field_development_contractors_info")
+else:
+    # Automated contractors' generation by the uploaded WorkGraph
+    contractors = [get_contractor_by_wg(field_development_wg, scaler=3)]
 
 # WorkGraph structure optimization
 structured_wg = graph_restructuring(field_development_wg, use_lag_edge_optimization=True)
@@ -25,12 +37,26 @@ structured_wg = graph_restructuring(field_development_wg, use_lag_edge_optimizat
 _ = work_graph_fig(structured_wg, (20, 10), legend_shift=4, show_names=True, text_size=6)
 plt.show()
 
-# Set up the project's start date
-start_date = "2022-12-21"
+# Set up attributes for the algorithm and results presentation
+scheduler_type = HEFTScheduler()  # Set up scheduling algorithm
+graph_structure_optimization = True  # Graph structure optimization flag
+csv_required = False  # Saving schedule to .csv file flag
+json_required = True  # Saving schedule to .json file flag
+
+visualization_mode = VisualizationMode.ShowFig  # Set up visualization type
+gant_chart_filename = './output/schedule_gant_chart.png'  # Set up gant chart file name (if necessary)
+
+start_date = "2023-01-01"  # Set up the project's start date
 
 # Schedule field development tasks
-schedule = HEFTScheduler().schedule(structured_wg, contractors)
-schedule_df = schedule.merged_stages_datetime_df(start_date)
+schedule = scheduler_type.schedule(structured_wg, contractors, validate=True)
+schedule_df = remove_service_tasks(schedule.merged_stages_datetime_df(start_date))
 
-# Visualize schedule
-schedule_gant_chart_fig(schedule_df, VisualizationMode.ShowFig)
+# Schedule's gant chart visualization
+gant_fig = schedule_gant_chart_fig(schedule_df,
+                                   fig_file_name=gant_chart_filename,
+                                   visualization=visualization_mode,
+                                   remove_service_tasks=True)
+
+# # Visualize schedule
+# schedule_gant_chart_fig(schedule_df, VisualizationMode.ShowFig)

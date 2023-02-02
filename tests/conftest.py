@@ -55,15 +55,15 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
             for contractor in setup_contractors for worker in contractor.workers.values()}
 
 
-@fixture(scope='module')
-def setup_contractors(setup_wg) -> List[Contractor]:
+@fixture(scope='module', params=[5 * i for i in range(10)])
+def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
-            # TODO Test for min resources pool(fixture parameter)
-            resource_req[req.kind] = resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2
+            resource_req[req.kind] = max(request.param,
+                                         resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():

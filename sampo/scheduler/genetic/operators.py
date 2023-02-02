@@ -133,8 +133,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     # crossover for resource borders
     toolbox.register("mate_resource_borders", mate_for_resource_borders, rand=rand)
 
-    toolbox.register("validate", is_chromosome_correct, contractor_borders=contractor_borders,
-                     node_indices=node_indices, parents=parents)
+    toolbox.register("validate", is_chromosome_correct, node_indices=node_indices, parents=parents)
     toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, wg=wg,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders)
@@ -189,10 +188,10 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
 
 
 def is_chromosome_correct(chromosome: ChromosomeType,
-                          contractor_borders: np.ndarray, node_indices: list[int],
+                          node_indices: list[int],
                           parents: Dict[int, list[int]]) -> bool:
     return is_chromosome_order_correct(chromosome, parents) and \
-           is_chromosome_contractors_correct(chromosome, contractor_borders, node_indices)
+           is_chromosome_contractors_correct(chromosome, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, list[int]]) -> bool:
@@ -207,7 +206,6 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, l
 
 
 def is_chromosome_contractors_correct(chromosome: ChromosomeType,
-                                      contractors_borders: np.ndarray,
                                       work_indices: Iterable[int]) -> bool:
     """
     Checks that assigned contractors can supply assigned workers
@@ -222,7 +220,6 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
         contractor_ind = chromosome[1][-1, work_ind]
         contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
-            # TODO Add contractor lower border check
             if contractor_border[ind] < count:
                 return False
     return True
@@ -297,7 +294,7 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
             contractor = ind[1][-1][i]
             border = ind[2][contractor][type_of_worker]
             # TODO Debug why min(xu, border) can be lower than xl
-            ind[1][type_of_worker][i] = rand.randint(xl, max(xl, min(xu, border)))
+            ind[1][type_of_worker][i] = rand.randint(xl, min(xu, border))
 
     return ind
 
@@ -321,9 +318,9 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     num_contractors = len(ind[2])
     for i in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
-            ind[2][i][type_of_worker] -= rand.randint(1, max(2, ind[2][i][type_of_worker] // 10))
-            if ind[2][i][type_of_worker] < resources_min_border[type_of_worker] + 1:
-                ind[2][i][type_of_worker] = resources_min_border[type_of_worker] + 1
+            ind[2][i][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
+                                                      max(resources_min_border[type_of_worker] + 1,
+                                                          ind[2][i][type_of_worker] // 10))
 
     return ind
 
@@ -344,9 +341,12 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
 
     # exchange work resources
     res1 = ind1[1][mate_positions]
-    res2 = ind1[1][mate_positions]
+    res2 = ind2[1][mate_positions]
     cxpoint = rand.randint(1, len(res1))
-    res1[cxpoint:], res2[cxpoint:] = res2[cxpoint:], res1[cxpoint:]
+
+    mate_positions = rand.sample(list(range(len(res1))), cxpoint)
+
+    res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
     return ind1, ind2
 
 
@@ -357,7 +357,7 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
 
     num_contractors = len(ind1[2])
     contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))
-
+    
     if rand.randint(0, 2) == 0:
         # trying to mate whole contractors
         border1 = ind1[2][contractors_to_mate]

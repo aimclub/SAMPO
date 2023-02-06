@@ -102,42 +102,45 @@ class JustInTimeTimeline(Timeline):
     def schedule(self,
                  task_index: int,
                  node: GraphNode,
-                 id2swork: Dict[GraphNode, ScheduledWork],
+                 node2swork: Dict[GraphNode, ScheduledWork],
                  workers: List[Worker],
                  contractor: Contractor,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+                 work_estimator: Optional[WorkTimeEstimator] = None):
         inseparable_chain = node.get_inseparable_chain_with_self()
         st = assigned_start_time if assigned_start_time is not None else self.find_min_start_time(node, workers,
-                                                                                                  id2swork,
+                                                                                                  node2swork,
                                                                                                   assigned_parent_time,
                                                                                                   work_estimator)
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
-            return self._schedule_with_inseparables(id2swork, workers, contractor, inseparable_chain, st, exec_times,
-                                                    work_estimator)
+            return self._schedule_with_inseparables(task_index, node, node2swork, workers, contractor, inseparable_chain,
+                                                    st, exec_times, work_estimator)
         else:
-            return self._schedule_with_inseparables(id2swork, workers, contractor, inseparable_chain, st, {},
-                                                    work_estimator)
+            return self._schedule_with_inseparables(task_index, node, node2swork, workers, contractor, inseparable_chain,
+                                                    st, {}, work_estimator)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item]
 
-    @staticmethod
-    def _schedule_with_inseparables(id2swork: Dict[GraphNode, ScheduledWork],
+    def _schedule_with_inseparables(self,
+                                    index: int,
+                                    node: GraphNode,
+                                    node2swork: Dict[GraphNode, ScheduledWork],
                                     workers: List[Worker],
                                     contractor: Contractor,
                                     inseparable_chain: List[GraphNode],
                                     start_time: Time,
                                     exec_times: Dict[GraphNode, Tuple[Time, Time]],
-                                    work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+                                    work_estimator: Optional[WorkTimeEstimator] = None):
         """
         Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
         and adds it ti given `id2swork`. Also does the same for all inseparable nodes starts from this one
-        :param id2swork:
+
+        :param node2swork:
         :param workers:
         :param contractor:
         :param inseparable_chain:
@@ -153,20 +156,24 @@ class JustInTimeTimeline(Timeline):
             # (the same as in original work)
             # set the same workers on it
             # TODO Decide where this should be
-            max_parent_time = max((id2swork[pnode].finish_time
+            max_parent_time = max((node2swork[pnode].finish_time
                                    for pnode in dep_node.parents),
                                   default=Time(0))
+
+            if dep_node.is_inseparable_son():
+                assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
+
             working_time = exec_times.get(dep_node, None)
             start_time = max(c_ft, max_parent_time)
             if working_time is None:
                 working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
             new_finish_time = start_time + working_time
 
-            id2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
-                                               start_end_time=(start_time, new_finish_time),
-                                               workers=workers,
-                                               contractor=contractor)
+            node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
+                                                 start_end_time=(start_time, new_finish_time),
+                                                 workers=workers,
+                                                 contractor=contractor)
             # change finish time for using workers
             c_ft = new_finish_time
 
-        return c_ft
+        self.update_timeline(index, c_ft, node, node2swork, workers)

@@ -114,6 +114,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
         if len(cpool) == 0:
             moment_pool[cont] = cpool
 
+        # if next equivalency class, check validity of resources distribution
         if time != moment:
             for contractor_id, contractor_pool in moment_pool.items():
                 for worker_name, worker_count in contractor_pool.items():
@@ -122,7 +123,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
                     assert available + worker_count >= 0, \
                         f"Overuse of workers (event type {event_type} at [{time}]) for contractor '{contractor_id}' " \
                         f"and worker type '{worker_name}': available {available}," \
-                        f" while being allocated {worker_count}"
+                        f" while being allocated {-worker_count}"
                     assert available + worker_count <= initial_worker_pool[contractor_id][worker_name], \
                         f"Excessive workers appear for contractor '{contractor_id}' and worker type '{worker_name}':" \
                         f"available {available}, being returned {worker_count}, " \

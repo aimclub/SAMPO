@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -16,7 +17,7 @@ from sampo.structurator.base import graph_restructuring
 from sampo.utilities.generation.work_graph import generate_resources_pool
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ("tests.schema", "tests.models", )
+pytest_plugins = ("tests.schema", "tests.models",)
 
 
 @fixture(scope='session')
@@ -24,7 +25,7 @@ def setup_sampler(request):
     return Sampler(1e-1)
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_wg(request, setup_sampler):
     sr = setup_sampler
     s = get_start_stage()
@@ -49,38 +50,53 @@ def setup_wg(request, setup_sampler):
     return wg_r
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
-    return {worker.name: {worker.contractor_id: worker}
-            for contractor in setup_contractors for worker in contractor.workers.values()}
+    worker_pool = defaultdict(dict)
+    for contractor in setup_contractors:
+        for worker in contractor.workers.values():
+            worker_pool[worker.name][worker.contractor_id] = worker
+    return worker_pool
 
 
-@fixture(scope='module', params=[5 * i for i in range(10)])
+@fixture(scope='function',
+         params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
 
+    num_contractors, contractor_min_resources = request.param
+
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
-            resource_req[req.kind] = max(request.param,
+            resource_req[req.kind] = max(contractor_min_resources,
                                          resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():
         resource_req[req] //= resource_req_count[req]
 
-    contractor_id = str(uuid4())
-    return [Contractor(id=contractor_id,
-                       name="OOO Berezka",
-                       workers={name:
-                                Worker(str(uuid4()), name, count, contractor_id=contractor_id)
-                                for name, count in resource_req.items()},
-                       equipments={})]
+    # contractors are the same and universal(but multiple)
+    contractors = []
+    for i in range(num_contractors):
+        contractor_id = str(uuid4())
+        contractors.append(Contractor(id=contractor_id,
+                                      name="OOO Berezka",
+                                      workers={name:
+                                                   Worker(str(uuid4()), name, count, contractor_id=contractor_id)
+                                               for name, count in resource_req.items()},
+                                      equipments={}))
+    print(f'Using {num_contractors} contractors:')
+    print(contractors)
+    return contractors
 
 
-@fixture(scope='module')
-def setup_default_schedules(setup_wg, setup_contractors, setup_start_date):
+@fixture(scope='function')
+def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
+
+    print(f'Received {len(setup_contractors)} contractors: {setup_contractors}')
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors)
@@ -92,11 +108,6 @@ def setup_default_schedules(setup_wg, setup_contractors, setup_start_date):
 
 
 @fixture(scope='module')
-def setup_start_date() -> str:
-    return '2019-02-22'
-
-
-@fixture(scope='module')
 def setup_scheduling_inner_params(request, setup_wg, setup_start_date):
     work_graph = setup_wg
     contractor_list = generate_resources_pool(DefaultContractorCapacity)
@@ -104,7 +115,7 @@ def setup_scheduling_inner_params(request, setup_wg, setup_start_date):
     return work_graph, contractor_list, setup_start_date
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_schedule(request, setup_scheduling_inner_params):
     work_graph, contractors, start = setup_scheduling_inner_params
     scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological

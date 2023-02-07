@@ -26,9 +26,12 @@ class BreakType(Enum):
 
 
 def test_check_order_validity_right(setup_wg, setup_default_schedules):
-    for schedule in setup_default_schedules.values():
-        _check_all_tasks_scheduled(schedule, setup_wg)
-        _check_parent_dependencies(schedule, setup_wg)
+    for scheduler, schedule in setup_default_schedules.items():
+        try:
+            _check_all_tasks_scheduled(schedule, setup_wg)
+            _check_parent_dependencies(schedule, setup_wg)
+        except AssertionError as e:
+            raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
 def test_check_order_validity_wrong(setup_wg, setup_default_schedules):
@@ -47,9 +50,12 @@ def test_check_order_validity_wrong(setup_wg, setup_default_schedules):
 
 
 def test_check_resources_validity_right(setup_wg, setup_contractors, setup_default_schedules):
-    for schedule in setup_default_schedules.values():
-        _check_all_workers_correspond_to_worker_reqs(schedule)
-        _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, setup_contractors)
+    for scheduler, schedule in setup_default_schedules.items():
+        try:
+            _check_all_workers_correspond_to_worker_reqs(schedule)
+            _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, setup_contractors)
+        except AssertionError as e:
+            raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
 def test_check_resources_validity_wrong(setup_wg, setup_worker_pool,
@@ -98,5 +104,11 @@ def break_schedule(break_type: BreakType, schedule: Schedule, wg: WorkGraph,
         for swork in broken.values():
             for worker in swork.workers:
                 worker.count = agents[worker.name][worker.contractor_id].count + 1
+
+    # print(f'Original: {list(schedule.to_schedule_work_dict.values())}')
+    # print(f'Broken  : {list(broken.values())}')
+
+    # this is here because without it validation tests may fail if you are running all tests
+    # print()
 
     return Schedule.from_scheduled_works(broken.values(), wg)

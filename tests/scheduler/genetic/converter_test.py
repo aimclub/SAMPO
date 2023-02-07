@@ -3,7 +3,7 @@ from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.utilities.validation import validate_schedule
 
 
-def test_convert_schedule_to_chromosome(setup_toolbox, setup_wg, setup_contractors, setup_start_date):
+def test_convert_schedule_to_chromosome(setup_toolbox, setup_wg, setup_contractors):
     tb, _ = setup_toolbox
 
     schedule = \
@@ -13,7 +13,7 @@ def test_convert_schedule_to_chromosome(setup_toolbox, setup_wg, setup_contracto
     assert tb.validate(chromosome)
 
 
-def test_convert_chromosome_to_schedule(setup_toolbox, setup_contractors, setup_wg, setup_start_date):
+def test_convert_chromosome_to_schedule(setup_toolbox, setup_contractors, setup_wg):
     tb, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()

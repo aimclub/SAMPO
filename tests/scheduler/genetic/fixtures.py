@@ -133,7 +133,7 @@ def create_toolbox(wg: WorkGraph,
 
 @fixture(scope='function')
 def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
-                  setup_start_date, setup_default_schedules) -> Tuple[Toolbox, np.ndarray]:
+                  setup_default_schedules) -> Tuple[Toolbox, np.ndarray]:
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
     work_estimator: Optional[WorkTimeEstimator] = None

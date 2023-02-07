@@ -106,7 +106,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
 
     moment_pool: Dict[str, Dict[str, int]] = {}
     moment = Time(0)
-    for event_type, time, work in ordered_start_end_events:
+    for index, (event_type, time, work) in enumerate(ordered_start_end_events):
         if len(work.workers) == 0:
             continue
         cont = work.workers[0].contractor_id
@@ -121,7 +121,9 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
                     available = cur_worker_pool[contractor_id][worker_name]
                     # check
                     assert available + worker_count >= 0, \
-                        f"Overuse of workers (event type {event_type} at [{time}]) for contractor '{contractor_id}' " \
+                        f"Overuse of workers (event type {event_type} " \
+                        f"at [index={index} of {len(ordered_start_end_events)}, time={time}]) " \
+                        f"for contractor '{contractor_id}' " \
                         f"and worker type '{worker_name}': available {available}," \
                         f" while being allocated {-worker_count}"
                     assert available + worker_count <= initial_worker_pool[contractor_id][worker_name], \

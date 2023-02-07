@@ -7,14 +7,13 @@ from pytest import fixture
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
+from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
-from sampo.schemas.contractor import WorkerContractorPool, Contractor, DefaultContractorCapacity
+from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.structurator.base import graph_restructuring
-from sampo.utilities.generation.work_graph import generate_resources_pool
 from sampo.utilities.sampler import Sampler
 
 pytest_plugins = ("tests.schema", "tests.models",)
@@ -25,7 +24,7 @@ def setup_sampler(request):
     return Sampler(1e-1)
 
 
-@fixture(scope='function')
+@fixture(scope='module')
 def setup_wg(request, setup_sampler):
     sr = setup_sampler
     s = get_start_stage()
@@ -50,7 +49,7 @@ def setup_wg(request, setup_sampler):
     return wg_r
 
 
-@fixture(scope='function')
+@fixture(scope='module')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
@@ -59,7 +58,7 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     return worker_pool
 
 
-@fixture(scope='function',
+@fixture(scope='module',
          params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
@@ -92,7 +91,7 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
     return contractors
 
 
-@fixture(scope='function')
+@fixture(scope='module')
 def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
@@ -107,17 +106,15 @@ def setup_default_schedules(setup_wg, setup_contractors):
     }
 
 
+# TODO Remove
 @fixture(scope='module')
-def setup_scheduling_inner_params(request, setup_wg, setup_start_date):
-    work_graph = setup_wg
-    contractor_list = generate_resources_pool(DefaultContractorCapacity)
-
-    return work_graph, contractor_list, setup_start_date
+def setup_scheduling_inner_params(request, setup_wg, setup_contractors):
+    return setup_wg, setup_contractors
 
 
-@fixture(scope='function')
+@fixture(scope='module')
 def setup_schedule(request, setup_scheduling_inner_params):
-    work_graph, contractors, start = setup_scheduling_inner_params
+    work_graph, contractors = setup_scheduling_inner_params
     scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological
     return generate_schedule(scheduling_algorithm_type=scheduler_type,
                              work_time_estimator=None,

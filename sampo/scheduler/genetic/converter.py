@@ -73,7 +73,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(worker_pool)
+        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
 

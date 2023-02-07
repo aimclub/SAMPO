@@ -1,10 +1,10 @@
 from collections import deque
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union, Iterable
 
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor
+from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
@@ -17,9 +17,10 @@ from sampo.utilities.collections import build_index
 
 class MomentumTimeline(Timeline):
 
-    def __init__(self, tasks: List[GraphNode], contractors: List[Contractor]):
+    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
         """
         This should create empty Timeline from given list of tasks and contractor list
+
         :param tasks:
         :param contractors:
         :return:
@@ -61,23 +62,6 @@ class MomentumTimeline(Timeline):
             for c in contractors
         }
 
-    def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
-                            node2swork: Dict[GraphNode, ScheduledWork],
-                            parent_time: Time = Time(0),
-                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
-        """
-        Computes start time, max parent time, contractor and exec times for given node
-
-        :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
-        :param node:
-        :param node2swork:
-        :param parent_time:
-        :param work_estimator:
-        :return:
-        """
-        return self.find_min_start_time_with_additional(node, worker_team, node2swork, None,
-                                                        parent_time, work_estimator)[0]
-
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
                                             worker_team: List[Worker],
@@ -95,7 +79,7 @@ class MomentumTimeline(Timeline):
         :param assigned_start_time:
         :param assigned_parent_time:
         :param work_estimator:
-        :return:
+        :return: start time, end time, exec_times
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
         contractor_id = worker_team[0].contractor_id if worker_team else ""
@@ -138,7 +122,7 @@ class MomentumTimeline(Timeline):
 
         assert st >= assigned_parent_time
 
-        return st, max_parent_time, exec_times
+        return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
                              resource_timeline: Dict[str, SortedList[ScheduleEvent]],

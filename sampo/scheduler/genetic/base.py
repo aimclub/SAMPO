@@ -6,9 +6,8 @@ from deap.base import Toolbox
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
-from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
-from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool

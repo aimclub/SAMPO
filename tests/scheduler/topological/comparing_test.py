@@ -7,7 +7,7 @@ from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
-def test_comparing_to_heft(setup_wg, setup_contractors, setup_start_date):
+def test_comparing_to_heft(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):

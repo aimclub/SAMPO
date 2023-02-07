@@ -2,6 +2,8 @@ from operator import attrgetter
 from typing import Dict
 from uuid import uuid4
 
+from _pytest.fixtures import fixture
+
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import ContractorName
@@ -13,25 +15,28 @@ from sampo.schemas.types import WorkerName
 from sampo.utilities.collections import build_index
 
 
-def test_init_resource_structure(setup_worker_pool):
-    timeline = JustInTimeTimeline(setup_worker_pool)
-    assert len(timeline._timeline) != 0
-    for timeline in timeline._timeline.values():
-        assert len(timeline) == 1
-        assert timeline[0][0] == 0
+@fixture(scope='function')
+def setup_jit_timeline(setup_wg, setup_contractors, setup_worker_pool):
+    return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool)
 
 
-def test_update_resource_structure(setup_worker_pool):
-    timeline = JustInTimeTimeline(setup_worker_pool)
+def test_init_resource_structure(setup_jit_timeline):
+    assert len(setup_jit_timeline._timeline) != 0
+    for setup_jit_timeline in setup_jit_timeline._timeline.values():
+        assert len(setup_jit_timeline) == 1
+        assert setup_jit_timeline[0][0] == 0
+
+
+def test_update_resource_structure(setup_jit_timeline, setup_worker_pool):
     mut_name: WorkerName = list(setup_worker_pool.keys())[0]
     mut_contractor: ContractorName = list(setup_worker_pool[mut_name].keys())[0]
-    mut_count = timeline[(mut_contractor, mut_name)][0][1]
+    mut_count = setup_jit_timeline[(mut_contractor, mut_name)][0][1]
 
     # mutate
     worker = Worker(str(uuid4()), mut_name, 1, contractor_id=mut_contractor)
-    timeline.update_timeline(0, Time(1), None, {}, [worker])
+    setup_jit_timeline.update_timeline(0, Time(1), None, {}, [worker])
 
-    worker_timeline = timeline[worker.get_agent_id()]
+    worker_timeline = setup_jit_timeline[worker.get_agent_id()]
 
     if mut_count == 1:
         assert len(worker_timeline) == 1
@@ -42,8 +47,7 @@ def test_update_resource_structure(setup_worker_pool):
         assert worker_timeline[1] == (Time(0), mut_count - 1)
 
 
-def test_schedule(setup_wg, setup_worker_pool, setup_contractors):
-    timeline = JustInTimeTimeline(setup_worker_pool)
+def test_schedule(setup_wg, setup_worker_pool, setup_contractors, setup_jit_timeline):
     ordered_nodes = prioritization(setup_wg)
     node = ordered_nodes[-1]
 
@@ -54,7 +58,7 @@ def test_schedule(setup_wg, setup_worker_pool, setup_contractors):
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
+    setup_jit_timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
 
     assert len(node2swork) == 1
     for swork in node2swork.values():

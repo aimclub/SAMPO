@@ -1,6 +1,6 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Iterable
 
-from sampo.scheduler.heft.time_computaion import calculate_working_time
+from sampo.scheduler.heft.time_computaion import calculate_working_time, calculate_working_time_cascade
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
@@ -13,17 +13,19 @@ from sampo.schemas.types import AgentId
 
 class JustInTimeTimeline(Timeline):
 
-    def __init__(self, worker_pool: WorkerContractorPool):
+    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
         self._timeline = {}
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
-    def find_min_start_time(self, node: GraphNode, worker_team: List[Worker],
-                            id2swork: Dict[GraphNode, ScheduledWork],
-                            assigned_parent_time: Time = Time(0),
-                            work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+    def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
+                                            node2swork: Dict[GraphNode, ScheduledWork],
+                                            assigned_start_time: Optional[Time] = None,
+                                            assigned_parent_time: Time = Time(0),
+                                            work_estimator: Optional[WorkTimeEstimator] = None) \
+            -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
         """
         Define the nearest possible start time for current job. It is equal the max value from:
         1. end time of all parent tasks
@@ -31,15 +33,15 @@ class JustInTimeTimeline(Timeline):
 
         :param node: target node
         :param worker_team: worker team under testing
-        :param id2swork:
+        :param node2swork:
         :param work_estimator:
-        :return: found time, queue of employees without assigned workers
+        :return: start time, end time, None(exec_times not needed in this timeline)
         """
         # if current job is the first
-        if len(id2swork) == 0:
-            return assigned_parent_time
+        if len(node2swork) == 0:
+            return assigned_parent_time, assigned_parent_time, None
         # define the max end time of all parent tasks
-        max_parent_time = max(max([id2swork[parent_node].finish_time
+        max_parent_time = max(max([node2swork[parent_node].finish_time
                                    for parent_node in node.parents], default=Time(0)), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
@@ -59,7 +61,10 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= offer_count
                 ind -= 1
 
-        return max(max_agent_time, max_parent_time)
+        c_st = max(max_agent_time, max_parent_time)
+
+        c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
+        return c_st, c_ft, None
 
     def update_timeline(self,
                         task_index: int,

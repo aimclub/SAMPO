@@ -77,11 +77,16 @@ def run_iteration(args):
         if mode == 0:
             schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler()]
         else:
-            schedulers = [GeneticScheduler(5, 50, 0.5, 0.5, 50),
-                          GeneticScheduler(5, 100, 0.5, 0.5, 50),
-                          GeneticScheduler(5, 100, 0.5, 0.75, 50),
-                          GeneticScheduler(5, 100, 0.75, 0.75, 50),
-                          GeneticScheduler(5, 50, 0.9, 0.9, 50)]
+            schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),
+                          GeneticScheduler(50, 100, 0.25, 0.5, 100),
+                          GeneticScheduler(50, 100, 0.5, 0.75, 100),
+                          GeneticScheduler(50, 100, 0.75, 0.75, 100),
+                          GeneticScheduler(50, 50, 0.9, 0.9, 100),
+                          GeneticScheduler(50, 100, 0.5, 0.5, 500),
+                          GeneticScheduler(50, 200, 0.25, 0.5, 500),
+                          GeneticScheduler(50, 50, 0.5, 0.75, 500),
+                          GeneticScheduler(50, 100, 0.75, 0.75, 500),
+                          GeneticScheduler(50, 50, 0.5, 0.9, 500)]
         variate_block_size(logfile, schedulers)
 
 

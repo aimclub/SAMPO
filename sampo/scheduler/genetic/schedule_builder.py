@@ -147,8 +147,8 @@ def build_schedule(wg: WorkGraph,
     pop = toolbox.population(n=population_size)
 
     # probability to participate in mutation and crossover for each individual
-    cxpb, mutpb = 0.5, 0.5
-    mutpb_res, cxpb_res = 0.3, 0.3
+    cxpb, mutpb = mutate_order, mutate_order
+    mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()

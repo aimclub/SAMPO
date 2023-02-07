@@ -49,7 +49,7 @@ def setup_wg(request, setup_sampler):
     return wg_r
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
@@ -58,7 +58,7 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     return worker_pool
 
 
-@fixture(scope='module',
+@fixture(scope='function',
          params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
@@ -91,7 +91,7 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
     return contractors
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
@@ -107,12 +107,12 @@ def setup_default_schedules(setup_wg, setup_contractors):
 
 
 # TODO Remove
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_scheduling_inner_params(request, setup_wg, setup_contractors):
     return setup_wg, setup_contractors
 
 
-@fixture(scope='module')
+@fixture(scope='function')
 def setup_schedule(request, setup_scheduling_inner_params):
     work_graph, contractors = setup_scheduling_inner_params
     scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological

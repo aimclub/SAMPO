@@ -24,7 +24,7 @@ def test_comparing_to_heft(setup_wg, setup_contractors):
     print(f'Topological time: {topological_time * 1000} ms')
 
     winner = 'HEFT' if heft_time < topological_time else 'Topological'
-    ratio = max(heft_time, topological_time) / min(heft_time, topological_time)
+    ratio = max(heft_time, topological_time) / max(min(heft_time, topological_time), 0.01)
 
     print(f'{winner} wins with coefficient {ratio}!')
 

@@ -48,7 +48,7 @@ class Scheduler(ABC):
                  timeline: Timeline | None = None) \
             -> Schedule:
         schedule = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
-        print(f'Schedule exec time: {schedule.execution_time} days')
+        # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedule
 
     @abstractmethod

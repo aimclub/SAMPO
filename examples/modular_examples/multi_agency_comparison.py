@@ -92,6 +92,6 @@ def run_iteration(args):
 
 if __name__ == '__main__':
     pool = ProcessingPool()
-    args = [[i, mode] for mode in [0, 1] for i in range(1)]
+    args = [[i, mode] for mode in [0, 1] for i in range(10)]
 
     pool.map(run_iteration, args)

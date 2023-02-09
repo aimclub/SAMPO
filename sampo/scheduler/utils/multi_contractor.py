@@ -3,6 +3,7 @@ from typing import List, Callable
 import numpy as np
 
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
@@ -72,6 +73,6 @@ def run_contractor_search(contractors: List[Contractor],
             best_contractor_size = contractor_size
 
     if best_contractor is None:
-        raise Exception(f'There is no contractor that can satisfy given search')
+        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search')
 
     return best_start_time, best_finish_time, best_contractor, best_worker_team

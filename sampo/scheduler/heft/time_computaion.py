@@ -13,6 +13,7 @@ def calculate_working_time_cascade(node: GraphNode, appointed_worker: List[Worke
     """
     Calculate working time of the appointed workers at current job for prioritization
     O(1) - at worst case |inseparable_edges|
+
     :param node: the target node
     :param work_estimator:
     :param appointed_worker:
@@ -35,6 +36,7 @@ def calculate_working_time(work_unit: WorkUnit, appointed_worker: List[Worker],
                            work_estimator: WorkTimeEstimator = None) -> Time:
     """
     Calculate working time of the appointed workers at current job for final schedule
+
     :param work_estimator:
     :param appointed_worker:
     :param work_unit:
@@ -53,6 +55,7 @@ def work_priority(node: GraphNode,
     Calculate the average time to complete the work when assigning the minimum and maximum number of employees
     for the correctly calculations of rank in prioritization
     O(sum_of_max_counts_of_workers) of current work
+
     :param node: the target node
     :param work_estimator:
     :param comp_cost: function for calculating working time (calculate_working_time)

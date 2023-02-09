@@ -38,7 +38,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(scope='module',
+@fixture(scope='session',
          params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
                                     'small plain synthetic', 'big plain synthetic',
@@ -105,7 +105,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture(scope='function')
+@fixture(scope='session')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
@@ -115,7 +115,7 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(scope='function',
+@fixture(scope='session',
          params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
@@ -139,28 +139,26 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
                                       name="OOO Berezka",
-                                      workers={name:
-                                                   Worker(str(uuid4()), name, count, contractor_id=contractor_id)
+                                      workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
-    print(f'Using {num_contractors} contractors:')
-    print(contractors)
     return contractors
 
 
-@fixture(scope='function')
+@fixture(scope='session')
 def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
-
-    print(f'Received {len(setup_contractors)} contractors: {setup_contractors}')
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors)
 
-    return {
-        "heft_end": init_schedule(HEFTScheduler),
-        "heft_between": init_schedule(HEFTBetweenScheduler)
-    }
+    try:
+        return {
+            "heft_end": init_schedule(HEFTScheduler),
+            "heft_between": init_schedule(HEFTBetweenScheduler)
+        }
+    except NoSufficientContractorError:
+        pytest.skip('Given contractor configuration can\'t support given work graph')
 
 
 @fixture(scope='session',
@@ -170,7 +168,7 @@ def setup_scheduler_type(request):
     return request.param
 
 
-@fixture(scope='function')
+@fixture(scope='session')
 def setup_schedule(request, setup_wg, setup_contractors):
     scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological
     try:

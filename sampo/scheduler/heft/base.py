@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Iterable
+from typing import List, Optional, Dict, Iterable, Type
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.heft.prioritization import prioritization
@@ -7,6 +7,7 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
+from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -25,8 +26,10 @@ class HEFTScheduler(Scheduler):
     def __init__(self,
                  scheduler_type: SchedulerType = SchedulerType.HEFTAddEnd,
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
+                 timeline_type: Type = JustInTimeTimeline,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
+        self._timeline_type = timeline_type
 
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
@@ -74,14 +77,14 @@ class HEFTScheduler(Scheduler):
         # dict for writing parameters of completed_jobs
         node2swork: Dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
-        if not isinstance(timeline, JustInTimeTimeline):
-            timeline = JustInTimeTimeline(worker_pool)
+        if not isinstance(timeline, self._timeline_type):
+            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool)
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
-            if node in node2swork:  # here
-                continue
+            # if node in node2swork:  # here
+            #     continue
 
             def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
                 min_count_worker_team, max_count_worker_team, workers \
@@ -93,7 +96,8 @@ class HEFTScheduler(Scheduler):
                 workers = [worker.copy() for worker in workers]
 
                 def get_finish_time(worker_team):
-                    return timeline.find_min_start_time(node, worker_team, node2swork) \
+                    return timeline.find_min_start_time(node, worker_team, node2swork,
+                                                        assigned_parent_time, work_estimator) \
                            + calculate_working_time_cascade(node, worker_team, work_estimator)
 
                 # apply worker team spec
@@ -104,8 +108,10 @@ class HEFTScheduler(Scheduler):
                                                        min_count_worker_team, max_count_worker_team,
                                                        get_finish_time))
 
-                c_st = timeline.find_min_start_time(node, workers, node2swork)
-                c_ft = c_st + calculate_working_time_cascade(node, workers, work_estimator)
+                # c_st = timeline.find_min_start_time(node, workers, node2swork, assigned_parent_time, work_estimator)
+                # c_ft = c_st + calculate_working_time_cascade(node, workers, work_estimator)
+                c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, None,
+                                                                             assigned_parent_time, work_estimator)
 
                 return c_st, c_ft, workers
 
@@ -118,8 +124,6 @@ class HEFTScheduler(Scheduler):
             # apply work to scheduling
             timeline.schedule(index, node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)
-            # add using resources in queue for workers
-            timeline.update_timeline(index, ft, node, node2swork, best_worker_team)
 
         # parallelize_local_sequence(ordered_nodes, 0, len(ordered_nodes), work_id2schedule_unit)
         # recalc_schedule(reversed(ordered_nodes), work_id2schedule_unit, worker_pool, work_estimator)
@@ -128,3 +132,12 @@ class HEFTScheduler(Scheduler):
                                    len(swork.work_unit.worker_reqs) != 0])
 
         return node2swork.values(), schedule_start_time, timeline
+
+
+class HEFTBetweenScheduler(HEFTScheduler):
+
+    def __init__(self,
+                 scheduler_type: SchedulerType = SchedulerType.HEFTAddBetween,
+                 resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
+                 work_estimator: Optional[WorkTimeEstimator or None] = None):
+        super().__init__(scheduler_type, resource_optimizer, MomentumTimeline, work_estimator)

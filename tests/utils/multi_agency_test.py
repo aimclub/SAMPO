@@ -4,8 +4,8 @@ from typing import Iterable
 from sampo.generator import SimpleSynthetic
 from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.multi_agency.block_generator import generate_blocks, SyntheticBlockGraphType, generate_queues
 from sampo.scheduler.multi_agency.block_validation import validate_block_schedule
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock

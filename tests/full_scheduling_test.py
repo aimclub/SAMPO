@@ -2,7 +2,6 @@ from sampo.generator import SimpleSynthetic
 from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
-from sampo.schemas.time import Time
 from sampo.structurator import graph_restructuring
 
 
@@ -17,4 +16,4 @@ def test_schedule_synthetic(setup_contractors):
         except AssertionError as e:
             raise AssertionError(f'Scheduler {scheduler_type} failed validation', e)
 
-        assert schedule.execution_time != Time.inf(), f'Scheduling failed on {scheduler_type.name}'
+        assert not schedule.execution_time.is_inf(), f'Scheduling failed on {scheduler_type.name}'

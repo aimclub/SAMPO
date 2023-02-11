@@ -47,7 +47,9 @@ class Scheduler(ABC):
                  start_time: Time = Time(0),
                  timeline: Timeline | None = None) \
             -> Schedule:
-        return self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
+        schedule = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
+        # print(f'Schedule exec time: {schedule.execution_time} days')
+        return schedule
 
     @abstractmethod
     def schedule_with_cache(self, wg: WorkGraph,

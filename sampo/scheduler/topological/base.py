@@ -85,11 +85,11 @@ class TopologicalScheduler(Scheduler):
         # data structure to hold scheduled tasks
         node2swork: Dict[GraphNode, ScheduledWork] = dict()
 
-        if not isinstance(timeline, MomentumTimeline):
-            timeline = MomentumTimeline(tasks, contractors)
-
         # we can get agents here, because they are always same and not updated
         worker_pool = get_worker_contractor_pool(contractors)
+
+        if not isinstance(timeline, MomentumTimeline):
+            timeline = MomentumTimeline(tasks, contractors, worker_pool)
 
         # We allocate resources for the whole inseparable chain, when we process the first node in it.
         # So, we will store IDs of non-head nodes in such chains to skip them.
@@ -156,7 +156,7 @@ class TopologicalScheduler(Scheduler):
 class RandomizedTopologicalScheduler(TopologicalScheduler):
     def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
-        super().__init__(work_estimator)
+        super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
     def _topological_sort(self, wg: WorkGraph) -> List[GraphNode]:

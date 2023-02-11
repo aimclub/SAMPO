@@ -90,6 +90,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
                  use_ffs_separately: bool = False):
     """
     Restores edges in the transformed graph
+
     :param origin_work_graph: WorkGraph - The original unconverted graph
     :param id2new_nodes: GraphNodeDict -dictionary with transformed vertices,
         if some vertices from the original graph are missing,
@@ -153,6 +154,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
 def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool] = False) -> WorkGraph:
     """
     Rebuilds all edges into finish-start edges with the corresponding rebuilding of the nodes
+
     :param wg: WorkGraph - The graph to be converted
     :param use_lag_edge_optimization: bool - if true - do optimization fake-finish-start edges,
         otherwise considers such edges to be similar to finish-start

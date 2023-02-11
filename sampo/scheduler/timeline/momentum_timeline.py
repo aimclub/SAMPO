@@ -51,7 +51,7 @@ class MomentumTimeline(Timeline):
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
         # and remember how many workers of a certain type is available at this particular moment
-        self._timeline = {
+        self._timeline: Dict[str, Dict[str, SortedList[ScheduleEvent]]] = {
             c.id: {
                 w_name: SortedList(
                     iterable=(ScheduleEvent(-1, EventType.Initial, Time(0), None, ws.count),),
@@ -107,7 +107,7 @@ class MomentumTimeline(Timeline):
 
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(passed_agents_new, work_estimator)
-            lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
+            lag_req = nodes_max_parent_times[chain_node] - max_parent_time  # - exec_time
             lag = lag_req if lag_req > 0 else 0
 
             exec_times[chain_node] = lag, node_exec_time
@@ -273,17 +273,17 @@ class MomentumTimeline(Timeline):
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
-                # assert event.available_workers_count >= w.count
+                assert event.available_workers_count >= w.count
                 event.available_workers_count -= w.count
 
             # assert available_workers_count >= w.count
 
             if start_idx < end_idx:
                 event: ScheduleEvent = state[end_idx - 1]
-                # assert state[0].available_workers_count >= event.available_workers_count + w.count
+                assert state[0].available_workers_count >= event.available_workers_count + w.count
                 end_count = event.available_workers_count + w.count
             else:
-                # assert state[0].available_workers_count >= available_workers_count
+                assert state[0].available_workers_count >= available_workers_count
                 end_count = available_workers_count
 
             state.add(ScheduleEvent(task_index, EventType.Start, start, swork, available_workers_count - w.count))
@@ -332,7 +332,9 @@ class MomentumTimeline(Timeline):
         for i, chain_node in enumerate(inseparable_chain):
             _, node_time = exec_times[chain_node]
 
-            lag_req = nodes_start_times[chain_node] - start_time - node_time
+            # TODO What?)
+            # lag_req = nodes_start_times[chain_node] - start_time - node_time
+            lag_req = nodes_start_times[chain_node] - curr_time
             node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag

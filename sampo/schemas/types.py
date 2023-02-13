@@ -13,18 +13,20 @@ AgentId = Tuple[ContractorName, WorkerName]
 # TODO: describe the class (description)
 class EventType(Enum):
     Initial = -1
-    End = 0
-    Start = 1
+    Start = 0
+    End = 1
 
     @property
     def priority(self) -> int:
         """
         Returns the processing order for scheduling events
+
         :return value: The desired priority
         """
         # noinspection PyTypeChecker
         value = int(self.value)
         return value
+
 
 # TODO: describe the class (description, parameters)
 @dataclass

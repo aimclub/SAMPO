@@ -44,11 +44,10 @@ def setup_core_resources(request):
 
 
 @pytest.fixture(scope='function')
-def setup_inherited_resources(request, setup_scheduling_inner_params, setup_schedule):
+def setup_inherited_resources(request, setup_wg, setup_schedule):
     schedule, _ = setup_schedule
-    work_graph, contractor_list = setup_scheduling_inner_params
     return {
-        'work_graph': work_graph,
+        'work_graph': setup_wg,
         'schedule': schedule
     }
 

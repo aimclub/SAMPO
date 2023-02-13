@@ -47,6 +47,10 @@ class Scheduler(ABC):
                  start_time: Time = Time(0),
                  timeline: Timeline | None = None) \
             -> Schedule:
+        if wg is None or len(wg.nodes) == 0:
+            raise ValueError('None or empty WorkGraph')
+        if contractors is None or len(contractors) == 0:
+            raise ValueError('None or empty contractor list')
         schedule = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
         # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedule

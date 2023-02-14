@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from functools import partial
 from typing import List, Dict, Iterable
 
-import dill
 import numpy as np
 from deap import creator, base, tools
 from deap.base import Toolbox
@@ -166,26 +165,34 @@ def prepare_toolbox(work_estimator: WorkTimeEstimator,  # serialized with dill
 def init_worker(fitness_constructor, s_work_estimator, genetic_args: tuple):  # serialized):
     # tb, fitness_constructor = dill.loads(serialized)
     # declare scope of a new global variable
-    global toolbox
-    global fitness_f
+    global global_toolbox
+    global global_fitness_f
 
-    # deserialize with dill
-    work_estimator = dill.loads(s_work_estimator)
+    # reconstruct work_estimator
+    work_estimator_constructor, work_estimator_params = s_work_estimator
+    if work_estimator_constructor is not None:
+        work_estimator = work_estimator_constructor(*work_estimator_params)
+    else:
+        work_estimator = None
 
     # store argument in the global variable for this process
-    toolbox = prepare_toolbox(work_estimator, *genetic_args)
+    global_toolbox = prepare_toolbox(work_estimator, *genetic_args)
     # construct fitness
-    fitness_f = fitness_constructor(toolbox)
+    global_fitness_f = fitness_constructor(global_toolbox)
 
     logger.info('I\'m here!')
 
 
 def evaluate(ind) -> Time:
-    return toolbox.evaluate(ind)
+    return global_toolbox.evaluate(ind)
 
 
 def evaluation(chromosome):
-    return (fitness_f.evaluate(chromosome[0]) if toolbox.validate(chromosome[0]) else Time.inf()).value
+    if global_toolbox.validate(chromosome[0]):
+        v = global_fitness_f.evaluate(chromosome[0])
+    else:
+        v = Time.inf()
+    return v.value
 
 
 def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: WorkerContractorPool,
@@ -305,6 +312,7 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, l
         used.add(work_index)
         for parent in parents[work_index]:
             if parent not in used:
+                logger.error(f'Order validation failed: {work_order}')
                 return False
     return True
 
@@ -325,6 +333,7 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
         contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
             if contractor_border[ind] < count:
+                logger.error(f'Contractor border validation failed: {contractor_border[ind]} < {count}')
                 return False
     return True
 

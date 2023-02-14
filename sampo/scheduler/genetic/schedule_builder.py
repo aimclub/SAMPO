@@ -4,7 +4,6 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, List, Tuple, Callable
 
-import dill
 import numpy as np
 import seaborn as sns
 from deap import tools
@@ -15,9 +14,10 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, init_worker, evaluate
+    FitnessFunction, TimeFitness, init_worker, evaluate, is_chromosome_correct
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -145,13 +145,19 @@ def build_schedule(wg: WorkGraph,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
                            assigned_parent_time, work_estimator)
 
+    for name, chromosome in init_chromosomes.items():
+        # print(toolbox.validate(chromosome), flush=True)
+        if not is_chromosome_correct(chromosome, node_indices, parents):
+            raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+
     def prepare_distributed_genetic_args():
         # for more information please refer operators.py#prepare_toolbox
         hyperparams = mutate_order, mutate_resources, selection_size, spec, rand, assigned_parent_time
         return wg, contractors, init_chromosomes, hyperparams
 
     with ProcessPoolExecutor(max_workers=n_cpu, initializer=init_worker,
-                             initargs=(fitness, dill.dumps(work_estimator),
+                             initargs=(fitness, (None, None) if work_estimator is None
+                                                             else work_estimator.split_to_constructor_and_params(),
                                        prepare_distributed_genetic_args(),)) as pool:
         # save best individuals
         hof = tools.HallOfFame(1, similar=compare_individuals)
@@ -188,7 +194,7 @@ def build_schedule(wg: WorkGraph,
 
         invalidation_border = 3
         plateau_steps = 0
-        max_plateau_steps = 3
+        max_plateau_steps = 8
 
         while g < generation_number and plateau_steps < max_plateau_steps:
             print(f"-- Generation {g}, population={len(pop)}, best time={best_fitness} --")

@@ -169,13 +169,12 @@ def setup_scheduler_type(request):
 
 
 @fixture(scope='session')
-def setup_schedule(request, setup_wg, setup_contractors):
-    scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological
+def setup_schedule(setup_scheduler_type, setup_wg, setup_contractors):
     try:
-        return generate_schedule(scheduling_algorithm_type=scheduler_type,
+        return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
                                  work_time_estimator=None,
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
-                                 validate_schedule=False), scheduler_type
+                                 validate_schedule=False), setup_scheduler_type
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

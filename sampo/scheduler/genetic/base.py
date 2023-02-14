@@ -29,6 +29,7 @@ class GeneticScheduler(Scheduler):
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
+                 n_cpu: int = 1,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
@@ -43,6 +44,7 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self._n_cpu = n_cpu
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -84,6 +86,9 @@ class GeneticScheduler(Scheduler):
                 size_of_population = works_count // 50
         return size_selection, mutate_order, mutate_resources, size_of_population
 
+    def set_use_multiprocessing(self, n_cpu: int):
+        self._n_cpu = n_cpu
+
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
@@ -92,8 +97,10 @@ class GeneticScheduler(Scheduler):
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline]:
         def init_schedule(scheduler_class):
-            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors, validate=True),
                     list(reversed(prioritization(wg, self.work_estimator))))
+
+        # raise NoSufficientContractorError('There is no contractor that can satisfy given requirements')
 
         init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
             "heft_end": init_schedule(HEFTScheduler),
@@ -116,6 +123,7 @@ class GeneticScheduler(Scheduler):
                                                                         spec,
                                                                         self.fitness_constructor,
                                                                         self.work_estimator,
+                                                                        n_cpu=self._n_cpu,
                                                                         assigned_parent_time=assigned_parent_time,
                                                                         timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)

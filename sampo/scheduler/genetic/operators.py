@@ -1,8 +1,11 @@
+import logging
+import multiprocessing as mp
 import random
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import List, Dict, Iterable, Callable
+from typing import List, Dict, Iterable
 
+import dill
 import numpy as np
 from deap import creator, base, tools
 from deap.base import Toolbox
@@ -10,13 +13,16 @@ from deap.base import Toolbox
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.utilities.collections import reverse_dictionary
+
+logger = mp.log_to_stderr(logging.DEBUG)
 
 
 class FitnessFunction(ABC):
@@ -80,6 +86,108 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
 
+# handle raised errors
+def handle_error(error):
+    logger.error(error)
+
+
+def prepare_toolbox(work_estimator: WorkTimeEstimator,  # serialized with dill
+                    wg: WorkGraph, contractors: List[Contractor],
+                    init_chromosomes: Dict[str, ChromosomeType], genetic_args: tuple):
+    # # linking objects, especially with high-cohesion objects like GraphNode
+    # # replace order_ids parameter in init_schedules by order_nodes
+    # for _, order_ids in init_schedules.values():
+    #     for i in range(len(order_ids)):
+    #         order_ids[i] = wg[order_ids[i]]
+
+    mutate_order, mutate_resources, selection_size, spec, rand, assigned_parent_time = genetic_args
+
+    # preparing access-optimized data structures
+    worker_pool = get_worker_contractor_pool(contractors)
+    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+
+    index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
+    work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
+    index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
+    index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
+    contractor2index = reverse_dictionary(index2contractor)
+    index2node_list = [(index, node) for index, node in enumerate(nodes)]
+    worker_pool_indices = {worker_name2index[worker_name]: {
+        contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
+    } for worker_name, workers_of_type in worker_pool.items()}
+    node_indices = list(range(len(nodes)))
+
+    contractors_capacity = np.zeros((len(contractors), len(worker_pool)))
+    for w_ind, cont2worker in worker_pool_indices.items():
+        for c_ind, worker in cont2worker.items():
+            contractors_capacity[c_ind][w_ind] = worker.count
+
+    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
+    resources_min_border = np.zeros((len(worker_pool)))
+    for work_index, node in index2node.items():
+        for req in node.work_unit.worker_reqs:
+            worker_index = worker_name2index[req.kind]
+            resources_border[0, worker_index, work_index] = req.min_count
+            resources_border[1, worker_index, work_index] = req.max_count
+            resources_min_border[worker_index] = max(resources_min_border[worker_index], req.min_count)
+
+    contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
+    for ind, contractor in enumerate(contractors):
+        for ind_worker, worker in enumerate(contractor.workers.values()):
+            contractor_borders[ind, ind_worker] = worker.count
+
+    # construct inseparable_child -> inseparable_parent mapping
+    inseparable_parents = {}
+    for node in nodes:
+        for child in node.get_inseparable_chain_with_self():
+            inseparable_parents[child] = node
+
+    # here we aggregate information about relationships from the whole inseparable chain
+    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
+                                         for inseparable in node.get_inseparable_chain_with_self()
+                                         for child in inseparable.children]
+                for node in nodes}
+
+    parents = {work_id2index[node.id]: [] for node in nodes}
+    for node, node_children in children.items():
+        for child in node_children:
+            parents[child].append(node)
+
+    return init_toolbox(wg, contractors, worker_pool, index2node,
+                        work_id2index, worker_name2index, index2contractor,
+                        index2contractor_obj, init_chromosomes, mutate_order,
+                        mutate_resources, selection_size, rand, spec, worker_pool_indices,
+                        contractor2index, contractor_borders, node_indices, index2node_list, parents,
+                        assigned_parent_time, work_estimator)
+
+
+# initialize worker processes
+def init_worker(fitness_constructor, s_work_estimator, genetic_args: tuple):  # serialized):
+    # tb, fitness_constructor = dill.loads(serialized)
+    # declare scope of a new global variable
+    global toolbox
+    global fitness_f
+
+    # deserialize with dill
+    work_estimator = dill.loads(s_work_estimator)
+
+    # store argument in the global variable for this process
+    toolbox = prepare_toolbox(work_estimator, *genetic_args)
+    # construct fitness
+    fitness_f = fitness_constructor(toolbox)
+
+    logger.info('I\'m here!')
+
+
+def evaluate(ind) -> Time:
+    return toolbox.evaluate(ind)
+
+
+def evaluation(chromosome):
+    return (fitness_f.evaluate(chromosome[0]) if toolbox.validate(chromosome[0]) else Time.inf()).value
+
+
 def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: WorkerContractorPool,
                  index2node: Dict[int, GraphNode],
                  work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
@@ -95,7 +203,6 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
                  parents: Dict[int, list[int]],
-                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     toolbox = base.Toolbox()
@@ -109,11 +216,8 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("individual", tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
     # create population from individuals
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    # construct fitness
-    fitness = fitness_constructor(toolbox)
     # evaluation function
-    toolbox.register("evaluate",
-                     lambda chromosome: fitness.evaluate(chromosome[0]) if toolbox.validate(chromosome[0]) else Time.inf())
+    toolbox.register("evaluate", evaluation)
     # crossover for order
     toolbox.register("mate", mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -357,7 +461,7 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
 
     num_contractors = len(ind1[2])
     contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))
-    
+
     if rand.randint(0, 2) == 0:
         # trying to mate whole contractors
         border1 = ind1[2][contractors_to_mate]

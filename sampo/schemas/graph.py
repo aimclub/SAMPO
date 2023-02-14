@@ -49,6 +49,19 @@ class GraphNode(JSONSerializable['GraphNode']):
     def __repr__(self) -> str:
         return self.id
 
+    def __getstate__(self):
+        # custom method to avoid calling __hash__() on GraphNode objects
+        return self._work_unit._serialize(), \
+               [(e.start.id, e.lag, e.type.value) for e in self._parent_edges]
+
+    def __setstate__(self, state):
+        # custom method to avoid calling __hash__() on GraphNode objects
+        s_work_unit, s_parent_edges = state
+        self.__init__(WorkUnit._deserialize(s_work_unit),
+                      s_parent_edges)
+        # self._work_unit = representation['work_unit']
+        # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
+
     # TODO: describe the function (description, return type)
     def _serialize(self) -> T:
         return {
@@ -73,6 +86,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def add_parents(self, parent_works: List['GraphNode'] or List[Tuple['GraphNode', float, EdgeType]]) -> None:
         """
         Two-sided linking of children and parents
+
         :param parent_works:
         """
         edges: List[GraphEdge] = []
@@ -166,6 +180,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
         'INSEPARABLE',
         IF self NODE IS THE START NODE OF SUCH CHAIN. Otherwise, None.
+
         :return: List of GraphNode or None
         """
         return [self] + self._get_inseparable_children() \
@@ -176,6 +191,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
         'INSEPARABLE'.
+
         :return: List of `inseparable chain` with starting node
         """
         return self.get_inseparable_chain() if self.get_inseparable_chain() else [self]
@@ -185,6 +201,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Recursively gets a child, connected with INSEPARABLE_FINISH_START edge, its inseparable child, etc.
         As any node may contain an inseparable connection with only one of its children, there is no need to choose.
         If no children are connected inseparably, returns None.
+
         :return: List[GraphNode]. Empty, if there is no inseparable children
         """
         inseparable_child = self.inseparable_son
@@ -226,6 +243,20 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     def __getitem__(self, item: str) -> GraphNode:
         return self.dict_nodes[item]
+
+    def __getstate__(self):
+        # custom method to avoid calling __hash__() on GraphNode objects
+        representation = self._serialize()
+        representation['start'] = self.start.id
+        representation['finish'] = self.start.id
+        return representation
+
+    def __setstate__(self, state):
+        # custom method to avoid calling __hash__() on GraphNode objects
+        deserialized = self._deserialize(state)
+        object.__setattr__(self, 'start', deserialized.start)
+        object.__setattr__(self, 'finish', deserialized.finish)
+        self.__post_init__()
 
     # TODO: describe the function (description, return type)
     def _serialize(self) -> T:

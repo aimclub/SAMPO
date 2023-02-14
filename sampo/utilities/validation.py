@@ -14,6 +14,7 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contr
     Checks if schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
     If it finishes without any exception, it means successful passing of the verification
+
     :param contractors:
     :param wg:
     :param schedule: to apply verification to

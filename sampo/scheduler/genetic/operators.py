@@ -84,10 +84,14 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
+import sys
 
-# handle raised errors
-def handle_error(error):
-    logger.error(error)
+np.set_printoptions(threshold=sys.maxsize)
+
+
+# # handle raised errors
+# def handle_error(error):
+#     logger.error(error)
 
 
 def prepare_toolbox(work_estimator: WorkTimeEstimator,  # serialized with dill
@@ -180,18 +184,28 @@ def init_worker(fitness_constructor, s_work_estimator, genetic_args: tuple):  # 
     # construct fitness
     global_fitness_f = fitness_constructor(global_toolbox)
 
+    with open(f'args_thread_{random.Random().randint(0, 100000)}', 'w') as f:
+        wg: WorkGraph = genetic_args[0]
+        nodes = wg.nodes[:]
+        sorted(nodes, key=lambda node: node.work_unit.id)
+        f.write(str(nodes))
+
     logger.info('I\'m here!')
 
 
 def evaluate(ind) -> Time:
-    return global_toolbox.evaluate(ind)
+    result = global_toolbox.evaluate(ind)
+    return result
 
 
 def evaluation(chromosome):
-    if global_toolbox.validate(chromosome[0]):
-        v = global_fitness_f.evaluate(chromosome[0])
+    if global_toolbox.validate(chromosome):
+        v = global_fitness_f.evaluate(chromosome)
     else:
+        logger.debug('----| Validation failed')
         v = Time.inf()
+    # v = global_fitness_f.evaluate(chromosome)
+    logger.debug(f'----| Result: {v.value}')
     return v.value
 
 

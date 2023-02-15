@@ -10,7 +10,7 @@ def test_genetic_run(setup_wg, setup_contractors):
     genetic.schedule(setup_wg, setup_contractors)
     single_core_time = time.time() - start_time
 
-    genetic.set_use_multiprocessing(n_cpu=6)
+    genetic.set_use_multiprocessing(n_cpu=4)
 
     start_time = time.time()
     genetic.schedule(setup_wg, setup_contractors)

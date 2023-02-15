@@ -1,5 +1,6 @@
 import math
 import random
+import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, List, Tuple, Callable
@@ -24,6 +25,8 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
+
+np.set_printoptions(threshold=sys.maxsize)
 
 
 def build_schedule(wg: WorkGraph,
@@ -146,7 +149,6 @@ def build_schedule(wg: WorkGraph,
                            assigned_parent_time, work_estimator)
 
     for name, chromosome in init_chromosomes.items():
-        # print(toolbox.validate(chromosome), flush=True)
         if not is_chromosome_correct(chromosome, node_indices, parents):
             raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
@@ -154,6 +156,12 @@ def build_schedule(wg: WorkGraph,
         # for more information please refer operators.py#prepare_toolbox
         hyperparams = mutate_order, mutate_resources, selection_size, spec, rand, assigned_parent_time
         return wg, contractors, init_chromosomes, hyperparams
+
+    with open(f'args_original', 'w') as f:
+        # f.write(str(prepare_distributed_genetic_args()))
+        nodes = wg.nodes[:]
+        sorted(nodes, key=lambda node: node.work_unit.id)
+        f.write(str(nodes))
 
     with ProcessPoolExecutor(max_workers=n_cpu, initializer=init_worker,
                              initargs=(fitness, (None, None) if work_estimator is None
@@ -168,11 +176,14 @@ def build_schedule(wg: WorkGraph,
         cxpb, mutpb = mutate_order, mutate_order
         mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
+        for init_ind in pop:
+            assert toolbox.validate(init_ind[0])
+
         print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
         start = time.time()
 
         # map to each individual fitness function
-        fitness = pool.map(evaluate, pop)
+        fitness = pool.map(evaluate, [ind[0] for ind in pop])
         # pool.close()
         # pool.join()
         for ind, fit in zip(pop, fitness):
@@ -299,7 +310,7 @@ def build_schedule(wg: WorkGraph,
             # for each individual - evaluation
             # print(pool.map(lambda x: x + 2, range(10)))
 
-            invalid_fit = pool.map(evaluate, invalid_ind)
+            invalid_fit = pool.map(evaluate, [ind[0] for ind in invalid_ind])
             for fit, ind in zip(invalid_fit, invalid_ind):
                 ind.fitness.values = [fit]
                 if fit == Time.inf() and ind.fitness.invalid_steps == 0:

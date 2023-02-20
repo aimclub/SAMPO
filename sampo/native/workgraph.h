@@ -1,7 +1,6 @@
 #include <vector>
 #include <tuple>
 
-#include "native.h"
 #include "dtime.h"
 
 using namespace std;
@@ -33,7 +32,7 @@ public:
     int max_count;
 
     explicit WorkerReq(string& kind, Time volume, int min_count, int max_count)
-        : kind(kind), volume(volume), min_count(min_count), max_count(max_count) {}
+            : kind(kind), volume(volume), min_count(min_count), max_count(max_count) {}
 };
 
 class WorkUnit : public Identifiable {
@@ -157,5 +156,5 @@ public:
 
     // `nodes` param MUST be a vector with topologically-ordered nodes
     explicit WorkGraph(GraphNode* start, GraphNode* finish, const vector<GraphNode*>& nodes)
-        : start(start), finish(finish), nodes(nodes) {}
+            : start(start), finish(finish), nodes(nodes) {}
 };

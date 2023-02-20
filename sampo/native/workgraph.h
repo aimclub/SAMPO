@@ -2,6 +2,7 @@
 #include <tuple>
 
 #include "dtime.h"
+#include "basic_types.h"
 
 using namespace std;
 
@@ -17,11 +18,6 @@ enum EdgeType {
     FinishStart,
     StartFinish,
     None
-};
-
-class Identifiable {
-public:
-    string id;
 };
 
 class WorkerReq {

@@ -2,6 +2,7 @@
 #include <tuple>
 
 #include "native.h"
+#include "dtime.h"
 
 using namespace std;
 
@@ -19,12 +20,31 @@ enum EdgeType {
     None
 };
 
-class WorkerReq {
-
+class Identifiable {
+public:
+    string id;
 };
 
-class WorkUnit {
+class WorkerReq {
+public:
+    string kind;
+    Time volume;
+    int min_count;
+    int max_count;
 
+    explicit WorkerReq(string& kind, Time volume, int min_count, int max_count)
+        : kind(kind), volume(volume), min_count(min_count), max_count(max_count) {}
+};
+
+class WorkUnit : public Identifiable {
+public:
+    vector<WorkerReq> worker_reqs;
+    float volume;
+    bool isServiceUnit;
+
+    explicit WorkUnit(const vector<WorkerReq>& worker_reqs = vector<WorkerReq>(),
+                      float volume = 1, bool isServiceUnit = false) \
+                      : worker_reqs(worker_reqs), volume(volume), isServiceUnit(isServiceUnit) {}
 };
 
 class GraphNode;
@@ -113,8 +133,8 @@ public:
         return workUnit;
     }
 
-    int id() {
-        return getWorkUnit()->id();
+    string id() {
+        return getWorkUnit()->id;
     }
 
     vector<GraphNode*> getInseparableChainWithSelf() {
@@ -130,5 +150,12 @@ public:
 };
 
 class WorkGraph {
+public:
+    GraphNode* start;
+    GraphNode* finish;
+    vector<GraphNode*> nodes;
 
+    // `nodes` param MUST be a vector with topologically-ordered nodes
+    explicit WorkGraph(GraphNode* start, GraphNode* finish, const vector<GraphNode*>& nodes)
+        : start(start), finish(finish), nodes(nodes) {}
 };

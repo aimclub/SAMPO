@@ -75,3 +75,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# C/C++ native files
+/sampo/native/cmake-build-debug/

@@ -3,7 +3,7 @@ project(native)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(native native.cpp native.h workgraph.cpp time.cpp time.h)
+add_executable(native native.cpp native.h workgraph.cpp dtime.cpp dtime.h)
 
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})

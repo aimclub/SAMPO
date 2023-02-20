@@ -2,3 +2,5 @@
 #define NATIVE_TIME_H
 
 #endif //NATIVE_TIME_H
+
+class Time;

@@ -62,28 +62,61 @@ namespace PyCodec {
         return PyFloat_AsDouble(incoming);
     }
 
-    string fromPrimitive(PyObject* incoming, string typeref) {
+    string fromPrimitive(PyObject* incoming, const string& typeref) {
         return { PyUnicode_AsUTF8(incoming) };
     }
 
     template<typename T>
-    vector<T> fromList(PyObject *incoming, T typeref) {  // typeref used for T recognition
+    vector<T> fromList(PyObject *incoming, T (*decodeValue)(PyObject*)) {
         vector<float> data;
         if (PyTuple_Check(incoming)) {
             for (Py_ssize_t i = 0; i < PyTuple_Size(incoming); i++) {
                 PyObject *value = PyTuple_GetItem(incoming, i);
-                data.push_back(fromPrimitive(value, typeref));
+                data.push_back(decodeValue(value));
             }
         } else {
             if (PyList_Check(incoming)) {
                 for (Py_ssize_t i = 0; i < PyList_Size(incoming); i++) {
                     PyObject *value = PyList_GetItem(incoming, i);
-                    data.push_back(fromPrimitive(value, typeref));
+                    data.push_back(decodeValue(value));
                 }
             } else {
                 throw logic_error("Passed PyObject pointer was not a list or tuple!");
             }
         }
         return data;
+    }
+
+    template<typename T>
+    vector<T> fromList(PyObject *incoming, T typeref) {  // typeref used for T recognition
+        return fromList(incoming, [typeref](PyObject* value) { return fromPrimitive(value, typeref); });
+    }
+
+    // ============================
+    // ====== Helper section ======
+    // ============================
+
+    PyObject* getAttr(PyObject* incoming, const char *name) {
+        return PyObject_GetAttr(incoming, PyUnicode_FromString(name));
+    }
+
+    int getAttrInt(PyObject* incoming, const char *name) {
+        return fromPrimitive(getAttr(incoming, name), 0);
+    }
+
+    long getAttrLong(PyObject* incoming, const char *name) {
+        return fromPrimitive(getAttr(incoming, name), 0L);
+    }
+
+    float getAttrFloat(PyObject* incoming, const char *name) {
+        return fromPrimitive(getAttr(incoming, name), 0.0f);
+    }
+
+    double getAttrDouble(PyObject* incoming, const char *name) {
+        return fromPrimitive(getAttr(incoming, name), 0.0);
+    }
+
+    string getAttrString(PyObject* incoming, const char *name) {
+        return fromPrimitive(getAttr(incoming, name), "");
     }
 }

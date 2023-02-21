@@ -35,14 +35,16 @@ public:
 };
 
 class Worker : public Identifiable {
+    string id;
     string name;
     int count;
     string contractor_id;
     IntervalGaussian productivity;
 
 public:
-    Worker(string name, int count, string contractorId, const IntervalGaussian &productivity)
-        : name(std::move(name)), count(count), contractor_id(std::move(contractorId)), productivity(productivity) {}
+    Worker(string id, string name, int count, string contractorId, const IntervalGaussian &productivity)
+        : id(std::move(id)), name(std::move(name)), count(count),
+        contractor_id(std::move(contractorId)), productivity(productivity) {}
 };
 
 class Contractor : public Identifiable {

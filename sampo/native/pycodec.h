@@ -36,8 +36,27 @@ namespace PyCodec {
 
     double fromPrimitive(PyObject* incoming, double typeref);
 
-    string fromPrimitive(PyObject* incoming, string typeref);
+    string fromPrimitive(PyObject* incoming, const string& typeref);
+
+    template<typename T>
+    vector<T> fromList(PyObject *incoming, T (*decodeValue)(PyObject*));
 
     template<typename T>
     vector<T> fromList(PyObject *incoming, T typeref);  // typeref used for T recognition
+
+    // ============================
+    // ====== Helper section ======
+    // ============================
+
+    PyObject* getAttr(PyObject* incoming, const char *name;
+
+    int getAttrInt(PyObject* incoming, const char *name);
+
+    long getAttrLong(PyObject* incoming, const char *name);
+
+    float getAttrFloat(PyObject* incoming, const char *name);
+
+    double getAttrDouble(PyObject* incoming, const char *name);
+
+    string getAttrString(PyObject* incoming, const char *name);
 }

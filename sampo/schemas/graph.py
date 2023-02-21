@@ -20,6 +20,7 @@ class EdgeType(Enum):
     FinishStart = 'FS'
     StartFinish = 'SF'
 
+
 # TODO: describe the class (description, parameters)
 @dataclass
 class GraphEdge:

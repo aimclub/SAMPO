@@ -100,6 +100,11 @@ namespace PyCodec {
         return PyObject_GetAttr(incoming, PyUnicode_FromString(name));
     }
 
+    template<typename T>
+    T getAttr(PyObject* incoming, const char *name, T (*decodeValue)(PyObject*)) {
+        return decodeValue(PyObject_GetAttr(incoming, PyUnicode_FromString(name)));
+    }
+
     int getAttrInt(PyObject* incoming, const char *name) {
         return fromPrimitive(getAttr(incoming, name), 0);
     }
@@ -114,6 +119,10 @@ namespace PyCodec {
 
     double getAttrDouble(PyObject* incoming, const char *name) {
         return fromPrimitive(getAttr(incoming, name), 0.0);
+    }
+
+    bool getAttrBool(PyObject* incoming, const char *name) {
+        return PyObject_IsTrue(getAttr(incoming, name));
     }
 
     string getAttrString(PyObject* incoming, const char *name) {

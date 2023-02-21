@@ -48,7 +48,10 @@ namespace PyCodec {
     // ====== Helper section ======
     // ============================
 
-    PyObject* getAttr(PyObject* incoming, const char *name;
+    PyObject* getAttr(PyObject* incoming, const char *name);
+
+    template<typename T>
+    T getAttr(PyObject* incoming, const char *name, T (*decodeValue)(PyObject*));
 
     int getAttrInt(PyObject* incoming, const char *name);
 
@@ -57,6 +60,8 @@ namespace PyCodec {
     float getAttrFloat(PyObject* incoming, const char *name);
 
     double getAttrDouble(PyObject* incoming, const char *name);
+
+    bool getAttrBool(PyObject* incoming, const char *name);
 
     string getAttrString(PyObject* incoming, const char *name);
 }

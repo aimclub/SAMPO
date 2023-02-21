@@ -151,6 +151,6 @@ public:
     vector<GraphNode*> nodes;
 
     // `nodes` param MUST be a vector with topologically-ordered nodes
-    explicit WorkGraph(GraphNode* start, GraphNode* finish, const vector<GraphNode*>& nodes)
-            : start(start), finish(finish), nodes(nodes) {}
+    explicit WorkGraph(const vector<GraphNode*>& nodes)
+            : start(nodes[0]), finish(nodes[nodes.size() - 1]), nodes(nodes) {}
 };

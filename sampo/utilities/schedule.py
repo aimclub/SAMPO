@@ -1,5 +1,7 @@
 import pandas as pd
 
+from sampo.structurator import STAGE_SEP
+
 
 def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -12,10 +14,13 @@ def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
     baps_schedule_df.index = range(df_len)
 
     df = pd.DataFrame(columns=baps_schedule_df.columns)
-    unique_ids = set([x.split('_')[0] for x in baps_schedule_df.task_id])
+    unique_ids = set([x.split(STAGE_SEP)[0] for x in baps_schedule_df.task_id])
 
     for task_id in unique_ids:
-        task_stages_df = baps_schedule_df.loc[baps_schedule_df.loc[:, 'task_id'].str.contains(task_id)]
+        task_stages_df = baps_schedule_df.loc[
+            baps_schedule_df.task_id.str.startswith(f'{task_id}{STAGE_SEP}stage{STAGE_SEP}')
+            or baps_schedule_df.task_id == task_id
+        ]
         task_series = merge_split_stages(task_stages_df.reset_index(drop=True))
         df.loc[df.shape[0]] = task_series  # append
 
@@ -34,13 +39,13 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     """
     if len(task_df) == 1:
         df = task_df.copy()
-        df['successors'] = [[tuple([x[0].split('_')[0], x[1]]) for x in df.loc[0, 'successors']]]
+        df['successors'] = [[tuple([x[0].split(STAGE_SEP)[0], x[1]]) for x in df.loc[0, 'successors']]]
         return df.loc[0, :]
     else:
         df = task_df.copy()
         df = df.iloc[-1:].reset_index(drop=True)
         for column in ['task_id', 'task_name']:
-            df.loc[0, column] = df.loc[0, column].split('_')[0]  # fix task id and name
+            df.loc[0, column] = df.loc[0, column].split(STAGE_SEP)[0]  # fix task id and name
 
         # sum up volumes through all stages
         df.loc[0, 'volume'] = sum(task_df.loc[:, 'volume'])

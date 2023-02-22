@@ -18,8 +18,8 @@ def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
 
     for task_id in unique_ids:
         task_stages_df = baps_schedule_df.loc[
-            baps_schedule_df.task_id.str.startswith(f'{task_id}{STAGE_SEP}stage{STAGE_SEP}')
-            or baps_schedule_df.task_id == task_id
+            baps_schedule_df.task_id.str.startswith(f'{task_id}{STAGE_SEP}')
+            | baps_schedule_df.task_id == task_id
         ]
         task_series = merge_split_stages(task_stages_df.reset_index(drop=True))
         df.loc[df.shape[0]] = task_series  # append

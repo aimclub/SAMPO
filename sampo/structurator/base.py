@@ -5,7 +5,7 @@ from sampo.schemas.graph import GraphNode, GraphNodeDict, GraphEdge, WorkGraph, 
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.works import WorkUnit
 
-STAGE_SEP = '_'
+STAGE_SEP = '_stage_'
 
 
 def make_start_id(work_unit_id: str, ind: int) -> str:
@@ -16,7 +16,7 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
     :return:
        auxiliary_id: str - an auxiliary id for the work unit
     """
-    return work_unit_id + f"{STAGE_SEP}stage{STAGE_SEP}{ind}"
+    return f"{work_unit_id}{STAGE_SEP}{ind}"
 
 
 def find_lags(edges: List[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (List[Tuple[float, float, bool]]):
@@ -79,7 +79,7 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
         volume = wu.volume * piece_div_main
 
         new_id = make_start_id(wu.id, ind) if ind < len(proportions) - 1 else wu.id
-        new_wu = WorkUnit(new_id, wu.name + f"{STAGE_SEP}stage{STAGE_SEP}{ind}", reqs, group=wu.group,
+        new_wu = WorkUnit(new_id, f"{wu.name}{STAGE_SEP}{ind}", reqs, group=wu.group,
                           volume=volume, volume_type=wu.volume_type)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)

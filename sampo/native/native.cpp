@@ -23,7 +23,7 @@ static PyMethodDef nativeMethods[] = {
 
 static PyModuleDef nativeModule = {
         PyModuleDef_HEAD_INIT,
-        "sampo.native",
+        "native",
         "The high-efficient native implementation of sampo modules",
         -1,
         nativeMethods

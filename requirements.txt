@@ -9,4 +9,6 @@ matplotlib~=3.6.2
 plotly~=5.11.0
 pytest~=7.2.0
 pytest-xdist~=3.1.0
-
+setuptools_cpp
+cmake
+dlib

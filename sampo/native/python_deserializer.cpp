@@ -1,4 +1,5 @@
 #include <unordered_map>
+#include <vector>
 #include "pycodec.h"
 
 #include "python_deserializer.h"

@@ -33,3 +33,7 @@ PyMODINIT_FUNC
 PyInit_native(void) {
     return PyModule_Create(&nativeModule);
 }
+
+void main() {
+
+}

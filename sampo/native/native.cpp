@@ -1,5 +1,9 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "native.h"
+#include "workgraph.h"
+#include "contractor.h"
+#include "python_deserializer.h"
 
 #include <iostream>
 
@@ -11,7 +15,10 @@
 // TODO Split data types' definition and implementation
 
 static PyObject* evaluate(PyObject *self, PyObject *args) {
-    std::cout << "Hello, World!" << std::endl;
+    WorkGraph* workGraph = PythonDeserializer::workGraph(PyTuple_GetItem(args, 1));
+    vector<Contractor*> contractors = PythonDeserializer::contractors(PyTuple_GetItem(args, 2));
+
+
     return nullptr;
 }
 
@@ -31,9 +38,10 @@ static PyModuleDef nativeModule = {
 
 PyMODINIT_FUNC
 PyInit_native(void) {
+    import_numpy();
     return PyModule_Create(&nativeModule);
 }
 
-void main() {
-
+int main() {
+    return 0;
 }

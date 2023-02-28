@@ -92,7 +92,7 @@ def build(setup_kwargs):
     This function is mandatory in order to build the extensions.
     """
     setup_kwargs.update(
-        {"ext_modules": [CMakeExtension("sampo/native")], "cmdclass": {"build_ext": build_ext}}
+        {"ext_modules": [CMakeExtension(".")], "cmdclass": {"build_ext": build_ext}}
     )
 
 setup(

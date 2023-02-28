@@ -6,7 +6,7 @@ authors = ["iAirLab <iairlab@yandex.ru>"]
 license = "BSD-3-Clause"
 # readme = "README.rst"
 # readme = "README.md"
-#build = "build.py"
+#build = "setup.py"
 #generate-setup-file = false
 
 [tool.poetry.dependencies]

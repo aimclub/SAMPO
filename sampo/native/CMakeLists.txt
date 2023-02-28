@@ -7,8 +7,21 @@ project(native CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(native native.cpp native.h dtime.cpp dtime.h python_deserializer.cpp python_deserializer.h workgraph.h contractor.h basic_types.h pycodec.h)
+add_executable(native
+        native.cpp native.h                                # main files
+        dtime.cpp dtime.h                                  # Time implementation
+        python_deserializer.cpp python_deserializer.h      # custom Python datastruct handler
+        workgraph.h contractor.h basic_types.h             # custom Python types definition
+        pycodec.h                                          # basic type transcoder
+        chromosome_evaluator.cpp chromosome_evaluator.h)   # algorithms
 
 find_package(PythonLibs REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
+
+# this now works only for Windows, for other OS this path should have another construction
+set(NUMPY_INCLUDE_DIR "${PYTHON_INCLUDE_DIRS}/../Lib/site-packages/numpy/core/include")
+
+message(${PYTHON_INCLUDE_DIRS})
+message(${NUMPY_INCLUDE_DIR})
+
+include_directories(${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 target_link_libraries(native ${PYTHON_LIBRARIES})

@@ -6,5 +6,5 @@
 namespace PythonDeserializer {
     WorkGraph* workGraph(PyObject* pyWorkGraph);
 
-    vector<Contractor*> contractors(PyListObject* pyContractors);
+    vector<Contractor*> contractors(PyObject* pyContractors);
 }

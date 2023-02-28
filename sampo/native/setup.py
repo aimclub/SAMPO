@@ -5,9 +5,11 @@ from setuptools.command.build_ext import build_ext as build_ext_orig
 from distutils.errors import DistutilsPlatformError, CCompilerError, DistutilsExecError
 from distutils.core import setup, Extension
 
+import numpy
+
 ext_modules = [
     Extension("native",
-              include_dirs=["."],
+              include_dirs=[numpy.get_include()],
               sources=[
                        # "basic_types.h",
                        # "contractor.h",
@@ -18,6 +20,7 @@ ext_modules = [
                        # "pycodec.h",
                        # "python_deserializer.h",
                        "python_deserializer.cpp",
+                       "chromosome_evaluator.cpp",
                        # "workgraph.h"
               ],),
 ]

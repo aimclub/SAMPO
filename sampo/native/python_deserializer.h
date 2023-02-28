@@ -1,3 +1,6 @@
+#ifndef PYTHON_DESERIALIZER_H
+#define PYTHON_DESERIALIZER_H
+
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "workgraph.h"
@@ -8,3 +11,5 @@ namespace PythonDeserializer {
 
     vector<Contractor*> contractors(PyObject* pyContractors);
 }
+
+#endif //PYTHON_DESERIALIZER_H

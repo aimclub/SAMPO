@@ -1,8 +1,6 @@
 #ifndef NATIVE_TIME_H
 #define NATIVE_TIME_H
 
-#endif //NATIVE_TIME_H
-
 class Time {
 private:
     int value;
@@ -49,3 +47,5 @@ public:
 
     bool operator==(int other) const;
 };
+
+#endif //NATIVE_TIME_H

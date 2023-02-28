@@ -1,3 +1,6 @@
+#ifndef WORKGRAPH_H
+#define WORKGRAPH_H
+
 #include <vector>
 #include <tuple>
 
@@ -154,3 +157,5 @@ public:
     explicit WorkGraph(const vector<GraphNode*>& nodes)
             : start(nodes[0]), finish(nodes[nodes.size() - 1]), nodes(nodes) {}
 };
+
+#endif //WORKGRAPH_H

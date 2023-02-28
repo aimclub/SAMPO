@@ -1,3 +1,6 @@
+#ifndef CONTRACTOR_H
+#define CONTRACTOR_H
+
 #include <utility>
 #include <vector>
 #include <random>
@@ -53,3 +56,5 @@ public:
 
     explicit Contractor(vector<Worker*>& workers) : workers(workers) {}
 };
+
+#endif //CONTRACTOR_H

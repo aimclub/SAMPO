@@ -97,7 +97,7 @@ private:
         }
     }
 
-    void schedule(int nodeIndex, int startTime, int contractor, PyArrayObject* team,
+    int schedule(int nodeIndex, int startTime, int contractor, PyArrayObject* team,
                   int teamSize, vector<int>& completed, Timeline& timeline) {
         int finishTime = startTime;
 
@@ -117,10 +117,22 @@ private:
         }
 
         updateTimeline(finishTime, contractor, team, teamSize, timeline);
+
+        return finishTime;
     }
 
     inline Timeline createTimeline() {
+        Timeline timeline = Timeline();
 
+        timeline.resize(workers.size());
+        for (int contractor = 0; contractor < workers.size(); contractor++) {
+            timeline[contractor].resize(workers[0].size());
+            for (int worker = 0; worker < workers[0].size(); worker++) {
+                timeline[contractor][worker].emplace_back(0, workers[contractor][worker]);
+            }
+        }
+
+        return timeline;
     }
 
 public:
@@ -135,6 +147,8 @@ public:
         auto completed = vector<int>();
         completed.resize(totalWorksCount);
 
+        int finishTime = 0;
+
         // scheduling works one-by-one
         for (int i = 0; i < worksCount; i++) {
             int workIndex = get(order, i);
@@ -143,9 +157,12 @@ public:
 
             int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
-            schedule(workIndex, st, contractor, team,
-                     resourcesCount, completed, timeline);
+            int c_ft = schedule(workIndex, st, contractor, team,
+                                resourcesCount, completed, timeline);
+            finishTime = max(finishTime, c_ft);
         }
+
+        return finishTime;
     }
 };
 

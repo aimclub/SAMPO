@@ -1,5 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "numpy/arrayobject.h"
+
 #include "native.h"
 #include "workgraph.h"
 #include "contractor.h"
@@ -38,7 +40,12 @@ static PyModuleDef nativeModule = {
 
 PyMODINIT_FUNC
 PyInit_native(void) {
-    import_numpy();
+    assert(! PyErr_Occurred());
+    // Initialise Numpy
+    import_array()
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
     return PyModule_Create(&nativeModule);
 }
 

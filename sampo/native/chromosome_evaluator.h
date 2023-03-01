@@ -2,6 +2,7 @@
 #define NATIVE_CHROMOSOME_EVALUATOR_H
 
 #include <vector>
+#include <iostream>
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -16,13 +17,26 @@ private:
     vector<vector<int>> parents;      // vertices' parents
     vector<vector<int>> inseparables; // inseparable chains with self
     vector<vector<int>> workers;      // contractor -> worker -> count
-
     int totalWorksCount;
+    PyObject* pythonWrapper;
 
-    int calculate_working_time(int work, PyArrayObject* team) {
-        // TODO Make call to Python WorkTimeEstimator
+    int calculate_working_time(int work, int contractor, PyArrayObject* team) {
         // TODO Make full hash-based cache
-        // TODO Remake node numeration: append inseparables' numeration to the end of current variant
+
+        PyObject* my_args = PyTuple_Pack(
+                3,
+                PyLong_FromLong(work),
+                PyLong_FromLong(contractor),
+                team
+        );
+        if (!my_args) {
+            cout << "Problems with tuple allocating; probably end of RAM" << endl;
+            return 0;
+        }
+        auto res = PyObject_CallMethodObjArgs(pythonWrapper,
+                                              PyUnicode_FromString("calculate_working_time"),
+                                              my_args, NULL);
+        return (int) PyLong_AsLong(res);
     }
 
     static inline int get(PyArrayObject* arr, int i) {
@@ -109,7 +123,7 @@ private:
             }
             startTime = max(startTime, maxParentTime);
 
-            int workingTime = calculate_working_time(dep_node, team);
+            int workingTime = calculate_working_time(dep_node, contractor, team);
             finishTime = startTime + workingTime;
 
             // cache finish time of scheduled work
@@ -136,9 +150,32 @@ private:
     }
 
 public:
-    int evaluate(PyArrayObject* chromosome) {
-        auto* order = (PyArrayObject*) PyArray_GETPTR1(chromosome, 0);
-        auto* resources = (PyArrayObject*) PyArray_GETPTR1(chromosome, 1);
+    explicit ChromosomeEvaluator(const vector<vector<int>>& parents,
+                                 const vector<vector<int>>& inseparables,
+                                 const vector<vector<int>>& workers,
+                                 int totalWorksCount,
+                                 PyObject* pythonWrapper) {
+        this->parents = parents;
+        this->inseparables = inseparables;
+        this->workers = workers;
+        this->totalWorksCount = totalWorksCount;
+        this->pythonWrapper = pythonWrapper;
+    }
+
+    vector<int> evaluate(vector<PyObject*>& chromosomes) {
+        auto results = vector<int>();
+        for (auto* chromosome : chromosomes) {
+            results.push_back(evaluate(chromosome));
+        }
+        return results;
+    }
+
+    int evaluate(PyObject* chromosome) {
+        PyObject* it = PyObject_GetIter(chromosome);
+        auto* order = (PyArrayObject*) (it = PyIter_Next(it));
+        auto* resources = (PyArrayObject*) (it = PyIter_Next(it));
+        Py_DECREF(it);
+
         int worksCount = PyArray_SIZE(order);  // without inseparables
         int resourcesCount = PyArray_SIZE(resources) - 1;
 

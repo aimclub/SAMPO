@@ -6,6 +6,8 @@
 #include "workgraph.h"
 #include "contractor.h"
 #include "python_deserializer.h"
+#include "pycodec.h"
+#include "chromosome_evaluator.h"
 
 #include <iostream>
 
@@ -16,12 +18,40 @@
 // TODO Cache data in C++ memory - parse Python WG and Contractors once per-scheduling
 // TODO Split data types' definition and implementation
 
+static inline int PyLong_AsInt(PyObject* object) {
+    return (int) PyLong_AsLong(object);
+}
+
+static inline vector<int> decodeIntList(PyObject* object) {
+    return PyCodec::fromList(object, PyLong_AsInt)
+}
+
+static inline PyObject* pyObjectIdentity(PyObject* object) {
+    return object;
+}
+
 static PyObject* evaluate(PyObject *self, PyObject *args) {
-    WorkGraph* workGraph = PythonDeserializer::workGraph(PyTuple_GetItem(args, 1));
-    vector<Contractor*> contractors = PythonDeserializer::contractors(PyTuple_GetItem(args, 2));
+    PyObject* it = PyObject_GetIter(args);
+    if (it == nullptr) {
+        return nullptr;
+    }
+    auto pythonWrapper = it = PyIter_Next(it);
+    auto parents = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
+    auto inseparables = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
+    auto workers = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
+    int totalWorksCount = PyLong_AsInt(it = PyIter_Next(it));
+    auto chromosomes = PyCodec::fromList(it = PyIter_Next(it), pyObjectIdentity);
 
+    Py_DECREF(it);
+    auto evaluator = ChromosomeEvaluator(parents, inseparables, workers, totalWorksCount, pythonWrapper);
 
-    return nullptr;
+    vector<int> results = evaluator.evaluate(chromosomes);
+
+    PyObject* pyList = PyList_New(results.size());
+    for (int i = 0; i < results.size(); i++) {
+        PyList_SetItem(pyList, i, Py_BuildValue("i", results[i]));
+    }
+    return pyList;
 }
 
 static PyMethodDef nativeMethods[] = {

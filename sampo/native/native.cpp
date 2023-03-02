@@ -85,18 +85,26 @@ PyInit_native(void) {
 
 // the test function
 int main() {
-    vector<vector<int>> parents      = { {   }, { 0 }, { 1 }, { 2 }, { 2 }, { 4 } }; // mostly sequential graph
-    vector<vector<int>> inseparables = { { 0 }, { 1 }, { 2 }, { 3 }, { 4 }, { 5 } }; // without inseparables
+    // real data from Python
+    vector<vector<int>> parents      = { {  }, { 0 }, { 0 }, { 1 }, { 2 }, { 1, 10 },
+                                         { 4, 5 }, { 3, 5 }, { 5 }, { 7, 8, 13 },
+                                         { 2 }, { 4 }, { 11, 10 }, { 6, 12 }};
+    vector<vector<int>> inseparables = { { 0 }, { 1 }, { 2, 10 }, { 3 }, { 4, 11, 12 }, { 5 },
+                                         { 6, 13 }, { 7 }, { 8 }, { 9 }, { 10 }, { 11 }, { 12 }, { 13 },};
     vector<vector<int>> workers      = { { 50, 50, 50, 50, 50, 50 } };               // one contractor with 6 types of workers
 
-    vector<int> chromosomeOrder = { 0, 1, 2, 3, 4, 5 };
+    vector<int> chromosomeOrder = { 0, 1, 2, 3, 5, 7, 4, 8, 6, 9 };
     vector<vector<int>> chromosomeResources = {
+            { 0,  0,  0,  0,  0,  0, 0},
+            {49, 49,  0,  0,  0,  0, 0},
             {49, 49, 49, 49, 49, 49, 0},
-            {49, 49, 49, 49, 49, 49, 0},
-            {49, 49, 49, 49, 49, 49, 0},
-            {49, 49, 49, 49, 49, 49, 0},
-            {49, 49, 49, 49, 49, 49, 0},
-            {49, 49, 49, 49, 49, 49, 0}
+            { 0, 49, 49,  0,  0, 49, 0},
+            { 0, 49, 49,  0,  0, 49, 0},
+            {49, 49, 49,  0, 49, 49, 0},
+            {49, 49, 49, 49,  0,  0, 0},
+            {49,  0, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49,  0, 49, 0},
+            { 0,  0,  0,  0,  0,  0, 0}
     };
 
     ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);

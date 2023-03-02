@@ -18,7 +18,8 @@ add_executable(native
 find_package(PythonLibs REQUIRED)
 
 # this now works only for Windows, for other OS this path should have another construction
-set(NUMPY_INCLUDE_DIR "${PYTHON_INCLUDE_DIRS}/../Lib/site-packages/numpy/core/include")
+#set(NUMPY_INCLUDE_DIR "${PYTHON_INCLUDE_DIRS}/../Lib/site-packages/numpy/core/include")
+set(NUMPY_INCLUDE_DIR "/home/quarter/.local/lib/python3.10/site-packages/numpy/core/include")
 
 message(${PYTHON_INCLUDE_DIRS})
 message(${NUMPY_INCLUDE_DIR})

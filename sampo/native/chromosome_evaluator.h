@@ -106,7 +106,7 @@ private:
             worker_timeline.emplace_back(finishTime, worker_count);
             int ind = worker_timeline.size() - 1;
             while (ind > 0 && worker_timeline[ind].first > worker_timeline[ind - 1].first) {
-                auto& tmp = worker_timeline[ind];
+                auto tmp = worker_timeline[ind];
                 worker_timeline[ind] = worker_timeline[ind - 1];
                 worker_timeline[ind - 1] = tmp;
                 ind--;

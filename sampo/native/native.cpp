@@ -2,12 +2,8 @@
 #include "Python.h"
 #include "numpy/arrayobject.h"
 
-#include "native.h"
-#include "workgraph.h"
-#include "contractor.h"
-#include "python_deserializer.h"
-#include "pycodec.h"
 #include "chromosome_evaluator.h"
+#include "pycodec.h"
 
 #include <iostream>
 
@@ -22,34 +18,42 @@ static inline int PyLong_AsInt(PyObject* object) {
     return (int) PyLong_AsLong(object);
 }
 
-static inline vector<int> decodeIntList(PyObject* object) {
-    return PyCodec::fromList(object, PyLong_AsInt)
+static vector<int> decodeIntList(PyObject* object) {
+    return PyCodec::fromList(object, PyLong_AsInt);
 }
 
-static inline PyObject* pyObjectIdentity(PyObject* object) {
+static PyObject* pyObjectIdentity(PyObject* object) {
     return object;
 }
 
 static PyObject* evaluate(PyObject *self, PyObject *args) {
-    PyObject* it = PyObject_GetIter(args);
-    if (it == nullptr) {
-        return nullptr;
-    }
-    auto pythonWrapper = it = PyIter_Next(it);
-    auto parents = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
-    auto inseparables = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
-    auto workers = PyCodec::fromList(it = PyIter_Next(it), decodeIntList);
-    int totalWorksCount = PyLong_AsInt(it = PyIter_Next(it));
-    auto chromosomes = PyCodec::fromList(it = PyIter_Next(it), pyObjectIdentity);
+    PyObject* pythonWrapper;
+    PyObject* pyParents;
+    PyObject* pyInseparables;
+    PyObject* pyWorkers;
+    int totalWorksCount;
+    PyObject* pyChromosomes;
 
-    Py_DECREF(it);
-    auto evaluator = ChromosomeEvaluator(parents, inseparables, workers, totalWorksCount, pythonWrapper);
+    if (!PyArg_ParseTuple(args, "OOOOiO",
+                          &pythonWrapper, &pyParents, &pyInseparables,
+                          &pyWorkers, &totalWorksCount, &pyChromosomes)) {
+        cout << "Can't parse arguments" << endl;
+    }
+    auto parents = PyCodec::fromList(pyParents, decodeIntList);
+    auto inseparables = PyCodec::fromList(pyInseparables, decodeIntList);
+    auto workers = PyCodec::fromList(pyWorkers, decodeIntList);
+    auto chromosomes = PyCodec::fromList(pyChromosomes, pyObjectIdentity);
+
+    cout << "Called" << endl;
+
+    ChromosomeEvaluator evaluator(parents, inseparables, workers, totalWorksCount, pythonWrapper);
 
     vector<int> results = evaluator.evaluate(chromosomes);
 
     PyObject* pyList = PyList_New(results.size());
     for (int i = 0; i < results.size(); i++) {
-        PyList_SetItem(pyList, i, Py_BuildValue("i", results[i]));
+        PyObject* pyInt = Py_BuildValue("i", results[i]);
+        PyList_SetItem(pyList, i, pyInt);
     }
     return pyList;
 }
@@ -74,11 +78,31 @@ PyInit_native(void) {
     // Initialise Numpy
     import_array()
     if (PyErr_Occurred()) {
-        return NULL;
+        return nullptr;
     }
     return PyModule_Create(&nativeModule);
 }
 
+// the test function
 int main() {
+    vector<vector<int>> parents      = { {   }, { 0 }, { 1 }, { 2 }, { 2 }, { 4 } }; // mostly sequential graph
+    vector<vector<int>> inseparables = { { 0 }, { 1 }, { 2 }, { 3 }, { 4 }, { 5 } }; // without inseparables
+    vector<vector<int>> workers      = { { 50, 50, 50, 50, 50, 50 } };               // one contractor with 6 types of workers
+
+    vector<int> chromosomeOrder = { 0, 1, 2, 3, 4, 5 };
+    vector<vector<int>> chromosomeResources = {
+            {49, 49, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49, 49, 49, 0},
+            {49, 49, 49, 49, 49, 49, 0}
+    };
+
+    ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);
+    int res = evaluator.testEvaluate(chromosomeOrder, chromosomeResources);
+
+    cout << "Result: " << res << endl;
+
     return 0;
 }

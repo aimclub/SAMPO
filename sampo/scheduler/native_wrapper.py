@@ -7,7 +7,9 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
-from sampo.native import evaluate
+import sampo.native
+
+from native import evaluate
 
 
 class NativeWrapper:
@@ -37,6 +39,7 @@ class NativeWrapper:
         self.worker_pool_indices = worker_pool_indices
 
     def calculate_working_time(self, work: int, contractor: int, team: np.ndarray) -> int:
+        print("Called WorkTimeEstimator!")
         workers = [self.worker_pool_indices[worker_index][contractor]
                          .copy().with_count(worker_count)
                          for worker_index, worker_count in enumerate(team)
@@ -44,4 +47,4 @@ class NativeWrapper:
         return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
-        evaluate(self, self.parents, self.inseparables, self.workers, chromosomes)
+        return evaluate(self, self.parents, self.inseparables, self.workers, self.totalWorksCount, chromosomes)

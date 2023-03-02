@@ -216,8 +216,8 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
     :return:
     """
     for work_ind in work_indices:
-        resources_count = chromosome[1][:-1, work_ind]
-        contractor_ind = chromosome[1][-1, work_ind]
+        resources_count = chromosome[1][work_ind, :-1]
+        contractor_ind = chromosome[1][work_ind, -1]
         contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
             if contractor_border[ind] < count:
@@ -279,23 +279,24 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
     ind = copy_chromosome(ind)
 
     # select random number from interval from min to max from uniform distribution
-    size = len(ind[1][type_of_worker])
+    size = len(ind[1])
+    workers_count = len(ind[1][0])
 
-    if type_of_worker == len(ind[1]) - 1:
+    if type_of_worker == workers_count - 1:
         # print('Contractor mutation!')
         for i in range(size):
             if rand.random() < probability_mutate_resources:
-                ind[1][type_of_worker][i] = rand.randint(0, contractor_count - 1)
+                ind[1][i][type_of_worker] = rand.randint(0, contractor_count - 1)
         return ind
 
     # change in this interval in random number from interval
     for i, xl, xu in zip(range(size), low, up):
         if rand.random() < probability_mutate_resources:
             # borders
-            contractor = ind[1][-1][i]
+            contractor = ind[1][i][-1]
             border = ind[2][contractor][type_of_worker]
             # TODO Debug why min(xu, border) can be lower than xl
-            ind[1][type_of_worker][i] = rand.randint(xl, min(xu, border))
+            ind[1][i][type_of_worker] = rand.randint(xl, max(xl + 1, min(xu, border)))
 
     return ind
 
@@ -341,8 +342,8 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     ind2 = copy_chromosome(ind2)
 
     # exchange work resources
-    res1 = ind1[1][mate_positions]
-    res2 = ind2[1][mate_positions]
+    res1 = ind1[1][:, mate_positions]
+    res2 = ind2[1][:, mate_positions]
     cxpoint = rand.randint(1, len(res1))
 
     mate_positions = rand.sample(list(range(len(res1))), cxpoint)

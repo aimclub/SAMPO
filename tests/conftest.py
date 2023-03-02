@@ -57,9 +57,6 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
     graph_type, lag_optimization = request.param
 
-    if graph_type != 'big plain synthetic':
-        pytest.skip('Remove this')
-
     match graph_type:
         case 'manual':
             sr = setup_sampler

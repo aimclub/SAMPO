@@ -323,6 +323,8 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
             ind[2][i][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
                                                       max(resources_min_border[type_of_worker] + 1,
                                                           ind[2][i][type_of_worker] // 10))
+            if ind[2][i][type_of_worker] <= 0:
+                ind[2][i][type_of_worker] = 1
 
     return ind
 

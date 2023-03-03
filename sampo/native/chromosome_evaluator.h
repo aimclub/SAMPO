@@ -14,6 +14,8 @@ using namespace std;
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
 
+#define TIME_INF 2000000000
+
 class ChromosomeEvaluator {
 private:
     const vector<vector<int>>& parents;      // vertices' parents
@@ -50,7 +52,7 @@ private:
         return *(int*) PyArray_GETPTR2(arr, i, j);
     }
 
-    int findMinStartTime(int nodeIndex, int contractor, const int* team, int teamSize,
+    int findMinStartTime(int nodeIndex, int contractor, const int* team, size_t teamSize,
                          vector<int>& completed, Timeline& timeline) {
         int maxParentTime = 0;
         // find min start time
@@ -70,16 +72,20 @@ private:
 //            cout << "contractor: " << contractor << " worker: " << worker << endl;
             // Traverse list while not enough resources and grab it
             auto &worker_timeline = timeline[contractor][worker];
-            int ind = worker_timeline.size() - 1;
+            size_t ind = worker_timeline.size() - 1;
             while (need_count > 0) {
 //                cout << "ind: " << ind << endl;
                 int offer_count = worker_timeline[ind].second;
                 maxAgentTime = max(maxAgentTime, worker_timeline[ind].first);
 
-                if (offer_count < need_count) {
+                if (need_count < offer_count) {
                     offer_count = need_count;
                 }
                 need_count -= offer_count;
+                if (ind == 0 && need_count > 0) {
+                    cerr << "Not enough workers" << endl;
+                    return TIME_INF;
+                }
                 ind--;
             }
         }
@@ -102,12 +108,16 @@ private:
                     break;
                 }
                 need_count -= next_count;
+                if (worker_timeline.size() == 1 && need_count > 0) {
+                    cerr << "---- Empty worker_timeline for worker " << worker << " and contractor " << contractor << endl << flush;
+                    return;
+                }
                 worker_timeline.pop_back();
             }
 
             // Add to the right place using bubble-sort iterations
             worker_timeline.emplace_back(finishTime, worker_count);
-            int ind = worker_timeline.size() - 1;
+            size_t ind = worker_timeline.size() - 1;
             while (ind > 0 && worker_timeline[ind].first > worker_timeline[ind - 1].first) {
                 auto tmp = worker_timeline[ind];
                 worker_timeline[ind] = worker_timeline[ind - 1];
@@ -118,7 +128,7 @@ private:
     }
 
     int schedule(int nodeIndex, int startTime, int contractor, const int* team,
-                 int teamSize, vector<int>& completed, Timeline& timeline) {
+                 size_t teamSize, vector<int>& completed, Timeline& timeline) {
         int finishTime = startTime;
 
         for (int dep_node : inseparables[nodeIndex]) {
@@ -155,10 +165,6 @@ private:
         return timeline;
     }
 
-    static PyObject* pyObjectIdentity(PyObject* object) {
-        return object;
-    }
-
 public:
     explicit ChromosomeEvaluator(const vector<vector<int>>& parents,
                                  const vector<vector<int>>& inseparables,
@@ -169,7 +175,7 @@ public:
         this->pythonWrapper = pythonWrapper;
     }
 
-    ~ChromosomeEvaluator() {}
+    ~ChromosomeEvaluator() = default;
 
     vector<int> evaluate(vector<PyObject*>& chromosomes) {
         auto results = vector<int>();
@@ -224,6 +230,9 @@ public:
 
             int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
+            if (st == TIME_INF) {
+                return TIME_INF;
+            }
 //            int c_ft = 0 + 5;
             int c_ft = schedule(workIndex, st, contractor, team,
                                 resourcesCount, completed, timeline);
@@ -235,8 +244,8 @@ public:
     }
 
     int testEvaluate(vector<int>& order, vector<vector<int>>& resources) {
-        int worksCount = order.size();
-        int resourcesCount = resources[0].size() - 1;
+        size_t worksCount = order.size();
+        size_t resourcesCount = resources[0].size() - 1;
 
         Timeline timeline = createTimeline();
 

@@ -179,11 +179,14 @@ def build_schedule(wg: WorkGraph,
 
     native = NativeWrapper(wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
 
+    def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
+        return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
+
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()
 
     # map to each individual fitness function
-    fitness = native.evaluate([ind[0] for ind in pop])
+    fitness = evaluate_chromosomes([ind[0] for ind in pop])
     # pool.close()
     # pool.join()
     for ind, fit in zip(pop, fitness):
@@ -310,7 +313,7 @@ def build_schedule(wg: WorkGraph,
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        invalid_fit = native.evaluate([ind[0] for ind in invalid_ind])
+        invalid_fit = evaluate_chromosomes([ind[0] for ind in invalid_ind])
         for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
             if fit == Time.inf() and ind.fitness.invalid_steps == 0:

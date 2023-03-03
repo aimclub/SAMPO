@@ -27,6 +27,8 @@ static PyObject* pyObjectIdentity(PyObject* object) {
 }
 
 static PyObject* evaluate(PyObject *self, PyObject *args) {
+    cerr << "Called" << endl;
+
     PyObject* pythonWrapper;
     PyObject* pyParents;
     PyObject* pyInseparables;
@@ -44,12 +46,13 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
     auto workers = PyCodec::fromList(pyWorkers, decodeIntList);
     auto chromosomes = PyCodec::fromList(pyChromosomes, pyObjectIdentity);
 
-    cout << "Called" << endl;
+    cout << "Called" << endl << flush;
 
     ChromosomeEvaluator evaluator(parents, inseparables, workers, totalWorksCount, pythonWrapper);
 
     vector<int> results = evaluator.evaluate(chromosomes);
 
+//    return PyLong_FromLong(evaluator.evaluate(chromosomes[0]));
     PyObject* pyList = PyList_New(results.size());
     for (int i = 0; i < results.size(); i++) {
         PyObject* pyInt = Py_BuildValue("i", results[i]);

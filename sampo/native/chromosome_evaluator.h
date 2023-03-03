@@ -16,9 +16,9 @@ typedef vector<vector<vector<pair<int, int>>>> Timeline;
 
 class ChromosomeEvaluator {
 private:
-    vector<vector<int>> parents;      // vertices' parents
-    vector<vector<int>> inseparables; // inseparable chains with self
-    vector<vector<int>> workers;      // contractor -> worker -> count
+    const vector<vector<int>>& parents;      // vertices' parents
+    const vector<vector<int>>& inseparables; // inseparable chains with self
+    const vector<vector<int>>& workers;      // contractor -> worker -> count
     int totalWorksCount;
     PyObject* pythonWrapper;
 
@@ -54,6 +54,7 @@ private:
                          vector<int>& completed, Timeline& timeline) {
         int maxParentTime = 0;
         // find min start time
+//        cout << "nodeIndex: " << nodeIndex << endl;
         for (int parent : parents[nodeIndex]) {
             maxParentTime = max(maxParentTime, completed[parent]);
         }
@@ -66,10 +67,12 @@ private:
             int need_count = worker_count;
             if (need_count == 0) continue;
 
+//            cout << "contractor: " << contractor << " worker: " << worker << endl;
             // Traverse list while not enough resources and grab it
             auto &worker_timeline = timeline[contractor][worker];
             int ind = worker_timeline.size() - 1;
             while (need_count > 0) {
+//                cout << "ind: " << ind << endl;
                 int offer_count = worker_timeline[ind].second;
                 maxAgentTime = max(maxAgentTime, worker_timeline[ind].first);
 
@@ -139,7 +142,7 @@ private:
     }
 
     inline Timeline createTimeline() {
-        Timeline timeline = Timeline();
+        Timeline timeline;
 
         timeline.resize(workers.size());
         for (int contractor = 0; contractor < workers.size(); contractor++) {
@@ -161,10 +164,7 @@ public:
                                  const vector<vector<int>>& inseparables,
                                  const vector<vector<int>>& workers,
                                  int totalWorksCount,
-                                 PyObject* pythonWrapper) {
-        this->parents = parents;
-        this->inseparables = inseparables;
-        this->workers = workers;
+                                 PyObject* pythonWrapper) : parents(parents), inseparables(inseparables), workers(workers) {
         this->totalWorksCount = totalWorksCount;
         this->pythonWrapper = pythonWrapper;
     }
@@ -180,16 +180,20 @@ public:
     }
 
     int evaluate(PyObject* chromosome) {
-        vector<PyObject*> chromosome_parts = PyCodec::fromList(chromosome, pyObjectIdentity);
-//        return 0;
-        PyObject* pyOrder = chromosome_parts[0];
-        PyObject* pyResources = chromosome_parts[1];
+        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
+        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
+        PyObject* pyContractors; //= PyList_GetItem(chromosome, 1);
 
-        auto* order = (PyArrayObject*) pyOrder;
-        auto* resources = (PyArrayObject*) pyResources;
+        if (!PyArg_ParseTuple(chromosome, "OOO", &pyOrder, &pyResources, &pyContractors)) {
+            cerr << "Can't parse chromosome!!!!" << endl;
+            return -1;
+        }
 
-        int worksCount = PyArray_DIM(order, 0);  // without inseparables
-        int resourcesCount = PyArray_DIM(resources, 1) - 1;
+        int* order = (int*) PyArray_DATA((PyArrayObject*) pyOrder);
+        int* resources = (int*) PyArray_DATA((PyArrayObject*) pyResources);
+
+        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
+        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
 
         Timeline timeline = createTimeline();
 
@@ -202,19 +206,27 @@ public:
 
         // scheduling works one-by-one
         for (int i = 0; i < worksCount; i++) {
-            int workIndex = get(order, i);
-            int contractor = get(resources, i, resourcesCount);
-            auto* team = (PyArrayObject*) PyArray_GETPTR1(chromosome, i);
-            auto worker_team = (int*) PyArray_DATA(team);
+//        int i = 0;
+            int workIndex = order[i];
+            auto* team = resources + i * (resourcesCount + 1); // go to the start of 'i' row in 2D array
+            int contractor = team[resourcesCount];
+//
+//            cout << "Work index: " << workIndex << endl << flush;
+//            cout << i << "," << resourcesCount << " Contractor: " << contractor << endl << flush;
 
-//            cout << "Work index: " << workIndex << endl;
-//            cout << i << "," << resourcesCount << " Contractor: " << contractor << endl;
+//            for (int worker = 0; worker < resourcesCount; worker++) {
+//                int worker_count = team[worker];
+//                cout << "contractor: " << contractor << " worker: " << worker << ", worker_count: " << worker_count << endl;
+//
+//                int need_count = worker_count;
+//                if (need_count == 0) continue;
+//            }
 
-            int st = findMinStartTime(workIndex, contractor, worker_team,
+            int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
-            int c_ft = schedule(workIndex, st, contractor, worker_team,
-                                resourcesCount, completed, timeline);
 //            int c_ft = 0 + 5;
+            int c_ft = schedule(workIndex, st, contractor, team,
+                                resourcesCount, completed, timeline);
             finishTime = max(finishTime, c_ft);
         }
 //        cout << "Finish time: " << finishTime << endl;
@@ -232,17 +244,12 @@ public:
         completed.resize(totalWorksCount);
 
         int finishTime = 0;
-//        cout << "Scheduling" << endl;
-
 
         // scheduling works one-by-one
         for (int i = 0; i < worksCount; i++) {
             int workIndex = order[i];
             int contractor = resources[i][resourcesCount];
             auto* team = resources[i].begin().operator->();
-
-//            cout << "Work index: " << workIndex << endl;
-//            cout << i << "," << resourcesCount << " Contractor: " << contractor << endl;
 
             int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
@@ -251,7 +258,6 @@ public:
 //            int c_ft = 0 + 5;
             finishTime = max(finishTime, c_ft);
         }
-//        cout << "Finish time: " << finishTime << endl;
 
         return finishTime;
     }

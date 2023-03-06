@@ -3,7 +3,7 @@ import multiprocessing as mp
 import random
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import List, Dict, Iterable
+from typing import List, Dict, Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
@@ -26,40 +26,37 @@ logger = mp.log_to_stderr(logging.DEBUG)
 
 class FitnessFunction(ABC):
 
-    def __init__(self, tb: Toolbox):
-        self._tb = tb
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+        self._evaluator = evaluator
 
     @abstractmethod
-    def evaluate(self, chromosome: ChromosomeType) -> int:
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         ...
 
 
 class TimeFitness(FitnessFunction):
 
-    def __init__(self, tb: Toolbox):
-        super().__init__(tb)
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+        super().__init__(evaluator)
 
-    def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
-        finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
-        return finish_time
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        return self._evaluator(chromosomes)
 
 
 class TimeAndResourcesFitness(FitnessFunction):
 
-    def __init__(self, tb: Toolbox):
-        super().__init__(tb)
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+        super().__init__(evaluator)
 
-    def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
-        workers_weight = int(np.sum(chromosome[2]))
-        return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time + Time(workers_weight)
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
+        return [finish_time + int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
 class DeadlineResourcesFitness(FitnessFunction):
 
-    def __init__(self, deadline: Time, tb: Toolbox):
-        super().__init__(tb)
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+        super().__init__(evaluator)
         self._deadline = deadline
 
     @staticmethod
@@ -69,13 +66,9 @@ class DeadlineResourcesFitness(FitnessFunction):
         """
         return partial(DeadlineResourcesFitness, deadline)
 
-    def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
-        finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
-        if finish_time > self._deadline:
-            return Time.inf()
-        else:
-            return int(np.sum(chromosome[2]))  # count of workers used in border
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
+        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum

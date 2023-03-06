@@ -1,8 +1,6 @@
 import math
 import random
-import sys
 import time
-from concurrent.futures import ProcessPoolExecutor
 from typing import Dict, List, Tuple, Callable
 
 import numpy as np
@@ -27,8 +25,6 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
-np.set_printoptions(threshold=sys.maxsize)
-
 
 def build_schedule(wg: WorkGraph,
                    contractors: List[Contractor],
@@ -41,7 +37,7 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
-                   fitness: Callable[[Toolbox], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -153,17 +149,6 @@ def build_schedule(wg: WorkGraph,
         if not is_chromosome_correct(chromosome, node_indices, parents):
             raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
-    def prepare_distributed_genetic_args():
-        # for more information please refer operators.py#prepare_toolbox
-        hyperparams = mutate_order, mutate_resources, selection_size, spec, rand, assigned_parent_time
-        return wg, contractors, init_chromosomes, hyperparams
-
-    with open(f'args_original', 'w') as f:
-        # f.write(str(prepare_distributed_genetic_args()))
-        nodes = wg.nodes[:]
-        sorted(nodes, key=lambda node: node.work_unit.id)
-        f.write(str(nodes))
-
 
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
@@ -174,19 +159,18 @@ def build_schedule(wg: WorkGraph,
     cxpb, mutpb = mutate_order, mutate_order
     mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
-    for init_ind in pop:
-        assert toolbox.validate(init_ind[0])
-
     native = NativeWrapper(wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
 
     def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
         return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
 
+    fitness_f = fitness_constructor(evaluate_chromosomes)
+
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()
 
     # map to each individual fitness function
-    fitness = evaluate_chromosomes([ind[0] for ind in pop])
+    fitness = fitness_f.evaluate([ind[0] for ind in pop])
     # pool.close()
     # pool.join()
     for ind, fit in zip(pop, fitness):
@@ -313,7 +297,7 @@ def build_schedule(wg: WorkGraph,
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        invalid_fit = evaluate_chromosomes([ind[0] for ind in invalid_ind])
+        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind])
         for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
             if fit == Time.inf() and ind.fitness.invalid_steps == 0:

@@ -37,14 +37,16 @@ class NativeWrapper:
         self.totalWorksCount = wg.vertex_count
         self.time_estimator = time_estimator
         self.worker_pool_indices = worker_pool_indices
+        self._current_chromosomes = None
 
-    def calculate_working_time(self, work: int, contractor: int, team: np.ndarray) -> int:
-        print("Called WorkTimeEstimator!")
-        workers = [self.worker_pool_indices[worker_index][contractor]
-                         .copy().with_count(worker_count)
-                         for worker_index, worker_count in enumerate(team)
-                         if worker_count > 0]
+    def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
+        team = self._current_chromosomes[chromosome_ind][1][team_target]
+        workers = [self.worker_pool_indices[worker_index][team[len(self.workers[0])]]
+                         .copy().with_count(team[worker_index])
+                         for worker_index in range(len(self.workers[0]))
+                         if team[worker_index] > 0]
         return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
+        self._current_chromosomes = chromosomes
         return evaluate(self, self.parents, self.inseparables, self.workers, self.totalWorksCount, chromosomes)

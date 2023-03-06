@@ -24,39 +24,22 @@ private:
     int totalWorksCount;
     PyObject* pythonWrapper;
 
-    int calculate_working_time(int work, int contractor, PyArrayObject* team) {
+    int calculate_working_time(int chromosome_ind, int work, int team_target) {
         // TODO Make full hash-based cache
 
-        PyObject* my_args = PyTuple_Pack(
-                3,
-                PyLong_FromLong(work),
-                PyLong_FromLong(contractor),
-                team
-        );
-        if (!my_args) {
-            cout << "Problems with tuple allocating; probably end of RAM" << endl;
+        auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
+        if (res == nullptr) {
+            cerr << "Result is NULL" << endl << flush;
             return 0;
         }
-        auto res = PyObject_CallMethodObjArgs(pythonWrapper,
-                                              PyUnicode_FromString("calculate_working_time"),
-                                              my_args, NULL);
+        Py_DECREF(res);
         return (int) PyLong_AsLong(res);
-    }
-
-    static inline int get(PyArrayObject* arr, int i) {
-        // very hacky, but simply getting element from numpy array
-        return *(int*) PyArray_GETPTR1(arr, i);
-    }
-
-    static inline int get(PyArrayObject* arr, int i, int j) {
-        return *(int*) PyArray_GETPTR2(arr, i, j);
     }
 
     int findMinStartTime(int nodeIndex, int contractor, const int* team, size_t teamSize,
                          vector<int>& completed, Timeline& timeline) {
         int maxParentTime = 0;
         // find min start time
-//        cout << "nodeIndex: " << nodeIndex << endl;
         for (int parent : parents[nodeIndex]) {
             maxParentTime = max(maxParentTime, completed[parent]);
         }
@@ -69,7 +52,6 @@ private:
             int need_count = worker_count;
             if (need_count == 0) continue;
 
-//            cout << "contractor: " << contractor << " worker: " << worker << endl;
             // Traverse list while not enough resources and grab it
             auto &worker_timeline = timeline[contractor][worker];
             size_t ind = worker_timeline.size() - 1;
@@ -127,7 +109,7 @@ private:
         }
     }
 
-    int schedule(int nodeIndex, int startTime, int contractor, const int* team,
+    int schedule(int chromosome_ind, int nodeIndex, int startTime, int contractor, const int* team,
                  size_t teamSize, vector<int>& completed, Timeline& timeline) {
         int finishTime = startTime;
 
@@ -139,7 +121,7 @@ private:
             }
             startTime = max(startTime, maxParentTime);
 
-            int workingTime = 1;//calculate_working_time(dep_node, contractor, team);
+            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex);
             finishTime = startTime + workingTime;
 
             // cache finish time of scheduled work
@@ -179,13 +161,14 @@ public:
 
     vector<int> evaluate(vector<PyObject*>& chromosomes) {
         auto results = vector<int>();
+        int i = 0;
         for (auto* chromosome : chromosomes) {
-            results.push_back(evaluate(chromosome));
+            results.push_back(evaluate(i++, chromosome));
         }
         return results;
     }
 
-    int evaluate(PyObject* chromosome) {
+    int evaluate(int chromosome_ind, PyObject* chromosome) {
         PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
         PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
         PyObject* pyContractors; //= PyList_GetItem(chromosome, 1);
@@ -234,7 +217,7 @@ public:
                 return TIME_INF;
             }
 //            int c_ft = 0 + 5;
-            int c_ft = schedule(workIndex, st, contractor, team,
+            int c_ft = schedule(chromosome_ind, workIndex, st, contractor, team,
                                 resourcesCount, completed, timeline);
             finishTime = max(finishTime, c_ft);
         }
@@ -262,7 +245,7 @@ public:
 
             int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
-            int c_ft = schedule(workIndex, st, contractor, team,
+            int c_ft = schedule(0, workIndex, st, contractor, team,
                                 resourcesCount, completed, timeline);
 //            int c_ft = 0 + 5;
             finishTime = max(finishTime, c_ft);

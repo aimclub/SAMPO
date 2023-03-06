@@ -349,6 +349,8 @@ def build_schedule(wg: WorkGraph,
         # print(evaluation)
         g += 1
 
+    native.close()
+
     chromosome = hof[0][0]
 
     # assert that we have valid chromosome

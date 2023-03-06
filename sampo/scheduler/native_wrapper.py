@@ -1,4 +1,6 @@
-import numpy as np
+from native import evaluate
+from native import decodeEvaluationInfo
+from native import freeEvaluationInfo
 
 from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.schemas.contractor import Contractor
@@ -6,10 +8,6 @@ from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
-
-import sampo.native
-
-from native import evaluate
 
 
 class NativeWrapper:
@@ -39,6 +37,9 @@ class NativeWrapper:
         self.worker_pool_indices = worker_pool_indices
         self._current_chromosomes = None
 
+        # preparing C++ cache
+        self._cache = decodeEvaluationInfo(self, self.parents, self.inseparables, self.workers, self.totalWorksCount)
+
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]
         workers = [self.worker_pool_indices[worker_index][team[len(self.workers[0])]]
@@ -49,4 +50,7 @@ class NativeWrapper:
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes
-        return evaluate(self, self.parents, self.inseparables, self.workers, self.totalWorksCount, chromosomes)
+        return evaluate(self._cache, chromosomes)
+
+    def close(self):
+        freeEvaluationInfo(self._cache)

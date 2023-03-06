@@ -26,34 +26,28 @@ static PyObject* pyObjectIdentity(PyObject* object) {
     return object;
 }
 
-static PyObject* evaluate(PyObject *self, PyObject *args) {
-//    cerr << "Called" << endl;
-
+typedef struct {
     PyObject* pythonWrapper;
-    PyObject* pyParents;
-    PyObject* pyInseparables;
-    PyObject* pyWorkers;
+    vector<vector<int>> parents;
+    vector<vector<int>> inseparables;
+    vector<vector<int>> workers;
     int totalWorksCount;
-    PyObject* pyChromosomes;
+} EvaluateInfo;
 
-    if (!PyArg_ParseTuple(args, "OOOOiO",
-                          &pythonWrapper, &pyParents, &pyInseparables,
-                          &pyWorkers, &totalWorksCount, &pyChromosomes)) {
+static PyObject* evaluate(PyObject *self, PyObject *args) {
+    EvaluateInfo* infoPtr;
+    PyObject* pyChromosomes;
+    if (!PyArg_ParseTuple(args, "LO", &infoPtr, &pyChromosomes)) {
         cout << "Can't parse arguments" << endl;
     }
-    auto parents = PyCodec::fromList(pyParents, decodeIntList);
-    auto inseparables = PyCodec::fromList(pyInseparables, decodeIntList);
-    auto workers = PyCodec::fromList(pyWorkers, decodeIntList);
     auto chromosomes = PyCodec::fromList(pyChromosomes, pyObjectIdentity);
 
-//    cout << "Called" << endl << flush;
-
-    ChromosomeEvaluator evaluator(parents, inseparables, workers, totalWorksCount, pythonWrapper);
+    ChromosomeEvaluator evaluator(infoPtr->parents, infoPtr->inseparables, infoPtr->workers, infoPtr->totalWorksCount, infoPtr->pythonWrapper);
 
     vector<int> results = evaluator.evaluate(chromosomes);
 
-//    return PyLong_FromLong(evaluator.evaluate(chromosomes[0]));
     PyObject* pyList = PyList_New(results.size());
+    Py_INCREF(pyList);
     for (int i = 0; i < results.size(); i++) {
         PyObject* pyInt = Py_BuildValue("i", results[i]);
         PyList_SetItem(pyList, i, pyInt);
@@ -61,9 +55,48 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
     return pyList;
 }
 
+static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
+    PyObject* pythonWrapper;
+    PyObject* pyParents;
+    PyObject* pyInseparables;
+    PyObject* pyWorkers;
+    int totalWorksCount;
+    if (!PyArg_ParseTuple(args, "OOOOi",
+                          &pythonWrapper, &pyParents, &pyInseparables,
+                          &pyWorkers, &totalWorksCount)) {
+        cout << "Can't parse arguments" << endl;
+    }
+
+    auto* info = new EvaluateInfo {
+        pythonWrapper,
+        PyCodec::fromList(pyParents, decodeIntList),
+        PyCodec::fromList(pyInseparables, decodeIntList),
+        PyCodec::fromList(pyWorkers, decodeIntList),
+        totalWorksCount
+    };
+
+    auto* res = PyLong_FromVoidPtr(info);
+    Py_INCREF(res);
+    return res;
+}
+
+static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
+    EvaluateInfo* infoPtr;
+    if (!PyArg_ParseTuple(args, "L", &infoPtr)) {
+        cout << "Can't parse arguments" << endl;
+    }
+    free(infoPtr);
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 static PyMethodDef nativeMethods[] = {
-        { "evaluate", evaluate, METH_VARARGS,
+        {"evaluate", evaluate, METH_VARARGS,
               "Evaluates the chromosome using Just-In-Time-Timeline" },
+        {"decodeEvaluationInfo", decodeEvaluationInfo, METH_VARARGS,
+                "Evaluates the chromosome using Just-In-Time-Timeline" },
+        {"freeEvaluationInfo", freeEvaluationInfo, METH_VARARGS,
+                "Evaluates the chromosome using Just-In-Time-Timeline" },
         {nullptr, nullptr, 0, nullptr}
 };
 

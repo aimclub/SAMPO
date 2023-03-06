@@ -1,6 +1,14 @@
 #ifndef NATIVE_CHROMOSOME_EVALUATOR_H
 #define NATIVE_CHROMOSOME_EVALUATOR_H
 
+//#pragma GCC optimize("Ofast")
+//#pragma GCC optimize("no-stack-protector")
+//#pragma GCC optimize("unroll-loops")
+//#pragma GCC target("sse,sse2,sse3,ssse3,popcnt,abm,mmx,tune=native")
+//#pragma GCC optimize("fast-math")
+
+#pragma optimize( "O2", on )
+
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -8,6 +16,7 @@
 
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 
 using namespace std;
 
@@ -24,16 +33,31 @@ private:
     int totalWorksCount;
     PyObject* pythonWrapper;
 
-    int calculate_working_time(int chromosome_ind, int work, int team_target) {
-        // TODO Make full hash-based cache
+    int calculate_working_time(int chromosome_ind, int work, int team_target, size_t teamSize, const int* teamData) {
+        static unordered_map<int, int> cache;
 
-        auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
-        if (res == nullptr) {
-            cerr << "Result is NULL" << endl << flush;
-            return 0;
+        // calculate the team hash
+        int hash = 0;
+        for (size_t i = 0; i < teamSize; i++) {
+            // distributed for super-scalar optimization, do not rewrite
+            int addition = 17 * teamData[i];
+            hash *= 13;
+            hash += addition;
         }
-        Py_DECREF(res);
-        return (int) PyLong_AsLong(res);
+
+        auto p = cache.find(hash);
+        if (p == cache.end()) {
+            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
+            if (res == nullptr) {
+                cerr << "Result is NULL" << endl << flush;
+                return 0;
+            }
+            Py_DECREF(res);
+            return (int) PyLong_AsLong(res);
+        } else {
+            cout << "Used cache!" << endl;
+            return p->second;
+        }
     }
 
     int findMinStartTime(int nodeIndex, int contractor, const int* team, size_t teamSize,
@@ -121,7 +145,7 @@ private:
             }
             startTime = max(startTime, maxParentTime);
 
-            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex);
+            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex, teamSize, team);
             finishTime = startTime + workingTime;
 
             // cache finish time of scheduled work

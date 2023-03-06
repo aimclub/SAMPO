@@ -21,7 +21,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import reverse_dictionary
 
-logger = mp.log_to_stderr(logging.DEBUG)
+# logger = mp.log_to_stderr(logging.DEBUG)
 
 
 class FitnessFunction(ABC):
@@ -193,7 +193,7 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, l
         used.add(work_index)
         for parent in parents[work_index]:
             if parent not in used:
-                logger.error(f'Order validation failed: {work_order}')
+                # logger.error(f'Order validation failed: {work_order}')
                 return False
     return True
 
@@ -214,7 +214,7 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
         contractor_border = chromosome[2][contractor_ind]
         for ind, count in enumerate(resources_count):
             if contractor_border[ind] < count:
-                logger.error(f'Contractor border validation failed: {contractor_border[ind]} < {count}')
+                # logger.error(f'Contractor border validation failed: {contractor_border[ind]} < {count}')
                 return False
     return True
 
@@ -289,7 +289,7 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
             contractor = ind[1][i][-1]
             border = ind[2][contractor][type_of_worker]
             # TODO Debug why min(xu, border) can be lower than xl
-            ind[1][i][type_of_worker] = rand.randint(xl, max(xl + 1, min(xu, border)))
+            ind[1][i][type_of_worker] = rand.randint(xl, max(xl, min(xu, border)))
 
     return ind
 

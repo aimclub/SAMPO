@@ -161,15 +161,16 @@ def build_schedule(wg: WorkGraph,
 
     native = NativeWrapper(wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
 
-    def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
-        return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
+    # def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
+    #     return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
 
-    fitness_f = fitness_constructor(evaluate_chromosomes)
+    fitness_f = fitness_constructor(native.evaluate)
 
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()
 
     # map to each individual fitness function
+    pop = [ind for ind in pop if toolbox.validate(ind[0])]
     fitness = fitness_f.evaluate([ind[0] for ind in pop])
     # pool.close()
     # pool.join()
@@ -292,12 +293,11 @@ def build_schedule(wg: WorkGraph,
         offspring.extend(cur_generation)
         cur_generation.clear()
         # Gather all the fitness in one list and print the stats
-        invalid_ind = [ind for ind in offspring
-                       if ind.fitness.invalid_steps < invalidation_border]
+        invalid_ind = [ind for ind in offspring if toolbox.validate(ind[0])]
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind])
+        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind if toolbox.validate(ind[0])])
         for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
             if fit == Time.inf() and ind.fitness.invalid_steps == 0:
@@ -308,19 +308,12 @@ def build_schedule(wg: WorkGraph,
             if len(_ftn) > 0:
                 fitness_history.append(sum(_ftn) / len(_ftn))
 
-        def valid(ind: Individual) -> bool:
-            if ind.fitness.invalid_steps == 0:
-                return True
-            ind.fitness.invalid_steps += 1
-            return ind.fitness.invalid_steps < invalidation_border
-
-        # renewing population
-        addition = [ind for ind in offspring if valid(ind)]
-        print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
         # pop_size = len(pop)
         # pop = [ind for ind in pop if valid(ind)]
         # print(f'----| Filtered out {pop_size - len(pop)} invalid individuals')
-        pop[:] = addition
+
+        # renewing population
+        pop[:] = offspring
         hof.update(pop)
 
         best_fitness = hof[0].fitness.values[0]

@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -65,16 +66,16 @@ class GeneticScheduler(Scheduler):
         mutate_order = self.mutate_order
         if mutate_order is None:
             if works_count < 300:
-                mutate_order = 0.006
+                mutate_order = 0.1
             else:
-                mutate_order = 2 / works_count
+                mutate_order = 2 / math.sqrt(works_count)
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
             if works_count < 300:
-                mutate_resources = 0.06
+                mutate_resources = 0.3
             else:
-                mutate_resources = 18 / works_count
+                mutate_resources = 18 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 #set(CMAKE_C_COMPILER "C:\\msys64\\mingw64\\bin\\gcc")
 #set(CMAKE_CXX_COMPILER "C:\\msys64\\mingw64\\bin\\g++")
+#set(CMAKE_C_COMPILER "gcc")
+#set(CMAKE_CXX_COMPILER "g++")
 
 project(native CXX)
 

@@ -7,7 +7,7 @@
 //#pragma GCC target("sse,sse2,sse3,ssse3,popcnt,abm,mmx,tune=native")
 //#pragma GCC optimize("fast-math")
 
-#pragma optimize( "O2", on )
+//#pragma optimize( "O2", on )
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
@@ -99,7 +99,7 @@ private:
         return max(maxParentTime, maxAgentTime);
     }
 
-    static void updateTimeline(int finishTime, int contractor, const int* team, int teamSize, Timeline& timeline) {
+    static void updateTimeline(int finishTime, int contractor, const int* team, size_t teamSize, Timeline& timeline) {
         for (int worker = 0; worker < teamSize; worker++) {
             int worker_count = team[worker];
             int need_count = worker_count;

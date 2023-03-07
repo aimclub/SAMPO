@@ -1,5 +1,5 @@
-from native import evaluate
 from native import decodeEvaluationInfo
+from native import evaluate
 from native import freeEvaluationInfo
 
 from sampo.scheduler.genetic.converter import ChromosomeType
@@ -14,7 +14,8 @@ class NativeWrapper:
     def __init__(self, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
                  worker_pool_indices: dict[int, dict[int, Worker]], time_estimator: WorkTimeEstimator):
         # the outer numeration. Begins with inseparable heads, continuous with tails.
-        numeration: dict[int, GraphNode] = {i: node for i, node in enumerate(filter(lambda node: not node.is_inseparable_son(), wg.nodes))}
+        numeration: dict[int, GraphNode] = {i: node for i, node in
+                                            enumerate(filter(lambda node: not node.is_inseparable_son(), wg.nodes))}
         heads_count = len(numeration)
         for i, node in enumerate([node for node in wg.nodes if node.is_inseparable_son()]):
             numeration[heads_count + i] = node
@@ -43,9 +44,9 @@ class NativeWrapper:
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]
         workers = [self.worker_pool_indices[worker_index][team[len(self.workers[0])]]
-                         .copy().with_count(team[worker_index])
-                         for worker_index in range(len(self.workers[0]))
-                         if team[worker_index] > 0]
+                   .copy().with_count(team[worker_index])
+                   for worker_index in range(len(self.workers[0]))
+                   if team[worker_index] > 0]
         return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):

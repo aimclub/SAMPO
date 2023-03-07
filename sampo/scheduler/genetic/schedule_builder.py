@@ -6,7 +6,6 @@ from typing import Dict, List, Tuple, Callable
 import numpy as np
 import seaborn as sns
 from deap import tools
-from deap.base import Toolbox
 from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
@@ -332,6 +331,8 @@ def build_schedule(wg: WorkGraph,
 
     # assert that we have valid chromosome
     assert hof[0].fitness.values[0] != Time.inf()
+
+    print(f'Final time: {hof[0].fitness.values[0]}')
 
     scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                                                                     index2contractor_obj,

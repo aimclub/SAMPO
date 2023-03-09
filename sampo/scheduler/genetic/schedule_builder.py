@@ -22,7 +22,7 @@ from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import reverse_dictionary
+from sampo.utilities.collections_util import reverse_dictionary
 
 
 def build_schedule(wg: WorkGraph,

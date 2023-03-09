@@ -8,7 +8,7 @@ from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 PRIORITY_SHUFFLE_RADIUS = 0.5
 

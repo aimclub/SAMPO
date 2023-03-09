@@ -9,7 +9,7 @@ from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
-from sampo.utilities.datetime import add_time_delta
+from sampo.utilities.datetime_util import add_time_delta
 from sampo.utilities.schedule import fix_split_tasks
 
 ResourceSchedule = Dict[str, List[Tuple[Time, Time]]]

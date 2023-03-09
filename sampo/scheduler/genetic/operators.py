@@ -19,7 +19,7 @@ from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import reverse_dictionary
+from sampo.utilities.collections_util import reverse_dictionary
 
 # logger = mp.log_to_stderr(logging.DEBUG)
 

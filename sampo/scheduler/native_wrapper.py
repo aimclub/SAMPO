@@ -7,7 +7,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import reverse_dictionary
+from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:

@@ -6,7 +6,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.time import Time
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 
 def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contractor]) -> None:

@@ -1,11 +1,10 @@
 import os
 import pathlib
-
-from setuptools.command.build_ext import build_ext as build_ext_orig
-from distutils.errors import DistutilsPlatformError, CCompilerError, DistutilsExecError
 from distutils.core import setup, Extension
+from distutils.errors import DistutilsPlatformError, CCompilerError, DistutilsExecError
 
 import numpy
+from setuptools.command.build_ext import build_ext as build_ext_orig
 
 ext_modules = [
     Extension("native",

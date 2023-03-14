@@ -34,30 +34,13 @@ private:
     PyObject* pythonWrapper;
 
     int calculate_working_time(int chromosome_ind, int work, int team_target, size_t teamSize, const int* teamData) {
-        static unordered_map<int, int> cache;
-
-        // calculate the team hash
-        int hash = 0;
-        for (size_t i = 0; i < teamSize; i++) {
-            // distributed for super-scalar optimization, do not rewrite
-            int addition = 17 * teamData[i];
-            hash *= 13;
-            hash += addition;
+        auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
+        if (res == nullptr) {
+            cerr << "Result is NULL" << endl << flush;
+            return 0;
         }
-
-        auto p = cache.find(hash);
-        if (p == cache.end()) {
-            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
-            if (res == nullptr) {
-                cerr << "Result is NULL" << endl << flush;
-                return 0;
-            }
-            Py_DECREF(res);
-            return (int) PyLong_AsLong(res);
-        } else {
-            cout << "Used cache!" << endl;
-            return p->second;
-        }
+        Py_DECREF(res);
+        return (int) PyLong_AsLong(res);
     }
 
     int findMinStartTime(int nodeIndex, int contractor, const int* team, size_t teamSize,

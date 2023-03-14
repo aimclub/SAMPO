@@ -33,7 +33,7 @@ private:
     int totalWorksCount;
     PyObject* pythonWrapper;
 
-    int calculate_working_time(int chromosome_ind, int work, int team_target, size_t teamSize, const int* teamData) {
+    int calculate_working_time(int chromosome_ind, int work, int team_target) {
         auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
         if (res == nullptr) {
             cerr << "Result is NULL" << endl << flush;
@@ -128,7 +128,7 @@ private:
             }
             startTime = max(startTime, maxParentTime);
 
-            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex, teamSize, team);
+            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex);
             finishTime = startTime + workingTime;
 
             // cache finish time of scheduled work
@@ -197,38 +197,22 @@ public:
         completed.resize(totalWorksCount);
 
         int finishTime = 0;
-//        cout << "Scheduling" << endl;
-
 
         // scheduling works one-by-one
         for (int i = 0; i < worksCount; i++) {
-//        int i = 0;
             int workIndex = order[i];
             auto* team = resources + i * (resourcesCount + 1); // go to the start of 'i' row in 2D array
             int contractor = team[resourcesCount];
-//
-//            cout << "Work index: " << workIndex << endl << flush;
-//            cout << i << "," << resourcesCount << " Contractor: " << contractor << endl << flush;
-
-//            for (int worker = 0; worker < resourcesCount; worker++) {
-//                int worker_count = team[worker];
-//                cout << "contractor: " << contractor << " worker: " << worker << ", worker_count: " << worker_count << endl;
-//
-//                int need_count = worker_count;
-//                if (need_count == 0) continue;
-//            }
 
             int st = findMinStartTime(workIndex, contractor, team,
                                       resourcesCount, completed, timeline);
             if (st == TIME_INF) {
                 return TIME_INF;
             }
-//            int c_ft = 0 + 5;
             int c_ft = schedule(chromosome_ind, workIndex, st, contractor, team,
                                 resourcesCount, completed, timeline);
             finishTime = max(finishTime, c_ft);
         }
-//        cout << "Finish time: " << finishTime << endl;
 
         return finishTime;
     }

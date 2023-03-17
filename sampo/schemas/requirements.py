@@ -82,6 +82,8 @@ class MaterialReq(BaseReq):
     :param name: the name of this requirement
     """
     kind: str
+    count: int
+    # need_start: int TODO Implement handling this
     name: Optional[str] = None
 
 

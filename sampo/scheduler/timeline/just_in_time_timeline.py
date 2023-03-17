@@ -4,7 +4,8 @@ from sampo.scheduler.heft.time_computaion import calculate_working_time, calcula
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.resources import Worker
+from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.resources import Worker, Resource
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -13,12 +14,16 @@ from sampo.schemas.types import AgentId
 
 class JustInTimeTimeline(Timeline):
 
-    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
+    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
+                 worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         self._timeline = {}
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
+
+        for landscape_offer in landscape.get_all_resources():
+            self._timeline[landscape_offer.get_agent_id()] = [(Time(0), landscape_offer)]
 
     def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
                                             node2swork: Dict[GraphNode, ScheduledWork],
@@ -43,6 +48,7 @@ class JustInTimeTimeline(Timeline):
         # define the max end time of all parent tasks
         max_parent_time = max(max([node2swork[parent_node].finish_time
                                    for parent_node in node.parents], default=Time(0)), assigned_parent_time)
+
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
 
@@ -104,6 +110,9 @@ class JustInTimeTimeline(Timeline):
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
 
+    def find_min_material_time(self):
+        
+
     def schedule(self,
                  task_index: int,
                  node: GraphNode,
@@ -115,10 +124,12 @@ class JustInTimeTimeline(Timeline):
                  assigned_parent_time: Time = Time(0),
                  work_estimator: Optional[WorkTimeEstimator] = None):
         inseparable_chain = node.get_inseparable_chain_with_self()
-        st = assigned_start_time if assigned_start_time is not None else self.find_min_start_time(node, workers,
-                                                                                                  node2swork,
-                                                                                                  assigned_parent_time,
-                                                                                                  work_estimator)
+        st = assigned_start_time
+
+        if assigned_start_time is None:
+            st = self.find_min_start_time(node, workers, node2swork, assigned_parent_time, work_estimator)
+            # min_material_time = self.find_max_agent_time([])
+
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}

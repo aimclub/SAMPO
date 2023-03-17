@@ -24,6 +24,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     # TODO Remove optional
     volume: Optional[float] = 1
     volume_type: Optional[str] = "unit"
+    workground_size: int = 100
 
     # TODO: describe the function (description, parameters, return type)
     @custom_serializer('worker_reqs')

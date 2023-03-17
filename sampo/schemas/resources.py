@@ -15,7 +15,15 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     """
     A class summarizing the different resources used in the work: Human resources, equipment, materials, etc.
     """
-    pass
+    id: str
+    name: str
+    count: int
+    contractor_id: Optional[str] = ""
+
+    # TODO: describe the function (description, return type)
+    def get_agent_id(self) -> AgentId:
+        return self.contractor_id, self.name
+
 
 
 # TODO describe "productivity"
@@ -35,9 +43,7 @@ class Worker(Resource):
                  contractor_id: Optional[str] = "",
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
-        super(Worker, self).__init__(id, name)
-        self.count = count
-        self.contractor_id = contractor_id
+        super(Worker, self).__init__(id, name, count, contractor_id)
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
@@ -58,10 +64,6 @@ class Worker(Resource):
     def get_cost(self) -> float:
         """Returns cost of this worker entry"""
         return self.cost_one_unit * self.count
-
-    # TODO: describe the function (description, return type)
-    def get_agent_id(self) -> AgentId:
-        return self.contractor_id, self.name
 
     # TODO: describe the function (description, return type)
     def get_static_productivity(self) -> float:
@@ -94,4 +96,12 @@ class Equipment(Resource):
 # TODO: describe the class (description)
 @dataclass
 class Material(Resource):
-    pass
+
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 count: int,
+                 contractor_id: Optional[str] = "",
+                 cost_one_unit: Optional[float] = 1):
+        super(Material, self).__init__(id, name, count, contractor_id)
+        self.cost_one_unit = cost_one_unit

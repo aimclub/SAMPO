@@ -1,3 +1,4 @@
+import math
 from operator import itemgetter
 
 from sortedcontainers import SortedKeyList
@@ -14,14 +15,40 @@ class SupplyTimeline:
             self._timeline[landscape.id] = SortedKeyList([(Time(0), landscape.count), (Time.inf(), landscape.count)],
                                                          itemgetter(0))
 
+
+    def deliver_materials(self, start_time: Time, finish_time: Time,
+                          materials: list[Material], batch_size: int) -> tuple[Time, Time]:
+        """
+        Models material delivery.
+
+        Delivery performed in batches sized by batch_size.
+
+        :return: pair of material-driven minimum start and finish times
+        """
+        sum_materials = sum([material.count for material in materials])
+        ratio = sum_materials / batch_size
+        batches = math.ceil(ratio)
+
+        first_batch = [material.copy().with_count(material.count // batches) for material in materials]
+        other_batches = [first_batch for _ in range(batches - 1)]
+        other_batches.append([material.copy().with_count(material.count * (ratio - batches)) for material in materials])
+
+        start_time = self.supply_resources(start_time, first_batch, False)
+        finish_time = max([self.supply_resources(finish_time, batch, False) for batch in other_batches])
+
+        return start_time, finish_time
+
+
+
     def supply_resources(self, deadline: Time, materials: list[Material], simulate: bool) -> Time:
         """
         Finds minimal time that given materials can be supplied, greater that given start time
 
         :param deadline: the time work starts
         :param materials: material resources that are required to start
-        :param simulate: should timeline only find minimum supply time
+        :param simulate: should timeline only find minimum supply time and not change timeline
         # :param workground_size: material capacity of the workground
+        :return: the time when resources are ready
         """
         min_start_time = deadline
 

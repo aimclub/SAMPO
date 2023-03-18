@@ -69,7 +69,7 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(max_agent_time, max_parent_time)
 
-        max_material_time = self._material_timeline.find_min_material_time(c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
+        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
 
         c_st = max(c_st, max_material_time)
 
@@ -187,14 +187,17 @@ class JustInTimeTimeline(Timeline):
                 working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
             new_finish_time = start_time + working_time
 
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, start_time,
+                                                                                       new_finish_time,
+                                                                                       node.work_unit.need_materials(),
+                                                                                       node.work_unit.workground_size)
+
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(start_time, new_finish_time),
                                                  workers=workers,
-                                                 contractor=contractor)
+                                                 contractor=contractor,
+                                                 materials=deliveries)
             # change finish time for using workers
             c_ft = new_finish_time
-
-        _, c_ft = self._material_timeline.deliver_materials(start_time, c_ft, node.work_unit.need_materials(),
-                                                         node.work_unit.workground_size)
 
         self.update_timeline(index, c_ft, node, node2swork, workers)

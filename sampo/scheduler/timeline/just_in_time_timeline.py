@@ -76,7 +76,7 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(c_st, max_material_time)
 
-        max_material_time = self._material_timeline.find_min_material_time(c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
+        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
 
         c_st = max(c_st, max_material_time)
 

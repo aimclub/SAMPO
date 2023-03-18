@@ -1,5 +1,6 @@
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.resources import Resource
+from sampo.schemas.time import Time
 
 
 class ResourceHolder(Resource):
@@ -33,3 +34,11 @@ class LandscapeConfiguration:
 
     def get_all_resources(self) -> list[Resource]:
         return self._roads + self._holders
+
+class MaterialDelivery:
+    def __init__(self, id: str):
+        self.id = id
+        self.delivery = []
+
+    def add_delivery(self, time: Time, count: int):
+        self.delivery.append((time, count))

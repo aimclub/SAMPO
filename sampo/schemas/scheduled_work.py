@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.resources import Equipment, ConstructionObject, Worker
+from sampo.schemas.landscape import MaterialDelivery
+from sampo.schemas.resources import Equipment, ConstructionObject, Worker, Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -22,8 +23,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  start_end_time: Tuple[Time, Time],
                  workers: List[Worker],
                  contractor: Contractor | str,
+                 materials: Optional[List[MaterialDelivery]] = None,
                  equipments: Optional[List[Equipment]] = None,
-                 materials: Optional[List[Equipment]] = None,
                  object: Optional[ConstructionObject] = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
@@ -31,6 +32,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.equipments = equipments
         self.materials = materials
         self.object = object
+
         if contractor is not None:
             if isinstance(contractor, str):
                 self.contractor = contractor

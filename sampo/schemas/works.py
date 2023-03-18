@@ -5,7 +5,7 @@ from typing import List, Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
-from sampo.schemas.resources import Worker
+from sampo.schemas.resources import Worker, Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -27,6 +27,9 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     workground_size: int = 100
 
     display_name: str = ''
+
+    def need_materials(self) -> list[Material]:
+        return [req.material() for req in self.material_reqs]
 
     # TODO: describe the function (description, parameters, return type)
     @custom_serializer('worker_reqs')

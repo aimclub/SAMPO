@@ -105,3 +105,14 @@ class Material(Resource):
                  cost_one_unit: Optional[float] = 1):
         super(Material, self).__init__(id, name, count, contractor_id)
         self.cost_one_unit = cost_one_unit
+
+    # TODO: describe the function (description, return type)
+    def copy(self):
+        return Material(id=self.id,
+                      name=self.name,
+                      count=self.count,
+                      contractor_id=self.contractor_id)
+
+    def with_count(self, count: int) -> 'Material':
+        self.count = count
+        return self

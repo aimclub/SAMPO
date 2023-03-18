@@ -76,6 +76,10 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(c_st, max_material_time)
 
+        max_material_time = self._material_timeline.find_min_material_time(c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
+
+        c_st = max(c_st, max_material_time)
+
         c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
         return c_st, c_ft, None
 
@@ -115,8 +119,6 @@ class JustInTimeTimeline(Timeline):
             while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
-
-    def find_min_material_time(self):
 
 
     def schedule(self,

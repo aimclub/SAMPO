@@ -18,11 +18,6 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     id: str
     name: str
     count: int
-    contractor_id: Optional[str] = ""
-
-    # TODO: describe the function (description, return type)
-    def get_agent_id(self) -> AgentId:
-        return self.contractor_id, self.name
 
 
 
@@ -43,11 +38,16 @@ class Worker(Resource):
                  contractor_id: Optional[str] = "",
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
-        super(Worker, self).__init__(id, name, count, contractor_id)
+        super(Worker, self).__init__(id, name, count)
+        self.contractor_id = contractor_id
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
     ignored_fields = ['productivity']
+
+    # TODO: describe the function (description, return type)
+    def get_agent_id(self) -> AgentId:
+        return self.contractor_id, self.name
 
     # TODO: describe the function (description, return type)
     def copy(self):
@@ -101,17 +101,15 @@ class Material(Resource):
                  id: str,
                  name: str,
                  count: int,
-                 contractor_id: Optional[str] = "",
                  cost_one_unit: Optional[float] = 1):
-        super(Material, self).__init__(id, name, count, contractor_id)
+        super(Material, self).__init__(id, name, count, "")
         self.cost_one_unit = cost_one_unit
 
     # TODO: describe the function (description, return type)
     def copy(self):
         return Material(id=self.id,
                       name=self.name,
-                      count=self.count,
-                      contractor_id=self.contractor_id)
+                      count=self.count)
 
     def with_count(self, count: int) -> 'Material':
         self.count = count

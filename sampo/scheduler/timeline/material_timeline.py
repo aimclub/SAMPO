@@ -15,6 +15,13 @@ class SupplyTimeline:
             self._timeline[landscape.id] = SortedKeyList([(Time(0), landscape.count), (Time.inf(), landscape.count)],
                                                          itemgetter(0))
 
+    def find_min_material_time(self, start_time: Time, materials: list[Material], batch_size: int) -> Time:
+        sum_materials = sum([material.count for material in materials])
+        ratio = sum_materials / batch_size
+        batches = math.ceil(ratio)
+
+        first_batch = [material.copy().with_count(material.count // batches) for material in materials]
+        return self.supply_resources(start_time, first_batch, True)
 
     def deliver_materials(self, start_time: Time, finish_time: Time,
                           materials: list[Material], batch_size: int) -> tuple[Time, Time]:

@@ -11,6 +11,7 @@ from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -33,6 +34,7 @@ class HEFTScheduler(Scheduler):
 
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
+                            landscape_config: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -41,7 +43,8 @@ class HEFTScheduler(Scheduler):
         ordered_nodes = prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
+            self.build_scheduler(ordered_nodes, contractors, landscape_config, spec,
+                                 self.work_estimator, assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -55,7 +58,8 @@ class HEFTScheduler(Scheduler):
     def build_scheduler(self,
                         ordered_nodes: List[GraphNode],
                         contractors: List[Contractor],
-                        spec: ScheduleSpec,
+                        landscape_config: LandscapeConfiguration = LandscapeConfiguration(),
+                        spec: ScheduleSpec = ScheduleSpec(),
                         work_estimator: WorkTimeEstimator = None,
                         assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
@@ -78,7 +82,7 @@ class HEFTScheduler(Scheduler):
         node2swork: Dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
         if not isinstance(timeline, self._timeline_type):
-            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool)
+            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool, landscape_config)
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit

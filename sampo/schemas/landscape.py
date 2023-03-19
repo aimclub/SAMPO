@@ -28,7 +28,7 @@ class Road(Resource):
         return Road(self.id, self.name, self.throughput)
 
 class LandscapeConfiguration:
-    def __init__(self, roads: list[Road], holders: list[ResourceHolder]):
+    def __init__(self, roads: list[Road] = [], holders: list[ResourceHolder] = []):
         self._roads = roads
         self._holders = holders
 

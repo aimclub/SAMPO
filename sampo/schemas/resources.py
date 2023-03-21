@@ -23,7 +23,6 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
         return self.contractor_id, self.name
 
 
-
 # TODO describe "productivity"
 @dataclass
 class Worker(Resource):

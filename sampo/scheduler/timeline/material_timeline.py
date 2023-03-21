@@ -25,7 +25,8 @@ class SupplyTimeline:
                     self._resource_sources[res] = res_source
                 res_source[landscape.id] = count
 
-    def find_min_material_time(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> tuple[MaterialDelivery, Time]:
+    def find_min_material_time(self, id: str, start_time: Time, materials: list[Material], batch_size: int) \
+            -> tuple[MaterialDelivery, Time]:
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
         batches = math.ceil(ratio)

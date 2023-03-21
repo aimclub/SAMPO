@@ -21,6 +21,10 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
+    def find_work_resources(self, work_name: str, work_volume: float) -> dict[str, int]:
+        ...
+    
+    @abstractmethod
     def estimate_time(self, work_unit: WorkUnit, resources: list[Worker], rand: Random | None = None):
         ...
 

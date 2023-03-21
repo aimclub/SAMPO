@@ -1,6 +1,4 @@
 import os
-import shutil
-from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -45,12 +43,11 @@ def setup_core_resources(request):
     }
 
 
-@pytest.fixture(scope='class')
-def setup_inherited_resources(request, setup_scheduling_inner_params, setup_schedule):
+@pytest.fixture(scope='function')
+def setup_inherited_resources(request, setup_wg, setup_schedule):
     schedule, _ = setup_schedule
-    work_graph, contractor_list, _ = setup_scheduling_inner_params
     return {
-        'work_graph': work_graph,
+        'work_graph': setup_wg,
         'schedule': schedule
     }
 

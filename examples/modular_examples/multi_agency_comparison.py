@@ -8,8 +8,8 @@ from sampo.generator import SimpleSynthetic
 from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
 from sampo.scheduler.topological.base import TopologicalScheduler
@@ -77,16 +77,21 @@ def run_iteration(args):
         if mode == 0:
             schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler()]
         else:
-            schedulers = [GeneticScheduler(5, 50, 0.5, 0.5, 50),
-                          GeneticScheduler(5, 100, 0.5, 0.5, 50),
-                          GeneticScheduler(5, 100, 0.5, 0.75, 50),
-                          GeneticScheduler(5, 100, 0.75, 0.75, 50),
-                          GeneticScheduler(5, 50, 0.9, 0.9, 50)]
+            schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),
+                          GeneticScheduler(50, 100, 0.25, 0.5, 100),
+                          GeneticScheduler(50, 100, 0.5, 0.75, 100),
+                          GeneticScheduler(50, 100, 0.75, 0.75, 100),
+                          GeneticScheduler(50, 50, 0.9, 0.9, 100),
+                          GeneticScheduler(50, 100, 0.5, 0.5, 500),
+                          GeneticScheduler(50, 200, 0.25, 0.5, 500),
+                          GeneticScheduler(50, 50, 0.5, 0.75, 500),
+                          GeneticScheduler(50, 100, 0.75, 0.75, 500),
+                          GeneticScheduler(50, 50, 0.5, 0.9, 500)]
         variate_block_size(logfile, schedulers)
 
 
 if __name__ == '__main__':
     pool = ProcessingPool()
-    args = [[i, mode] for mode in [0, 1] for i in range(1)]
+    args = [[i, mode] for mode in [0, 1] for i in range(10)]
 
     pool.map(run_iteration, args)

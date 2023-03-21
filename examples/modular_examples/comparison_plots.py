@@ -97,27 +97,29 @@ def parse_raw_data(mode_index: int, iterations: int, algos: list[str], algo_labe
 
 
 # general comparison
-def compare_algos_general(title: str, compare_dict: Dict, algo_labels: list[str]):
+def compare_algos_general(title: str, compare_dict: Dict, algos: list[str], algo_labels: list[str]):
     centers = range(len(algo_labels))
     fig, ax = plt.subplots(figsize=(10, 7))
-    ax.bar(centers, compare_dict.values(), tick_label=algo_labels)
+
     ax.set_xlabel('Algorithm')
     ax.set_ylabel('Count')
+    ax.bar(centers, [compare_dict[algo] for algo in algos], tick_label=algo_labels)
 
     plt.suptitle(title, fontsize=24)
     fig.savefig(f'{title}.jpg')
     plt.show()
 
 
-def boxplot_compare_algos_general(title: str, compare_dict: Dict, algo_labels: list[str]):
+def boxplot_compare_algos_general(title: str, compare_dict: Dict, algos: list[str], algo_labels: list[str]):
     fig, ax = plt.subplots(figsize=(10, 7))
     fig.suptitle(title, fontsize=16)
 
-    values = [list(freq.values()) for freq in compare_dict.values()]
+    values = [list(freq.values()) for freq in [compare_dict[algo] for algo in algos]]
     ax.set_xlabel('Algorithm')
     ax.set_ylabel('Count')
     ax.boxplot(values, labels=algo_labels)
 
+    plt.xticks(fontsize=10)
     plt.subplots_adjust(left=0.1,
                         bottom=0.16,
                         right=0.9,
@@ -167,8 +169,8 @@ def boxplot_compare_algos_bg_type(title: str, compare_dict: Dict, algo_labels: l
                         bottom=0.1,
                         right=0.9,
                         top=0.84,
-                        wspace=0.4,
-                        hspace=0.4)
+                        wspace=0.2,
+                        hspace=0.2)
     fig.savefig(f'{title}.jpg')
     plt.show()
 
@@ -201,7 +203,7 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
     fig.suptitle(title, fontsize=32)
     for i, freq_by_step in enumerate(compare_dict.items()):
         values = np.array([[f for f in freq.values()] for freq in freq_by_step[1].values()])
-        ax = fig.add_subplot(23 * 10 + i + 1)
+        ax = fig.add_subplot(33 * 10 + i + 1)
         ax.set(title=algo_labels[i])
         ax.set_xlabel('Block type')
         ax.set_ylabel('Count')
@@ -211,41 +213,52 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
                         bottom=0.1,
                         right=0.9,
                         top=0.84,
-                        wspace=0.4,
-                        hspace=0.45)
+                        wspace=0.2,
+                        hspace=0.6)
     fig.savefig(f'{title}.jpg')
     plt.show()
 
 
 # all algorithms
-algos = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
-         'Genetic[generations=50,size_selection=None,mutate_order=None,mutate_resources=None]']
-algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
-               'Genetic[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
-
-parse_raw_data(0, 1, algos, algo_labels)
-
-compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algo_labels)
-compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algo_labels)
-
-compare_algos_bg_type('Received blocks - algorithms with graph types comparison',
-                      global_algo_bg_type_frequencies, algo_labels)
-compare_algos_bg_type('Downtimes - algorithms with graph types comparison', global_algo_bg_type_downtimes, algo_labels)
-
-compare_algos_block_type('Received blocks - algorithms with block types comparison',
-                         global_algo_block_type_frequencies, algo_labels)
+# algos = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
+#          'Genetic[generations=50,size_selection=None,mutate_order=None,mutate_resources=None]']
+# algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
+#                'Genetic[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
+#
+# parse_raw_data(0, 10, algos, algo_labels)
+#
+# compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algos, algo_labels)
+# compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algos, algo_labels)
+#
+# compare_algos_bg_type('Received blocks - algorithms with graph types comparison',
+#                       global_algo_bg_type_frequencies, algo_labels)
+# compare_algos_bg_type('Downtimes - algorithms with graph types comparison', global_algo_bg_type_downtimes, algo_labels)
+#
+# compare_algos_block_type('Received blocks - algorithms with block types comparison',
+#                          global_algo_block_type_frequencies, algo_labels)
 
 # genetics
-algos = ['Genetic[generations=5,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
-         'Genetic[generations=5,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',
-         'Genetic[generations=5,size_selection=100,mutate_order=0.5,mutate_resources=0.75]',
-         'Genetic[generations=5,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
-         'Genetic[generations=5,size_selection=50,mutate_order=0.9,mutate_resources=0.9]']
-algo_labels = ['generations=5,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.5',
-               'generations=5,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.5',
-               'generations=5,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.75',
-               'generations=5,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75',
-               'generations=5,\nsize_selection=50,\nmutate_order=0.9\n,mutate_resources=0.9']
+algos = ['Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
+         'Genetic[generations=50,size_selection=100,mutate_order=0.25,mutate_resources=0.5]',
+         'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.75]',
+         'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
+         'Genetic[generations=50,size_selection=50,mutate_order=0.9,mutate_resources=0.9]',
+         'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',
+         'Genetic[generations=50,size_selection=200,mutate_order=0.25,mutate_resources=0.5]',
+         'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.75]',
+         'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
+         'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.9]']
+# algo_labels = ['first_population=100,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.5',
+#                'first_population=100,\nsize_selection=100,\nmutate_order=0.25,\nmutate_resources=0.5',
+#                'first_population=100,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.75',
+#                'first_population=100,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75',
+#                'first_population=100,\nsize_selection=50,\nmutate_order=0.9\n,mutate_resources=0.9',
+#                'first_population=500,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.5]',
+#                'first_population=500,\nsize_selection=200,\nmutate_order=0.25,\nmutate_resources=0.5]',
+#                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.75]',
+#                'first_population=500,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75]',
+#                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.9]']
+algo_labels = [str(i) for i in range(1, 10 + 1)]
 
 # clear previous data
 global_algo_frequencies.clear()
@@ -263,8 +276,8 @@ launch_algo_block_type_downtimes.clear()
 
 parse_raw_data(1, 1, algos, algo_labels)
 
-boxplot_compare_algos_general('Received blocks - genetics comparison', launch_algo_frequencies, algo_labels)
-boxplot_compare_algos_general('Downtimes blocks - genetics comparison', launch_algo_downtimes, algo_labels)
+boxplot_compare_algos_general('Received blocks - genetics comparison', launch_algo_frequencies, algos, algo_labels)
+boxplot_compare_algos_general('Downtimes blocks - genetics comparison', launch_algo_downtimes, algos, algo_labels)
 
 boxplot_compare_algos_bg_type('Received blocks - genetics with graph types comparison',
                               launch_algo_bg_type_frequencies, algo_labels)

@@ -21,6 +21,7 @@ def get_swap_candidates(node: GraphNode,
     """
     Abstract function to find nodes that can be swapped
     with given node without breaking topological order
+
     :param node: target node
     :param node_index: index of target node in global sequence
     :param candidates: list of candidates to swapping
@@ -51,6 +52,7 @@ def shuffle_local_sequence(seq: List[GraphNode],
     """
     Params: sub-seq for optimizing, work time estimator
     This performs just small shuffle that not break topological order
+
     :param seq:
     :param start_index:
     :param end_index:

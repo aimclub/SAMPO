@@ -1,17 +1,19 @@
 import math
 import random
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Callable
 
 import numpy as np
 import seaborn as sns
 from deap import tools
+from deap.base import Toolbox
 from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
+    FitnessFunction, TimeFitness
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -33,6 +35,7 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
+                   fitness: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    assigned_parent_time: Time = Time(0),
@@ -58,6 +61,7 @@ def build_schedule(wg: WorkGraph,
     :param mutate_resources:
     :param rand:
     :param spec: spec for current scheduling
+    :param fitness: the fitness function to be used
     :param init_schedules:
     :param timeline:
     :param assigned_parent_time: start time of the whole schedule(time shift)
@@ -135,15 +139,16 @@ def build_schedule(wg: WorkGraph,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
-                           assigned_parent_time, work_estimator)
+                           fitness, assigned_parent_time, work_estimator)
+
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
     # create population of a given size
     pop = toolbox.population(n=population_size)
 
     # probability to participate in mutation and crossover for each individual
-    cxpb, mutpb = 0.5, 0.5
-    mutpb_res, cxpb_res = 0.3, 0.3
+    cxpb, mutpb = mutate_order, mutate_order
+    mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()

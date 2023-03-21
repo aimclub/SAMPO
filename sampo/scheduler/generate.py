@@ -3,8 +3,8 @@ from typing import Union, List, Callable
 
 from sampo.scheduler.base import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.heft_between.base import HEFTBetweenScheduler
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.contractor import Contractor

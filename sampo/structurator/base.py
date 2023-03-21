@@ -5,6 +5,8 @@ from sampo.schemas.graph import GraphNode, GraphNodeDict, GraphEdge, WorkGraph, 
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.works import WorkUnit
 
+STAGE_SEP = '_stage_'
+
 
 def make_start_id(work_unit_id: str, ind: int) -> str:
     """
@@ -14,7 +16,7 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
     :return:
        auxiliary_id: str - an auxiliary id for the work unit
     """
-    return work_unit_id + f"_stage_{ind}"
+    return f"{work_unit_id}{STAGE_SEP}{ind}"
 
 
 def find_lags(edges: List[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (List[Tuple[float, float, bool]]):
@@ -77,7 +79,7 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
         volume = wu.volume * piece_div_main
 
         new_id = make_start_id(wu.id, ind) if ind < len(proportions) - 1 else wu.id
-        new_wu = WorkUnit(new_id, wu.name + f"_stage_{ind}", reqs, group=wu.group,
+        new_wu = WorkUnit(new_id, f"{wu.name}{STAGE_SEP}{ind}", reqs, group=wu.group,
                           volume=volume, volume_type=wu.volume_type)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)
@@ -90,6 +92,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
                  use_ffs_separately: bool = False):
     """
     Restores edges in the transformed graph
+
     :param origin_work_graph: WorkGraph - The original unconverted graph
     :param id2new_nodes: GraphNodeDict -dictionary with transformed vertices,
         if some vertices from the original graph are missing,
@@ -153,6 +156,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
 def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool] = False) -> WorkGraph:
     """
     Rebuilds all edges into finish-start edges with the corresponding rebuilding of the nodes
+
     :param wg: WorkGraph - The graph to be converted
     :param use_lag_edge_optimization: bool - if true - do optimization fake-finish-start edges,
         otherwise considers such edges to be similar to finish-start

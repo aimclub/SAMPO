@@ -49,15 +49,12 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     for node in order:
         node_id = node.work_unit.id
         index = work_id2index[node_id]
-        # TODO Check that `node_reqs` is really need
-        node_reqs = set([req.kind for req in node.work_unit.worker_reqs])
         for resource in schedule[node_id].workers:
-            if resource.name in node_reqs:
-                res_count = resource.count
-                res_index = worker_name2index[resource.name]
-                res_contractor = resource.contractor_id
-                resource_chromosome[res_index, index] = res_count
-                resource_chromosome[-1, index] = contractor2index[res_contractor]
+            res_count = resource.count
+            res_index = worker_name2index[resource.name]
+            res_contractor = resource.contractor_id
+            resource_chromosome[res_index, index] = res_count
+            resource_chromosome[-1, index] = contractor2index[res_contractor]
 
     resource_border_chromosome = np.copy(contractor_borders)
 
@@ -71,19 +68,19 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    spec: ScheduleSpec,
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
-                                   work_estimator: WorkTimeEstimator = None,) \
+                                   work_estimator: WorkTimeEstimator = None, ) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline]:
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(worker_pool)
+        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
 
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
-        if node.id in node2swork and not node.is_inseparable_son():
-            continue
+        # if node.id in node2swork and not node.is_inseparable_son():
+        #     continue
 
         work_spec = spec.get_work_spec(node.id)
 
@@ -104,10 +101,8 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
             st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
-        finish_time = timeline.schedule(order_index, node, node2swork, worker_team, contractor,
-                                        st, work_spec.assigned_time, assigned_parent_time, work_estimator)
-
-        timeline.update_timeline(order_index, finish_time, node, node2swork, worker_team)
+        timeline.schedule(order_index, node, node2swork, worker_team, contractor,
+                          st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
     schedule_start_time = min([swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0])

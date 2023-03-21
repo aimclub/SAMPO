@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -20,7 +21,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  work_unit: WorkUnit,
                  start_end_time: Tuple[Time, Time],
                  workers: List[Worker],
-                 contractor: Contractor,
+                 contractor: Contractor | str,
                  equipments: Optional[List[Equipment]] = None,
                  materials: Optional[List[Equipment]] = None,
                  object: Optional[ConstructionObject] = None):
@@ -30,14 +31,24 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.equipments = equipments
         self.materials = materials
         self.object = object
-        if contractor:
-            self.contractor = contractor.name if contractor.name else contractor.id
+        if contractor is not None:
+            if isinstance(contractor, str):
+                self.contractor = contractor
+            else:
+                self.contractor = contractor.name if contractor.name else contractor.id
         else:
             self.contractor = ""
 
         self.cost = 0
         for worker in self.workers:
             self.cost += worker.get_cost() * self.duration.value
+
+    def __str__(self):
+        return f'ScheduledWork[work_unit={self.work_unit}, start_end_time={self.start_end_time}, ' \
+               f'workers={self.workers}, contractor={self.contractor}]'
+
+    def __repr__(self):
+        return self.__str__()
 
     @custom_serializer('workers')
     @custom_serializer('start_end_time')
@@ -109,3 +120,9 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             "contractor_id": self.contractor,
             "workers": {worker.name: worker.count for worker in self.workers},
         }
+
+    def __deepcopy__(self, memodict={}):
+        return ScheduledWork(deepcopy(self.work_unit, memodict),
+                             deepcopy(self.start_end_time, memodict),
+                             deepcopy(self.workers, memodict),
+                             self.contractor)

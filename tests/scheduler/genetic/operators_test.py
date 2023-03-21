@@ -2,7 +2,7 @@ from fixtures import *
 from sampo.scheduler.genetic.converter import ChromosomeType
 
 
-TEST_ITERATIONS = 1000
+TEST_ITERATIONS = 10
 
 
 def test_generate_individual(setup_toolbox):

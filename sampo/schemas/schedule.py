@@ -137,7 +137,7 @@ class Schedule(JSONSerializable['Schedule']):
         ordered_task_ids = order_nodes_by_start_time(works, wg) if wg else None
 
         def info(work_unit: WorkUnit) -> Tuple[float, str, List[Tuple[str, str]]]:
-            if not wg:
+            if wg is None:
                 return 0, "", []
             # noinspection PyTypeChecker
             return work_unit.volume, work_unit.volume_type, \

@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from random import Random
 from typing import Optional
 
-import numpy as np
-
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
@@ -18,7 +16,6 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     id: str
     name: str
     count: int
-
 
 
 # TODO describe "productivity"
@@ -77,10 +74,12 @@ class Worker(Resource):
     def __repr__(self):
         return f'{self.count} {self.name}'
 
+
 # TODO: describe the class (description)
 @dataclass
 class ConstructionObject(Resource):
     pass
+
 
 # TODO: describe the class (description, parameters)
 @dataclass(init=False)
@@ -88,10 +87,12 @@ class EmptySpaceConstructionObject(ConstructionObject):
     id: str = "00000000000000000"
     name: str = "empty space construction object"
 
+
 # TODO: describe the class (description)
 @dataclass
 class Equipment(Resource):
     pass
+
 
 # TODO: describe the class (description)
 @dataclass
@@ -102,14 +103,14 @@ class Material(Resource):
                  name: str,
                  count: int,
                  cost_one_unit: Optional[float] = 1):
-        super(Material, self).__init__(id, name, count, "")
+        super(Material, self).__init__(id, name, count)
         self.cost_one_unit = cost_one_unit
 
     # TODO: describe the function (description, return type)
     def copy(self):
         return Material(id=self.id,
-                      name=self.name,
-                      count=self.count)
+                        name=self.name,
+                        count=self.count)
 
     def with_count(self, count: int) -> 'Material':
         self.count = count

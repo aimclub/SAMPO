@@ -61,4 +61,4 @@ class AbstractWorkEstimator(WorkTimeEstimator, ABC):
             if productivity == 0:
                 return Time.inf()
             times.append(req.volume // productivity)
-        return max(times)
+        return max(max(times), Time(1))

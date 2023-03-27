@@ -9,7 +9,7 @@ from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.resources import Material
 
 
-@fixture
+@fixture(scope='function')
 def setup_landscape():
     return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
                                                           materials=[Material('111', 'mat1', 100000)])])

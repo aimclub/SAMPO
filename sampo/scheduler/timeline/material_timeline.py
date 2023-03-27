@@ -61,8 +61,9 @@ class SupplyTimeline:
     def _find_best_supply(self, material: str, count: int) -> str:
         # TODO Make better algorithm
         # Return the first depot that can supply given materials
-        return [depot_id for depot_id, depot_count in self._resource_sources[material].items() if depot_count >= count][
-            0]
+        depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
+                  if depot_count >= count]
+        return depots[0]
 
     @staticmethod
     def _grab_from_current_area(material_timeline: ExtendedSortedList,
@@ -165,26 +166,17 @@ class SupplyTimeline:
         grabbed = 0
 
         def record_delivery(name: str, time: Time, depot: str, count: int):
-            nonlocal grabbed
-            # update depot state
-            self._resource_sources[name][depot] -= count
-            # add to the result
-            delivery.add_delivery(name, time, count)
-            grabbed += count
+            nonlocal count_left
+            count_left -= count
+
+            if not simulate:
+                # update depot state
+                self._resource_sources[name][depot] -= count
+                # add to the result
+                delivery.add_delivery(name, time, count)
 
         cur_start_time = deadline
         going_right = False
-
-        def step_left():
-            nonlocal cur_start_time, going_right
-            cur_start_time -= 1
-            if cur_start_time < 0:
-                # we can't supply resources to deadline, let's go deeper
-                going_right = True
-
-        def step_right():
-            nonlocal cur_start_time
-            cur_start_time += 1
 
         for material in materials:
             depot = self._find_best_supply(material.name, material.count)
@@ -201,30 +193,11 @@ class SupplyTimeline:
                 idx_left = material_timeline.bisect_key_right(cur_start_time) - 1
                 time_left = material_timeline[idx_left][0]
                 time_right = material_timeline[idx_left + 1][0]
-                grabbed = 0
-
-                # # find first area with count > 0
-                # if not going_right:
-                #     while idx_left >= 0 and material_timeline[idx_left][1] == 0:
-                #         idx_left -= 1
-                #         if idx_left < 0:
-                #             going_right = True
-                #
-                # if going_right:
-                #     # we can't supply given materials to 'start_time' moment
-                #     # so, let's go deeper
-                #     cur_start_time = deadline
-                #     idx_left = material_timeline.bisect_key_left(cur_start_time)
-                #     idx_right = material_timeline.bisect_key_right(cur_start_time)
-
-                    # while idx_right < len(material_timeline) and material_timeline[idx_left][1] == 0:
-                    #     idx_left = idx_right
-                    #     idx_right += 1
 
                 cur_start_time, grabbed = self._grab_from_current_area(material_timeline, cur_start_time, idx_left,
                                                                        count_left, capacity, going_right, simulate)
-                # TODO add_delivery
-                count_left -= grabbed
+
+                record_delivery(material.name, cur_start_time, depot, material.count)
 
                 if cur_start_time < time_left:
                     # over left of current area, step left

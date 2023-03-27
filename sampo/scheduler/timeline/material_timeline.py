@@ -1,5 +1,6 @@
 import math
 from operator import itemgetter
+from typing import Callable
 
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
 from sampo.schemas.resources import Material
@@ -68,7 +69,8 @@ class SupplyTimeline:
     @staticmethod
     def _grab_from_current_area(material_timeline: ExtendedSortedList,
                                 cur_time: Time, idx_start: int, need_count: int,
-                                capacity: int, going_right: bool, simulate: bool) -> tuple[Time, int]:
+                                capacity: int, going_right: bool, simulate: bool,
+                                delivery_writer: Callable[[Time, int], None]) -> Time:
         """
         Processes the whole area starts with `idx_start` from `cur_time` moment
 
@@ -83,70 +85,70 @@ class SupplyTimeline:
         """
         time_start = material_timeline[idx_start][0]
         time_end = material_timeline[idx_start + 1][0]
-        grabbed = 0
 
         def process_start_milestone():
-            nonlocal cur_time, need_count, grabbed, going_right
+            nonlocal cur_time, need_count, going_right
             if cur_time == time_start:  # grab from start milestone
                 start_count = material_timeline[idx_start][1]
                 if need_count > start_count:
                     need_count -= start_count
                     if not simulate:  # drop start milestone
                         material_timeline[idx_start] = (time_start, 0)
-                    grabbed += start_count
+                    delivery_writer(cur_time, start_count)  # write to the result
+
                     if going_right:
                         cur_time += 1
                     else:
                         cur_time -= 1
-                    # going_right = True
                 else:
                     if not simulate:  # subtract from start milestone
                         material_timeline[idx_start] = (time_start, start_count - need_count)
-                    grabbed += need_count
+                    delivery_writer(cur_time, need_count)  # write to the result
                     need_count = 0
 
         process_start_milestone()
 
-        if not going_right:
-            return cur_time, grabbed
+        # TODO Check that we can remove this
+        # if not going_right:
+        #     return cur_time
 
         # grab from area
         if going_right:
             while need_count > 0 and cur_time < time_end:  # inside area
-                grabbed += capacity
+                delivery_writer(cur_time, capacity)  # write to the result
                 need_count -= capacity
                 cur_time += 1
 
             if cur_time >= time_end:
                 # we grabbed all the area, so we don't need to insert any milestone
                 # our start milestone is already processed upper
-                return cur_time, grabbed
+                return cur_time
 
             if not simulate:
                 # if we are here, need_count < 0
-                # we grabbed not all the area, so insert milestone to cur_time - 1 moment
+                # we grabbed not all the area, so insert milestone to cur_time - 1 moment.
                 # 'cur_time - 1' because cur_time is the moment after the last 'need_count' addition performed
                 # '-need_count' is resources count that are left at the last seen time moment
                 material_timeline.add((cur_time - 1, -need_count))
         else:
             while need_count > 0 and time_start < cur_time:  # inside area
-                grabbed += capacity
+                delivery_writer(cur_time, capacity)  # write to the result
                 need_count -= capacity
                 cur_time -= 1
 
             if cur_time == time_start:
                 # we grabbed all the area, so now we are allowed to grab the start milestone
                 process_start_milestone()
-                return cur_time, grabbed
+                return cur_time
 
             if not simulate:
                 # if we are here, need_count < 0
-                # we grabbed not all the area, so insert milestone to cur_time + 1 moment
+                # we grabbed not all the area, so insert milestone to cur_time + 1 moment.
                 # 'cur_time + 1' because cur_time is the moment after the last 'need_count' subtraction performed
                 # '-need_count' is resources count that are left at the last seen time moment
                 material_timeline.add((cur_time + 1, -need_count))
 
-        return cur_time, grabbed
+        return cur_time
 
     def supply_resources(self, id: str, deadline: Time, materials: list[Material], simulate: bool) \
             -> tuple[MaterialDelivery, Time]:
@@ -165,16 +167,6 @@ class SupplyTimeline:
 
         grabbed = 0
 
-        def record_delivery(name: str, time: Time, depot: str, count: int):
-            nonlocal count_left
-            count_left -= count
-
-            if not simulate:
-                # update depot state
-                self._resource_sources[name][depot] -= count
-                # add to the result
-                delivery.add_delivery(name, time, count)
-
         cur_start_time = deadline
         going_right = False
 
@@ -183,21 +175,36 @@ class SupplyTimeline:
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
 
+            def record_delivery(time: Time, count: int):
+                nonlocal count_left
+                count_left -= count
+
+                if not simulate:
+                    # update depot state
+                    self._resource_sources[material.name][depot] -= count
+                    # add to the result
+                    delivery.add_delivery(material.name, time, count)
+
             count_left = material.count
             cur_start_time = deadline
 
             going_right = False
 
+            i = 0
             while count_left > 0:
+                if i > 0 and i % 50 == 0:
+                    print(f'Probably cycle: cur_start_time={cur_start_time}, idx_left={idx_left}', flush=True)
+
                 # find current area
                 idx_left = material_timeline.bisect_key_right(cur_start_time) - 1
                 time_left = material_timeline[idx_left][0]
                 time_right = material_timeline[idx_left + 1][0]
 
-                cur_start_time, grabbed = self._grab_from_current_area(material_timeline, cur_start_time, idx_left,
-                                                                       count_left, capacity, going_right, simulate)
+                cur_start_time = self._grab_from_current_area(material_timeline, cur_start_time, idx_left,
+                                                              count_left, capacity, going_right, simulate,
+                                                              record_delivery)
 
-                record_delivery(material.name, cur_start_time, depot, material.count)
+                # record_delivery(material.name, depot, cur_start_time, material.count)
 
                 if cur_start_time < time_left:
                     # over left of current area, step left
@@ -208,6 +215,8 @@ class SupplyTimeline:
                 elif cur_start_time > time_right:
                     # over right of current area, step right
                     idx_left += 1
+
+                i += 1
 
             min_start_time = min(min_start_time, cur_start_time)
 

@@ -1,6 +1,8 @@
+from abc import ABC, abstractmethod
 from operator import attrgetter
-from typing import List, Dict, Set, Iterable
+from typing import List, Dict, Set, Iterable, Callable
 
+from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool
 from sampo.schemas.graph import GraphNode
@@ -11,6 +13,28 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import build_index
 
 PRIORITY_SHUFFLE_RADIUS = 0.5
+
+
+class OrderLocalOptimizer(ABC):
+
+    @abstractmethod
+    def optimize(self, node_order: list[GraphNode], area: slice):
+        ...
+
+
+class ScheduleLocalOptimizer(ABC):
+
+    def __init__(self, timeline_type: Callable[[...], Timeline]):
+        """
+        :param timeline_type: timeline used for schedule recalculation
+        """
+        self._timeline_type = timeline_type
+
+    @abstractmethod
+    def optimize(self, node_order: list[GraphNode], scheduled_works: Iterable[ScheduledWork], area: slice):
+        ...
+
+# TODO Rewrite local optimization methods with classes above
 
 
 def get_swap_candidates(node: GraphNode,

@@ -31,7 +31,15 @@ class ScheduleLocalOptimizer(ABC):
         self._timeline_type = timeline_type
 
     @abstractmethod
-    def optimize(self, node_order: list[GraphNode], scheduled_works: Iterable[ScheduledWork], area: slice):
+    def optimize(self, node_order: list[GraphNode], scheduled_works: dict[str, ScheduledWork], area: slice):
+        """
+        Optimizes works `scheduled_works`, referenced by `node_order` and `area` parameters.
+
+        Result writes to `scheduled_works` in-place.
+        :param node_order:
+        :param scheduled_works:
+        :param area:
+        """
         ...
 
 # TODO Rewrite local optimization methods with classes above

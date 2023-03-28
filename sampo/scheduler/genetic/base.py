@@ -90,7 +90,7 @@ class GeneticScheduler(Scheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
+            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def init_schedule(scheduler_class):
             return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
                     list(reversed(prioritization(wg, self.work_estimator))))
@@ -103,24 +103,24 @@ class GeneticScheduler(Scheduler):
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)
 
-        scheduled_works, schedule_start_time, timeline = build_schedule(wg,
-                                                                        contractors,
-                                                                        agents,
-                                                                        size_of_population,
-                                                                        self.number_of_generation,
-                                                                        size_selection,
-                                                                        mutate_order,
-                                                                        mutate_resources,
-                                                                        init_schedules,
-                                                                        self.rand,
-                                                                        spec,
-                                                                        self.fitness_constructor,
-                                                                        self.work_estimator,
-                                                                        assigned_parent_time=assigned_parent_time,
-                                                                        timeline=timeline)
+        scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
+                                                                                     contractors,
+                                                                                     agents,
+                                                                                     size_of_population,
+                                                                                     self.number_of_generation,
+                                                                                     size_selection,
+                                                                                     mutate_order,
+                                                                                     mutate_resources,
+                                                                                     init_schedules,
+                                                                                     self.rand,
+                                                                                     spec,
+                                                                                     self.fitness_constructor,
+                                                                                     self.work_estimator,
+                                                                                     assigned_parent_time=assigned_parent_time,
+                                                                                     timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline
+        return schedule, schedule_start_time, timeline, order_nodes

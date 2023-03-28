@@ -34,7 +34,7 @@ class TopologicalScheduler(Scheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
+            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         tsorted_nodes: List[GraphNode] = self._topological_sort(wg)
 
         schedule, schedule_start_time, timeline = \
@@ -47,7 +47,7 @@ class TopologicalScheduler(Scheduler):
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline
+        return schedule, schedule_start_time, timeline, tsorted_nodes
 
     # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph) -> List[GraphNode]:

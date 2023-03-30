@@ -8,6 +8,8 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections import build_index
 
@@ -30,15 +32,19 @@ class ScheduleLocalOptimizer(ABC):
         self._timeline_type = timeline_type
 
     @abstractmethod
-    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], worker_pool: WorkerContractorPool,
-                 work_estimator: WorkTimeEstimator, scheduled_works: dict[str, ScheduledWork], area: range):
+    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], spec: ScheduleSpec,
+                 worker_pool: WorkerContractorPool, work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
+                 scheduled_works: dict[str, ScheduledWork], area: range) -> dict[GraphNode, ScheduledWork]:
         """
         Optimizes works `scheduled_works`, referenced by `node_order` and `area` parameters.
 
         Result writes to `scheduled_works` in-place.
         :param node_order:
         :param contractors:
+        :param spec:
         :param worker_pool:
+        :param work_estimator:
+        :param assigned_parent_time:
         :param scheduled_works:
         :param area:
         """
@@ -136,33 +142,45 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     def recalc_schedule(self,
                         node_order: Iterable[GraphNode],
                         contractors: list[Contractor],
+                        spec: ScheduleSpec,
                         node2swork: Dict[GraphNode, ScheduledWork],
                         worker_pool: WorkerContractorPool,
-                        work_estimator: WorkTimeEstimator = None):
+                        assigned_parent_time: Time,
+                        work_estimator: WorkTimeEstimator = None) -> dict[GraphNode, ScheduledWork]:
         """
         Recalculates duration and start-finish times in the whole given `seq`.
         This will be useful to call after `parallelize_local_sequence` method
         or other methods that can change the appointed set of workers.
         :param node_order: scheduled works to process
         :param contractors:
+        :param spec:
         :param node2swork:
         :param worker_pool:
+        :param assigned_parent_time:
         :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
         """
 
         timeline = self._timeline_type(node_order, contractors, worker_pool)
         node2swork_new: Dict[GraphNode, ScheduledWork] = {}
 
+        id2contractor = build_index(contractors, attrgetter('name'))
+
         for index, node in enumerate(node_order):
             node_schedule = node2swork[node]
-            st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
-            ft = st + node_schedule.get_actual_duration(work_estimator)
-            timeline.update_timeline(index, ft, node, node2swork, node_schedule.workers)
-            node_schedule.start_end_time = (st, ft)
+            work_spec = spec.get_work_spec(node.id)
+            # st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
+            # ft = st + node_schedule.get_actual_duration(work_estimator)
+            timeline.schedule(index, node, node2swork_new, node_schedule.workers,
+                              id2contractor[node_schedule.contractor], None, work_spec.assigned_time,
+                              assigned_parent_time, work_estimator)
+            # node_schedule.start_end_time = (st, ft)
             node2swork_new[node] = node_schedule
 
-    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], worker_pool: WorkerContractorPool,
-                 work_estimator: WorkTimeEstimator, scheduled_works: dict[GraphNode, ScheduledWork], area: range):
+        return node2swork_new
+
+    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], spec: ScheduleSpec,
+                 worker_pool: WorkerContractorPool, work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
+                 scheduled_works: dict[GraphNode, ScheduledWork], area: range) -> dict[GraphNode, ScheduledWork]:
         start_index = area.start
         end_index = area.stop
         
@@ -239,7 +257,8 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                     # candidate_schedule.start_time = my_schedule.start_time
                     break
 
-        self.recalc_schedule(node_order, contractors, scheduled_works, worker_pool, work_estimator)
+        return self.recalc_schedule(reversed(node_order), contractors, spec, scheduled_works,
+                                    worker_pool, assigned_parent_time, work_estimator)
 
 
 def optimize_local_sequence(seq: List[GraphNode],

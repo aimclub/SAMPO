@@ -28,41 +28,8 @@ class HEFTScheduler(GenericScheduler):
                  timeline_type: Type = JustInTimeTimeline,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type, resource_optimizer, timeline_type, prioritization,
-                         self.optimize_resources_default, work_estimator)
+                         self.get_default_res_opt_function(), work_estimator)
         self._timeline_type = timeline_type
-
-    def optimize_resources_default(self, node: GraphNode, contractors: list[Contractor], work_spec: WorkSpec,
-                                   worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
-                                   assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator):
-        def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
-            min_count_worker_team, max_count_worker_team, workers \
-                = get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
-
-            if len(workers) != len(node.work_unit.worker_reqs):
-                return Time(0), Time.inf(), []
-
-            workers = [worker.copy() for worker in workers]
-
-            def get_finish_time(worker_team):
-                return timeline.find_min_start_time(node, worker_team, node2swork,
-                                                    assigned_parent_time, work_estimator) \
-                    + calculate_working_time_cascade(node, worker_team, work_estimator)
-
-            # apply worker team spec
-            self.optimize_resources_using_spec(node.work_unit, workers, work_spec,
-                                               lambda optimize_array: self.resource_optimizer.optimize_resources(
-                                                   worker_pool, workers,
-                                                   optimize_array,
-                                                   min_count_worker_team, max_count_worker_team,
-                                                   get_finish_time))
-
-            # c_st = timeline.find_min_start_time(node, workers, node2swork, assigned_parent_time, work_estimator)
-            # c_ft = c_st + calculate_working_time_cascade(node, workers, work_estimator)
-            c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, None,
-                                                                         assigned_parent_time, work_estimator)
-            return c_st, c_ft, workers
-
-        return run_contractor_search(contractors, run_with_contractor)
 
 
 class HEFTBetweenScheduler(HEFTScheduler):

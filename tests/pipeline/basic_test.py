@@ -12,9 +12,9 @@ def test_plain_scheduling(setup_wg, setup_contractors):
         schedule = SchedulingPipeline.create() \
             .wg(setup_wg) \
             .contractors(setup_contractors) \
-            .optimize_local(SwapOrderLocalOptimizer(), range(0, 5)) \
+            .optimize_local(SwapOrderLocalOptimizer(), range(0, setup_wg.vertex_count // 2)) \
             .schedule(HEFTScheduler()) \
-            .optimize_local(ParallelizeScheduleLocalOptimizer(JustInTimeTimeline), range(0, 5)) \
+            .optimize_local(ParallelizeScheduleLocalOptimizer(JustInTimeTimeline), range(0, setup_wg.vertex_count // 2)) \
             .finish()
 
         print(f'Scheduled {len(schedule.to_schedule_work_dict)} works')

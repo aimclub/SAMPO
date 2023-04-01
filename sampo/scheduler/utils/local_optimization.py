@@ -19,7 +19,7 @@ PRIORITY_SHUFFLE_RADIUS = 0.5
 class OrderLocalOptimizer(ABC):
 
     @abstractmethod
-    def optimize(self, node_order: list[GraphNode], area: range):
+    def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
         ...
 
 
@@ -89,7 +89,7 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
     This performs just small shuffle that not break topological order
     """
 
-    def optimize(self, node_order: list[GraphNode], area: range):
+    def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
         if node_order is None:
             return
 
@@ -128,6 +128,8 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
             processed.add(node)
         print(f'Swapped {swapped} times!')
+
+        return node_order
 
 
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):

@@ -1,6 +1,9 @@
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
+from sampo.pipeline.delegating import DelegatingScheduler
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
+from sampo.schemas.apply_queue import ApplyQueue
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
@@ -18,6 +21,7 @@ class DefaultInputPipeline(InputPipeline):
         self._node_order = None
         self._spec = ScheduleSpec()
         self._assigned_parent_time = Time(0)
+        self._local_optimize_stack = ApplyQueue()
 
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
         self._wg = wg
@@ -44,12 +48,29 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def optimize_local(self, optimizer: OrderLocalOptimizer, area: range) -> 'InputPipeline':
-        self._node_order = optimizer.optimize(self._node_order, area)
+        self._local_optimize_stack.add(optimizer.optimize, (area,))
         return self
 
-    # TODO Rewrite schedulers with universal scheme: parameterize with prioritization function
-    #  this should allow the Pipeline to apply local optimization to it's internal prioritization
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+        if isinstance(scheduler, GenericScheduler):
+            # if scheduler is generic, it supports injecting local optimizations
+            s_self = self  # cache upper-layer self to another variable to get it from inner class
+            class LocalOptimizedScheduler(DelegatingScheduler):
+
+                def __init__(self, delegate: GenericScheduler):
+                    super().__init__(delegate)
+
+                def delegate_prioritization(self, orig_prioritization):
+                    def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator):
+                        # call delegate's prioritization and apply local optimizations
+                        return s_self._local_optimize_stack.apply(orig_prioritization(wg, work_estimator))
+
+                    return prioritization
+
+            scheduler = LocalOptimizedScheduler(scheduler)
+        elif not self._local_optimize_stack.empty():
+            print('Trying to apply local optimizations to non-generic scheduler, ignoring it')
+
         schedule, _, _, node_order = scheduler.schedule_with_cache(self._wg, self._contractors, self._spec,
                                                                    assigned_parent_time=self._assigned_parent_time)
         self._node_order = node_order

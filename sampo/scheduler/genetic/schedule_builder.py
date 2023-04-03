@@ -36,7 +36,8 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
-                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[
+                       [Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -147,7 +148,6 @@ def build_schedule(wg: WorkGraph,
     for name, chromosome in init_chromosomes.items():
         if not is_chromosome_correct(chromosome, node_indices, parents):
             raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
-
 
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
@@ -333,12 +333,13 @@ def build_schedule(wg: WorkGraph,
 
     print(f'Final time: {hof[0].fitness.values[0]}')
 
-    scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                                                    index2contractor_obj,
-                                                                                    worker_pool_indices,
-                                                                                    spec, timeline,
-                                                                                    assigned_parent_time,
-                                                                                    work_estimator)
+    scheduled_works, schedule_start_time, timeline, order_nodes \
+        = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                         index2contractor_obj,
+                                         worker_pool_indices,
+                                         spec, timeline,
+                                         assigned_parent_time,
+                                         work_estimator)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 

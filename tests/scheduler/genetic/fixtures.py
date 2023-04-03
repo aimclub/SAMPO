@@ -6,7 +6,7 @@ from deap.base import Toolbox
 from pytest import fixture
 
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox, TimeFitness
+from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
@@ -126,7 +126,6 @@ def create_toolbox(wg: WorkGraph,
                         node_indices,
                         index2node_list,
                         parents,
-                        TimeFitness,
                         Time(0),
                         work_estimator), resources_border
 

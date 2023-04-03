@@ -130,7 +130,8 @@ class Schedule(JSONSerializable['Schedule']):
             -> 'Schedule':
         """
         Factory method to create a Schedule object from list of Schedule works and additional info
-        :param wg: Work graph.
+        :param wg: Work graph. If passed, given order of works should be
+                   overridden by time-topological order supported by given WorkGraph
         :param works: Iterable collection of ScheduledWork's.
         :return: Schedule.
         """

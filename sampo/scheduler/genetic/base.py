@@ -9,6 +9,7 @@ from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
@@ -33,9 +34,10 @@ class GeneticScheduler(Scheduler):
                  n_cpu: int = 1,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
+                 resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
-                         resource_optimizer=IdentityResourceOptimizer(),
+                         resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
         self.size_selection = size_selection
@@ -96,12 +98,10 @@ class GeneticScheduler(Scheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
+            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def init_schedule(scheduler_class):
-            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors, validate=True),
+            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
                     list(reversed(prioritization(wg, self.work_estimator))))
-
-        # raise NoSufficientContractorError('There is no contractor that can satisfy given requirements')
 
         init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
             "heft_end": init_schedule(HEFTScheduler),
@@ -111,25 +111,25 @@ class GeneticScheduler(Scheduler):
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)
 
-        scheduled_works, schedule_start_time, timeline = build_schedule(wg,
-                                                                        contractors,
-                                                                        agents,
-                                                                        size_of_population,
-                                                                        self.number_of_generation,
-                                                                        size_selection,
-                                                                        mutate_order,
-                                                                        mutate_resources,
-                                                                        init_schedules,
-                                                                        self.rand,
-                                                                        spec,
-                                                                        self.fitness_constructor,
-                                                                        self.work_estimator,
-                                                                        n_cpu=self._n_cpu,
-                                                                        assigned_parent_time=assigned_parent_time,
-                                                                        timeline=timeline)
+        scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
+                                                                                     contractors,
+                                                                                     agents,
+                                                                                     size_of_population,
+                                                                                     self.number_of_generation,
+                                                                                     size_selection,
+                                                                                     mutate_order,
+                                                                                     mutate_resources,
+                                                                                     init_schedules,
+                                                                                     self.rand,
+                                                                                     spec,
+                                                                                     self.fitness_constructor,
+                                                                                     self.work_estimator,
+                                                                                     n_cpu=self._n_cpu,
+                                                                                     assigned_parent_time=assigned_parent_time,
+                                                                                     timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline
+        return schedule, schedule_start_time, timeline, order_nodes

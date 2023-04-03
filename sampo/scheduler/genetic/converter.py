@@ -69,16 +69,18 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = None, ) \
-        -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline]:
+        -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
+    order_nodes = []
 
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
+        order_nodes.append(node)
         # if node.id in node2swork and not node.is_inseparable_son():
         #     continue
 
@@ -107,4 +109,4 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
     schedule_start_time = min([swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0])
 
-    return node2swork, schedule_start_time, timeline
+    return node2swork, schedule_start_time, timeline, order_nodes

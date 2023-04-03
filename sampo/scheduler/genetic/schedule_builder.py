@@ -42,7 +42,7 @@ def build_schedule(wg: WorkGraph,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None) \
-        -> tuple[ScheduleWorkDict, Time, Timeline]:
+        -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
     Genetic algorithm
     Structure of chromosome:
@@ -171,8 +171,7 @@ def build_schedule(wg: WorkGraph,
     # map to each individual fitness function
     pop = [ind for ind in pop if toolbox.validate(ind[0])]
     fitness = fitness_f.evaluate([ind[0] for ind in pop])
-    # pool.close()
-    # pool.join()
+
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = [fit]
         ind.fitness.invalid_steps = 1 if fit == Time.inf() else 0
@@ -352,7 +351,7 @@ def build_schedule(wg: WorkGraph,
             palette='r')
         plt.show()
 
-    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline
+    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):

@@ -8,7 +8,7 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
@@ -62,7 +62,15 @@ class Scheduler(ABC):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
+            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+        """
+        Extended version of 'schedule' method. Returns much inner info
+        about scheduling process, not only Schedule.
+
+        :return: resulting schedule, finish time,
+                 resulting timeline used for scheduling
+                 and node_order used for scheduling
+        """
         ...
 
     @staticmethod

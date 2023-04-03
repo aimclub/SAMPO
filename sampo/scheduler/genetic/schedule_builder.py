@@ -40,7 +40,7 @@ def build_schedule(wg: WorkGraph,
                    show_fitness_graph: bool = False,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None) \
-        -> tuple[ScheduleWorkDict, Time, Timeline]:
+        -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
     Genetic algorithm
     Structure of chromosome:
@@ -320,12 +320,13 @@ def build_schedule(wg: WorkGraph,
     # assert that we have valid chromosome
     assert hof[0].fitness.values[0] != Time.inf()
 
-    scheduled_works, schedule_start_time, timeline = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                                                                    index2contractor_obj,
-                                                                                    worker_pool_indices,
-                                                                                    spec, timeline,
-                                                                                    assigned_parent_time,
-                                                                                    work_estimator)
+    scheduled_works, schedule_start_time, timeline, order_nodes \
+        = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
+                                         index2contractor_obj,
+                                         worker_pool_indices,
+                                         spec, timeline,
+                                         assigned_parent_time,
+                                         work_estimator)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
 
@@ -338,7 +339,7 @@ def build_schedule(wg: WorkGraph,
             palette='r')
         plt.show()
 
-    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline
+    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
 def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):

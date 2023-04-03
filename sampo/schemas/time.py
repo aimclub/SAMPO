@@ -3,7 +3,7 @@ from sampo.schemas.serializable import AutoJSONSerializable
 TIME_INF = 2_000_000_000
 
 
-# TODO Consider converting to StrSeriailzable
+# TODO Consider converting to StrSerializable
 # TODO: describe the class (description, parameters/)
 class Time(AutoJSONSerializable['Time']):
     value: int

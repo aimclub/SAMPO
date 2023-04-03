@@ -35,7 +35,7 @@ class TimeFitness(FitnessFunction):
         super().__init__(tb)
 
     def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        scheduled_works, _, _, _ = self._tb.chromosome_to_schedule(chromosome)
         finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
         return finish_time
 
@@ -46,7 +46,7 @@ class TimeAndResourcesFitness(FitnessFunction):
         super().__init__(tb)
 
     def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        scheduled_works, _, _, _ = self._tb.chromosome_to_schedule(chromosome)
         workers_weight = int(np.sum(chromosome[2]))
         return max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time + Time(workers_weight)
 
@@ -65,7 +65,7 @@ class DeadlineResourcesFitness(FitnessFunction):
         return partial(DeadlineResourcesFitness, deadline)
 
     def evaluate(self, chromosome: ChromosomeType) -> int:
-        scheduled_works, _, _ = self._tb.chromosome_to_schedule(chromosome)
+        scheduled_works, _, _, _ = self._tb.chromosome_to_schedule(chromosome)
         finish_time = max(scheduled_works.values(), key=ScheduledWork.finish_time_getter()).finish_time
         if finish_time > self._deadline:
             return Time.inf()

@@ -5,19 +5,17 @@ from typing import List, Dict, Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
-from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
-from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
+from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.resources import Worker
-from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections_util import reverse_dictionary
+
 
 # logger = mp.log_to_stderr(logging.DEBUG)
 
@@ -67,6 +65,27 @@ class DeadlineResourcesFitness(FitnessFunction):
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
         return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
+
+
+class DeadlineCostFitness(FitnessFunction):
+
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+        super().__init__(evaluator)
+        self._deadline = deadline
+
+    @staticmethod
+    def prepare(deadline: Time):
+        """
+        Returns the constructor of that fitness function prepared to use in Genetic
+        """
+        return partial(DeadlineCostFitness, deadline)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
+        # TODO Integrate cost calculation to native module
+        # here we know that all resources costs `10` coins
+        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2] * 10))
+                for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum

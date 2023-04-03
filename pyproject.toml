@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "sampo"
-version = "0.1.1.125"
+version = "0.1.1.129"
 description = "Open-source framework for adaptive manufacturing processes scheduling"
 authors = ["iAirLab <iairlab@yandex.ru>"]
 license = "BSD-3-Clause"
 # readme = "README.rst"
 # readme = "README.md"
-build = "build.py"
+# build = "build.py"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"

@@ -36,8 +36,8 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
-                   fitness_constructor: Callable[
-                       [Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
+                                                 FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -53,6 +53,7 @@ def build_schedule(wg: WorkGraph,
     Generate resources from min to max
     Overall initial population is valid
 
+    :param fitness_constructor:
     :param show_fitness_graph:
     :param worker_pool:
     :param contractors:

@@ -68,21 +68,21 @@ class GeneticScheduler(Scheduler):
         mutate_order = self.mutate_order
         if mutate_order is None:
             if works_count < 300:
-                mutate_order = 0.1
+                mutate_order = 0.05
             else:
                 mutate_order = 2 / math.sqrt(works_count)
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
             if works_count < 300:
-                mutate_resources = 0.3
+                mutate_resources = 0.1
             else:
                 mutate_resources = 18 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
-                size_of_population = 80
+                size_of_population = 20
             elif 1500 > works_count >= 300:
                 size_of_population = 50
             else:

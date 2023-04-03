@@ -8,6 +8,7 @@ from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
@@ -31,9 +32,10 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
+                 resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
-                         resource_optimizer=IdentityResourceOptimizer(),
+                         resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
         self.size_selection = size_selection

@@ -55,6 +55,7 @@ class DefaultInputPipeline(InputPipeline):
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
             s_self = self  # cache upper-layer self to another variable to get it from inner class
+
             class LocalOptimizedScheduler(DelegatingScheduler):
 
                 def __init__(self, delegate: GenericScheduler):
@@ -84,13 +85,17 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._input = s_input
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
-        self._scheduled_works = {s_input._wg[swork.work_unit.id]: swork for swork in schedule.to_schedule_work_dict.values()}
+        self._scheduled_works = {s_input._wg[swork.work_unit.id]:
+                                 swork for swork in schedule.to_schedule_work_dict.values()}
+        self._local_optimize_stack = ApplyQueue()
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
-        self._schedule = optimizer.optimize(self._input._node_order, self._input._contractors, self._input._spec,
-                                            self._worker_pool, self._input._work_estimator,
-                                            self._input._assigned_parent_time, self._scheduled_works, area)
+        self._local_optimize_stack.add(optimizer.optimize,
+                                       (self._input._node_order, self._input._contractors, self._input._spec,
+                                        self._worker_pool, self._input._work_estimator,
+                                        self._input._assigned_parent_time, area))
         return self
 
     def finish(self) -> Schedule:
-        return Schedule.from_scheduled_works(self._scheduled_works.values(), self._input._wg)
+        processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
+        return Schedule.from_scheduled_works(processed_sworks.values(), self._input._wg)

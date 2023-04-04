@@ -32,9 +32,10 @@ class ScheduleLocalOptimizer(ABC):
         self._timeline_type = timeline_type
 
     @abstractmethod
-    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], spec: ScheduleSpec,
-                 worker_pool: WorkerContractorPool, work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
-                 scheduled_works: dict[str, ScheduledWork], area: range) -> dict[GraphNode, ScheduledWork]:
+    def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
+                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
+                 area: range) -> dict[GraphNode, ScheduledWork]:
         """
         Optimizes works `scheduled_works`, referenced by `node_order` and `area` parameters.
 
@@ -180,9 +181,10 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
 
         return node2swork_new
 
-    def optimize(self, node_order: list[GraphNode], contractors: list[Contractor], spec: ScheduleSpec,
-                 worker_pool: WorkerContractorPool, work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
-                 scheduled_works: dict[GraphNode, ScheduledWork], area: range) -> dict[GraphNode, ScheduledWork]:
+    def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
+                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
+                 area: range) -> dict[GraphNode, ScheduledWork]:
         start_index = area.start
         end_index = area.stop
         

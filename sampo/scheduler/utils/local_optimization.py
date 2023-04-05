@@ -11,7 +11,7 @@ from sampo.schemas.schedule import ScheduledWork
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 PRIORITY_SHUFFLE_RADIUS = 0.5
 

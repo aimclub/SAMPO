@@ -44,7 +44,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
 
     # resources for works part of chromosome
     # +1 stores contractors line
-    resource_chromosome = np.zeros((len(worker_name2index) + 1, len(order_chromosome)), dtype=int)
+    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
     for node in order:
         node_id = node.work_unit.id
@@ -53,8 +53,8 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
             res_count = resource.count
             res_index = worker_name2index[resource.name]
             res_contractor = resource.contractor_id
-            resource_chromosome[res_index, index] = res_count
-            resource_chromosome[-1, index] = contractor2index[res_contractor]
+            resource_chromosome[index, res_index] = res_count
+            resource_chromosome[index, -1] = contractor2index[res_contractor]
 
     resource_border_chromosome = np.copy(contractor_borders)
 
@@ -86,8 +86,8 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
 
         work_spec = spec.get_work_spec(node.id)
 
-        resources = works_resources[:-1, work_index]
-        contractor_index = works_resources[-1, work_index]
+        resources = works_resources[work_index, :-1]
+        contractor_index = works_resources[work_index, -1]
         contractor = index2contractor[contractor_index]
         worker_team: List[Worker] = [worker_pool_indices[worker_index][contractor_index]
                                      .copy().with_count(worker_count)

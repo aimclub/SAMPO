@@ -6,22 +6,23 @@ from typing import Dict, List, Tuple, Callable
 import numpy as np
 import seaborn as sns
 from deap import tools
-from deap.base import Toolbox
 from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness
+    FitnessFunction, TimeFitness, is_chromosome_correct
+from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.collections import reverse_dictionary
+from sampo.utilities.collections_util import reverse_dictionary
 
 
 def build_schedule(wg: WorkGraph,
@@ -35,9 +36,11 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
-                   fitness: Callable[[Toolbox], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
+                                                 FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
+                   n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
@@ -46,10 +49,11 @@ def build_schedule(wg: WorkGraph,
     Structure of chromosome:
     [[order of job], [numbers of workers types 1 for each job], [numbers of workers types 2], ... ]
     Different mate and mutation for order and for workers
-    Generate order of job by prioritization from HEFT and from Topological
+    Generate order of job by prioritization from HEFTs and from Topological
     Generate resources from min to max
     Overall initial population is valid
 
+    :param fitness_constructor:
     :param show_fitness_graph:
     :param worker_pool:
     :param contractors:
@@ -64,6 +68,7 @@ def build_schedule(wg: WorkGraph,
     :param fitness: the fitness function to be used
     :param init_schedules:
     :param timeline:
+    :param n_cpu: number or parallel workers to use in computational process
     :param assigned_parent_time: start time of the whole schedule(time shift)
     :param work_estimator:
     :return: scheduler
@@ -139,7 +144,11 @@ def build_schedule(wg: WorkGraph,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
-                           fitness, assigned_parent_time, work_estimator)
+                           assigned_parent_time, work_estimator)
+
+    for name, chromosome in init_chromosomes.items():
+        if not is_chromosome_correct(chromosome, node_indices, parents):
+            raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
@@ -150,11 +159,20 @@ def build_schedule(wg: WorkGraph,
     cxpb, mutpb = mutate_order, mutate_order
     mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
+    native = NativeWrapper(wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
+
+    # def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
+    #     return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
+
+    fitness_f = fitness_constructor(native.evaluate)
+
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
     start = time.time()
 
     # map to each individual fitness function
-    fitness = list(map(toolbox.evaluate, pop))
+    pop = [ind for ind in pop if toolbox.validate(ind[0])]
+    fitness = fitness_f.evaluate([ind[0] for ind in pop])
+
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = [fit]
         ind.fitness.invalid_steps = 1 if fit == Time.inf() else 0
@@ -174,7 +192,7 @@ def build_schedule(wg: WorkGraph,
 
     invalidation_border = 3
     plateau_steps = 0
-    max_plateau_steps = 3
+    max_plateau_steps = 8
 
     while g < generation_number and plateau_steps < max_plateau_steps:
         print(f"-- Generation {g}, population={len(pop)}, best time={best_fitness} --")
@@ -274,13 +292,12 @@ def build_schedule(wg: WorkGraph,
         offspring.extend(cur_generation)
         cur_generation.clear()
         # Gather all the fitness in one list and print the stats
-        invalid_ind = [ind for ind in offspring
-                       if ind.fitness.invalid_steps < invalidation_border]
+        invalid_ind = [ind for ind in offspring if toolbox.validate(ind[0])]
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        for ind in invalid_ind:
-            fit = toolbox.evaluate(ind) if ind.fitness.invalid_steps == 0 else ind.fitness.values[0]
+        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind if toolbox.validate(ind[0])])
+        for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
             if fit == Time.inf() and ind.fitness.invalid_steps == 0:
                 ind.fitness.invalid_steps = 1
@@ -290,19 +307,12 @@ def build_schedule(wg: WorkGraph,
             if len(_ftn) > 0:
                 fitness_history.append(sum(_ftn) / len(_ftn))
 
-        def valid(ind: Individual) -> bool:
-            if ind.fitness.invalid_steps == 0:
-                return True
-            ind.fitness.invalid_steps += 1
-            return ind.fitness.invalid_steps < invalidation_border
-
-        # renewing population
-        addition = [ind for ind in offspring if valid(ind)]
-        print(f'----| Offspring size={len(offspring)}, adding {len(addition)} individuals')
         # pop_size = len(pop)
         # pop = [ind for ind in pop if valid(ind)]
         # print(f'----| Filtered out {pop_size - len(pop)} invalid individuals')
-        pop[:] = addition
+
+        # renewing population
+        pop[:] = offspring
         hof.update(pop)
 
         best_fitness = hof[0].fitness.values[0]
@@ -315,10 +325,14 @@ def build_schedule(wg: WorkGraph,
         # print(evaluation)
         g += 1
 
+    native.close()
+
     chromosome = hof[0][0]
 
     # assert that we have valid chromosome
     assert hof[0].fitness.values[0] != Time.inf()
+
+    print(f'Final time: {hof[0].fitness.values[0]}')
 
     scheduled_works, schedule_start_time, timeline, order_nodes \
         = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,

@@ -12,7 +12,7 @@ from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 
 class MomentumTimeline(Timeline):

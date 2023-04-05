@@ -4,7 +4,7 @@ from typing import Callable
 
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 
 class BlockNode:

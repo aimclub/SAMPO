@@ -49,6 +49,6 @@ if __name__ == '__main__':
 
     best_genetic = GeneticScheduler(50, 50, 0.9, 0.9, 100)
 
-    schedule = best_genetic.schedule(conjuncted, contractors[4])
+    schedule = best_genetic.schedule(conjuncted, [contractors[4]])
 
     print(f'Genetic res: {schedule.execution_time}')

@@ -25,6 +25,8 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     volume: Optional[float] = 1
     volume_type: Optional[str] = "unit"
 
+    display_name = ''
+
     # TODO: describe the function (description, parameters, return type)
     @custom_serializer('worker_reqs')
     def worker_reqs_serializer(self, value):
@@ -92,6 +94,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = new_work_unit.volume
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
+        self.display_name = new_work_unit.display_name
 
 
 # TODO: describe the function (description, parameters, return type)

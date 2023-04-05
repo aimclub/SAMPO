@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from random import Random
 from typing import Optional
 
-import numpy as np
-
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
@@ -57,7 +55,7 @@ class Worker(Resource):
 
     def get_cost(self) -> float:
         """Returns cost of this worker entry"""
-        return self.cost_one_unit * self.count
+        return self.cost_one_unit * int(self.count)
 
     # TODO: describe the function (description, return type)
     def get_agent_id(self) -> AgentId:

@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -30,6 +31,7 @@ class GeneticScheduler(Scheduler):
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
+                 n_cpu: int = 1,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
@@ -45,6 +47,7 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self._n_cpu = n_cpu
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -65,26 +68,29 @@ class GeneticScheduler(Scheduler):
         mutate_order = self.mutate_order
         if mutate_order is None:
             if works_count < 300:
-                mutate_order = 0.006
+                mutate_order = 0.05
             else:
-                mutate_order = 2 / works_count
+                mutate_order = 2 / math.sqrt(works_count)
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
             if works_count < 300:
-                mutate_resources = 0.06
+                mutate_resources = 0.1
             else:
-                mutate_resources = 18 / works_count
+                mutate_resources = 18 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
-                size_of_population = 80
+                size_of_population = 20
             elif 1500 > works_count >= 300:
                 size_of_population = 50
             else:
                 size_of_population = works_count // 50
         return size_selection, mutate_order, mutate_resources, size_of_population
+
+    def set_use_multiprocessing(self, n_cpu: int):
+        self._n_cpu = n_cpu
 
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
@@ -118,6 +124,7 @@ class GeneticScheduler(Scheduler):
                                                                                      spec,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
+                                                                                     n_cpu=self._n_cpu,
                                                                                      assigned_parent_time=assigned_parent_time,
                                                                                      timeline=timeline)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from enum import auto, Enum
 from itertools import chain
 from operator import itemgetter, attrgetter
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Callable
 
 import numpy as np
 import plotly.graph_objects
@@ -32,10 +32,11 @@ def resource_employment_fig(schedule: Union[DataFrame, Schedule],
                             fig_type: EmploymentFigType = EmploymentFigType.Classic,
                             vis_mode: VisualizationMode = VisualizationMode.ShowFig,
                             file_name: Optional[str] = None,
-                            project_start: datetime = datetime(year=2020, month=1, day=1)) \
+                            project_start: datetime = datetime(year=2020, month=1, day=1),
+                            converter: Callable[[Dict[str, np.ndarray]], dict] = None) \
         -> Optional[Union[plt.Figure, plotly.graph_objects.Figure]]:
 
-    graph_data = (convert_schedule_df(schedule, fig_type)
+    graph_data = (convert_schedule_df(schedule, fig_type, converter)
                   if isinstance(schedule, DataFrame)
                   else get_schedule_df(schedule.to_schedule_work_dict, fig_type, project_start)) \
         if fig_type in [EmploymentFigType.WorkLabeled, EmploymentFigType.DateLabeled] \
@@ -127,7 +128,8 @@ def get_resources(item):
     return resources
 
 
-def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType) -> DataFrame:
+def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType,
+                        converter: Callable[[Dict[str, np.ndarray]], dict] = None) -> DataFrame:
     first_day = schedule['start'].min()
     first_day = datetime(year=first_day.year, month=first_day.month, day=first_day.day)
 
@@ -145,8 +147,14 @@ def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType) -> Dat
 
         data = list(chain(*[[(timedelta(days=i), timedelta(days=i + 1), r, c) for i, c in enumerate(s) if c > 0]
                             for r, s in resource_schedule.items()]))
+        if converter is not None:  # additional injection
+            additional = converter(resource_schedule)
+            additional = list(chain(*[[(timedelta(days=i), timedelta(days=i + 1), r, c) for i, c in enumerate(s) if c > 0]
+                                      for r, s in additional.items()]))
+            data.extend(additional)
         result = DataFrame.from_records(data, columns=['time_start', 'time_end', 'resource', 'count'])
         result.loc[:, ['time_start', 'time_end']] += first_day
+        result = result.sort_values(by='resource', ascending=False)
         return result
 
     if fig_type is EmploymentFigType.WorkLabeled:

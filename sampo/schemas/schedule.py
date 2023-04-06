@@ -23,7 +23,7 @@ class Schedule(JSONSerializable['Schedule']):
     """
     _schedule: DataFrame
 
-    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'contractor', 'cost',
+    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
                                 'volume', 'measurement', 'successors', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
@@ -156,7 +156,8 @@ class Schedule(JSONSerializable['Schedule']):
 
         df = [(i,                                                 # idx
                w.work_unit.id,                                    # task_id
-               w.work_unit.name,                                  # task_name
+               w.work_unit.display_name,                          # task_name
+               w.work_unit.name,                                  # task_name_mapped
                w.contractor,                                      # contractor info
                w.cost,                                            # work cost
                *info(w.work_unit),                                # volume, measurement, successors

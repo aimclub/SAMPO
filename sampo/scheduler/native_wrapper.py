@@ -1,6 +1,17 @@
-from native import decodeEvaluationInfo
-from native import evaluate
-from native import freeEvaluationInfo
+from deap.base import Toolbox
+
+native = True
+try:
+    from native import decodeEvaluationInfo
+    from native import evaluate as evaluator
+    from native import freeEvaluationInfo
+except ImportError:
+    print("Can't find native module; switching to default")
+    decodeEvaluationInfo = lambda *args: args
+    freeEvaluationInfo = lambda *args: args
+    evaluator = None
+    native = False
+
 
 from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.schemas.contractor import Contractor
@@ -11,7 +22,7 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:
-    def __init__(self, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
+    def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
                  worker_pool_indices: dict[int, dict[int, Worker]], time_estimator: WorkTimeEstimator):
         # the outer numeration. Begins with inseparable heads, continuous with tails.
         numeration: dict[int, GraphNode] = {i: node for i, node in
@@ -38,6 +49,14 @@ class NativeWrapper:
         self.worker_pool_indices = worker_pool_indices
         self._current_chromosomes = None
 
+        if not native:
+            def fit(chromosome: ChromosomeType) -> int:
+                sworks = toolbox.chromosome_to_schedule(chromosome)[0]
+                return max([swork.finish_time for swork in sworks]).value
+            self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
+        else:
+            self.evaluator = evaluator
+
         # preparing C++ cache
         self._cache = decodeEvaluationInfo(self, self.parents, self.inseparables, self.workers, self.totalWorksCount)
 
@@ -51,7 +70,7 @@ class NativeWrapper:
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes
-        return evaluate(self._cache, chromosomes)
+        return self.evaluator(self._cache, chromosomes)
 
     def close(self):
         freeEvaluationInfo(self._cache)

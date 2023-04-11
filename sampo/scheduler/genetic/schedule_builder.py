@@ -162,7 +162,7 @@ def build_schedule(wg: WorkGraph,
     cxpb, mutpb = mutate_order, mutate_order
     mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
-    native = NativeWrapper(wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
+    native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
 
     # def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
     #     return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])

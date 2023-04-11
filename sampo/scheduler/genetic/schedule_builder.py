@@ -42,7 +42,8 @@ def build_schedule(wg: WorkGraph,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
-                   timeline: Timeline | None = None) \
+                   timeline: Timeline | None = None,
+                   time_border: int = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
     Genetic algorithm
@@ -65,17 +66,19 @@ def build_schedule(wg: WorkGraph,
     :param mutate_resources:
     :param rand:
     :param spec: spec for current scheduling
-    :param fitness: the fitness function to be used
     :param init_schedules:
     :param timeline:
     :param n_cpu: number or parallel workers to use in computational process
     :param assigned_parent_time: start time of the whole schedule(time shift)
     :param work_estimator:
+    :param time_border:
     :return: scheduler
     """
 
     if show_fitness_graph:
         fitness_history = list()
+
+    global_start = time.time()
 
     start = time.time()
     # preparing access-optimized data structures
@@ -190,11 +193,11 @@ def build_schedule(wg: WorkGraph,
     print(f'First population evaluation took {(time.time() - start) * 1000} ms')
     start = time.time()
 
-    invalidation_border = 3
     plateau_steps = 0
     max_plateau_steps = 8
 
-    while g < generation_number and plateau_steps < max_plateau_steps:
+    while g < generation_number and plateau_steps < max_plateau_steps \
+            and (time_border is None or time.time() - global_start < time_border):
         print(f"-- Generation {g}, population={len(pop)}, best time={best_fitness} --")
         if best_fitness == prev_best_fitness:
             plateau_steps += 1

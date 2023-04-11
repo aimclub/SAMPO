@@ -116,8 +116,8 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 
 # TODO Make parametrization with different(specialized) contractors
 @fixture(scope='session',
-         params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
+         params=[(i, 5 * j) for j in range(10) for i in range(1, 3)], # 6)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 3)]) # 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}

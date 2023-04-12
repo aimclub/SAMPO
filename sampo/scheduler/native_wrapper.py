@@ -1,5 +1,7 @@
 from deap.base import Toolbox
 
+from sampo.schemas.scheduled_work import ScheduledWork
+
 native = True
 try:
     from native import decodeEvaluationInfo
@@ -52,7 +54,7 @@ class NativeWrapper:
         if not native:
             def fit(chromosome: ChromosomeType) -> int:
                 sworks = toolbox.chromosome_to_schedule(chromosome)[0]
-                return max([swork.finish_time for swork in sworks]).value
+                return max([swork.finish_time for swork in sworks.values()]).value
             self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
         else:
             self.evaluator = evaluator

@@ -32,12 +32,12 @@ if __name__ == '__main__':
 
     bg = generate_block_graph(SyntheticBlockGraphType.Sequential, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
                               rand, obstruction_getter, 2, [3, 4], [3, 4], logger=print)
+    conjuncted = bg.to_work_graph()
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
     print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
 
-    conjuncted = bg.to_work_graph()
     best_genetic = GeneticScheduler(50, 50, 0.9, 0.9, 100)
 
     schedule = best_genetic.schedule(conjuncted, [contractors[4]])

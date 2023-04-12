@@ -38,7 +38,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(scope='session',
+@fixture(scope='module',
          params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
                                     'small plain synthetic', 'big plain synthetic',
@@ -105,7 +105,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
@@ -115,9 +115,9 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(scope='session',
-         params=[(i, 5 * j) for j in range(10) for i in range(1, 3)], # 6)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 3)]) # 6)])
+@fixture(scope='module',
+         params=[(i, 5 * j) for j in range(5) for i in range(1, 6)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(5) for i in range(1, 6)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
@@ -145,7 +145,7 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
     return contractors
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
@@ -168,7 +168,7 @@ def setup_scheduler_type(request):
     return request.param
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def setup_schedule(setup_scheduler_type, setup_wg, setup_contractors):
     try:
         return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,

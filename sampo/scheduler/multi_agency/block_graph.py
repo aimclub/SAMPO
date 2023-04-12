@@ -50,6 +50,15 @@ class BlockGraph:
         Creates `WorkGraph` that is equal to this `BlockGraph`.
         """
         copied_nodes = deepcopy(self.nodes)
+        for node in copied_nodes:
+            # node.wg = WorkGraph._deserialize(node.wg._serialize())
+            for wg_node in node.wg.nodes:
+                wg_node.__dict__.pop('parents', None)
+                wg_node.__dict__.pop('parents_set', None)
+                wg_node.__dict__.pop('children', None)
+                wg_node.__dict__.pop('children_set', None)
+                wg_node.__dict__.pop('inseparable_parent', None)
+                wg_node.__dict__.pop('inseparable_son', None)
         global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
         global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
 

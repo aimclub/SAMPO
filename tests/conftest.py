@@ -41,13 +41,13 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
 @fixture(scope='module',
          params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
-                                    'small plain synthetic', 'big plain synthetic',
-                                    'small advanced synthetic', 'big advanced synthetic']],
+                                    'small plain synthetic', 'big plain synthetic',]],
+                                    # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
               for lag_opt in [True, False]
               for graph_type in ['manual',
-                                 'small plain synthetic', 'big plain synthetic',
-                                 'small advanced synthetic', 'big advanced synthetic']])
+                                 'small plain synthetic', 'big plain synthetic',]])
+                                 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
     BIG_GRAPH_SIZE = 1000

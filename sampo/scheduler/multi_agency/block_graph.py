@@ -47,14 +47,14 @@ class BlockGraph:
 
     def to_work_graph(self) -> WorkGraph:
         """
-        Creates `WorkGraph` that are equal to this `BlockGraph`.
+        Creates `WorkGraph` that is equal to this `BlockGraph`.
         """
         copied_nodes = deepcopy(self.nodes)
-        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.start
-        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.finish
+        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
+        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
 
         for end in copied_nodes:
-            end.wg.start.add_parents([start.wg.finish for start in end.blocks_from])
+            end.wg.start.add_parents([start.wg.finish for start in end.blocks_to])
 
         return WorkGraph(global_start, global_end)
 

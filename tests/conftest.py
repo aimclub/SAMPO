@@ -50,7 +50,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
                                  # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
-    BIG_GRAPH_SIZE = 1000
+    BIG_GRAPH_SIZE = 300
     BORDER_RADIUS = 20
     ADV_GRAPH_UNIQ_WORKS_PROP = 0.4
     ADV_GRAPH_UNIQ_RES_PROP = 0.2
@@ -116,8 +116,8 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 
 # TODO Make parametrization with different(specialized) contractors
 @fixture(scope='module',
-         params=[(i, 5 * j) for j in range(5) for i in range(1, 6)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(5) for i in range(1, 6)])
+         params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}

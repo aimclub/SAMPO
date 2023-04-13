@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cached_property
+from functools import cached_property, cache
 from typing import List, Union, Tuple, Optional, Dict, Set
 
 import numpy as np
@@ -157,8 +157,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         return list([edge.finish for edge in self._children_edges])
 
     # TODO Describe the function (description, return type)
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def children_set(self) -> Set['GraphNode']:
         return set(self.children)
 
@@ -181,7 +181,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def id(self) -> str:
         return self.work_unit.id
 
-    # @cache
+    @cache
     def get_inseparable_chain(self) -> Optional[List['GraphNode']]:
         """
         Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =

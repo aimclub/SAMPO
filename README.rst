@@ -27,11 +27,24 @@ It provides toolbox for generating schedules of manufacturing process under the 
 Installation
 ============
 
-The simplest way to install SAMPO is using ``pip``:
+SAMPO package is available via PyPI:
 
 .. code-block::
 
   $ pip install sampo
+
+SAMPO Features
+============
+
+The following algorithms for prejcts sheduling are implemented:
+* HEFT (heterogeneous earliest finish time) - an heuristic algoritm
+
+Difference from existing implementations:
+
+* Module for generating graphs of production tasks with a given structure;
+* Easy to use pipeline structure;
+* Multi-agent modeling block, allowing you to effectively select a combination of planning algorithms for a particular project;
+* Ability to handle complex projects with a large number of works (2-10 thousand).
 
 How to Use
 ==========

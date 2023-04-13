@@ -154,7 +154,13 @@ When data was prepared and scheduler built, you should use scheduling pipeline t
 Supported by
 ============
 
-- `National Center for Cognitive Research of ITMO University <https://actcognitive.org/>`_
+
+The development is supported by the research center `Strong Artificial Intelligence in Industry <https://sai.itmo.ru/>`_ at ITMO University.
+
+.. image:: docs/AIM-logo.svg
+   :alt: Logo of AIM club
+   :align: center
+   :width: 500pt
 
 
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg

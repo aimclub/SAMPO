@@ -24,6 +24,9 @@ Scheduler for Adaptive Manufacturing Processes Optimization
 It provides toolbox for generating schedules of manufacturing process under the constraints imposed by the subject area. The core of SAMPO is based on the combination of meta-heuristic, genetic and multi-agent algorithms. Taking as input the task graph with tasks connections and resource constraints, as well as the optimization metric, the scheduler builds the optimal tasks sequence and resources assignment according to the given metric.
 
 
+.. image:: docs/sampo_scheme.png
+   :alt: scheme of sampo structure
+
 Installation
 ============
 
@@ -44,10 +47,10 @@ The following algorithms for projects sheduling are implemented:
 
 Difference from existing implementations:
 
-* Module for generating graphs of production tasks with a given structure;
-* Easy to use pipeline structure;
-* Multi-agent modeling block, allowing you to effectively select a combination of planning algorithms for a particular project;
-* Ability to handle complex projects with a large number of works (2-10 thousand).
+* Module for generating graphs of production tasks with a given structure
+* Easy to use pipeline structure
+* Multi-agent modeling block, allowing you to effectively select a combination of planning algorithms for a particular project
+* Ability to handle complex projects with a large number of works (2-10 thousand)
 
 How to Use
 ==========

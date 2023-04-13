@@ -44,77 +44,79 @@ To use the API, follow these steps:
 To use SAMPO as scheduler you need WorkGraph as work info representation and list of Contractor
 objects as available resources.
 
-1.1. Load WorkGraph from file
-.. code-block:: python
+    1.1. Load WorkGraph from file
 
-  wg = WorkGraph.load(...)
+    .. code-block:: python
 
-1.2. Generate synthetic WorkGraph
+      wg = WorkGraph.load(...)
 
-.. code-block:: python
+    1.2. Generate synthetic WorkGraph
 
-  from sampo.generator import SimpleSynthetic()
+    .. code-block:: python
 
-  # SimpleSynthetic object used for simpler generations
-  ss = SimpleSynthetic()
+      from sampo.generator import SimpleSynthetic()
 
-  # simple graph
-  # should generate general(average) type of graph with 10 clusters and from 100 to 200 vertices
-  wg = ss.work_graph(mode=SyntheticGraphType.General,
-                     cluster_counts=10,
-                     bottom_border=100,
-                     top_border=200)
+      # SimpleSynthetic object used for simpler generations
+      ss = SimpleSynthetic()
 
-  # complex graph
-  # should generate general(average) type of graph with 300 unique works, 100 resources and below 2000 vertices
-  wg = ss.advanced_work_graph(works_count_top_border=2000,
-                              uniq_works=300,
-                              uniq_resources=100)
+      # simple graph
+      # should generate general(average) type of graph with 10 clusters and from 100 to 200 vertices
+      wg = ss.work_graph(mode=SyntheticGraphType.General,
+                         cluster_counts=10,
+                         bottom_border=100,
+                         top_border=200)
 
-1.3. Contractors
+      # complex graph
+      # should generate general(average) type of graph with 300 unique works, 100 resources and below 2000 vertices
+      wg = ss.advanced_work_graph(works_count_top_border=2000,
+                                  uniq_works=300,
+                                  uniq_resources=100)
 
-1.3.1. Construct by hand
+    1.3. Contractors
 
-.. code-block:: python
+        1.3.1. Construct by hand
 
-  contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
+        .. code-block:: python
 
-1.3.2. Generate from WorkGraph
+          contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
 
-.. code-block:: python
+        1.3.2. Generate from WorkGraph
 
-  # TODO
+        .. code-block:: python
+
+          # TODO
 
 2. Schedule
 
-2.1. Construct the scheduler
+    2.1. Construct the scheduler
 
-There are 4 classes of schedulers available in SAMPO:
-* HEFTScheduler.
-* HEFTBetweenScheduler.
-* TopologicalScheduler.
-* GeneticScheduler.
+    There are 4 classes of schedulers available in SAMPO:
 
-Each of them has various hyper-parameters to fit. They should be passed when scheduler object created.
+    - HEFTScheduler
+    - HEFTBetweenScheduler
+    - TopologicalScheduler
+    - GeneticScheduler
 
-.. code-block:: python
+    Each of them has various hyper-parameters to fit. They should be passed when scheduler object created.
 
-  from sampo.scheduler.heft import HEFTScheduler
+    .. code-block:: python
 
-  scheduler = HEFTScheduler()
+      from sampo.scheduler.heft import HEFTScheduler
 
-.. code-block:: python
+      scheduler = HEFTScheduler()
 
-  from sampo.scheduler.genetic import GeneticScheduler
+    .. code-block:: python
 
-  scheduler = GeneticScheduler(mutate_order=0.1,
-                              mutate_resources=0.3)
+      from sampo.scheduler.genetic import GeneticScheduler
 
-2.2. Schedule
+      scheduler = GeneticScheduler(mutate_order=0.1,
+                                  mutate_resources=0.3)
 
-.. code-block:: python
+    2.2. Schedule
 
-  schedule = scheduler.schedule(wg, contractors)
+    .. code-block:: python
+
+      schedule = scheduler.schedule(wg, contractors)
 
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions

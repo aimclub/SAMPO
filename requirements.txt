@@ -9,5 +9,21 @@ matplotlib~=3.6.2
 plotly~=5.11.0
 pytest~=7.2.0
 pytest-xdist~=3.1.0
-setuptools
-cmake
+pathos
+
+# Requirements to build the Python documentation
+
+# Sphinx version is pinned so that new versions that introduce new warnings
+# won't suddenly cause build failures. Updating the version is fine as long
+# as no warnings are raised by doing so.
+sphinx==4.5.0
+
+blurb
+
+sphinx-lint==0.6.7
+sphinxext-opengraph==0.7.5
+
+# The theme used by the documentation is stored separately, so we need
+# to install that as well.
+python-docs-theme>=2022.1
+sphinx-rtd-theme

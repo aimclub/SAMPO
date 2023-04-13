@@ -36,8 +36,11 @@ SAMPO package is available via PyPI:
 SAMPO Features
 ============
 
-The following algorithms for prejcts sheduling are implemented:
-* HEFT (heterogeneous earliest finish time) - an heuristic algoritm
+The following algorithms for projects sheduling are implemented:
+
+* Topological - heuristic algorithm based in toposort of WorkGraph
+* HEFT (heterogeneous earliest finish time) and HEFTBetween - heuristic algorithms based on critical path heuristic
+* Genetic - algorithm that uses heuristic algorithms for beginning population and modelling evolution process
 
 Difference from existing implementations:
 
@@ -130,6 +133,20 @@ objects as available resources.
     .. code-block:: python
 
       schedule = scheduler.schedule(wg, contractors)
+
+3. Pipeline
+
+When data was prepared and scheduler built, you should use scheduling pipeline to control the scheduling process:
+
+.. code-block:: python
+
+  from sampo.pipeline import SchedulingPipeline
+
+  schedule = SchedulingPipeline.create() \
+        .wg(wg) \
+        .contractors(contractors) \
+        .schedule(HEFTScheduler()) \
+        .finish()
 
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions

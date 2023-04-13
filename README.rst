@@ -58,56 +58,53 @@ How to Use
 
 To use the API, follow these steps:
 
-1. Prepare data
+1. Input data preparation
 
-To use SAMPO as scheduler you need WorkGraph as work info representation and list of Contractor
-objects as available resources.
+To use SAMPO for the schedule generation you need to prepare:
 
-    1.1. Load WorkGraph from file
+* WorkGraph object with the works information representation, including volumes of the works and connections between them
+* list of Contractor objects with the information about available resources types and volumes.
+
+    1.1. Loading WorkGraph from file
 
     .. code-block:: python
 
       wg = WorkGraph.load(...)
 
-    1.2. Generate synthetic WorkGraph
+    1.2. Generating synthetic WorkGraph
 
     .. code-block:: python
 
       from sampo.generator import SimpleSynthetic
 
-      # SimpleSynthetic object used for simpler generations
+      # SimpleSynthetic object used for the simple work graph structure generation
       ss = SimpleSynthetic()
 
       # simple graph
-      # should generate general(average) type of graph with 10 clusters and from 100 to 200 vertices
+      # should generate general (average) type of graph with 10 clusters from 100 to 200 vertices each
       wg = ss.work_graph(mode=SyntheticGraphType.General,
                          cluster_counts=10,
                          bottom_border=100,
                          top_border=200)
 
       # complex graph
-      # should generate general(average) type of graph with 300 unique works, 100 resources and below 2000 vertices
+      # should generate general (average) type of graph with 300 unique works, 100 resources and 2000 vertices
       wg = ss.advanced_work_graph(works_count_top_border=2000,
                                   uniq_works=300,
                                   uniq_resources=100)
 
-    1.3. Contractors
+    1.3. Contractors generation
 
-        1.3.1. Construct by hand
+    Manual Contractor list generation:
 
-        .. code-block:: python
+    .. code-block:: python
 
-          contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
+    contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
 
-        1.3.2. Generate from WorkGraph
 
-        .. code-block:: python
+2. Scheduling process
 
-          # TODO
-
-2. Schedule
-
-    2.1. Construct the scheduler
+    2.1. Scheduler constructing
 
     There are 4 classes of schedulers available in SAMPO:
 
@@ -115,6 +112,7 @@ objects as available resources.
     - HEFTBetweenScheduler
     - TopologicalScheduler
     - GeneticScheduler
+
 
     Each of them has various hyper-parameters to fit. They should be passed when scheduler object created.
 
@@ -131,13 +129,13 @@ objects as available resources.
       scheduler = GeneticScheduler(mutate_order=0.1,
                                    mutate_resources=0.3)
 
-    2.2. Schedule
+    2.2. Schedule generation
 
     .. code-block:: python
 
       schedule = scheduler.schedule(wg, contractors)
 
-3. Pipeline
+3. Pipeline structure
 
 When data was prepared and scheduler built, you should use scheduling pipeline to control the scheduling process:
 

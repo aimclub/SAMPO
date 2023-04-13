@@ -1,5 +1,6 @@
 .. image:: docs/sampo_logo.png
    :alt: Logo of SAMPO framework
+   :width: 300pt
    
 Scheduler for Adaptive Manufacturing Processes Optimization
 ======================
@@ -38,29 +39,24 @@ How to Use
 
 To use the API, follow these steps:
 
-1. Import ``generator`` and ``scheduler`` modules
-
-.. code-block:: python
-
- from sampo import generator
- from sampo import scheduler
-
-2. Prepare data
+1. Prepare data
 
 To use SAMPO as scheduler you need WorkGraph as work info representation and list of Contractor
 objects as available resources.
 
-2.1. Load WorkGraph from file
+1.1. Load WorkGraph from file
 .. code-block:: python
 
   wg = WorkGraph.load(...)
 
-2.2. Generate synthetic WorkGraph
+1.2. Generate synthetic WorkGraph
 
 .. code-block:: python
 
+  from sampo.generator import SimpleSynthetic()
+
   # SimpleSynthetic object used for simpler generations
-  ss = generator.SimpleSynthetic()
+  ss = SimpleSynthetic()
 
   # simple graph
   # should generate general(average) type of graph with 10 clusters and from 100 to 200 vertices
@@ -75,23 +71,23 @@ objects as available resources.
                               uniq_works=300,
                               uniq_resources=100)
 
-2.3. Contractors
+1.3. Contractors
 
-2.3.1. Construct by hand
+1.3.1. Construct by hand
 
 .. code-block:: python
 
-  schedule = scheduler.HEFTScheduler().schedule(wg, contractors)
+  contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
 
-2.3.2. Generate from WorkGraph
+1.3.2. Generate from WorkGraph
 
 .. code-block:: python
 
   # TODO
 
-3. Schedule
+2. Schedule
 
-3.1. Construct the scheduler
+2.1. Construct the scheduler
 
 There are 4 classes of schedulers available in SAMPO:
 * HEFTScheduler.
@@ -105,14 +101,20 @@ Each of them has various hyper-parameters to fit. They should be passed when sch
 
   from sampo.scheduler.heft import HEFTScheduler
 
-  schedule = HEFTScheduler()
+  scheduler = HEFTScheduler()
 
 .. code-block:: python
 
   from sampo.scheduler.genetic import GeneticScheduler
 
-  schedule = GeneticScheduler(mutate_order=0.1,
+  scheduler = GeneticScheduler(mutate_order=0.1,
                               mutate_resources=0.3)
+
+2.2. Schedule
+
+.. code-block:: python
+
+  schedule = scheduler.schedule(wg, contractors)
 
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions

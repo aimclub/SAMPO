@@ -54,7 +54,7 @@ objects as available resources.
 
     .. code-block:: python
 
-      from sampo.generator import SimpleSynthetic()
+      from sampo.generator import SimpleSynthetic
 
       # SimpleSynthetic object used for simpler generations
       ss = SimpleSynthetic()
@@ -110,7 +110,7 @@ objects as available resources.
       from sampo.scheduler.genetic import GeneticScheduler
 
       scheduler = GeneticScheduler(mutate_order=0.1,
-                                  mutate_resources=0.3)
+                                   mutate_resources=0.3)
 
     2.2. Schedule
 

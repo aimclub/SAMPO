@@ -45,16 +45,75 @@ To use the API, follow these steps:
  from sampo import generator
  from sampo import scheduler
 
-2. Generate synthetic graph and schedule works
+2. Prepare data
+
+To use SAMPO as scheduler you need WorkGraph as work info representation and list of Contractor
+objects as available resources.
+
+2.1. Load WorkGraph from file
+.. code-block:: python
+
+  wg = WorkGraph.load(...)
+
+2.2. Generate synthetic WorkGraph
 
 .. code-block:: python
 
-  wg = generator.SimpleSynthetic().advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
-  contractors = [generator.get_contractor_by_wg(wg)]
-  
+  # SimpleSynthetic object used for simpler generations
+  ss = generator.SimpleSynthetic()
+
+  # simple graph
+  # should generate general(average) type of graph with 10 clusters and from 100 to 200 vertices
+  wg = ss.work_graph(mode=SyntheticGraphType.General,
+                     cluster_counts=10,
+                     bottom_border=100,
+                     top_border=200)
+
+  # complex graph
+  # should generate general(average) type of graph with 300 unique works, 100 resources and below 2000 vertices
+  wg = ss.advanced_work_graph(works_count_top_border=2000,
+                              uniq_works=300,
+                              uniq_resources=100)
+
+2.3. Contractors
+
+2.3.1. Construct by hand
+
+.. code-block:: python
+
   schedule = scheduler.HEFTScheduler().schedule(wg, contractors)
-  
-  
+
+2.3.2. Generate from WorkGraph
+
+.. code-block:: python
+
+  # TODO
+
+3. Schedule
+
+3.1. Construct the scheduler
+
+There are 4 classes of schedulers available in SAMPO:
+* HEFTScheduler.
+* HEFTBetweenScheduler.
+* TopologicalScheduler.
+* GeneticScheduler.
+
+Each of them has various hyper-parameters to fit. They should be passed when scheduler object created.
+
+.. code-block:: python
+
+  from sampo.scheduler.heft import HEFTScheduler
+
+  schedule = HEFTScheduler()
+
+.. code-block:: python
+
+  from sampo.scheduler.genetic import GeneticScheduler
+
+  schedule = GeneticScheduler(mutate_order=0.1,
+                              mutate_resources=0.3)
+
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions
    :target: https://badge.fury.io/py/sampo

@@ -1,5 +1,6 @@
 .. image:: docs/sampo_logo.png
    :alt: Logo of SAMPO framework
+   :width: 300pt
    
 Scheduler for Adaptive Manufacturing Processes Optimization
 ======================
@@ -23,14 +24,33 @@ Scheduler for Adaptive Manufacturing Processes Optimization
 It provides toolbox for generating schedules of manufacturing process under the constraints imposed by the subject area. The core of SAMPO is based on the combination of meta-heuristic, genetic and multi-agent algorithms. Taking as input the task graph with tasks connections and resource constraints, as well as the optimization metric, the scheduler builds the optimal tasks sequence and resources assignment according to the given metric.
 
 
+.. image:: docs/sampo-scheme.jfif
+   :alt: scheme of sampo structure
+
 Installation
 ============
 
-The simplest way to install SAMPO is using ``pip``:
+SAMPO package is available via PyPI:
 
 .. code-block::
 
   $ pip install sampo
+
+SAMPO Features
+============
+
+The following algorithms for projects sheduling are implemented:
+
+* Topological - heuristic algorithm based in toposort of WorkGraph
+* HEFT (heterogeneous earliest finish time) and HEFTBetween - heuristic algorithms based on critical path heuristic
+* Genetic - algorithm that uses heuristic algorithms for beginning population and modelling evolution process
+
+Difference from existing implementations:
+
+* Module for generating graphs of production tasks with a given structure
+* Easy to use pipeline structure
+* Multi-agent modeling block, allowing you to effectively select a combination of planning algorithms for a particular project
+* Ability to handle complex projects with a large number of works (2-10 thousand)
 
 How to Use
 ==========
@@ -38,23 +58,109 @@ How to Use
 
 To use the API, follow these steps:
 
-1. Import ``generator`` and ``scheduler`` modules
+1. Input data preparation
+
+To use SAMPO for the schedule generation you need to prepare:
+
+* WorkGraph object with the works information representation, including volumes of the works and connections between them
+* list of Contractor objects with the information about available resources types and volumes.
+
+    1.1. Loading WorkGraph from file
+
+    .. code-block:: python
+
+      wg = WorkGraph.load(...)
+
+    1.2. Generating synthetic WorkGraph
+
+    .. code-block:: python
+
+      from sampo.generator import SimpleSynthetic
+
+      # SimpleSynthetic object used for the simple work graph structure generation
+      ss = SimpleSynthetic()
+
+      # simple graph
+      # should generate general (average) type of graph with 10 clusters from 100 to 200 vertices each
+      wg = ss.work_graph(mode=SyntheticGraphType.General,
+                         cluster_counts=10,
+                         bottom_border=100,
+                         top_border=200)
+
+      # complex graph
+      # should generate general (average) type of graph with 300 unique works, 100 resources and 2000 vertices
+      wg = ss.advanced_work_graph(works_count_top_border=2000,
+                                  uniq_works=300,
+                                  uniq_resources=100)
+
+    1.3. Contractors generation
+
+    Manual Contractor list generation:
+
+    .. code-block:: python
+
+    contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
+
+
+2. Scheduling process
+
+    2.1. Scheduler constructing
+
+    There are 4 classes of schedulers available in SAMPO:
+
+    - HEFTScheduler
+    - HEFTBetweenScheduler
+    - TopologicalScheduler
+    - GeneticScheduler
+
+
+    Each of them has various hyper-parameters to fit. They should be passed when scheduler object created.
+
+    .. code-block:: python
+
+      from sampo.scheduler.heft import HEFTScheduler
+
+      scheduler = HEFTScheduler()
+
+    .. code-block:: python
+
+      from sampo.scheduler.genetic import GeneticScheduler
+
+      scheduler = GeneticScheduler(mutate_order=0.1,
+                                   mutate_resources=0.3)
+
+    2.2. Schedule generation
+
+    .. code-block:: python
+
+      schedule = scheduler.schedule(wg, contractors)
+
+3. Pipeline structure
+
+When data was prepared and scheduler built, you should use scheduling pipeline to control the scheduling process:
 
 .. code-block:: python
 
- from sampo import generator
- from sampo import scheduler
+  from sampo.pipeline import SchedulingPipeline
 
-2. Generate synthetic graph and schedule works
+  schedule = SchedulingPipeline.create() \
+        .wg(wg) \
+        .contractors(contractors) \
+        .schedule(HEFTScheduler()) \
+        .finish()
 
-.. code-block:: python
+Supported by
+============
 
-  wg = generator.SimpleSynthetic().advanced_work_graph(works_count_top_border=2000, uniq_works=300, uniq_resources=100)
-  contractors = [generator.get_contractor_by_wg(wg)]
-  
-  schedule = scheduler.HEFTScheduler().schedule(wg, contractors)
-  
-  
+
+The development is supported by the research center `Strong Artificial Intelligence in Industry <https://sai.itmo.ru/>`_ at ITMO University.
+
+.. image:: docs/AIM-logo.svg
+   :alt: Logo of AIM club
+   :align: center
+   :width: 500pt
+
+
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions
    :target: https://badge.fury.io/py/sampo

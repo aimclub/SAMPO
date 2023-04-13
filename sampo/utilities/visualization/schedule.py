@@ -33,7 +33,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
 
     fig = px.timeline(schedule_dataframe, x_start='start', x_end='finish', y='idx', hover_name='task_name',
                       color=schedule_dataframe.loc[:, 'contractor'],
-                      hover_data=['cost', 'volume', 'measurement', 'workers'],
+                      hover_data=['task_name_mapped', 'cost', 'volume', 'measurement', 'workers'],
                       title=f"{'Project tasks - Gant chart'}",
                       category_orders={'idx': list(schedule_dataframe.idx)},
                       text='task_name')

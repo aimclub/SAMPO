@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -8,6 +9,7 @@ from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
@@ -29,11 +31,13 @@ class GeneticScheduler(Scheduler):
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
+                 n_cpu: int = 1,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
+                 resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
-                         resource_optimizer=IdentityResourceOptimizer(),
+                         resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
         self.size_selection = size_selection
@@ -43,6 +47,9 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self._n_cpu = n_cpu
+
+        self._time_border = None
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -63,26 +70,32 @@ class GeneticScheduler(Scheduler):
         mutate_order = self.mutate_order
         if mutate_order is None:
             if works_count < 300:
-                mutate_order = 0.006
+                mutate_order = 0.05
             else:
-                mutate_order = 2 / works_count
+                mutate_order = 2 / math.sqrt(works_count)
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
             if works_count < 300:
-                mutate_resources = 0.06
+                mutate_resources = 0.1
             else:
-                mutate_resources = 18 / works_count
+                mutate_resources = 6 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
-                size_of_population = 80
+                size_of_population = 20
             elif 1500 > works_count >= 300:
                 size_of_population = 50
             else:
                 size_of_population = works_count // 50
         return size_selection, mutate_order, mutate_resources, size_of_population
+
+    def set_use_multiprocessing(self, n_cpu: int):
+        self._n_cpu = n_cpu
+
+    def set_time_border(self, time_border: int):
+        self._time_border = time_border
 
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
@@ -90,7 +103,7 @@ class GeneticScheduler(Scheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline]:
+            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def init_schedule(scheduler_class):
             return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
                     list(reversed(prioritization(wg, self.work_estimator))))
@@ -103,24 +116,26 @@ class GeneticScheduler(Scheduler):
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)
 
-        scheduled_works, schedule_start_time, timeline = build_schedule(wg,
-                                                                        contractors,
-                                                                        agents,
-                                                                        size_of_population,
-                                                                        self.number_of_generation,
-                                                                        size_selection,
-                                                                        mutate_order,
-                                                                        mutate_resources,
-                                                                        init_schedules,
-                                                                        self.rand,
-                                                                        spec,
-                                                                        self.fitness_constructor,
-                                                                        self.work_estimator,
-                                                                        assigned_parent_time=assigned_parent_time,
-                                                                        timeline=timeline)
+        scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
+                                                                                     contractors,
+                                                                                     agents,
+                                                                                     size_of_population,
+                                                                                     self.number_of_generation,
+                                                                                     size_selection,
+                                                                                     mutate_order,
+                                                                                     mutate_resources,
+                                                                                     init_schedules,
+                                                                                     self.rand,
+                                                                                     spec,
+                                                                                     self.fitness_constructor,
+                                                                                     self.work_estimator,
+                                                                                     n_cpu=self._n_cpu,
+                                                                                     assigned_parent_time=assigned_parent_time,
+                                                                                     timeline=timeline,
+                                                                                     time_border=self._time_border)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline
+        return schedule, schedule_start_time, timeline, order_nodes

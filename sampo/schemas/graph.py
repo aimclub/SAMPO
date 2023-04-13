@@ -125,6 +125,7 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     # TODO: describe the function (description, return type)
     @cached_property
+    # @property
     def inseparable_son(self) -> Optional['GraphNode']:
         inseparable_children = list([x.finish for x in self._children_edges
                                      if x.type == EdgeType.InseparableFinishStart])
@@ -132,27 +133,32 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     # TODO: describe the function (description, return type)
     @cached_property
+    # @property
     def inseparable_parent(self) -> Optional['GraphNode']:
         inseparable_parents = list([x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart])
         return inseparable_parents[0] if inseparable_parents else None
 
     # TODO Describe the function (description, return type)
     @cached_property
+    # @property
     def parents(self) -> List['GraphNode']:
         return list([edge.start for edge in self._parent_edges])
 
     # TODO Describe the function (description, return type)
     @cached_property
+    # @property
     def parents_set(self) -> Set['GraphNode']:
         return set(self.parents)
 
     # TODO Describe the function (description, return type)
     @cached_property
+    # @property
     def children(self) -> List['GraphNode']:
         return list([edge.finish for edge in self._children_edges])
 
     # TODO Describe the function (description, return type)
     @cached_property
+    # @property
     def children_set(self) -> Set['GraphNode']:
         return set(self.children)
 

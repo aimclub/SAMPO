@@ -49,6 +49,8 @@ class GeneticScheduler(Scheduler):
         self.work_estimator = work_estimator
         self._n_cpu = n_cpu
 
+        self._time_border = None
+
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
                f'generations={self.number_of_generation},' \
@@ -77,7 +79,7 @@ class GeneticScheduler(Scheduler):
             if works_count < 300:
                 mutate_resources = 0.1
             else:
-                mutate_resources = 18 / math.sqrt(works_count)
+                mutate_resources = 6 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:
@@ -91,6 +93,9 @@ class GeneticScheduler(Scheduler):
 
     def set_use_multiprocessing(self, n_cpu: int):
         self._n_cpu = n_cpu
+
+    def set_time_border(self, time_border: int):
+        self._time_border = time_border
 
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
@@ -126,7 +131,8 @@ class GeneticScheduler(Scheduler):
                                                                                      self.work_estimator,
                                                                                      n_cpu=self._n_cpu,
                                                                                      assigned_parent_time=assigned_parent_time,
-                                                                                     timeline=timeline)
+                                                                                     timeline=timeline,
+                                                                                     time_border=self._time_border)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:

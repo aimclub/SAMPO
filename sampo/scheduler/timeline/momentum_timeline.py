@@ -103,10 +103,8 @@ class MomentumTimeline(Timeline):
         exec_time: Time = Time(0)
         exec_times: Dict[GraphNode, Tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for i, chain_node in enumerate(inseparable_chain):
-            passed_agents_new = [agent.copy() for agent in worker_team]
-
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                chain_node.work_unit.estimate_static(passed_agents_new, work_estimator)
+                chain_node.work_unit.estimate_static(worker_team, work_estimator)
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time  # - exec_time
             lag = lag_req if lag_req > 0 else 0
 

@@ -151,6 +151,12 @@ When data was prepared and scheduler built, you should use scheduling pipeline t
         .schedule(HEFTScheduler()) \
         .finish()
 
+Supported by
+============
+
+- `National Center for Cognitive Research of ITMO University <https://actcognitive.org/>`_
+
+
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions
    :target: https://badge.fury.io/py/sampo

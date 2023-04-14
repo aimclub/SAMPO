@@ -163,11 +163,6 @@ of a library of strong AI algorithms in terms of adaptive optimization of produc
 multi-criteria evolutionary schemes and a multi-agent simulation environment.
 
 
-.. image:: docs/AIM-logo.svg
-   :alt: Logo of AIM club
-   :align: center
-   :width: 500pt
-
 .. |itmo| image:: https://github.com/ITMO-NSS-team/open-source-ops/blob/master/badges/ITMO_badge_flat.svg
    :alt: ITMO site
    :target: https://en.itmo.ru/en/

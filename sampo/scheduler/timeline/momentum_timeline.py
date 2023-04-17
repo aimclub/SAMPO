@@ -105,7 +105,7 @@ class MomentumTimeline(Timeline):
         for i, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(worker_team, work_estimator)
-            lag_req = nodes_max_parent_times[chain_node] - max_parent_time  # - exec_time
+            lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 
             exec_times[chain_node] = lag, node_exec_time
@@ -216,7 +216,7 @@ class MomentumTimeline(Timeline):
             # we need to check the event current_start_idx - 1 cause it is the first event
             # that influence amount of available for us workers
             not_enough_workers_found = False
-            for idx in range(end_idx - 1, current_start_idx - 2, -1):
+            for idx in range(end_idx - 1, current_start_idx - 1, -1):
                 if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
@@ -274,7 +274,7 @@ class MomentumTimeline(Timeline):
                 assert event.available_workers_count >= w.count
                 event.available_workers_count -= w.count
 
-            # assert available_workers_count >= w.count
+            assert available_workers_count >= w.count
 
             if start_idx < end_idx:
                 event: ScheduleEvent = state[end_idx - 1]

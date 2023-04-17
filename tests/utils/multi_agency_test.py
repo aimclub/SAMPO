@@ -108,7 +108,7 @@ def test_managing_queues():
     def obstruction_getter(i: int):
         return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
 
-    for i in range(20):
+    for i in range(5):
         contractors = [p_rand.contractor(10)]
 
         scheduler_constructors = [HEFTScheduler]

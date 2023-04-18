@@ -1,11 +1,14 @@
 from enum import Enum
 from random import Random
 from typing import Callable
+from uuid import uuid4
 
 from sampo.generator import SimpleSynthetic
 from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.multi_agency.block_graph import BlockGraph, BlockNode
 from sampo.scheduler.utils.obstruction import Obstruction
+from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.works import WorkUnit
 
 
 class SyntheticBlockGraphType(Enum):
@@ -13,6 +16,15 @@ class SyntheticBlockGraphType(Enum):
     Parallel = 1,
     Random = 2,
     Queues = 3
+
+
+EMPTY_GRAPH_VERTEX_COUNT = 2
+
+
+def generate_empty_graph() -> WorkGraph:
+    start = GraphNode(WorkUnit(str(uuid4()), ""), [])
+    end = GraphNode(WorkUnit(str(uuid4()), ""), [start])
+    return WorkGraph(start, end)
 
 
 def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_prop: list[int],
@@ -36,21 +48,33 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
 
     modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
     nodes = [ss.work_graph(mode, *count_supplier(i)) for i, mode in enumerate(modes)]
+    nodes += [generate_empty_graph(), generate_empty_graph()]
     bg = BlockGraph.pure(nodes, obstruction_getter)
+
+    global_start, global_end = bg.nodes[-2:]
 
     match graph_type:
         case SyntheticBlockGraphType.Sequential:
             for idx, start in enumerate(bg.nodes[:-2]):
-                bg.add_edge(start, bg.nodes[idx + 1])
+                if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
+                        and bg.nodes[idx + 1].wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
+                    bg.add_edge(start, bg.nodes[idx + 1])
         case SyntheticBlockGraphType.Parallel:
             pass
         case SyntheticBlockGraphType.Random:
             rev_edge_prob = int(1 / edge_prob)
             for idx, start in enumerate(bg.nodes):
                 for end in bg.nodes[idx:]:
-                    if start == end or rand.randint(0, rev_edge_prob) != 0:
-                        continue
-                    bg.add_edge(start, end)
+                    if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
+                            and end.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
+                        if start == end or rand.randint(0, rev_edge_prob) != 0:
+                            continue
+                        bg.add_edge(start, end)
+
+    for node in bg.nodes:
+        if node.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
+            bg.add_edge(global_start, node)
+            bg.add_edge(node, global_end)
 
     logger(f'{graph_type.name} ' + ' '.join([str(mode.name) for mode in modes]))
     return bg

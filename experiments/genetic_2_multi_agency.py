@@ -4,6 +4,7 @@ from sampo.generator import SimpleSynthetic
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
+from sampo.schemas.time import Time
 
 r_seed = 231
 p_rand = SimpleSynthetic(rand=r_seed)
@@ -35,7 +36,14 @@ if __name__ == '__main__':
 
     print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
 
-    best_genetic = GeneticScheduler(50, 50, 0.9, 0.9, 100)
+    min_downtime = Time.inf()
+    best_genetic = None
+    for agent in agents:
+        if agent.downtime < min_downtime:
+            min_downtime = agent.downtime
+            best_genetic = agent.scheduler
+
+    print(f'Best genetic: {best_genetic}')
 
     schedule = best_genetic.schedule(conjuncted, contractors)
 

@@ -9,12 +9,16 @@ Scheduler for Adaptive Manufacturing Processes Optimization
 .. list-table::
    :stub-columns: 1
 
+   * - affiliation
+     - | |sai| |itmo|
    * - package
      - | |pypi| |py_10|
    * - license
      - | |license|
    * - support
      - | |mailto|
+   * - mirror
+     - | |mirror| 
 
 
 .. end-badges
@@ -153,12 +157,19 @@ Supported by
 ============
 
 
-The development is supported by the research center `Strong Artificial Intelligence in Industry <https://sai.itmo.ru/>`_ at ITMO University.
+The study is supported by the `Research Center Strong Artificial Intelligence in Industry <https://sai.itmo.ru/>`_ 
+of `ITMO University <https://en.itmo.ru/>`_ as part of the plan of the center's program: Development and testing of an experimental prototype 
+of a library of strong AI algorithms in terms of adaptive optimization of production processes based on intelligent technologies, 
+multi-criteria evolutionary schemes and a multi-agent simulation environment.
 
-.. image:: docs/AIM-logo.svg
-   :alt: Logo of AIM club
-   :align: center
-   :width: 500pt
+
+.. |itmo| image:: https://github.com/ITMO-NSS-team/open-source-ops/blob/master/badges/ITMO_badge_flat.svg
+   :alt: ITMO site
+   :target: https://en.itmo.ru/en/
+
+.. |sai| image:: https://github.com/ITMO-NSS-team/open-source-ops/blob/master/badges/SAI_badge_flat.svg
+   :alt: SAI site
+   :target: https://sai.itmo.ru/
 
 
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
@@ -178,3 +189,7 @@ The development is supported by the research center `Strong Artificial Intellige
 .. |mailto| image:: https://img.shields.io/badge/email-IAIRLab-blueviolet
    :alt: Framework Support
    :target: mailto:iairlab@yandex.ru
+
+.. |mirror| image:: https://camo.githubusercontent.com/9bd7b8c5b418f1364e72110a83629772729b29e8f3393b6c86bff237a6b784f6/68747470733a2f2f62616467656e2e6e65742f62616467652f6769746c61622f6d6972726f722f6f72616e67653f69636f6e3d6769746c6162
+   :alt: Gitlab Mirror
+   :target: https://gitlab.actcognitive.org/itmo-sai-code/sampo

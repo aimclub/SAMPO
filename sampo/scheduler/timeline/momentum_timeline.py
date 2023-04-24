@@ -221,7 +221,7 @@ class MomentumTimeline(Timeline):
             # we need to check the event current_start_idx - 1 cause it is the first event
             # that influence amount of available for us workers
             not_enough_workers_found = False
-            for idx in range(end_idx - 1, current_start_idx - 1, -1):
+            for idx in range(end_idx - 1, current_start_idx - 2, -1):
                 if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check

@@ -5,6 +5,8 @@ from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, Schedu
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
@@ -16,6 +18,25 @@ class InputPipeline(ABC):
 
     @abstractmethod
     def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def time_shift(self, time: Time) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def lag_optimize(self, lag_optimize: bool) -> 'InputPipeline':
+        """
+        Mandatory argument. Shows should graph be lag-optimized or not.
+        If not defined, pipeline should search the best variant of this argument in result.
+
+        :param lag_optimize:
+        :return: the pipeline object
+        """
         ...
 
     @abstractmethod

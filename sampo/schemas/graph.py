@@ -26,6 +26,7 @@ class EdgeType(Enum):
 class GraphEdge:
     start: 'GraphNode'
     finish: 'GraphNode'
+    # TODO Remove Optional
     lag: Optional[float] = 0
     type: Optional[EdgeType] = None
 

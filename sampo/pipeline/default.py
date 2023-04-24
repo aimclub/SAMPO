@@ -10,6 +10,7 @@ from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.structurator import graph_restructuring
 
 
 class DefaultInputPipeline(InputPipeline):
@@ -19,15 +20,27 @@ class DefaultInputPipeline(InputPipeline):
         self._contractors = None
         self._work_estimator = None
         self._node_order = None
+        self._lag_optimize = None
         self._spec = ScheduleSpec()
         self._assigned_parent_time = Time(0)
         self._local_optimize_stack = ApplyQueue()
 
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
+        """
+        Mandatory argument.
+
+        :param wg: the WorkGraph object for scheduling task
+        :return: the pipeline object
+        """
         self._wg = wg
         return self
 
     def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
+        """
+        Mandatory argument.
+        :param contractors: the contractors list for scheduling task
+        :return: the pipeline object
+        """
         self._contractors = contractors
         return self
 
@@ -37,6 +50,17 @@ class DefaultInputPipeline(InputPipeline):
 
     def time_shift(self, time: Time) -> 'InputPipeline':
         self._assigned_parent_time = time
+        return self
+
+    def lag_optimize(self, lag_optimize: bool) -> 'InputPipeline':
+        """
+        Mandatory argument. Shows should graph be lag-optimized or not.
+        If not defined, pipeline should search the best variant of this argument in result.
+
+        :param lag_optimize:
+        :return: the pipeline object
+        """
+        self._lag_optimize = lag_optimize
         return self
 
     def work_estimator(self, work_estimator: WorkTimeEstimator) -> 'InputPipeline':
@@ -72,20 +96,40 @@ class DefaultInputPipeline(InputPipeline):
         elif not self._local_optimize_stack.empty():
             print('Trying to apply local optimizations to non-generic scheduler, ignoring it')
 
-        schedule, _, _, node_order = scheduler.schedule_with_cache(self._wg, self._contractors, self._spec,
-                                                                   assigned_parent_time=self._assigned_parent_time)
-        self._node_order = node_order
-        return DefaultSchedulePipeline(self, schedule)
+        if self._lag_optimize is None:
+            # Searching the best
+            wg = graph_restructuring(self._wg, False)
+            schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+                                                                         assigned_parent_time=self._assigned_parent_time)
+            wg = graph_restructuring(self._wg, True)
+            schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+                                                                         assigned_parent_time=self._assigned_parent_time)
+
+            if schedule1.execution_time < schedule2.execution_time:
+                self._node_order = node_order1
+                schedule = schedule1
+            else:
+                self._node_order = node_order2
+                schedule = schedule2
+
+        else:
+            wg = graph_restructuring(self._wg, self._lag_optimize)
+            schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+                                                                       assigned_parent_time=self._assigned_parent_time)
+            self._node_order = node_order
+
+        return DefaultSchedulePipeline(self, wg, schedule)
 
 
 # noinspection PyProtectedMember
 class DefaultSchedulePipeline(SchedulePipeline):
 
-    def __init__(self, s_input: DefaultInputPipeline, schedule: Schedule):
+    def __init__(self, s_input: DefaultInputPipeline, wg: WorkGraph, schedule: Schedule):
         self._input = s_input
+        self._wg = wg
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
-        self._scheduled_works = {s_input._wg[swork.work_unit.id]:
+        self._scheduled_works = {wg[swork.work_unit.id]:
                                  swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
 
@@ -98,4 +142,4 @@ class DefaultSchedulePipeline(SchedulePipeline):
 
     def finish(self) -> Schedule:
         processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
-        return Schedule.from_scheduled_works(processed_sworks.values(), self._input._wg)
+        return Schedule.from_scheduled_works(processed_sworks.values(), self._wg)

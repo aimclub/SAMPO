@@ -16,27 +16,27 @@ from sampo.utilities.collections_util import build_index
 
 
 @fixture(scope='function')
-def setup_jit_timeline(setup_wg, setup_contractors, setup_worker_pool):
+def setup_timeline(setup_wg, setup_contractors, setup_worker_pool):
     return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool)
 
 
-def test_init_resource_structure(setup_jit_timeline):
-    assert len(setup_jit_timeline._timeline) != 0
-    for setup_jit_timeline in setup_jit_timeline._timeline.values():
-        assert len(setup_jit_timeline) == 1
-        assert setup_jit_timeline[0][0] == 0
+def test_init_resource_structure(setup_timeline):
+    assert len(setup_timeline._timeline) != 0
+    for setup_timeline in setup_timeline._timeline.values():
+        assert len(setup_timeline) == 1
+        assert setup_timeline[0][0] == 0
 
 
-def test_update_resource_structure(setup_jit_timeline, setup_worker_pool):
+def test_update_resource_structure(setup_timeline, setup_worker_pool):
     mut_name: WorkerName = list(setup_worker_pool.keys())[0]
     mut_contractor: ContractorName = list(setup_worker_pool[mut_name].keys())[0]
-    mut_count = setup_jit_timeline[(mut_contractor, mut_name)][0][1]
+    mut_count = setup_timeline[(mut_contractor, mut_name)][0][1]
 
     # mutate
     worker = Worker(str(uuid4()), mut_name, 1, contractor_id=mut_contractor)
-    setup_jit_timeline.update_timeline(0, Time(1), None, {}, [worker])
+    setup_timeline.update_timeline(0, Time(1), None, {}, [worker])
 
-    worker_timeline = setup_jit_timeline[worker.get_agent_id()]
+    worker_timeline = setup_timeline[worker.get_agent_id()]
 
     if mut_count == 1:
         assert len(worker_timeline) == 1
@@ -47,7 +47,7 @@ def test_update_resource_structure(setup_jit_timeline, setup_worker_pool):
         assert worker_timeline[1] == (Time(0), mut_count - 1)
 
 
-def test_schedule(setup_wg, setup_worker_pool, setup_contractors, setup_jit_timeline):
+def test_schedule(setup_wg, setup_worker_pool, setup_contractors, setup_timeline):
     ordered_nodes = prioritization(setup_wg)
     node = ordered_nodes[-1]
 
@@ -58,7 +58,7 @@ def test_schedule(setup_wg, setup_worker_pool, setup_contractors, setup_jit_time
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    setup_jit_timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
+    setup_timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
 
     assert len(node2swork) == 1
     for swork in node2swork.values():

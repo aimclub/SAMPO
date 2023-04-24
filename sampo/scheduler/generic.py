@@ -141,6 +141,6 @@ class GenericScheduler(Scheduler):
                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         schedule_start_time = min([swork.start_time for swork in node2swork.values() if
-                                   len(swork.work_unit.worker_reqs) != 0])
+                                   len(swork.work_unit.worker_reqs) != 0], default=assigned_parent_time)
 
         return node2swork.values(), schedule_start_time, timeline

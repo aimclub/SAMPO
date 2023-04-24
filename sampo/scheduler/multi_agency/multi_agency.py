@@ -70,6 +70,10 @@ class Agent:
     def contractors(self):
         return self._contractors
 
+    @property
+    def scheduler(self):
+        return self._scheduler
+
 
 @dataclass
 class ScheduledBlock:

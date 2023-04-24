@@ -12,6 +12,7 @@ from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -150,7 +151,7 @@ def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors)
+        return scheduler_class(work_estimator=work_estimator, resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors)
 
     try:
         return {

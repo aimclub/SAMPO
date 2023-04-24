@@ -59,11 +59,13 @@ class BlockGraph:
                 wg_node.__dict__.pop('children_set', None)
                 wg_node.__dict__.pop('inseparable_parent', None)
                 wg_node.__dict__.pop('inseparable_son', None)
-        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
-        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
+                wg_node.__dict__.pop('get_inseparable_chain', None)
 
         for end in copied_nodes:
             end.wg.start.add_parents([start.wg.finish for start in end.blocks_to])
+
+        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
+        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
 
         return WorkGraph(global_start, global_end)
 

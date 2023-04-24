@@ -43,6 +43,10 @@ class JustInTimeTimeline(Timeline):
         # define the max end time of all parent tasks
         max_parent_time = max(max([node2swork[parent_node].finish_time
                                    for parent_node in node.parents], default=Time(0)), assigned_parent_time)
+
+        max_neighbor_time = Time(0)
+        if node.neighbors:
+            max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
 
@@ -61,7 +65,7 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= offer_count
                 ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time)
+        c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
 
         c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
         return c_st, c_ft, None

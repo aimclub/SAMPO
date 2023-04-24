@@ -91,6 +91,11 @@ class MomentumTimeline(Timeline):
         max_parent_time: Time = max(apply_time_spec(
             max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
         ), assigned_parent_time)
+
+        if node.neighbors:
+            max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
+            max_parent_time = max(max_parent_time, max_neighbor_time)
+
         nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].finish_time),
                                                                      assigned_parent_time)
                                                                  if pnode in node2swork else assigned_parent_time

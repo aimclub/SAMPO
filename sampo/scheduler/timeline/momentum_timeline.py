@@ -90,7 +90,7 @@ class MomentumTimeline(Timeline):
 
         max_parent_time: Time = max(apply_time_spec(
             max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
-        ), assigned_parent_time)
+        ), assigned_parent_time) + 1
 
         if node.neighbors:
             max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
@@ -214,7 +214,7 @@ class MomentumTimeline(Timeline):
             #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
             #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
             i += 1
-            end_idx = state.bisect_right(current_start_time + exec_time)
+            end_idx = state.bisect_right(current_start_time + exec_time + 1)
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start of the execution interval, i.e., current_start_idx - 1
@@ -268,7 +268,7 @@ class MomentumTimeline(Timeline):
 
         swork = node2swork[node]  # masking the whole chain ScheduleEvent with the first node
         start = swork.start_time
-        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time
+        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time + 1
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)

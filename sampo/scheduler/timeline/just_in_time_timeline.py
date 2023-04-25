@@ -42,7 +42,7 @@ class JustInTimeTimeline(Timeline):
             return assigned_parent_time, assigned_parent_time, None
         # define the max end time of all parent tasks
         max_parent_time = max(max([node2swork[parent_node].finish_time
-                                   for parent_node in node.parents], default=Time(0)), assigned_parent_time)
+                                   for parent_node in node.parents], default=Time(0)), assigned_parent_time) + 1
 
         max_neighbor_time = Time(0)
         if node.neighbors:
@@ -100,9 +100,9 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= next_count
 
             # Add to the right place
-            # worker_timeline.append((finish, worker.count))
+            # worker_timeline.append((finish + 1, worker.count))
             # worker_timeline.sort(reverse=True)
-            worker_timeline.append((finish_time, worker.count))
+            worker_timeline.append((finish_time + 1, worker.count))
             ind = len(worker_timeline) - 1
             while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
@@ -168,6 +168,9 @@ class JustInTimeTimeline(Timeline):
             max_parent_time = max((node2swork[pnode].finish_time
                                    for pnode in dep_node.parents),
                                   default=Time(0))
+            # np-hard comments...
+            if not dep_node.work_unit.is_service_unit:
+                max_parent_time += 1
 
             if dep_node.is_inseparable_son():
                 assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time

@@ -120,7 +120,7 @@ class Manager:
         """
         id2sblock = {}
         for i, block in enumerate(bg.toposort()):
-            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
+            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0)) + 1
             start_time, end_time, agent_schedule, agent \
                 = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
 

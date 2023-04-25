@@ -43,7 +43,7 @@ def test_update_resource_structure(setup_timeline, setup_worker_pool):
         assert worker_timeline[0] == (Time(0), 1)
     else:
         assert len(worker_timeline) == 2
-        assert worker_timeline[0] == (Time(1), 1)
+        assert worker_timeline[0] == (Time(2), 1)
         assert worker_timeline[1] == (Time(0), mut_count - 1)
 
 

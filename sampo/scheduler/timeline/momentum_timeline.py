@@ -41,7 +41,7 @@ class MomentumTimeline(Timeline):
                 return x.time, x.seq_id, x.event_type.priority
 
             if isinstance(x, Time):
-                return x, len(tasks), 1
+                return x, Time.inf().value, 2
 
             if isinstance(x, tuple):
                 return x

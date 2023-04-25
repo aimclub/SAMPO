@@ -51,7 +51,7 @@ class BlockGraph:
         """
         copied_nodes = deepcopy(self.nodes)
         for node in copied_nodes:
-            # node.wg = WorkGraph._deserialize(node.wg._serialize())
+            node.wg = WorkGraph._deserialize(node.wg._serialize())
             for wg_node in node.wg.nodes:
                 wg_node.__dict__.pop('parents', None)
                 wg_node.__dict__.pop('parents_set', None)

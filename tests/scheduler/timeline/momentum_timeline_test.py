@@ -1,7 +1,5 @@
 from _pytest.fixtures import fixture
 
-from _pytest.fixtures import fixture
-
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
@@ -54,7 +52,7 @@ def test_insert_works_with_one_worker_kind(setup_timeline_context):
     worker_count = contractor.workers[worker_kind].count
     for i, node in enumerate(nodes):
         worker_team = [Worker(id=str(i), name=worker_kind, count=worker_count // 2, contractor_id=contractor.id)]
-        timeline.schedule(i, node, node2swork, worker_team, contractor)
+        timeline.schedule(node, node2swork, worker_team, contractor)
 #
 # TODO
 # def test_update_resource_structure(setup_timeline, setup_worker_pool):

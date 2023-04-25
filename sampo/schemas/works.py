@@ -22,7 +22,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     group: Optional[str] = "default"
     is_service_unit: Optional[bool] = False
     # TODO Remove optional
-    volume: Optional[float] = 1
+    volume: Optional[float] = 0
     volume_type: Optional[str] = "unit"
 
     display_name: str = ''

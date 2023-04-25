@@ -137,7 +137,7 @@ class GenericScheduler(Scheduler):
                 ft += st
 
             # apply work to scheduling
-            timeline.schedule(index, node, node2swork, best_worker_team, contractor,
+            timeline.schedule(node, node2swork, best_worker_team, contractor,
                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         schedule_start_time = min([swork.start_time for swork in node2swork.values() if

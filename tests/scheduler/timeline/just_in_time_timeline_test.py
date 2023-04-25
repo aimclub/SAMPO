@@ -34,7 +34,7 @@ def test_update_resource_structure(setup_timeline, setup_worker_pool):
 
     # mutate
     worker = Worker(str(uuid4()), mut_name, 1, contractor_id=mut_contractor)
-    setup_timeline.update_timeline(0, Time(1), None, {}, [worker])
+    setup_timeline.update_timeline(Time(1), None, {}, [worker])
 
     worker_timeline = setup_timeline[worker.get_agent_id()]
 
@@ -58,7 +58,7 @@ def test_schedule(setup_wg, setup_worker_pool, setup_contractors, setup_timeline
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    setup_timeline.schedule(0, node, node2swork, worker_team, contractor, work_estimator=None)
+    setup_timeline.schedule(node, node2swork, worker_team, contractor, work_estimator=None)
 
     assert len(node2swork) == 1
     for swork in node2swork.values():

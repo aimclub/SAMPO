@@ -103,7 +103,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
             st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
-        timeline.schedule(order_index, node, node2swork, worker_team, contractor,
+        timeline.schedule(node, node2swork, worker_team, contractor,
                           st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
     schedule_start_time = min([swork.start_time for swork in node2swork.values() if

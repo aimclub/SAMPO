@@ -11,6 +11,7 @@ from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
+from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -50,6 +51,7 @@ class GeneticScheduler(Scheduler):
         self._n_cpu = n_cpu
 
         self._time_border = None
+        self._deadline = None
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -97,6 +99,31 @@ class GeneticScheduler(Scheduler):
     def set_time_border(self, time_border: int):
         self._time_border = time_border
 
+    def set_deadline(self, deadline: Time):
+        self._deadline = deadline
+
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+        if self._deadline is None:
+            def init_schedule(scheduler_class):
+                return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                        list(reversed(prioritization(wg, self.work_estimator))))
+
+            return {
+                "heft_end": init_schedule(HEFTScheduler),
+                "heft_between": init_schedule(HEFTBetweenScheduler)
+            }
+        else:
+            def init_schedule(scheduler_class):
+                schedule = AverageBinarySearchResourceOptimizingScheduler(
+                    scheduler_class(work_estimator=self.work_estimator)
+                ).schedule_with_cache(wg, contractors, self._deadline)[0]
+                return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+
+            return {
+                "heft_end": init_schedule(HEFTScheduler),
+                "heft_between": init_schedule(HEFTBetweenScheduler)
+            }
+
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: List[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
@@ -104,14 +131,8 @@ class GeneticScheduler(Scheduler):
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
-        def init_schedule(scheduler_class):
-            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
-                    list(reversed(prioritization(wg, self.work_estimator))))
 
-        init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
-            "heft_end": init_schedule(HEFTScheduler),
-            "heft_between": init_schedule(HEFTBetweenScheduler)
-        }
+        init_schedules = self.generate_first_population(wg, contractors)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         agents = get_worker_contractor_pool(contractors)

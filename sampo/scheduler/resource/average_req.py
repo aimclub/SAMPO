@@ -10,6 +10,9 @@ from sampo.schemas.time import Time
 
 class AverageReqResourceOptimizer(ResourceOptimizer):
 
+    def __init__(self, k: float = 2):
+        self.k = k
+
     def optimize_resources(self,
                            worker_pool: WorkerContractorPool,
                            worker_team: List[Worker],
@@ -21,7 +24,8 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
         if optimize_array:
             for i in range(len(worker_team)):
                 if optimize_array[i]:
-                    worker_team[i].count = (down_border[i] + up_border[i]) // 2
+                    worker_team[i].count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
         else:
+            # TODO Remove max()
             for i in range(len(worker_team)):
-                worker_team[i].count = (down_border[i] + up_border[i]) // 2
+                worker_team[i].count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)

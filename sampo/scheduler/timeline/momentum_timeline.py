@@ -41,6 +41,7 @@ class MomentumTimeline(Timeline):
                 return x.time, x.seq_id, x.event_type.priority
 
             if isinstance(x, Time):
+                # instances of Time must be greater than almost all ScheduleEvents with same time point
                 return x, Time.inf().value, 2
 
             if isinstance(x, tuple):

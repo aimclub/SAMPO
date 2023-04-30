@@ -162,7 +162,8 @@ def build_schedule(wg: WorkGraph,
     cxpb, mutpb = mutate_order, mutate_order
     mutpb_res, cxpb_res = mutate_resources, mutate_resources
 
-    native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices, work_estimator)
+    native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
+                           index2node, work_estimator)
 
     # def evaluate_chromosomes(chromosomes: list[ChromosomeType]):
     #     return native.evaluate([chromo for chromo in chromosomes if toolbox.validate(chromo)])
@@ -175,6 +176,8 @@ def build_schedule(wg: WorkGraph,
     # map to each individual fitness function
     pop = [ind for ind in pop if toolbox.validate(ind[0])]
     fitness = fitness_f.evaluate([ind[0] for ind in pop])
+
+    evaluation_time = time.time() - start
 
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = [fit]
@@ -194,7 +197,7 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     plateau_steps = 0
-    max_plateau_steps = 8
+    max_plateau_steps = generation_number # 8
 
     while g < generation_number and plateau_steps < max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
@@ -299,11 +302,12 @@ def build_schedule(wg: WorkGraph,
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind if toolbox.validate(ind[0])])
+        evaluation_start = time.time()
+        invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind])
+        evaluation_time += time.time() - evaluation_start
+
         for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
-            if fit == Time.inf() and ind.fitness.invalid_steps == 0:
-                ind.fitness.invalid_steps = 1
 
         if show_fitness_graph:
             _ftn = [f for f in fitness if not math.isinf(f)]
@@ -346,6 +350,7 @@ def build_schedule(wg: WorkGraph,
                                          work_estimator)
 
     print(f'Generations processing took {(time.time() - start) * 1000} ms')
+    print(f'Evaluation time: {evaluation_time}')
 
     if show_fitness_graph:
         sns.lineplot(

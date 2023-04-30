@@ -26,14 +26,6 @@ static PyObject* pyObjectIdentity(PyObject* object) {
     return object;
 }
 
-typedef struct {
-    PyObject* pythonWrapper;
-    vector<vector<int>> parents;
-    vector<vector<int>> inseparables;
-    vector<vector<int>> workers;
-    int totalWorksCount;
-} EvaluateInfo;
-
 static PyObject* evaluate(PyObject *self, PyObject *args) {
     EvaluateInfo* infoPtr;
     PyObject* pyChromosomes;
@@ -42,7 +34,7 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
     }
     auto chromosomes = PyCodec::fromList(pyChromosomes, pyObjectIdentity);
 
-    ChromosomeEvaluator evaluator(infoPtr->parents, infoPtr->inseparables, infoPtr->workers, infoPtr->totalWorksCount, infoPtr->pythonWrapper);
+    ChromosomeEvaluator evaluator(infoPtr);
 
     vector<int> results = evaluator.evaluate(chromosomes);
 
@@ -61,9 +53,15 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* pyInseparables;
     PyObject* pyWorkers;
     int totalWorksCount;
-    if (!PyArg_ParseTuple(args, "OOOOi",
+    bool useExternalWorkEstimator;
+    PyObject* volume;
+    PyObject* minReq;
+    PyObject* maxReq;
+
+    if (!PyArg_ParseTuple(args, "OOOOipOOO",
                           &pythonWrapper, &pyParents, &pyInseparables,
-                          &pyWorkers, &totalWorksCount)) {
+                          &pyWorkers, &totalWorksCount, &useExternalWorkEstimator,
+                          &volume, &minReq, &maxReq)) {
         cout << "Can't parse arguments" << endl;
     }
 
@@ -72,7 +70,11 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(pyParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
         PyCodec::fromList(pyWorkers, decodeIntList),
-        totalWorksCount
+        PyCodec::fromList(volume, PyFloat_AsDouble),
+        PyCodec::fromList(minReq, decodeIntList),
+        PyCodec::fromList(maxReq, decodeIntList),
+        totalWorksCount,
+        useExternalWorkEstimator
     };
 
     auto* res = PyLong_FromVoidPtr(info);
@@ -94,9 +96,9 @@ static PyMethodDef nativeMethods[] = {
         {"evaluate", evaluate, METH_VARARGS,
               "Evaluates the chromosome using Just-In-Time-Timeline" },
         {"decodeEvaluationInfo", decodeEvaluationInfo, METH_VARARGS,
-                "Evaluates the chromosome using Just-In-Time-Timeline" },
+                "Uploads the scheduling info to C++ memory and caches it" },
         {"freeEvaluationInfo", freeEvaluationInfo, METH_VARARGS,
-                "Evaluates the chromosome using Just-In-Time-Timeline" },
+                "Frees C++ scheduling cache. Must be called in the end of scheduling to avoid memory leaks." },
         {nullptr, nullptr, 0, nullptr}
 };
 
@@ -143,10 +145,10 @@ int main() {
             { 0,  0,  0,  0,  0,  0, 0}
     };
 
-    ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);
-    int res = evaluator.testEvaluate(chromosomeOrder, chromosomeResources);
-
-    cout << "Result: " << res << endl;
+//    ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);
+//    int res = evaluator.testEvaluate(chromosomeOrder, chromosomeResources);
+//
+//    cout << "Result: " << res << endl;
 
     return 0;
 }

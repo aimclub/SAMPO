@@ -13,6 +13,7 @@
 #include "Python.h"
 #include "numpy/arrayobject.h"
 #include "pycodec.h"
+#include "evaluator_types.h"
 
 #include <vector>
 #include <iostream>
@@ -20,18 +21,6 @@
 #include <omp.h>
 
 using namespace std;
-
-typedef struct {
-    PyObject* pythonWrapper;
-    vector<vector<int>> parents;
-    vector<vector<int>> inseparables;
-    vector<vector<int>> workers;
-    vector<double> volume;
-    vector<vector<int>> minReq;
-    vector<vector<int>> maxReq;
-    int totalWorksCount;
-    bool useExternalWorkEstimator;
-} EvaluateInfo;
 
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
@@ -287,7 +276,8 @@ public:
         // scheduling works one-by-one
         for (int i = 0; i < worksCount; i++) {
             int workIndex = order[i];
-            auto* team = (int*) PyArray_GETPTR1(pyResources, workIndex); // = resources + workIndex * (resourcesCount + 1); // go to the start of 'i' row in 2D array
+            auto* team = (int*) PyArray_GETPTR1(pyResources, workIndex);
+            // = resources + workIndex * (resourcesCount + 1); // go to the start of 'i' row in 2D array
             int contractor = team[resourcesCount];
 
 //            for (size_t j = 0; j < resourcesCount; j++) {

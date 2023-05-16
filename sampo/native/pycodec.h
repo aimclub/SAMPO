@@ -3,6 +3,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "numpy/arrayobject.h"
 #include "evaluator_types.h"
 
 #include <iostream>
@@ -103,11 +104,11 @@ namespace PyCodec {
         return fromList(incoming, [typeref](PyObject* value) { return fromPrimitive(value, typeref); });
     }
 
-    inline static int get_worker(const PyObject* resources, size_t work, size_t worker) {
+    inline static int Py_GET2D(const PyObject* resources, size_t work, size_t worker) {
         return * (int*) PyArray_GETPTR2(resources, work, worker);
     }
 
-    Chromosome* decodeChromosome(PyObject* incoming) {
+    inline Chromosome* decodeChromosome(PyObject* incoming) {
         PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
         PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
         PyObject* pyContractors; //= PyList_GetItem(chromosome, 2);
@@ -117,17 +118,37 @@ namespace PyCodec {
             return nullptr;
         }
 
-//        int* order = (int*) PyArray_DATA((PyArrayObject*) pyOrder);
-//        int* resources = (int*) PyArray_DATA((PyArrayObject*) pyResources);
-
         int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
         int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
+        int contractorsCount = PyArray_DIM(pyContractors, 0);
 
+        auto* chromosome = new Chromosome(worksCount, resourcesCount, contractorsCount);
 
+        // TODO Find the way to faster copy from NumPy ND array.
+        //  !!!Attention!!! You can't just memcpy()! Plain NumPy array is not C-aligned!
+        auto order = chromosome->getOrder();
+        for (int i = 0; i < worksCount; i++) {
+            *order[i] = *(int *) PyArray_GETPTR1(pyOrder, i);
+        }
+        auto resources = chromosome->getResources();
+        for (int work = 0; work < worksCount; work++) {
+            for (int worker = 0; worker < resourcesCount; worker++) {
+                resources[work][worker] = Py_GET2D(pyResources, work, worker);
+            }
+        }
+        auto contractors = chromosome->getContractors();
+        for (int contractor = 0; contractor < contractorsCount; contractor++) {
+            for (int worker = 0; worker < resourcesCount; worker++) {
+                contractors[contractor][worker] = Py_GET2D(pyContractors, contractor, worker);
+            }
+        }
+
+        return chromosome;
     }
 
-    PyObject* encodeChromosomes(vector<Chromosome*>& incoming) {
-
+    inline PyObject* encodeChromosomes(vector<Chromosome*>& incoming) {
+        // TODO
+        return nullptr;
     }
 
     // ============================

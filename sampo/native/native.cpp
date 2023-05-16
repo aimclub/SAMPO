@@ -87,7 +87,7 @@ static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "L", &infoPtr)) {
         cout << "Can't parse arguments" << endl;
     }
-    free(infoPtr);
+    delete infoPtr;
     Py_INCREF(Py_None);
     return Py_None;
 }

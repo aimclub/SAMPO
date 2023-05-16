@@ -3,6 +3,9 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "evaluator_types.h"
+
+#include <iostream>
 #include <vector>
 #include <stdexcept>
 
@@ -98,6 +101,33 @@ namespace PyCodec {
     template<typename T>
     inline vector<T> fromList(PyObject *incoming, T typeref) {  // typeref used for T recognition
         return fromList(incoming, [typeref](PyObject* value) { return fromPrimitive(value, typeref); });
+    }
+
+    inline static int get_worker(const PyObject* resources, size_t work, size_t worker) {
+        return * (int*) PyArray_GETPTR2(resources, work, worker);
+    }
+
+    Chromosome* decodeChromosome(PyObject* incoming) {
+        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
+        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
+        PyObject* pyContractors; //= PyList_GetItem(chromosome, 2);
+
+        if (!PyArg_ParseTuple(incoming, "OOO", &pyOrder, &pyResources, &pyContractors)) {
+            cerr << "Can't parse chromosome!!!!" << endl;
+            return nullptr;
+        }
+
+//        int* order = (int*) PyArray_DATA((PyArrayObject*) pyOrder);
+//        int* resources = (int*) PyArray_DATA((PyArrayObject*) pyResources);
+
+        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
+        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
+
+
+    }
+
+    PyObject* encodeChromosomes(vector<Chromosome*>& incoming) {
+
     }
 
     // ============================

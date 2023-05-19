@@ -45,6 +45,18 @@ public:
         this->data = other.data;
         return *this;
     }
+
+    int width() {
+        return stride;
+    }
+
+    int height() {
+        return length / stride;
+    }
+
+    int size() {
+        return length;
+    }
 };
 
 class Chromosome {

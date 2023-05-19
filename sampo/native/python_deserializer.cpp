@@ -121,4 +121,80 @@ namespace PythonDeserializer {
     vector<Contractor*> contractors(PyObject* pyContractors) {
         return PyCodec::fromList(pyContractors, decodeContractor);
     }
+
+    inline Chromosome* decodeChromosome(PyObject* incoming) {
+        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
+        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
+        PyObject* pyContractors; //= PyList_GetItem(chromosome, 2);
+
+        if (!PyArg_ParseTuple(incoming, "OOO", &pyOrder, &pyResources, &pyContractors)) {
+            cerr << "Can't parse chromosome!!!!" << endl;
+            return nullptr;
+        }
+
+        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
+        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
+        int contractorsCount = PyArray_DIM(pyContractors, 0);
+
+        auto* chromosome = new Chromosome(worksCount, resourcesCount, contractorsCount);
+
+        // TODO Find the way to faster copy from NumPy ND array.
+        //  !!!Attention!!! You can't just memcpy()! Plain NumPy array is not C-aligned!
+        auto order = chromosome->getOrder();
+        for (int i = 0; i < worksCount; i++) {
+            *order[i] = *(int *) PyArray_GETPTR1(pyOrder, i);
+        }
+        auto resources = chromosome->getResources();
+        for (int work = 0; work < worksCount; work++) {
+            for (int worker = 0; worker < resourcesCount; worker++) {
+                resources[work][worker] = PyCodec::Py_GET2D(pyResources, work, worker);
+            }
+        }
+        auto contractors = chromosome->getContractors();
+        for (int contractor = 0; contractor < contractorsCount; contractor++) {
+            for (int worker = 0; worker < resourcesCount; worker++) {
+                contractors[contractor][worker] = PyCodec::Py_GET2D(pyContractors, contractor, worker);
+            }
+        }
+
+        return chromosome;
+    }
+
+    vector<Chromosome*> decodeChromosomes(PyObject* incoming) {
+        return PyCodec::fromList(incoming, decodeChromosome);
+    }
+
+    PyObject* encodeChromosome(Chromosome* incoming) {
+        npy_intp dimsOrder[] { incoming->getOrder().size() };
+        npy_intp dimsResources[] { incoming->getResources().width(), incoming->getResources().height() };
+        npy_intp dimsContractors[] { incoming->getContractors().width(), incoming->getContractors().height() };
+
+        PyObject* pyOrder = PyArray_ZEROS(1, dimsOrder, NPY_INT, 0);
+        PyObject* pyResources = PyArray_ZEROS(2, dimsResources, NPY_INT, 0);
+        PyObject* pyContractors = PyArray_ZEROS(2, dimsContractors, NPY_INT, 0);
+
+        for (int i = 0; i < dimsOrder[0]; i++) {
+            PyCodec::Py_GET1D(pyOrder, i) = *incoming->getOrder()[i];
+        }
+        for (int work = 0; work < dimsResources[0]; work++) {
+            for (int resource = 0; resource < dimsResources[0]; resource++) {
+                PyCodec::Py_GET2D(pyResources, work, resource)
+                    = incoming->getResources()[work][resource];
+            }
+        }
+        for (int contractor = 0; contractor < dimsResources[0]; contractor++) {
+            for (int resource = 0; resource < dimsResources[0]; resource++) {
+                PyCodec::Py_GET2D(pyContractors, contractor, resource)
+                    = incoming->getContractors()[contractor][resource];
+            }
+        }
+
+        PyObject* pyChromosome = Py_BuildValue("(OOO)", pyOrder, pyResources, pyContractors);
+        Py_XINCREF(pyChromosome);  // we can run out-of-memory, but still just return to Python
+        return pyChromosome;
+    }
+
+    PyObject* encodeChromosomes(const vector<Chromosome*>& incoming) {
+        return PyCodec::toList(incoming, encodeChromosome);
+    }
 }

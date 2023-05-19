@@ -40,11 +40,11 @@ namespace PyCodec {
     }
 
     template<typename T>
-    PyObject *toPyList(const vector<T> &data) {
+    PyObject *toList(const vector<T> &data, PyObject* (*encodeValue)(T)) {
         PyObject *listObj = PyList_New(data.size());
         if (!listObj) throw logic_error("Unable to allocate memory for Python list");
         for (size_t i = 0; i < data.size(); i++) {
-            PyObject *num = toPrimitive(data[i]);
+            PyObject *num = encodeValue(data[i]);
             if (!num) {
                 Py_DECREF(listObj);
                 throw logic_error("Unable to allocate memory for Python list");
@@ -52,6 +52,11 @@ namespace PyCodec {
             PyList_SET_ITEM(listObj, i, num);
         }
         return listObj;
+    }
+
+    template<typename T>
+    PyObject *toPrimitiveList(const vector<T> &data) {
+        return toList(data, toPrimitive);
     }
 
     // =============================
@@ -104,51 +109,12 @@ namespace PyCodec {
         return fromList(incoming, [typeref](PyObject* value) { return fromPrimitive(value, typeref); });
     }
 
-    inline static int Py_GET2D(const PyObject* resources, size_t work, size_t worker) {
+    inline static int& Py_GET1D(const PyObject* list, size_t ind) {
+        return * (int*) PyArray_GETPTR1(list, ind);
+    }
+
+    inline static int& Py_GET2D(const PyObject* resources, size_t work, size_t worker) {
         return * (int*) PyArray_GETPTR2(resources, work, worker);
-    }
-
-    inline Chromosome* decodeChromosome(PyObject* incoming) {
-        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
-        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
-        PyObject* pyContractors; //= PyList_GetItem(chromosome, 2);
-
-        if (!PyArg_ParseTuple(incoming, "OOO", &pyOrder, &pyResources, &pyContractors)) {
-            cerr << "Can't parse chromosome!!!!" << endl;
-            return nullptr;
-        }
-
-        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
-        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
-        int contractorsCount = PyArray_DIM(pyContractors, 0);
-
-        auto* chromosome = new Chromosome(worksCount, resourcesCount, contractorsCount);
-
-        // TODO Find the way to faster copy from NumPy ND array.
-        //  !!!Attention!!! You can't just memcpy()! Plain NumPy array is not C-aligned!
-        auto order = chromosome->getOrder();
-        for (int i = 0; i < worksCount; i++) {
-            *order[i] = *(int *) PyArray_GETPTR1(pyOrder, i);
-        }
-        auto resources = chromosome->getResources();
-        for (int work = 0; work < worksCount; work++) {
-            for (int worker = 0; worker < resourcesCount; worker++) {
-                resources[work][worker] = Py_GET2D(pyResources, work, worker);
-            }
-        }
-        auto contractors = chromosome->getContractors();
-        for (int contractor = 0; contractor < contractorsCount; contractor++) {
-            for (int worker = 0; worker < resourcesCount; worker++) {
-                contractors[contractor][worker] = Py_GET2D(pyContractors, contractor, worker);
-            }
-        }
-
-        return chromosome;
-    }
-
-    inline PyObject* encodeChromosomes(vector<Chromosome*>& incoming) {
-        // TODO
-        return nullptr;
     }
 
     // ============================

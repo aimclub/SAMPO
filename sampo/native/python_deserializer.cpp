@@ -170,8 +170,16 @@ namespace PythonDeserializer {
         npy_intp dimsContractors[] { incoming->getContractors().width(), incoming->getContractors().height() };
 
         PyObject* pyOrder = PyArray_ZEROS(1, dimsOrder, NPY_INT, 0);
+        Py_XINCREF(pyOrder);
         PyObject* pyResources = PyArray_ZEROS(2, dimsResources, NPY_INT, 0);
+        Py_XINCREF(pyResources);
         PyObject* pyContractors = PyArray_ZEROS(2, dimsContractors, NPY_INT, 0);
+        Py_XINCREF(pyContractors);
+
+        if (pyOrder == nullptr || pyResources == nullptr || pyContractors == nullptr) {
+            // we can run out-of-memory, but still just return to Python
+            return nullptr;
+        }
 
         for (int i = 0; i < dimsOrder[0]; i++) {
             PyCodec::Py_GET1D(pyOrder, i) = *incoming->getOrder()[i];

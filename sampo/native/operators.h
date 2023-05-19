@@ -13,22 +13,31 @@ using namespace std;
 
 namespace Operators {
 
-    vector<Chromosome*> applyAll(vector<Chromosome>& chromosomes,
+    void applyOrder(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target, float mutate, float cross) {
+        for (int i = 0; i < chromosomes.size(); i++) {
+            // without i = j & j = i duplications
+            for (int j = i; j < chromosomes.size(); j++) {
+                
+            }
+        }
+    }
+
+    void applyResources(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target, float mutate, float cross) {
+
+    }
+
+    void applyContractors(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target, float mutate, float cross) {
+
+    }
+
+    vector<Chromosome*> applyAll(vector<Chromosome*>& chromosomes,
                                  float mutateOrder, float mutateResources, float mutateContractors,
                                  float crossOrder, float crossResources, float crossContractors) {
-
-    }
-
-    vector<Chromosome*> applyOrder(vector<Chromosome*>& chromosomes, float mutate, float cross) {
-
-    }
-
-    vector<Chromosome*> applyResources(vector<Chromosome*>& chromosomes, float mutate, float cross) {
-
-    }
-
-    vector<Chromosome*> applyContractors(vector<Chromosome*>& chromosomes, float mutate, float cross) {
-
+        vector<Chromosome*> offspring;
+        applyOrder(chromosomes, offspring, mutateOrder, crossOrder);
+        applyResources(chromosomes, offspring, mutateResources, crossResources);
+        applyContractors(chromosomes, offspring, mutateContractors, crossContractors);
+        return offspring;
     }
 }
 

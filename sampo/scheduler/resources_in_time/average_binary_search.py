@@ -1,9 +1,10 @@
 from typing import List
 
-from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -23,10 +24,13 @@ class AverageBinarySearchResourceOptimizingScheduler:
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def call_scheduler(k) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
             self._resource_optimizer.k = k
-            return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+            try:
+                return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+            except NoSufficientContractorError:
+                return None, Time.inf(), None, None
 
         def fitness(k):
-            result = call_scheduler(k)[0].execution_time
+            result = call_scheduler(k)[1]
             if result > deadline:
                 result = Time.inf()
             return result

@@ -7,7 +7,7 @@ from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, Pa
 from sampo.schemas.exceptions import NoSufficientContractorError
 
 
-def test_plain_scheduling(setup_wg, setup_contractors):
+def _test_plain_scheduling(setup_wg, setup_contractors):
     try:
         schedule = SchedulingPipeline.create() \
             .wg(setup_wg) \

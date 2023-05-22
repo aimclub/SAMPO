@@ -181,7 +181,6 @@ def build_schedule(wg: WorkGraph,
 
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = [fit]
-        ind.fitness.invalid_steps = 1 if fit == Time.inf() else 0
 
     hof.update(pop)
     best_fitness = hof[0].fitness.values[0]
@@ -197,7 +196,7 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     plateau_steps = 0
-    max_plateau_steps = generation_number # 8
+    max_plateau_steps = generation_number  # 8
 
     while g < generation_number and plateau_steps < max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
@@ -294,20 +293,21 @@ def build_schedule(wg: WorkGraph,
                     cur_generation.append(wrap(ind1))
                     cur_generation.append(wrap(ind2))
 
-        # add mutant part of generation to offspring
-        offspring.extend(cur_generation)
-        cur_generation.clear()
+        evaluation_start = time.time()
+
         # Gather all the fitness in one list and print the stats
-        invalid_ind = [ind for ind in offspring if toolbox.validate(ind[0])]
+        invalid_ind = [ind for ind in cur_generation if toolbox.validate(ind[0])]
         # for each individual - evaluation
         # print(pool.map(lambda x: x + 2, range(10)))
 
-        evaluation_start = time.time()
         invalid_fit = fitness_f.evaluate([ind[0] for ind in invalid_ind])
-        evaluation_time += time.time() - evaluation_start
-
         for fit, ind in zip(invalid_fit, invalid_ind):
             ind.fitness.values = [fit]
+        evaluation_time += time.time() - evaluation_start
+
+        # add mutant part of generation to offspring
+        offspring.extend(invalid_ind)
+        cur_generation.clear()
 
         if show_fitness_graph:
             _ftn = [f for f in fitness if not math.isinf(f)]

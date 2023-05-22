@@ -19,7 +19,7 @@ from sampo.utilities.validation import validate_schedule
 def get_finish_time_default(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator):
     return timeline.find_min_start_time(node, worker_team, node2swork,
                                         assigned_parent_time, work_estimator) \
-        + calculate_working_time_cascade(node, worker_team, work_estimator)
+        + calculate_working_time_cascade(node, worker_team, work_estimator)  # TODO Кажется, это не работает - лаги не учитываются
 
 
 class GenericScheduler(Scheduler):
@@ -57,7 +57,6 @@ class GenericScheduler(Scheduler):
 
                 def ft_getter(worker_team):
                     return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator)
-
 
                 # apply worker team spec
                 self.optimize_resources_using_spec(node.work_unit, workers, work_spec,

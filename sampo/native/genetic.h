@@ -257,8 +257,10 @@ public:
         Chromosome* bestChromosome = nullptr;
 
         auto fitness = evaluator.evaluate(initialPopulation);
+        int g = 0;
 
         while (curPlateau < maxPlateau) {
+            printf("--- Generation %i | fitness = %i\n", g, bestFitness);
             // update plateau info
             if (bestFitness == prevFitness) {
                 curPlateau++;
@@ -280,6 +282,8 @@ public:
             population.clear();
             population.insert(population.end(), offspring.begin(), offspring.end());
             population.insert(population.end(), nextGeneration.begin(), nextGeneration.end());
+
+            g++;
         }
 
         return bestChromosome;

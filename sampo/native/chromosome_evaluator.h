@@ -234,6 +234,10 @@ public:
 
     ~ChromosomeEvaluator() = default;
 
+    vector<int> evaluate(vector<Chromosome*>& chromosomes) {
+        // TODO
+    }
+
     vector<int> evaluate(vector<PyObject*>& chromosomes) {
         auto results = vector<int>();
         results.resize(chromosomes.size());

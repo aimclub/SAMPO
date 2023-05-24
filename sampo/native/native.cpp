@@ -4,6 +4,8 @@
 
 #include "chromosome_evaluator.h"
 #include "pycodec.h"
+#include "genetic.h"
+#include "python_deserializer.h"
 
 #include <iostream>
 
@@ -32,7 +34,7 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "LO", &infoPtr, &pyChromosomes)) {
         cout << "Can't parse arguments" << endl;
     }
-    auto chromosomes = PyCodec::fromList(pyChromosomes, pyObjectIdentity);
+    auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
 
     ChromosomeEvaluator evaluator(infoPtr);
 
@@ -45,6 +47,30 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
         PyList_SetItem(pyList, i, pyInt);
     }
     return pyList;
+}
+
+static PyObject* runGenetic(PyObject* self, PyObject* args) {
+    EvaluateInfo* infoPtr;
+    PyObject* pyChromosomes;
+    float mutateOrderProb, mutateResourcesProb, mutateContractorsProb;
+    float crossOrderProb, crossResourcesProb, crossContractorsProb;
+    int sizeSelection;
+
+    if (!PyArg_ParseTuple(args, "LOffffffi", &infoPtr, &pyChromosomes,
+                          &mutateOrderProb, &mutateResourcesProb, &mutateContractorsProb,
+                          &crossOrderProb, &crossResourcesProb, &crossContractorsProb, &sizeSelection)) {
+        cout << "Can't parse arguments" << endl;
+    }
+    auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
+
+    ChromosomeEvaluator evaluator(infoPtr);
+    Genetic g(infoPtr->minReq,
+              mutateOrderProb, mutateResourcesProb, mutateContractorsProb,
+              crossOrderProb, crossResourcesProb, crossContractorsProb,
+              sizeSelection, evaluator);
+
+    auto result = g.run(chromosomes);
+    return PythonDeserializer::encodeChromosome(result);
 }
 
 static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
@@ -94,7 +120,9 @@ static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
 
 static PyMethodDef nativeMethods[] = {
         {"evaluate", evaluate, METH_VARARGS,
-              "Evaluates the chromosome using Just-In-Time-Timeline" },
+                "Evaluates the chromosome using Just-In-Time-Timeline" },
+        {"runGenetic", evaluate, METH_VARARGS,
+                "Runs the whole genetic cycle" },
         {"decodeEvaluationInfo", decodeEvaluationInfo, METH_VARARGS,
                 "Uploads the scheduling info to C++ memory and caches it" },
         {"freeEvaluationInfo", freeEvaluationInfo, METH_VARARGS,
@@ -105,7 +133,7 @@ static PyMethodDef nativeMethods[] = {
 static PyModuleDef nativeModule = {
         PyModuleDef_HEAD_INIT,
         "native",
-        "The high-efficient native implementation of sampo modules",
+        "The high-efficient native implementation of SAMPO modules",
         -1,
         nativeMethods
 };

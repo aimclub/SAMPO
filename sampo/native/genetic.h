@@ -15,7 +15,7 @@ using namespace std;
 
 class Genetic {
 private:
-    Array2D<int> resourceMinBorder;
+    vector<vector<int>> resourceMinBorder;
     unsigned seed;
 
     float mutateOrderProb, mutateResourcesProb, mutateContractorsProb;
@@ -98,7 +98,7 @@ private:
 
         // mutate resources
         for (int work : worksToChange) {
-            int* resMin = this->resourceMinBorder[work];
+            auto resMin = this->resourceMinBorder[work];
             int* resMax = chromosome->getWorkResourceBorder(work);
             for (int res : resourcesToChange) {
                 chromosome->getResources()[work][res] = randInt(resMin[res], resMax[res]);
@@ -127,7 +127,7 @@ private:
 
         // mutate resources
         for (int work : contractorsToChange) {
-            int* resMin = this->resourceMinBorder[work];
+            auto resMin = this->resourceMinBorder[work];
             for (int res : resourcesToChange) {
                 chromosome->getContractors()[work][res] -= randInt(resMin[res] + 1, max(resMin[res] + 1,
                                                                    (int)(chromosome->getContractors()[work][res] / 1.2)));
@@ -233,7 +233,7 @@ private:
     }
 
 public:
-    explicit Genetic(Array2D<int>& resourcesMinBorder,
+    explicit Genetic(vector<vector<int>>& resourcesMinBorder,
                      float mutateOrder, float mutateResources, float mutateContractors,
                      float crossOrder, float crossResources, float crossContractors,
                      int sizeSelection,

@@ -111,7 +111,7 @@ public:
         return contractors;
     }
 
-    int getContractor(int work) {
+    int& getContractor(int work) {
         return getResources()[work][resourcesCount];
     }
 
@@ -121,6 +121,18 @@ public:
 
     int* getWorkResourceBorder(int work) {
         return getContractorBorder(getContractor(work));
+    }
+
+    int numWorks() {
+        return getOrder().size();
+    }
+
+    int numResources() {
+        return getResources().width() - 1;
+    }
+
+    int numContractors() {
+        return getContractors().height();
     }
 };
 

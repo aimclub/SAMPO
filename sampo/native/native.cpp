@@ -70,6 +70,7 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
               sizeSelection, evaluator);
 
     auto result = g.run(chromosomes);
+
     return PythonDeserializer::encodeChromosome(result);
 }
 

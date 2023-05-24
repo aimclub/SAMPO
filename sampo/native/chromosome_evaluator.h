@@ -52,14 +52,10 @@ private:
         return 1 / (float) (6 * m * m) * (float) (-2 * n * n * n + 3 * n * n + (6 * m * m - 1) * n);
     }
 
-    inline static int get_worker(const PyObject* resources, size_t work, size_t worker) {
-        return * (int*) PyArray_GETPTR2(resources, work, worker);
-    }
-
-    int calculate_working_time(int chromosome_ind, int work, int team_target, const PyObject* resources, size_t teamSize) {
+    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, size_t teamSize) {
         if (useExternalWorkEstimator) {
-            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind,
-                                           team_target, work);
+            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)",
+                                           chromosome_ind, team_target, work);
             if (res == nullptr) {
                 cerr << "Result is NULL" << endl << flush;
                 return 0;
@@ -74,7 +70,7 @@ private:
                 int minReq = this->minReqs[work][i];
                 if (minReq == 0)
                     continue;
-                if (get_worker(resources, team_target, i) < minReq) {
+                if (resources[i] < minReq) {
 //                    cout << "Not conforms to min_req: " << get_worker(resources, team_target, i) << " < " << minReq << " on work " << work
 //                         << " and worker " << i << ", chromosome " << chromosome_ind << ", teamSize=" << teamSize << endl;
 //                    cout << "Team: ";
@@ -86,8 +82,8 @@ private:
                 }
                 int maxReq = this->maxReqs[work][i];
 
-                float productivity = get_productivity(i, get_worker(resources, team_target, i));
-                productivity *= communication_coefficient(get_worker(resources, team_target, i), maxReq);
+                float productivity = get_productivity(i, resources[i]);
+                productivity *= communication_coefficient(resources[i], maxReq);
 
 //                if (productivity < 0.000001) {
 //                    return TIME_INF;
@@ -103,7 +99,7 @@ private:
         }
     }
 
-    int findMinStartTime(int nodeIndex, int contractor, const PyObject* resources, size_t teamSize,
+    int findMinStartTime(int nodeIndex, int contractor, const int* resources, size_t teamSize,
                          vector<int>& completed, Timeline& timeline) {
         int maxParentTime = 0;
         // find min start time
@@ -114,7 +110,7 @@ private:
         int maxAgentTime = 0;
 
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = get_worker(resources, nodeIndex, worker);
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -141,9 +137,9 @@ private:
         return max(maxParentTime, maxAgentTime);
     }
 
-    static void updateTimeline(int work, int finishTime, int contractor, const PyObject* resources, size_t teamSize, Timeline& timeline) {
+    static void updateTimeline(int finishTime, int contractor, const int* resources, size_t teamSize, Timeline& timeline) {
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = get_worker(resources, work, worker);
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -175,7 +171,7 @@ private:
         }
     }
 
-    int schedule(int chromosome_ind, int nodeIndex, int startTime, int contractor, const PyObject* resources,
+    int schedule(int chromosome_ind, int nodeIndex, int startTime, int contractor, const int* resources,
                  size_t teamSize, vector<int>& completed, Timeline& timeline) {
         int finishTime = startTime;
 
@@ -194,7 +190,7 @@ private:
             completed[dep_node] = finishTime;
         }
 
-        updateTimeline(nodeIndex, finishTime, contractor, resources, teamSize, timeline);
+        updateTimeline(finishTime, contractor, resources, teamSize, timeline);
 
         return finishTime;
     }
@@ -235,10 +231,6 @@ public:
     ~ChromosomeEvaluator() = default;
 
     vector<int> evaluate(vector<Chromosome*>& chromosomes) {
-        // TODO
-    }
-
-    vector<int> evaluate(vector<PyObject*>& chromosomes) {
         auto results = vector<int>();
         results.resize(chromosomes.size());
 
@@ -249,26 +241,7 @@ public:
         return results;
     }
 
-    int evaluate(int chromosome_ind, PyObject* chromosome) {
-        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
-        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
-        PyObject* pyContractors; //= PyList_GetItem(chromosome, 2);
-
-        if (!PyArg_ParseTuple(chromosome, "OOO", &pyOrder, &pyResources, &pyContractors)) {
-            cerr << "Can't parse chromosome!!!!" << endl;
-            return -1;
-        }
-
-        int* order = (int*) PyArray_DATA((PyArrayObject*) pyOrder);
-        int* resources = (int*) PyArray_DATA((PyArrayObject*) pyResources);
-
-        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
-        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
-//        cout << worksCount << " works, " << resourcesCount << " resources" << endl;
-
-        int stride_works = PyArray_STRIDE(pyResources, 0);
-//        cout << "Stride: " << stride_works << endl;
-
+    int evaluate(int chromosome_ind, Chromosome* chromosome) {
         Timeline timeline = createTimeline();
 
         auto completed = vector<int>();
@@ -276,60 +249,24 @@ public:
 
         int finishTime = 0;
 
-//        cout << "Resources: ";
         // scheduling works one-by-one
-        for (int i = 0; i < worksCount; i++) {
-            int workIndex = order[i];
-            auto* team = (int*) PyArray_GETPTR1(pyResources, workIndex);
-            // = resources + workIndex * (resourcesCount + 1); // go to the start of 'i' row in 2D array
-            int contractor = team[resourcesCount];
+        for (int i = 0; i < chromosome->numWorks(); i++) {
+            int workIndex = *chromosome->getOrder()[i];
+            int* team = chromosome->getResources()[workIndex];
+            int contractor = chromosome->getContractor(workIndex);
 
-//            for (size_t j = 0; j < resourcesCount; j++) {
-//                int* worker_count = (int*) PyArray_GETPTR2(pyResources, workIndex, j);
-//                cout << *worker_count << " ";
-//            }
-//            cout << endl;
-
-            int st = findMinStartTime(workIndex, contractor, pyResources,
-                                      resourcesCount, completed, timeline);
+            int st = findMinStartTime(workIndex, contractor, team,
+                                      chromosome->numResources(), completed, timeline);
             if (st == TIME_INF) {
                 return TIME_INF;
             }
-            int c_ft = schedule(chromosome_ind, workIndex, st, contractor, pyResources,
-                                resourcesCount, completed, timeline);
+            int c_ft = schedule(chromosome_ind, workIndex, st, contractor, team,
+                                chromosome->numResources(), completed, timeline);
             finishTime = max(finishTime, c_ft);
         }
 
         return finishTime;
     }
-
-//    int testEvaluate(vector<int>& order, vector<vector<int>>& resources) {
-//        size_t worksCount = order.size();
-//        size_t resourcesCount = resources[0].size() - 1;
-//
-//        Timeline timeline = createTimeline();
-//
-//        auto completed = vector<int>();
-//        completed.resize(totalWorksCount);
-//
-//        int finishTime = 0;
-//
-//        // scheduling works one-by-one
-//        for (int i = 0; i < worksCount; i++) {
-//            int workIndex = order[i];
-//            int contractor = resources[i][resourcesCount];
-//            auto* team = resources[i].begin().operator->();
-//
-//            int st = findMinStartTime(workIndex, contractor, team,
-//                                      resourcesCount, completed, timeline);
-//            int c_ft = schedule(0, workIndex, st, contractor, team,
-//                                resourcesCount, completed, timeline);
-////            int c_ft = 0 + 5;
-//            finishTime = max(finishTime, c_ft);
-//        }
-//
-//        return finishTime;
-//    }
 };
 
 

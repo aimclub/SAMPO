@@ -8,8 +8,11 @@
 #include "evaluator_types.h"
 #include "chromosome_evaluator.h"
 
-#include <bits/stdc++.h>
+#include <random>
 #include <vector>
+#include <set>
+#include <algorithm>
+#include <numeric>
 
 using namespace std;
 
@@ -214,7 +217,7 @@ private:
         vector<Chromosome*> result;
         result.resize(sizeSelection);
         for (int i = 0; i < sizeSelection; i++) {
-            result[i] = population[top[i]];
+            result[i] = new Chromosome(population[top[i]]);
         }
         return result;
     }
@@ -230,6 +233,12 @@ private:
             }
         }
         return oldFit <= leaderFit ? -1 : leaderPos;
+    }
+
+    inline void deleteChromosomes(vector<Chromosome*>& chromosomes) {
+        for (auto chromosome : chromosomes) {
+            delete chromosome;
+        }
     }
 
 public:
@@ -276,9 +285,12 @@ public:
             if (leaderPos != -1) {
                 bestChromosome = nextGeneration[leaderPos];
                 bestFitness = fitness[leaderPos];
+            } else {
+                bestChromosome = new Chromosome(bestChromosome);
             }
 
             // renew population
+            deleteChromosomes(population);
             population.clear();
             population.insert(population.end(), offspring.begin(), offspring.end());
             population.insert(population.end(), nextGeneration.begin(), nextGeneration.end());

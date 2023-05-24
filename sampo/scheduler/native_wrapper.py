@@ -1,4 +1,3 @@
-import numpy as np
 from deap.base import Toolbox
 
 native = True
@@ -6,10 +5,12 @@ try:
     from native import decodeEvaluationInfo
     from native import evaluate as evaluator
     from native import freeEvaluationInfo
+    from native import runGenetic
 except ImportError:
     print("Can't find native module; switching to default")
     decodeEvaluationInfo = lambda *args: args
     freeEvaluationInfo = lambda *args: args
+    runGenetic = lambda *args: args
     evaluator = None
     native = False
 
@@ -26,6 +27,7 @@ class NativeWrapper:
     def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
                  worker_pool_indices: dict[int, dict[int, Worker]], index2node: dict[int, GraphNode],
                  time_estimator: WorkTimeEstimator):
+        self.native = native
         if not native:
             def fit(chromosome: ChromosomeType) -> int:
                 sworks = toolbox.chromosome_to_schedule(chromosome)[0]
@@ -92,6 +94,13 @@ class NativeWrapper:
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes
         return self.evaluator(self._cache, chromosomes)
+
+    def run_genetic(self, chromosomes: list[ChromosomeType],
+                    mutate_order, mate_order, mutate_resources, mate_resources,
+                    mutate_contractors, mate_contractors, selection_size):
+        self._current_chromosomes = chromosomes
+        return runGenetic(self._cache, chromosomes, mutate_order, mate_order, mutate_resources, mate_resources,
+                          mutate_contractors, mate_contractors, selection_size)
 
     def close(self):
         freeEvaluationInfo(self._cache)

@@ -110,6 +110,18 @@ public:
     Array2D<int>& getContractors() {
         return contractors;
     }
+
+    int getContractor(int work) {
+        return getResources()[work][resourcesCount];
+    }
+
+    int* getContractorBorder(int contractor) {
+        return getContractors()[contractor];
+    }
+
+    int* getWorkResourceBorder(int work) {
+        return getContractorBorder(getContractor(work));
+    }
 };
 
 typedef struct {

@@ -50,6 +50,19 @@ namespace Operators {
         }
     }
 
+    inline vector<int> sample_ind(int size, float prob, unsigned seed) {
+        random_device rd;
+        uniform_int_distribution<int> rnd(0, size);
+
+        vector<int> result;
+        result.resize((int)(prob * (float) rnd(rd)));
+
+        for (int & i : result) {
+            i = rnd(rd);
+        }
+        return result;
+    }
+
     template<typename T>
     inline vector<T*> sample(vector<T*>& src, float prob, unsigned seed) {
         random_device rd;
@@ -87,11 +100,30 @@ namespace Operators {
         }
     }
 
-    inline void mutateResources() {
+    inline void mutateResources(Chromosome* chromosome, Array2D<int>& resMin, float prob, unsigned seed) {
+        auto resourcesToChange = sample_ind(chromosome->getResources().width(), 1, seed);
+        auto worksToChange = sample_ind(chromosome->getOrder().width(), prob, seed);
+
+        for (int work : worksToChange) {
+            int* resMax = chromosome->getWorkResourceBorder(work);
+            for (int res : resourcesToChange) {
+                // TODO
+            }
+        }
+    }
+
+    inline void crossResources(Chromosome* a, Chromosome* b, unsigned seed) {
 
     }
 
-    void applyResources(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target, float mutate, float cross) {
+    void applyResources(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target,
+                        float mutate, float cross, unsigned seed) {
+        auto toMutate = sample(chromosomes, mutate, seed);
+        // TODO pragma omp parallel
+        for (int i = 0; i < toMutate.size(); i++) {
+            mutateResources(toMutate[i], seed);
+        }
+
         for (int i = 0; i < chromosomes.size(); i++) {
             Chromosome* a = chromosomes[i];
             // without i = j & j = i duplications
@@ -108,9 +140,9 @@ namespace Operators {
 
     vector<Chromosome*> applyAll(vector<Chromosome*>& chromosomes,
                                  float mutateOrder, float mutateResources, float mutateContractors,
-                                 float crossOrder, float crossResources, float crossContractors) {
+                                 float crossOrder, float crossResources, float crossContractors, unsigned seed) {
         vector<Chromosome*> offspring;
-        applyOrder(chromosomes, offspring, mutateOrder, crossOrder);
+        applyOrder(chromosomes, offspring, mutateOrder, crossOrder, seed);
         applyResources(chromosomes, offspring, mutateResources, crossResources);
         applyContractors(chromosomes, offspring, mutateContractors, crossContractors);
         return offspring;

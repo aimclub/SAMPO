@@ -155,11 +155,12 @@ def build_schedule(wg: WorkGraph,
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            index2node, work_estimator)
+    # create population of a given size
+    pop = toolbox.population(n=population_size)
+
     if not native.native:
         # save best individuals
         hof = tools.HallOfFame(1, similar=compare_individuals)
-        # create population of a given size
-        pop = toolbox.population(n=population_size)
 
         # probability to participate in mutation and crossover for each individual
         cxpb, mutpb = mutate_order, mutate_order
@@ -343,7 +344,7 @@ def build_schedule(wg: WorkGraph,
         print(f'Generations processing took {(time.time() - start) * 1000} ms')
         print(f'Evaluation time: {evaluation_time}')
     else:
-        chromosome = native.run_genetic(list(init_chromosomes.values()),
+        chromosome = native.run_genetic(list([ind[0] for ind in pop]),
                                         mutate_order, mutate_order, mutate_resources, mutate_resources,
                                         mutate_resources, mutate_resources, selection_size)
 

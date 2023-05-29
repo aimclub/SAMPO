@@ -110,7 +110,7 @@ private:
         int maxAgentTime = 0;
 
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = resources[worker];
+            int worker_count = 1;//resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -234,7 +234,7 @@ public:
         auto results = vector<int>();
         results.resize(chromosomes.size());
 
-        #pragma omp parallel for firstprivate(chromosomes) shared(results) default (none) num_threads(this->numThreads)
+//        #pragma omp parallel for firstprivate(chromosomes) shared(results) default (none) num_threads(this->numThreads)
         for (int i = 0; i < chromosomes.size(); i++) {
             results[i] = evaluate(i, chromosomes[i]);
         }

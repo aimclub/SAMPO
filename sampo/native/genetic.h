@@ -2,6 +2,7 @@
 #define NATIVE_GENETIC_H
 
 #define PY_SSIZE_T_CLEAN
+
 #include "Python.h"
 #include "numpy/arrayobject.h"
 #include "pycodec.h"
@@ -28,13 +29,29 @@ private:
 
     ChromosomeEvaluator evaluator;
 
-    inline void mutateOrder(Chromosome* chromosome) {
-        int* order = chromosome->getOrder()[0];
-        shuffle(order, order + chromosome->getOrder().size(),
-                default_random_engine());
+//    template<typename T>
+//    inline void swap(T* o1, T* o2) {
+//        T tmp = *o1;
+//        *o1 = *o2;
+//        *o2 = tmp;
+//    }
+//
+//    template<typename T>
+//    inline void shuffle(T* data, int first, int last, unsigned seed) {
+//        auto rnd = default_random_engine(seed);
+//        for (int i = last - 1; i > first; i--) {
+//            std::uniform_int_distribution<int> d(first, i);
+//            swap(data + i, data + d(rnd));
+//        }
+//    }
+
+    inline void mutateOrder(Chromosome *chromosome) {
+        random_device rd;
+        int *order = chromosome->getOrder()[0];
+        std::shuffle(order, order + chromosome->getOrder().size(), rd);
     }
 
-    inline void crossOrder(Chromosome* a, Chromosome* b) {
+    inline void crossOrder(Chromosome *a, Chromosome *b) {
         random_device rd;
         uniform_int_distribution<int> rnd(0, a->getOrder().size());
 
@@ -64,58 +81,61 @@ private:
         }
     }
 
-    inline vector<int> sample_ind(int size, float prob, random_device& rd) {
-        uniform_int_distribution<int> rnd(0, size);
-
+    // TODO Think about make own more cache-friendly shuffle using areas around target element
+    inline vector<int> sample_ind(int size, float prob, random_device &rd) {
         vector<int> result;
-        result.resize((int)(prob * (float) rnd(rd)));
+        result.resize(size);
+        std::iota(result.begin(), result.end(), 0);
+        std::shuffle(result.begin(), result.end(), rd);
 
-        for (int & i : result) {
-            i = rnd(rd);
-        }
+        result.resize((int) (prob * (float) size));
         return result;
     }
 
     template<typename T>
-    inline vector<T*> sample(vector<T*>& src, float prob, random_device& rd) {
-        uniform_int_distribution<int> rnd(0, src.size());
+    inline vector<T*> sample(vector<T*> &src, float prob, random_device &rd, bool copy = true) {
+        auto indexes = sample_ind(src.size(), prob, rd);
 
         vector<T*> result;
-        result.resize((int)(prob * (float) rnd(rd)));
+        result.resize(indexes.size());
 
         for (int i = 0; i < result.size(); i++) {
-            result[i] = new T(src[rnd(rd)]);
+            int ind = indexes[i];
+            result[i] = src[ind];
+            if (copy) {
+                result[i] = new T(result[i]);
+            }
         }
         return result;
     }
 
     static inline int randInt(int from, int to) {
         // TODO implement using C++ 11 and without re-creating distribution objects each call
-        return (int)(rand() * (to - from));
+        return (int) (rand() * (to - from));
     }
 
-    inline void mutateResources(Chromosome* chromosome) {
+    inline void mutateResources(Chromosome *chromosome) {
         random_device rd;
         auto resourcesToChange = sample_ind(chromosome->getResources().width() - 1, 1, rd);
         auto worksToChange = sample_ind(chromosome->getOrder().width(), mutateResourcesProb, rd);
 
         // mutate resources
-        for (int work : worksToChange) {
+        for (int work: worksToChange) {
             auto resMin = this->resourceMinBorder[work];
-            int* resMax = chromosome->getWorkResourceBorder(work);
-            for (int res : resourcesToChange) {
+            int *resMax = chromosome->getWorkResourceBorder(work);
+            for (int res: resourcesToChange) {
                 chromosome->getResources()[work][res] = randInt(resMin[res], resMax[res]);
             }
         }
         // TODO mutate contractor
     }
 
-    inline void crossResources(Chromosome* a, Chromosome* b) {
+    inline void crossResources(Chromosome *a, Chromosome *b) {
         random_device rd;
         auto resourcesToMate = sample_ind(a->getResources().width(), 1, rd);
 
         for (int work = 0; work < a->getOrder().size(); work++) {
-            for (int res : resourcesToMate) {
+            for (int res: resourcesToMate) {
                 int tmp = a->getResources()[work][res];
                 a->getResources()[work][res] = b->getResources()[work][res];
                 b->getResources()[work][res] = tmp;
@@ -123,29 +143,30 @@ private:
         }
     }
 
-    inline void mutateContractors(Chromosome* chromosome) {
+    inline void mutateContractors(Chromosome *chromosome) {
         random_device rd;
         auto resourcesToChange = sample_ind(chromosome->numResources(), mutateResourcesProb, rd);
         auto contractorsToChange = sample_ind(chromosome->numContractors(), mutateContractorsProb, rd);
 
         // mutate resources
-        for (int work : contractorsToChange) {
+        for (int work: contractorsToChange) {
             auto resMin = this->resourceMinBorder[work];
-            for (int res : resourcesToChange) {
+            for (int res: resourcesToChange) {
                 chromosome->getContractors()[work][res] -= randInt(resMin[res] + 1, max(resMin[res] + 1,
-                                                                   (int)(chromosome->getContractors()[work][res] / 1.2)));
+                                                                                        (int) (chromosome->getContractors()[work][res] /
+                                                                                               1.2)));
             }
         }
     }
 
-    inline void crossContractors(Chromosome* a, Chromosome* b) {
+    inline void crossContractors(Chromosome *a, Chromosome *b) {
         random_device rd;
         auto resourcesToMate = sample_ind(a->numResources(), 1, rd);
         auto contractorsToMate = sample_ind(a->numContractors(), mutateContractorsProb, rd);
 
         // TODO Decide should we mate whole contractor borders
-        for (int contractor = 0; contractor < a->getOrder().size(); contractor++) {
-            for (int res : resourcesToMate) {
+        for (int contractor = 0; contractor < a->numContractors(); contractor++) {
+            for (int res: resourcesToMate) {
                 int tmp = a->getResources()[contractor][res];
                 a->getContractors()[contractor][res] = b->getResources()[contractor][res];
                 b->getContractors()[contractor][res] = tmp;
@@ -153,8 +174,9 @@ private:
         }
     }
 
-    void applyOperators(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target, float mutate, float cross,
-                        void (Genetic::*mutator)(Chromosome*), void (Genetic::*crossover)(Chromosome*, Chromosome*)) {
+    void applyOperators(vector<Chromosome *> &chromosomes, vector<Chromosome *> &target, float mutate, float cross,
+                        void (Genetic::*mutator)(Chromosome *),
+                        void (Genetic::*crossover)(Chromosome *, Chromosome *)) {
         random_device rd;
         auto toMutate = sample(chromosomes, mutate, rd);
         // TODO pragma omp parallel
@@ -173,20 +195,23 @@ private:
         target.insert(target.end(), toCross.begin(), toCross.end());
     }
 
-    inline void applyOrder(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target) {
-        applyOperators(chromosomes, target, mutateOrderProb, crossOrderProb, &Genetic::mutateOrder, &Genetic::crossOrder);
+    inline void applyOrder(vector<Chromosome *> &chromosomes, vector<Chromosome *> &target) {
+        applyOperators(chromosomes, target, mutateOrderProb, crossOrderProb, &Genetic::mutateOrder,
+                       &Genetic::crossOrder);
     }
 
-    inline void applyResources(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target) {
-        applyOperators(chromosomes, target, mutateResourcesProb, crossResourcesProb, &Genetic::mutateResources, &Genetic::crossResources);
+    inline void applyResources(vector<Chromosome *> &chromosomes, vector<Chromosome *> &target) {
+        applyOperators(chromosomes, target, mutateResourcesProb, crossResourcesProb, &Genetic::mutateResources,
+                       &Genetic::crossResources);
     }
 
-    inline void applyContractors(vector<Chromosome*>& chromosomes, vector<Chromosome*>& target) {
-        applyOperators(chromosomes, target, mutateContractorsProb, crossContractorsProb, &Genetic::mutateContractors, &Genetic::crossContractors);
+    inline void applyContractors(vector<Chromosome *> &chromosomes, vector<Chromosome *> &target) {
+        applyOperators(chromosomes, target, mutateContractorsProb, crossContractorsProb, &Genetic::mutateContractors,
+                       &Genetic::crossContractors);
     }
 
-    vector<Chromosome*> applyAll(vector<Chromosome*>& chromosomes) {
-        vector<Chromosome*> offspring;
+    vector<Chromosome *> applyAll(vector<Chromosome *> &chromosomes) {
+        vector<Chromosome *> offspring;
         applyOrder(chromosomes, offspring);
         applyResources(chromosomes, offspring);
         applyContractors(chromosomes, offspring);
@@ -212,18 +237,18 @@ private:
         return indices;
     }
 
-    inline vector<Chromosome*> selection(vector<Chromosome*>& population, vector<int>& fitness) {
+    inline vector<Chromosome *> selection(vector<Chromosome *> &population, vector<int> &fitness) {
         auto top = argsort(fitness);
-        vector<Chromosome*> result;
-        result.resize(sizeSelection);
-        for (int i = 0; i < sizeSelection; i++) {
+        vector<Chromosome *> result;
+        result.resize(min(fitness.size(), (size_t) sizeSelection));
+        for (int i = 0; i < result.size(); i++) {
             result[i] = new Chromosome(population[top[i]]);
         }
         return result;
     }
 
     // return the position of new leader, and -1 if the old one should be used
-    inline static int updateHOF(vector<Chromosome*>& population, vector<int>& fitness, int oldFit) {
+    inline static int updateHOF(vector<Chromosome *> &population, vector<int> &fitness, int oldFit) {
         int leaderPos = 0;
         int leaderFit = INT_MAX;
         for (int i = 0; i < population.size(); i++) {
@@ -235,40 +260,47 @@ private:
         return oldFit <= leaderFit ? -1 : leaderPos;
     }
 
-    inline void deleteChromosomes(vector<Chromosome*>& chromosomes) {
-        for (auto chromosome : chromosomes) {
+    inline static void deleteChromosomes(vector<Chromosome *> &chromosomes) {
+        for (auto* chromosome: chromosomes) {
             delete chromosome;
         }
     }
 
 public:
-    explicit Genetic(vector<vector<int>>& resourcesMinBorder,
+    explicit Genetic(vector<vector<int>> &resourcesMinBorder,
                      float mutateOrder, float mutateResources, float mutateContractors,
                      float crossOrder, float crossResources, float crossContractors,
                      int sizeSelection,
-                     ChromosomeEvaluator& evaluator, unsigned seed = 0)
-        : resourceMinBorder(resourcesMinBorder), seed(seed), evaluator(evaluator), sizeSelection(sizeSelection),
-          mutateOrderProb(mutateOrder), mutateResourcesProb(mutateResources), mutateContractorsProb(mutateContractors),
-          crossOrderProb(crossOrder),   crossResourcesProb(crossResources),   crossContractorsProb(crossContractors) {
+                     ChromosomeEvaluator &evaluator, unsigned seed = 0)
+            : resourceMinBorder(resourcesMinBorder), seed(seed), evaluator(evaluator), sizeSelection(sizeSelection),
+              mutateOrderProb(mutateOrder), mutateResourcesProb(mutateResources),
+              mutateContractorsProb(mutateContractors),
+              crossOrderProb(crossOrder), crossResourcesProb(crossResources), crossContractorsProb(crossContractors) {
         // TODO
     }
 
     // TODO Add multi-criteria optimization (object hierarchy of fitness functions)
-    Chromosome* run(vector<Chromosome*>& initialPopulation) {
+    Chromosome *run(vector<Chromosome *> &initialPopulation) {
+        cout << "Initial population size: " << initialPopulation.size() << endl;
+
         // TODO Ensure this is copy
         auto population = initialPopulation;
+
+        cout << "Start population size: " << population.size() << endl;
 
         int maxPlateau = 10;
         int curPlateau = 0;
 
         int prevFitness = INT_MAX;
         int bestFitness = prevFitness;
-        Chromosome* bestChromosome = nullptr;
+        Chromosome *bestChromosome = nullptr;
 
         auto fitness = evaluator.evaluate(initialPopulation);
         int g = 0;
+        // TODO Propagate from Python
+        const int MAX_GENERATIONS = 10;
 
-        while (curPlateau < maxPlateau) {
+        while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
             printf("--- Generation %i | fitness = %i\n", g, bestFitness);
             // update plateau info
             if (bestFitness == prevFitness) {
@@ -278,7 +310,11 @@ public:
             }
 
             auto offspring = selection(population, fitness);
+
+            cout << "Selected " << population.size() << " individuals" << endl;
+
             auto nextGeneration = applyAll(offspring);
+
             fitness = evaluator.evaluate(nextGeneration);
 
             int leaderPos = updateHOF(nextGeneration, fitness, bestFitness);
@@ -297,6 +333,7 @@ public:
 
             g++;
         }
+        deleteChromosomes(population);
 
         return bestChromosome;
     }

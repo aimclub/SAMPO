@@ -99,8 +99,8 @@ class NativeWrapper:
                     mutate_order, mate_order, mutate_resources, mate_resources,
                     mutate_contractors, mate_contractors, selection_size):
         self._current_chromosomes = chromosomes
-        return runGenetic(self._cache, chromosomes, mutate_order, mate_order, mutate_resources, mate_resources,
-                          mutate_contractors, mate_contractors, selection_size)
+        return runGenetic(self._cache, chromosomes, mutate_order, mutate_resources, mutate_contractors,
+                          mate_order, mate_resources, mate_contractors, selection_size)
 
     def close(self):
         freeEvaluationInfo(self._cache)

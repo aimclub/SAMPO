@@ -70,8 +70,10 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
               sizeSelection, evaluator);
 
     auto result = g.run(chromosomes);
-
-    return PythonDeserializer::encodeChromosome(result);
+//    return PythonDeserializer::encodeChromosome(result);
+//    Py_INCREF(Py_None);
+//    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
@@ -122,7 +124,7 @@ static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
 static PyMethodDef nativeMethods[] = {
         {"evaluate", evaluate, METH_VARARGS,
                 "Evaluates the chromosome using Just-In-Time-Timeline" },
-        {"runGenetic", evaluate, METH_VARARGS,
+        {"runGenetic", runGenetic, METH_VARARGS,
                 "Runs the whole genetic cycle" },
         {"decodeEvaluationInfo", decodeEvaluationInfo, METH_VARARGS,
                 "Uploads the scheduling info to C++ memory and caches it" },

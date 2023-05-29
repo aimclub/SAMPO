@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 
 using namespace std;
 
@@ -17,18 +18,20 @@ private:
     T* data;
     bool shallow;
 public:
-    explicit Array2D(size_t length, size_t stride, T* data, bool shallow = true)
+    Array2D(size_t length, size_t stride, T* data, bool shallow = true)
         : length(length), stride(stride), data(data), shallow(shallow) {}
 
-    explicit Array2D(size_t length = 1, size_t stride = 1)
-        : Array2D(length, stride, (T*) malloc(length * sizeof(T)), false) {}
+    explicit Array2D(size_t length = 1, size_t stride = 1, bool shallow = true)
+        : Array2D(length, stride, (T*) malloc(length * sizeof(T)), shallow) {}
 
-    Array2D(const Array2D& other) : Array2D(other.length, other.stride) {
+    Array2D(const Array2D& other) : Array2D(other.length, other.stride, other.shallow) {
         memcpy(this->data, other.data, length * sizeof(T));
+        cout << "Copy" << endl;
     }
 
     ~Array2D() {
         if (!shallow) {
+            cout << "Free array" << endl;
             free(this->data);
         }
     }
@@ -73,16 +76,27 @@ private:
 public:
     explicit Chromosome(int worksCount, int resourcesCount, int contractorsCount)
         : worksCount(worksCount), resourcesCount(resourcesCount), contractorsCount(contractorsCount) {
+//        cout << worksCount << " " << resourcesCount << " " << contractorsCount << endl;
         size_t ORDER_SHIFT = 0;
         size_t RESOURCES_SHIFT = ORDER_SHIFT + worksCount;
         size_t CONTRACTORS_SHIFT = RESOURCES_SHIFT + worksCount * (resourcesCount + 1);
         this->DATA_SIZE = (CONTRACTORS_SHIFT + contractorsCount * resourcesCount) * sizeof(int);
+//        cout << ORDER_SHIFT << " " << RESOURCES_SHIFT << " " << CONTRACTORS_SHIFT << endl;
+//        cout << DATA_SIZE << endl;
         this->data = (int*) malloc(DATA_SIZE);
+        if (data == nullptr) {
+            cout << "Not enough memory" << endl;
+            return;
+        }
         this->order       = Array2D<int>(worksCount, 1, this->data);
         this->resources   = Array2D<int>(worksCount * (resourcesCount + 1),
                                          resourcesCount + 1, this->data + RESOURCES_SHIFT);
         this->contractors = Array2D<int>(contractorsCount * resourcesCount,
                                          resourcesCount, this->data + CONTRACTORS_SHIFT);
+
+//        cout << order.size()<< endl;
+//        cout << resources.width() << " " << resources.height() << endl;
+//        cout << contractors.width() << " " << contractors.height() << endl;
     }
 
     explicit Chromosome(const Chromosome* other)

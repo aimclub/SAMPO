@@ -110,7 +110,7 @@ private:
         int maxAgentTime = 0;
 
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = 1;//resources[worker];
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -127,7 +127,7 @@ private:
                 }
                 need_count -= offer_count;
                 if (ind == 0 && need_count > 0) {
-                    cerr << "Not enough workers" << endl;
+//                    cerr << "Not enough workers" << endl;
                     return TIME_INF;
                 }
                 ind--;
@@ -230,15 +230,11 @@ public:
 
     ~ChromosomeEvaluator() = default;
 
-    vector<int> evaluate(vector<Chromosome*>& chromosomes) {
-        auto results = vector<int>();
-        results.resize(chromosomes.size());
-
+    void evaluate(vector<Chromosome*>& chromosomes) {
 //        #pragma omp parallel for firstprivate(chromosomes) shared(results) default (none) num_threads(this->numThreads)
         for (int i = 0; i < chromosomes.size(); i++) {
-            results[i] = evaluate(i, chromosomes[i]);
+            chromosomes[i]->fitness = evaluate(i, chromosomes[i]);
         }
-        return results;
     }
 
     int evaluate(int chromosome_ind, Chromosome* chromosome) {
@@ -248,6 +244,11 @@ public:
         completed.resize(totalWorksCount);
 
         int finishTime = 0;
+
+//        for (int w = 0; w < chromosome->numWorks(); w++) {
+//            cout << *chromosome->getOrder()[w] << " ";
+//        }
+//        cout << endl;
 
         // scheduling works one-by-one
         for (int i = 0; i < chromosome->numWorks(); i++) {

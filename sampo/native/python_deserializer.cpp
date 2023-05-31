@@ -1,8 +1,9 @@
 #include <unordered_map>
 #include <vector>
-#include "pycodec.h"
 
+#include "pycodec.h"
 #include "python_deserializer.h"
+#include "utils/use_numpy.h"
 
 namespace PythonDeserializer {
 
@@ -172,19 +173,28 @@ namespace PythonDeserializer {
 
     PyObject* encodeChromosome(Chromosome* incoming) {
         npy_intp dimsOrder[] { incoming->getOrder().size() };
-        npy_intp dimsResources[] { incoming->getResources().width(), incoming->getResources().height() };
-        npy_intp dimsContractors[] { incoming->getContractors().width(), incoming->getContractors().height() };
+        npy_intp dimsResources[] { incoming->getResources().height(), incoming->getResources().width() };
+        npy_intp dimsContractors[] { incoming->getContractors().height(), incoming->getContractors().width() };
 
-        PyObject* pyOrder = PyArray_ZEROS(1, dimsOrder, NPY_INT, 0);
+        cout << dimsOrder[0] << endl;
+        cout << dimsResources[0] << " " << dimsResources[1] << endl;
+        cout << dimsContractors[0] << " " << dimsContractors[1] << endl;
+
+        import_array();
+
+        PyObject* pyOrder = PyArray_EMPTY(1, dimsOrder, NPY_INT, 0);
         Py_XINCREF(pyOrder);
-        PyObject* pyResources = PyArray_ZEROS(2, dimsResources, NPY_INT, 0);
+        PyObject* pyResources = PyArray_EMPTY(2, dimsResources, NPY_INT, 0);
         Py_XINCREF(pyResources);
-        PyObject* pyContractors = PyArray_ZEROS(2, dimsContractors, NPY_INT, 0);
+        PyObject* pyContractors = PyArray_EMPTY(2, dimsContractors, NPY_INT, 0);
         Py_XINCREF(pyContractors);
 
+//        Py_RETURN_NONE;
+
         if (pyOrder == nullptr || pyResources == nullptr || pyContractors == nullptr) {
+            cout << "Can't allocate chromosome" << endl;
             // we can run out-of-memory, but still just return to Python
-            return nullptr;
+            Py_RETURN_NONE;
         }
 
         for (int i = 0; i < dimsOrder[0]; i++) {
@@ -202,6 +212,8 @@ namespace PythonDeserializer {
                     = incoming->getContractors()[contractor][resource];
             }
         }
+
+//        Py_RETURN_NONE;
 
         PyObject* pyChromosome = Py_BuildValue("(OOO)", pyOrder, pyResources, pyContractors);
         Py_XINCREF(pyChromosome);  // we can run out-of-memory, but still just return to Python

@@ -103,17 +103,11 @@ public:
 //        cout << contractors.width() << " " << contractors.height() << endl;
     }
 
-//    explicit Chromosome(const Chromosome* other) {
-//        // copy all packed data
-//        cout << "Copy chromosome" << endl;
-////        memcpy(this->data, other->data, DATA_SIZE);
-//    }
-
     Chromosome(Chromosome* other)
         : Chromosome(other->worksCount, other->resourcesCount, other->contractorsCount) {
         // copy all packed data
-        cout << "Copy chromosome" << endl;
         memcpy(this->data, other->data, DATA_SIZE);
+        this->fitness = other->fitness;
     }
 
     ~Chromosome() {
@@ -164,6 +158,7 @@ public:
 typedef struct {
     PyObject* pythonWrapper;
     vector<vector<int>> parents;
+    vector<vector<int>> headParents;
     vector<vector<int>> inseparables;
     vector<vector<int>> workers;
     vector<double> volume;

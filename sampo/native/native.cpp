@@ -64,15 +64,19 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
               mutateOrderProb, mutateResourcesProb, mutateContractorsProb,
               crossOrderProb, crossResourcesProb, crossContractorsProb,
               sizeSelection, evaluator);
-
-    auto result = g.run(chromosomes);
-    return PythonDeserializer::encodeChromosome(result);
-//    Py_RETURN_NONE;
+    Chromosome* result;
+    Py_BEGIN_ALLOW_THREADS;
+    result = g.run(chromosomes);
+    Py_END_ALLOW_THREADS;
+    auto pyResult = PythonDeserializer::encodeChromosome(result);
+    delete result;
+    return pyResult;
 }
 
 static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* pythonWrapper;
     PyObject* pyParents;
+    PyObject* pyHeadParents;
     PyObject* pyInseparables;
     PyObject* pyWorkers;
     int totalWorksCount;
@@ -81,8 +85,8 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* minReq;
     PyObject* maxReq;
 
-    if (!PyArg_ParseTuple(args, "OOOOipOOO",
-                          &pythonWrapper, &pyParents, &pyInseparables,
+    if (!PyArg_ParseTuple(args, "OOOOOipOOO",
+                          &pythonWrapper, &pyParents, &pyHeadParents, &pyInseparables,
                           &pyWorkers, &totalWorksCount, &useExternalWorkEstimator,
                           &volume, &minReq, &maxReq)) {
         cout << "Can't parse arguments" << endl;
@@ -91,6 +95,7 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     auto* info = new EvaluateInfo {
         pythonWrapper,
         PyCodec::fromList(pyParents, decodeIntList),
+        PyCodec::fromList(pyHeadParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
         PyCodec::fromList(pyWorkers, decodeIntList),
         PyCodec::fromList(volume, PyFloat_AsDouble),
@@ -111,8 +116,7 @@ static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
         cout << "Can't parse arguments" << endl;
     }
     delete infoPtr;
-    Py_INCREF(Py_None);
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef nativeMethods[] = {

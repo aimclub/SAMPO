@@ -19,6 +19,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <omp.h>
+#include <set>
 
 using namespace std;
 
@@ -30,6 +31,7 @@ typedef vector<vector<vector<pair<int, int>>>> Timeline;
 class ChromosomeEvaluator {
 private:
     const vector<vector<int>>& parents;      // vertices' parents
+    const vector<vector<int>>& headParents;  // vertices' parents without inseparables
     const vector<vector<int>>& inseparables; // inseparable chains with self
     const vector<vector<int>>& workers;      // contractor -> worker -> count
     vector<double> volume;                   // work -> worker -> WorkUnit.min_req
@@ -39,7 +41,6 @@ private:
     int totalWorksCount;
     PyObject* pythonWrapper;
     bool useExternalWorkEstimator;
-    int numThreads;
 
     inline static float get_productivity(size_t workerType, int worker_count) {
         // TODO
@@ -210,30 +211,68 @@ private:
     }
 
 public:
+    int numThreads;
+
     explicit ChromosomeEvaluator(EvaluateInfo* info)
-        : parents(info->parents), inseparables(info->inseparables), workers(info->workers) {
+        : parents(info->parents), headParents(info->headParents), inseparables(info->inseparables), workers(info->workers) {
         this->totalWorksCount = info->totalWorksCount;
         this->pythonWrapper = info->pythonWrapper;
         this->useExternalWorkEstimator = info->useExternalWorkEstimator;
-//         this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
-        this->numThreads = 1;
+        this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
         this->volume = info->volume;
         this->minReqs = info->minReq;
         this->maxReqs = info->maxReq;
 
-//        cout << volume.size() << endl;
-//        cout << minReqs[5].size() << " " << minReqs.size() << endl;
-//        cout << maxReqs[5].size() << " " << maxReqs.size() << endl;
+//        for (int i = 0; i < headParents.size(); i++) {
+//            cout << i << " | ";
+//            for (int p : headParents[i]) {
+//                cout << p << " ";
+//            }
+//            cout << endl;
+//        }
 
-//         printf("Threads: %i\n", this->numThreads);
+         printf("Genetic running threads: %i\n", this->numThreads);
     }
 
     ~ChromosomeEvaluator() = default;
 
+    bool isValid(Chromosome* chromosome) {
+        bool* visited = new bool[chromosome->numWorks()] { false };
+
+        // check edges
+        for (int i = 0; i < chromosome->numWorks(); i++) {
+            int node = *chromosome->getOrder()[i];
+            visited[node] = true;
+            for (int parent : headParents[node]) {
+                if (!visited[parent]) {
+                    return false;
+                }
+            }
+        }
+
+        delete[] visited;
+        // check resources
+        for (int node = 0; node < chromosome->numWorks(); node++) {
+            int contractor = chromosome->getContractor(node);
+            for (int res = 0; res < chromosome->numResources(); res++) {
+                int count = chromosome->getResources()[node][res];
+                if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     void evaluate(vector<Chromosome*>& chromosomes) {
-//        #pragma omp parallel for firstprivate(chromosomes) shared(results) default (none) num_threads(this->numThreads)
+        #pragma omp parallel for shared(chromosomes) default (none) num_threads(this->numThreads)
         for (int i = 0; i < chromosomes.size(); i++) {
-            chromosomes[i]->fitness = evaluate(i, chromosomes[i]);
+            if (isValid(chromosomes[i])) {
+                chromosomes[i]->fitness = evaluate(i, chromosomes[i]);
+            } else {
+                chromosomes[i]->fitness = INT_MAX;
+            }
         }
     }
 
@@ -242,6 +281,8 @@ public:
 
         auto completed = vector<int>();
         completed.resize(totalWorksCount);
+
+//        cout << "Evaluated" << endl;
 
         int finishTime = 0;
 

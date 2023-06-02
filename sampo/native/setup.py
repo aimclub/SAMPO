@@ -21,7 +21,9 @@ ext_modules = [
                        "python_deserializer.cpp",
                        "chromosome_evaluator.cpp",
                        # "workgraph.h"
-              ],),
+              ],
+              extra_compile_args=['-fopenmp', '/openmp'],
+              extra_link_args=['-lgomp']),
 ]
 
 

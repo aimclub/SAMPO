@@ -26,6 +26,7 @@ private:
     float crossOrderProb, crossResourcesProb, crossContractorsProb;
 
     int sizeSelection;
+    int numThreads;
 
     ChromosomeEvaluator evaluator;
 
@@ -194,14 +195,14 @@ private:
                         void (Genetic::*crossover)(Chromosome *, Chromosome *)) {
         random_device rd;
         auto toMutate = sample(chromosomes, mutate, rd);
-        // TODO pragma omp parallel
+        #pragma omp parallel for firstprivate(mutator) shared(toMutate) default (none) num_threads(this->numThreads)
         for (int i = 0; i < toMutate.size(); i++) {
             (this->*mutator)(toMutate[i]);
         }
 
         // multiply with 2 because of 2 chromosomes needed for crossover operation
         auto toCross = sample(chromosomes, 2 * cross, rd);
-        // TODO pragma omp parallel
+        #pragma omp parallel for firstprivate(crossover) shared(toCross) default (none) num_threads(this->numThreads)
         for (int i = 0; i < toCross.size(); i += 2) {
             (this->*crossover)(toCross[i], toCross[i + 1]);
         }
@@ -267,6 +268,11 @@ private:
                       return array[left]->fitness < array[right]->fitness;
                   });
 
+//        for (int i = 0; i < indices.size(); i++) {
+//            cout << array[indices[i]]->fitness << " ";
+//        }
+//        cout << endl;
+
         return indices;
     }
 
@@ -280,7 +286,6 @@ private:
         return result;
     }
 
-    // return the position of new leader, and -1 if the old one should be used
     static Chromosome* updateHOF(vector<Chromosome *> &population, Chromosome* oldLeader) {
         Chromosome* leader = oldLeader;
         for (auto & chromosome : population) {
@@ -306,7 +311,8 @@ public:
             : resourceMinBorder(resourcesMinBorder), seed(seed), evaluator(evaluator), sizeSelection(sizeSelection),
               mutateOrderProb(mutateOrder), mutateResourcesProb(mutateResources),
               mutateContractorsProb(mutateContractors),
-              crossOrderProb(crossOrder), crossResourcesProb(crossResources), crossContractorsProb(crossContractors) {
+              crossOrderProb(crossOrder), crossResourcesProb(crossResources), crossContractorsProb(crossContractors),
+              numThreads(evaluator.numThreads) {
         // TODO
     }
 
@@ -319,7 +325,7 @@ public:
 
         cout << "Start population size: " << population.size() << endl;
 
-        int maxPlateau = 10;
+        int maxPlateau = 100;
         int curPlateau = 0;
 
         evaluator.evaluate(population);
@@ -335,10 +341,10 @@ public:
 
         int g = 0;
         // TODO Propagate from Python
-        const int MAX_GENERATIONS = 10;
+        const int MAX_GENERATIONS = 1000;
 
         while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
-            printf("--- Generation %i | fitness = %i\n", g, bestChromosome->fitness);
+//            printf("--- Generation %i | fitness = %i\n", g, bestChromosome->fitness);
             // update plateau info
             if (bestChromosome->fitness == prevFitness) {
                 curPlateau++;
@@ -346,21 +352,22 @@ public:
                 curPlateau = 0;
             }
 
-
-            // TODO Now we have some general problem near Chromosome NPE
             auto offspring = selection(population);
 
-            cout << "Selected " << offspring.size() << " individuals" << endl;
+//            cout << "Selected " << offspring.size() << " individuals" << endl;
 
             auto nextGeneration = applyAll(offspring);
 
             evaluator.evaluate(nextGeneration);
 
             auto newBest = updateHOF(nextGeneration, bestChromosome);
-            if (newBest == bestChromosome) {
-                // copy because previous leader should be deleted with the previous generation
-                bestChromosome = new Chromosome(newBest);
-            }
+            bestChromosome = new Chromosome(newBest);
+//            if (newBest == bestChromosome) {
+//                // copy because previous leader should be deleted with the previous generation
+//                bestChromosome = new Chromosome(newBest);
+//            } else {
+//                bestChromosome = newBest;
+//            }
 
             // renew population
             deleteChromosomes(population);
@@ -371,6 +378,8 @@ public:
             g++;
         }
         deleteChromosomes(population);
+
+//        cout << "Result validation: " << evaluator.isValid(bestChromosome) << endl;
 
         return bestChromosome;
     }

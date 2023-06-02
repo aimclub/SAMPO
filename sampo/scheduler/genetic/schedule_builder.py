@@ -37,7 +37,7 @@ def build_schedule(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec,
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
-                                                 FitnessFunction] = TimeFitness,
+                   FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -122,9 +122,9 @@ def build_schedule(wg: WorkGraph,
             inseparable_parents[child] = node
 
     # here we aggregate information about relationships from the whole inseparable chain
-    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
-                                         for inseparable in node.get_inseparable_chain_with_self()
-                                         for child in inseparable.children]
+    children = {work_id2index[node.id]: list(set([work_id2index[inseparable_parents[child].id]
+                                                  for inseparable in node.get_inseparable_chain_with_self()
+                                                  for child in inseparable.children]))
                 for node in nodes}
 
     parents = {work_id2index[node.id]: [] for node in nodes}
@@ -154,9 +154,11 @@ def build_schedule(wg: WorkGraph,
             raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
-                           index2node, work_estimator)
+                           parents, work_estimator)
     # create population of a given size
     pop = toolbox.population(n=population_size)
+
+    print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     if not native.native:
         # save best individuals
@@ -171,7 +173,6 @@ def build_schedule(wg: WorkGraph,
 
         fitness_f = fitness_constructor(native.evaluate)
 
-        print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
         start = time.time()
 
         # map to each individual fitness function
@@ -342,12 +343,13 @@ def build_schedule(wg: WorkGraph,
 
         print(f'Final time: {hof[0].fitness.values[0]}')
         print(f'Generations processing took {(time.time() - start) * 1000} ms')
-        print(f'Evaluation time: {evaluation_time}')
+        print(f'Evaluation time: {evaluation_time * 1000}')
     else:
+        native_start = time.time()
         chromosome = native.run_genetic(list([ind[0] for ind in pop]),
                                         mutate_order, mutate_order, mutate_resources, mutate_resources,
                                         mutate_resources, mutate_resources, selection_size)
-
+        print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
     scheduled_works, schedule_start_time, timeline, order_nodes \
         = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
@@ -356,7 +358,6 @@ def build_schedule(wg: WorkGraph,
                                          spec, timeline,
                                          assigned_parent_time,
                                          work_estimator)
-
 
     if show_fitness_graph:
         sns.lineplot(

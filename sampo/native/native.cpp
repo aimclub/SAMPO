@@ -9,6 +9,9 @@
 #include "python_deserializer.h"
 #include "utils/use_numpy.h"
 
+
+#include <chrono>
+
 // GLOBAL TODOS
 // TODO Make all classes with encapsulation - remove public fields
 // TODO Make parallel runtime
@@ -57,7 +60,11 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
                           &crossOrderProb, &crossResourcesProb, &crossContractorsProb, &sizeSelection)) {
         cout << "Can't parse arguments" << endl;
     }
+    auto start = chrono::high_resolution_clock::now();
     auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+    cout << "Chromosomes decoded in " << duration.count() << " ms" << endl;
 
     ChromosomeEvaluator evaluator(infoPtr);
     Genetic g(infoPtr->minReq,
@@ -65,9 +72,9 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
               crossOrderProb, crossResourcesProb, crossContractorsProb,
               sizeSelection, evaluator);
     Chromosome* result;
-    Py_BEGIN_ALLOW_THREADS;
+//    Py_BEGIN_ALLOW_THREADS;
     result = g.run(chromosomes);
-    Py_END_ALLOW_THREADS;
+//    Py_END_ALLOW_THREADS;
     auto pyResult = PythonDeserializer::encodeChromosome(result);
     delete result;
     return pyResult;

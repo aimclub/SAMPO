@@ -21,8 +21,6 @@
 #include <omp.h>
 #include <set>
 
-using namespace std;
-
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
 

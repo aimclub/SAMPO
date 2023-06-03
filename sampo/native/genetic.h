@@ -61,38 +61,38 @@ private:
             return;
         }
 
-//        int crossPoint = rnd(rd);
-//
-//        set<int> headA;
-//        set<int> headB;
-//        vector<int> toA;
-//        vector<int> toB;
-//        // store heads
-//        for (int i = 0; i < crossPoint; i++) {
-//            headA.insert(*a->getOrder()[i]);
-//            headB.insert(*b->getOrder()[i]);
-//        }
-//        int indA = crossPoint;
-//        int indB = crossPoint;
-//        for (int i = 0; i < a->getOrder().size(); i++) {
-//            int curA = *a->getOrder()[i];
-//            int curB = *b->getOrder()[i];
-//            // if cur work not in head, insert work
-//            if (headA.find(curB) == headA.end()) {
-//                if (indA >= a->numWorks()) {
-//                    cout << "Overflow A" << endl;
-//                } else {
-//                    *a->getOrder()[indA++] = curB;
-//                }
-//            }
-//            if (headB.find(curA) == headB.end()) {
-//                if (indB >= a->numWorks()) {
-//                    cout << "Overflow B" << endl;
-//                } else {
-//                    *b->getOrder()[indB++] = curA;
-//                }
-//            }
-//        }
+        int crossPoint = rnd(rd);
+
+        set<int> headA;
+        set<int> headB;
+        vector<int> toA;
+        vector<int> toB;
+        // store heads
+        for (int i = 0; i < crossPoint; i++) {
+            headA.insert(*a->getOrder()[i]);
+            headB.insert(*b->getOrder()[i]);
+        }
+        int indA = crossPoint;
+        int indB = crossPoint;
+        for (int i = 0; i < a->getOrder().size(); i++) {
+            int curA = *a->getOrder()[i];
+            int curB = *b->getOrder()[i];
+            // if cur work not in head, insert work
+            if (headA.find(curB) == headA.end()) {
+                if (indA >= a->numWorks()) {
+                    cout << "Overflow A" << endl;
+                } else {
+                    *a->getOrder()[indA++] = curB;
+                }
+            }
+            if (headB.find(curA) == headB.end()) {
+                if (indB >= a->numWorks()) {
+                    cout << "Overflow B" << endl;
+                } else {
+                    *b->getOrder()[indB++] = curA;
+                }
+            }
+        }
     }
 
     // TODO Think about make own more cache-friendly shuffle using areas around target element
@@ -203,7 +203,7 @@ private:
         // multiply with 2 because of 2 chromosomes needed for crossover operation
         auto toCross = sample(chromosomes, 2 * cross, rd);
         #pragma omp parallel for firstprivate(crossover) shared(toCross) default (none) num_threads(this->numThreads)
-        for (int i = 0; i < toCross.size(); i += 2) {
+        for (int i = 0; i < toCross.size() - 1; i += 2) {
             (this->*crossover)(toCross[i], toCross[i + 1]);
         }
         // add to global list
@@ -226,12 +226,26 @@ private:
                        &Genetic::crossContractors);
     }
 
-    vector<Chromosome *> applyAll(vector<Chromosome *> &chromosomes) {
-        vector<Chromosome *> offspring;
-        applyOrder(chromosomes, offspring);
-        applyResources(chromosomes, offspring);
-        applyContractors(chromosomes, offspring);
-        return offspring;
+    typedef void (Genetic::*p_op_apply)(vector<Chromosome *>&, vector<Chromosome *>&);
+    const static int APPLY_FUNCTIONS_COUNT = 3;
+    p_op_apply applyFunctions[APPLY_FUNCTIONS_COUNT];
+
+    inline vector<Chromosome *> applyAll(vector<Chromosome *> &chromosomes) {
+        vector<Chromosome *> nextGen[APPLY_FUNCTIONS_COUNT];
+
+        // TODO Research about HOW adding this directive slows down the runtime
+//        #pragma omp parallel for shared(chromosomes, nextGen) default (none) num_threads(this->numThreads)
+        for (int i = 0; i < APPLY_FUNCTIONS_COUNT; i++) {
+            (this->*applyFunctions[i])(chromosomes, nextGen[i]);
+        }
+
+        // aggregate results
+        vector<Chromosome*> results;
+        for (auto & functionResult : nextGen) {
+            results.insert(results.end(), functionResult.begin(), functionResult.end());
+        }
+
+        return results;
     }
 
 //    /**
@@ -314,16 +328,15 @@ public:
               crossOrderProb(crossOrder), crossResourcesProb(crossResources), crossContractorsProb(crossContractors),
               numThreads(evaluator.numThreads) {
         // TODO
+        applyFunctions[0] = &Genetic::applyOrder;
+        applyFunctions[1] = &Genetic::applyResources;
+        applyFunctions[2] = &Genetic::applyContractors;
     }
 
     // TODO Add multi-criteria optimization (object hierarchy of fitness functions)
     Chromosome *run(vector<Chromosome *> &initialPopulation) {
-        cout << "Initial population size: " << initialPopulation.size() << endl;
-
         // TODO Ensure this is copy
         auto population = initialPopulation;
-
-        cout << "Start population size: " << population.size() << endl;
 
         int maxPlateau = 100;
         int curPlateau = 0;
@@ -341,7 +354,7 @@ public:
 
         int g = 0;
         // TODO Propagate from Python
-        const int MAX_GENERATIONS = 1000;
+        const int MAX_GENERATIONS = 100;
 
         while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
 //            printf("--- Generation %i | fitness = %i\n", g, bestChromosome->fitness);
@@ -362,12 +375,6 @@ public:
 
             auto newBest = updateHOF(nextGeneration, bestChromosome);
             bestChromosome = new Chromosome(newBest);
-//            if (newBest == bestChromosome) {
-//                // copy because previous leader should be deleted with the previous generation
-//                bestChromosome = new Chromosome(newBest);
-//            } else {
-//                bestChromosome = newBest;
-//            }
 
             // renew population
             deleteChromosomes(population);

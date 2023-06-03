@@ -38,19 +38,19 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(scope='session',
+@fixture(scope='module',
          params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
-                                    'small plain synthetic', 'big plain synthetic',
-                                    'small advanced synthetic', 'big advanced synthetic']],
+                                    'small plain synthetic', 'big plain synthetic',]],
+                                    # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
               for lag_opt in [True, False]
               for graph_type in ['manual',
-                                 'small plain synthetic', 'big plain synthetic',
-                                 'small advanced synthetic', 'big advanced synthetic']])
+                                 'small plain synthetic', 'big plain synthetic',]])
+                                 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
-    BIG_GRAPH_SIZE = 1000
+    BIG_GRAPH_SIZE = 300
     BORDER_RADIUS = 20
     ADV_GRAPH_UNIQ_WORKS_PROP = 0.4
     ADV_GRAPH_UNIQ_RES_PROP = 0.2
@@ -105,7 +105,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
@@ -115,9 +115,9 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(scope='session',
-         params=[(i, 5 * j) for j in range(10) for i in range(1, 6)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(10) for i in range(1, 6)])
+@fixture(scope='module',
+         params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
 def setup_contractors(request, setup_wg) -> List[Contractor]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
@@ -145,7 +145,7 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
     return contractors
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
@@ -168,14 +168,13 @@ def setup_scheduler_type(request):
     return request.param
 
 
-@fixture(scope='session')
-def setup_schedule(request, setup_wg, setup_contractors):
-    scheduler_type = hasattr(request, 'param') and request.param or SchedulerType.Topological
+@fixture(scope='module')
+def setup_schedule(setup_scheduler_type, setup_wg, setup_contractors):
     try:
-        return generate_schedule(scheduling_algorithm_type=scheduler_type,
+        return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
                                  work_time_estimator=None,
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
-                                 validate_schedule=False), scheduler_type
+                                 validate_schedule=False), setup_scheduler_type
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

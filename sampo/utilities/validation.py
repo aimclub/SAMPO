@@ -6,7 +6,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.time import Time
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 
 def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contractor]) -> None:
@@ -14,6 +14,7 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contr
     Checks if schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
     If it finishes without any exception, it means successful passing of the verification
+
     :param contractors:
     :param wg:
     :param schedule: to apply verification to

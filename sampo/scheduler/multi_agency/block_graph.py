@@ -4,7 +4,7 @@ from typing import Callable
 
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
-from sampo.utilities.collections import build_index
+from sampo.utilities.collections_util import build_index
 
 
 class BlockNode:
@@ -47,14 +47,23 @@ class BlockGraph:
 
     def to_work_graph(self) -> WorkGraph:
         """
-        Creates `WorkGraph` that are equal to this `BlockGraph`.
+        Creates `WorkGraph` that is equal to this `BlockGraph`.
         """
         copied_nodes = deepcopy(self.nodes)
-        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.start
-        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.finish
+        for node in copied_nodes:
+            # node.wg = WorkGraph._deserialize(node.wg._serialize())
+            for wg_node in node.wg.nodes:
+                wg_node.__dict__.pop('parents', None)
+                wg_node.__dict__.pop('parents_set', None)
+                wg_node.__dict__.pop('children', None)
+                wg_node.__dict__.pop('children_set', None)
+                wg_node.__dict__.pop('inseparable_parent', None)
+                wg_node.__dict__.pop('inseparable_son', None)
+        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
+        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
 
         for end in copied_nodes:
-            end.wg.start.add_parents([start.wg.finish for start in end.blocks_from])
+            end.wg.start.add_parents([start.wg.finish for start in end.blocks_to])
 
         return WorkGraph(global_start, global_end)
 

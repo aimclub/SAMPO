@@ -12,6 +12,7 @@ from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
@@ -151,12 +152,21 @@ def setup_default_schedules(setup_wg, setup_contractors):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator=work_estimator, resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors)
+        return scheduler_class(work_estimator=work_estimator,
+                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors)
+
+    def init_k_schedule(scheduler_class, k):
+        return scheduler_class(work_estimator=work_estimator,
+                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors)
 
     try:
         return {
             "heft_end": init_schedule(HEFTScheduler),
-            "heft_between": init_schedule(HEFTBetweenScheduler)
+            "heft_between": init_schedule(HEFTBetweenScheduler),
+            "12.5%": init_k_schedule(HEFTScheduler, 8),
+            "25%": init_k_schedule(HEFTScheduler, 4),
+            "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+            "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
         }
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

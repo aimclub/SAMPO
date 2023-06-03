@@ -96,7 +96,7 @@ def get_contractor_for_resources_schedule(resources: Union[DataFrame, List[Dict[
         return np.ceil(min_contractor * contractor_capacity_in / 10)
 
     resources_df = resources if isinstance(resources, DataFrame) else DataFrame(resources)
-    contractor_id = contractor_id if contractor_id else str(uuid4().hex)
+    contractor_id = contractor_id if contractor_id is not None else str(uuid4().hex)
 
     # TODO: process equipment
     return Contractor(id=contractor_id,

@@ -9,7 +9,7 @@ from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
-from sampo.utilities.datetime import add_time_delta
+from sampo.utilities.datetime_util import add_time_delta
 from sampo.utilities.schedule import fix_split_tasks
 
 ResourceSchedule = Dict[str, List[Tuple[Time, Time]]]
@@ -23,7 +23,7 @@ class Schedule(JSONSerializable['Schedule']):
     """
     _schedule: DataFrame
 
-    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'contractor', 'cost',
+    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
                                 'volume', 'measurement', 'successors', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
@@ -130,7 +130,8 @@ class Schedule(JSONSerializable['Schedule']):
             -> 'Schedule':
         """
         Factory method to create a Schedule object from list of Schedule works and additional info
-        :param wg: Work graph.
+        :param wg: Work graph. If passed, given order of works should be
+                   overridden by time-topological order supported by given WorkGraph
         :param works: Iterable collection of ScheduledWork's.
         :return: Schedule.
         """
@@ -155,7 +156,8 @@ class Schedule(JSONSerializable['Schedule']):
 
         df = [(i,                                                 # idx
                w.work_unit.id,                                    # task_id
-               w.work_unit.name,                                  # task_name
+               w.work_unit.display_name,                          # task_name
+               w.work_unit.name,                                  # task_name_mapped
                w.contractor,                                      # contractor info
                w.cost,                                            # work cost
                *info(w.work_unit),                                # volume, measurement, successors

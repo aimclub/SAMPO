@@ -25,6 +25,8 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     volume: Optional[float] = 1
     volume_type: Optional[str] = "unit"
 
+    display_name: str = ''
+
     # TODO: describe the function (description, parameters, return type)
     @custom_serializer('worker_reqs')
     def worker_reqs_serializer(self, value):
@@ -75,6 +77,24 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                 return Time.inf()
             times.append(Time(req.volume // productivity))
         return max(times)
+
+    def __getstate__(self):
+        # custom method to avoid calling __hash__() on GraphNode objects
+        return self._serialize()
+
+    def __setstate__(self, state):
+        new_work_unit = self._deserialize(state)
+        self.worker_reqs = new_work_unit.worker_reqs
+        self.equipment_reqs = new_work_unit.equipment_reqs
+        self.object_reqs = new_work_unit.object_reqs
+        self.material_reqs = new_work_unit.material_reqs
+        self.id = new_work_unit.id
+        self.name = new_work_unit.name
+        self.is_service_unit = new_work_unit.is_service_unit
+        self.volume = new_work_unit.volume
+        self.volume_type = new_work_unit.volume_type
+        self.group = new_work_unit.group
+        self.display_name = new_work_unit.display_name
 
 
 # TODO: describe the function (description, parameters, return type)

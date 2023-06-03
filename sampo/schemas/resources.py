@@ -16,14 +16,15 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     pass
 
 
-# TODO describe "productivity"
 @dataclass
 class Worker(Resource):
     """
     A class dedicated to human resources
+
     :param count: the number of people in this resource
     :param contractor_id: Contractor id if resources are added directly to the contractor
-    :param productivity: Contractor id if resources are added directly to the contractor
+    :param productivity: interval from Gaussian or Uniform distribution, that contains possible values of
+    productivity of certain worker
     """
 
     def __init__(self,
@@ -41,8 +42,12 @@ class Worker(Resource):
 
     ignored_fields = ['productivity']
 
-    # TODO: describe the function (description, return type)
     def copy(self):
+        """
+        Return copied current object
+
+        :return: object of Worker class
+        """
         return Worker(id=self.id,
                       name=self.name,
                       count=self.count,
@@ -50,6 +55,12 @@ class Worker(Resource):
                       productivity=self.productivity)
 
     def with_count(self, count: int) -> 'Worker':
+        """
+        Update count field
+
+        :param count: amount of current type of worker
+        :return: upgraded current object
+        """
         self.count = count
         return self
 
@@ -57,21 +68,27 @@ class Worker(Resource):
         """Returns cost of this worker entry"""
         return self.cost_one_unit * int(self.count)
 
-    # TODO: describe the function (description, return type)
     def get_agent_id(self) -> AgentId:
+        """
+        Return contractor of current worker
+
+        :return: contractor's id and name
+        """
         return self.contractor_id, self.name
 
-    # TODO: describe the function (description, return type)
     def get_static_productivity(self) -> float:
+        """Return the average productivity of worker team"""
         return self.productivity.mean * self.count
 
-    # TODO: describe the function (description, return type)
     def get_stochastic_productivity(self, rand: Optional[Random] = None) -> float:
+        """Return the stochastic productivity of worker team"""
         return self.productivity.rand_float(rand) * self.count
 
-    # TODO: describe the function (description, return type)
     def __repr__(self):
         return f'{self.count} {self.name}'
+
+    def __str__(self):
+        return self.__repr__()
 
 # TODO: describe the class (description)
 @dataclass

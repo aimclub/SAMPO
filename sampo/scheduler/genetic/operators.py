@@ -183,6 +183,14 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     :param init_chromosomes:
     :return: chromosome
     """
+
+    def randomized_init() -> ChromosomeType:
+        schedule = RandomizedTopologicalScheduler(work_estimator,
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors)
+        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                                    contractor2index, contractor_borders, schedule)
+
     chance = rand.random()
     if chance < 0.2:
         chromosome = init_chromosomes["heft_end"]
@@ -197,11 +205,10 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     elif chance < 0.8:
         chromosome = init_chromosomes["87.5%"]
     else:
-        schedule = RandomizedTopologicalScheduler(work_estimator,
-                                                  int(rand.random() * 1000000)) \
-            .schedule(wg, contractors)
-        chromosome = convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                                    contractor2index, contractor_borders, schedule)
+        chromosome = randomized_init()
+
+    if chromosome is None:
+        chromosome = randomized_init()
     return chromosome
 
 

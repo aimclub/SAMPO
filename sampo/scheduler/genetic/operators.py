@@ -209,6 +209,7 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
 
     if chromosome is None:
         chromosome = randomized_init()
+
     return chromosome
 
 

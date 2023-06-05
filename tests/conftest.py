@@ -1,6 +1,6 @@
 from collections import defaultdict
 from random import Random
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from uuid import uuid4
 
 import pytest
@@ -108,7 +108,9 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
 
 @fixture(scope='module')
-def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
+def setup_worker_pool(setup_scheduler_parameters) -> WorkerContractorPool:
+    _, setup_contractors = setup_scheduler_parameters
+
     worker_pool = defaultdict(dict)
     for contractor in setup_contractors:
         for worker in contractor.workers.values():
@@ -120,7 +122,7 @@ def setup_worker_pool(setup_contractors) -> WorkerContractorPool:
 @fixture(scope='module',
          params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
-def setup_contractors(request, setup_wg) -> List[Contractor]:
+def setup_scheduler_parameters(request, setup_wg) -> tuple[WorkGraph, list[Contractor]]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
 
@@ -128,7 +130,7 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
-            resource_req[req.kind] = max(contractor_min_resources,
+            resource_req[req.kind] = max(contractor_min_resources, req.min_count,
                                          resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
@@ -144,12 +146,14 @@ def setup_contractors(request, setup_wg) -> List[Contractor]:
                                       workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
-    return contractors
+    return setup_wg, contractors
 
 
 @fixture(scope='module')
-def setup_default_schedules(setup_wg, setup_contractors):
+def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: Optional[WorkTimeEstimator] = None
+
+    setup_wg, setup_contractors = setup_scheduler_parameters
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator,
@@ -160,7 +164,7 @@ def setup_default_schedules(setup_wg, setup_contractors):
                                resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors)
 
     try:
-        return {
+        return setup_scheduler_parameters, {
             "heft_end": init_schedule(HEFTScheduler),
             "heft_between": init_schedule(HEFTBetweenScheduler),
             "12.5%": init_k_schedule(HEFTScheduler, 8),
@@ -180,7 +184,9 @@ def setup_scheduler_type(request):
 
 
 @fixture(scope='module')
-def setup_schedule(setup_scheduler_type, setup_wg, setup_contractors):
+def setup_schedule(setup_scheduler_type, setup_scheduler_parameters):
+    setup_wg, setup_contractors = setup_scheduler_parameters
+
     try:
         return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
                                  work_time_estimator=None,

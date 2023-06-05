@@ -38,7 +38,7 @@ class AverageBinarySearchResourceOptimizingScheduler:
         k_min = 1
         k_max = 10000
 
-        last_correct = 2
+        last_correct = k_max
 
         while k_max - k_min > 0.05:
             m = (k_min + k_max) / 2
@@ -49,4 +49,6 @@ class AverageBinarySearchResourceOptimizingScheduler:
                 last_correct = m
                 k_min = m
 
-        return call_scheduler(last_correct)
+        res = call_scheduler(last_correct)
+
+        return res

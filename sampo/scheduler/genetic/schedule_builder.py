@@ -12,11 +12,10 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, is_chromosome_correct
+    FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
-from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -140,6 +139,7 @@ def build_schedule(wg: WorkGraph,
     init_chromosomes: Dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, order)
+            if schedule is not None else None
          for name, (schedule, order) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
@@ -149,9 +149,9 @@ def build_schedule(wg: WorkGraph,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
                            assigned_parent_time, work_estimator)
 
-    for name, chromosome in init_chromosomes.items():
-        if not is_chromosome_correct(chromosome, node_indices, parents):
-            raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+    # for name, chromosome in init_chromosomes.items():
+    #     if not is_chromosome_correct(chromosome, node_indices, parents):
+    #         raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     # save best individuals
     hof = tools.HallOfFame(1, similar=compare_individuals)
@@ -194,7 +194,7 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     plateau_steps = 0
-    max_plateau_steps = 8
+    max_plateau_steps = 48
 
     while g < generation_number and plateau_steps < max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):

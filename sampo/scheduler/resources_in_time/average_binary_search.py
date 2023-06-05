@@ -38,12 +38,15 @@ class AverageBinarySearchResourceOptimizingScheduler:
         k_min = 1
         k_max = 10000
 
+        last_correct = 2
+
         while k_max - k_min > 0.05:
             m = (k_min + k_max) / 2
             time_m = fitness(m)
             if time_m.is_inf():
                 k_max = m
             else:
+                last_correct = m
                 k_min = m
 
-        return call_scheduler(k_min)
+        return call_scheduler(last_correct)

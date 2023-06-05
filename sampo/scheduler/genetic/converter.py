@@ -61,7 +61,8 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     return order_chromosome, resource_chromosome, resource_border_chromosome
 
 
-def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: WorkerContractorPool,
+def convert_chromosome_to_schedule(chromosome: ChromosomeType,
+                                   worker_pool: WorkerContractorPool,
                                    index2node: dict[int, GraphNode],
                                    index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],

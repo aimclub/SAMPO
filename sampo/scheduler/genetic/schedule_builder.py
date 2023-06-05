@@ -37,7 +37,7 @@ def build_schedule(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec,
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
-                                                 FitnessFunction] = TimeFitness,
+                   FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -348,7 +348,6 @@ def build_schedule(wg: WorkGraph,
                                         mutate_order, mutate_order, mutate_resources, mutate_resources,
                                         mutate_resources, mutate_resources, selection_size)
 
-
     scheduled_works, schedule_start_time, timeline, order_nodes \
         = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                          index2contractor_obj,
@@ -356,7 +355,6 @@ def build_schedule(wg: WorkGraph,
                                          spec, timeline,
                                          assigned_parent_time,
                                          work_estimator)
-
 
     if show_fitness_graph:
         sns.lineplot(

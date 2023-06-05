@@ -352,7 +352,10 @@ def build_schedule(wg: WorkGraph,
         = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                          index2contractor_obj,
                                          worker_pool_indices,
-                                         spec, timeline,
+                                         spec,
+                                         worker_name2index,
+                                         contractor2index,
+                                         timeline,
                                          assigned_parent_time,
                                          work_estimator)
 

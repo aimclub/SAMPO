@@ -95,13 +95,17 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
 
-def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: WorkerContractorPool,
+def init_toolbox(wg: WorkGraph, contractors: List[Contractor],
+                 worker_pool: WorkerContractorPool,
                  index2node: Dict[int, GraphNode],
-                 work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
+                 work_id2index: Dict[str, int],
+                 worker_name2index: Dict[str, int],
                  index2contractor: Dict[int, str],
                  index2contractor_obj: Dict[int, Contractor],
                  init_chromosomes: Dict[str, ChromosomeType],
-                 mutate_order: float, mutate_resources: float, selection_size: int,
+                 mutate_order: float,
+                 mutate_resources: float,
+                 selection_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
                  worker_pool_indices: dict[int, dict[int, Worker]],
@@ -149,7 +153,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
-                     work_estimator=work_estimator)
+                     work_estimator=work_estimator, worker_name2index=worker_name2index, contractor2index=contractor2index)
     return toolbox
 
 

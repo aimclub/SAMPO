@@ -212,13 +212,10 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return self._children_edges
 
-    # TODO: describe the function (description, return type)
     @property
     def work_unit(self) -> WorkUnit:
-
         return self._work_unit
 
-    # TODO: describe the function (description, return type)
     @property
     def id(self) -> str:
         return self.work_unit.id
@@ -258,8 +255,13 @@ class GraphNode(JSONSerializable['GraphNode']):
             if inseparable_child \
             else []
 
-    # TODO: describe the function (description, parameters, return type)
     def _add_child_edge(self, child: GraphEdge):
+        """
+        Append new edge with children
+
+        :param child:
+        :return: current graph node
+        """
         self._children_edges.append(child)
 
 

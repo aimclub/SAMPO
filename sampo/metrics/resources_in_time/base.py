@@ -29,28 +29,48 @@ def max_time_schedule(schedule: Union[ScheduleWorkDict, Schedule]):
 
 def get_schedule_with_time(scheduler: Scheduler, wg: WorkGraph,
                            agent_counts: np.array, agent_names: List[str]) -> Tuple[Schedule, Time]:
+    """
+    Build schedule and return it with max execution time
+
+    :param scheduler:
+    :param wg:
+    :param agent_counts:
+    :param agent_names:
+    :return:
+    """
     scheduled_works = scheduler.schedule(wg, agents_to_contractors(agent_counts, agent_names))
     max_time = max_time_schedule(scheduled_works)
     return scheduled_works, max_time
 
 
-def agents_to_contractors(agent_counts: np.array, agent_names: List[str],
+def agents_to_contractors(agent_counts: np.array,
+                          agent_names: List[str],
                           contractor_id: Optional[str or None] = None,
                           contractor_name: Optional[str] = ""):
     contractor_id = contractor_id or uuid4()
-    # TODO Remove...
-    # TODO: remove try
     try:
         workers = [Worker(str(uuid4()), name, count) for name, count in zip(agent_names, agent_counts)]
     except Exception:
-        print('обосрамс...')
+        print('Я упал')
     workers_dict = {(w.name, w.productivity_class): w for w in workers}
     return [Contractor(contractor_id, contractor_name, agent_names, [], workers_dict, {})]
 
 
 def is_resources_good(wg: WorkGraph,
-                      agent_counts: np.array, agent_names: List[str],
-                      scheduler: Scheduler, deadline: Time) -> bool:
+                      agent_counts: np.array,
+                      agent_names: List[str],
+                      scheduler: Scheduler,
+                      deadline: Time) -> bool:
+    """
+    Return if schedule with given set of resources will be done before deadline
+
+    :param wg:
+    :param agent_counts:
+    :param agent_names:
+    :param scheduler:
+    :param deadline:
+    :return:
+    """
     try:
         _, schedule_time = get_schedule_with_time(scheduler, wg, agent_counts, agent_names)
         return schedule_time <= deadline
@@ -63,6 +83,14 @@ def is_resources_good(wg: WorkGraph,
 
 
 def find_min_agents(wg: WorkGraph, max_workers: int) -> Tuple[np.array, List[str]]:
+    """
+    Find minimum amount of resource of certain type among each agent and build list of agents with minimum amount
+    certain type of resource
+
+    :param wg:
+    :param max_workers:
+    :return:
+    """
     min_agents = defaultdict(lambda: max_workers)
     for node in wg.nodes:
         for req in node.work_unit.worker_reqs:
@@ -72,7 +100,7 @@ def find_min_agents(wg: WorkGraph, max_workers: int) -> Tuple[np.array, List[str
     return min_counts, agent_names
 
 
-def get_minimal_counts_by_schedule(scheduled_works: Schedule, agent_names: List[str]) -> np.array:
+def get_minimal_counts_by_schedule(scheduled_works: Schedule, agent_names: list[str]) -> np.array:
     workers_intervals = get_workers_intervals(scheduled_works)
     max_used_counts = defaultdict(int)
     for name_index in workers_intervals:
@@ -82,7 +110,9 @@ def get_minimal_counts_by_schedule(scheduled_works: Schedule, agent_names: List[
     return optimal_counts
 
 
-def init_borders(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
+def init_borders(wg: WorkGraph,
+                 scheduler: Scheduler,
+                 deadline: Time,
                  worker_factor: int,
                  max_workers: int,
                  right_agents: WorkerContractorPool or None) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], List[str]]:
@@ -99,10 +129,14 @@ def init_borders(wg: WorkGraph, scheduler: Scheduler, deadline: Time,
     if not is_resources_good(wg, right_counts, agent_names, scheduler, deadline):
         # wg is not resolved in time by any set of workers
         return None, right_counts, agent_names
+
     return left_counts, right_counts, agent_names
 
 
-def prepare_answer(counts: np.array, agent_names: List[str], wg: WorkGraph, scheduler: Scheduler,
+def prepare_answer(counts: np.array,
+                   agent_names: List[str],
+                   wg: WorkGraph,
+                   scheduler: Scheduler,
                    dry_resources: bool):
     schedule, max_time = get_schedule_with_time(scheduler, wg, counts, agent_names)
     if dry_resources:

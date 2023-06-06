@@ -112,6 +112,12 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  parents: Dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
+    """
+    Object, that include set of functions (tools) for genetic model and other functions related to it.
+    List of parameters, that received this function, is sufficient and complete to manipulate with genetic
+
+    :return: Object, included tools for genetic
+    """
     toolbox = base.Toolbox()
     # generate initial population
     toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,

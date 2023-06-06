@@ -11,6 +11,9 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class InputPipeline(ABC):
+    """
+    Base class to build different pipeline, that help to use the framework
+    """
 
     @abstractmethod
     def wg(self, wg: WorkGraph) -> 'InputPipeline':

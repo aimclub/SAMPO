@@ -14,16 +14,19 @@ from sampo.structurator import graph_restructuring
 
 
 class DefaultInputPipeline(InputPipeline):
+    """
+    Default pipeline, that help to use framework
+    """
 
     def __init__(self):
-        self._wg = None
-        self._contractors = None
-        self._work_estimator = None
-        self._node_order = None
-        self._lag_optimize = None
-        self._spec = ScheduleSpec()
-        self._assigned_parent_time = Time(0)
-        self._local_optimize_stack = ApplyQueue()
+        self._wg: WorkGraph | None = None
+        self._contractors: list[Contractor] | None = None
+        self._work_estimator: WorkTimeEstimator | None = None
+        self._node_order: list[GraphNode] | None = None
+        self._lag_optimize: bool | None = None
+        self._spec: ScheduleSpec | None = ScheduleSpec()
+        self._assigned_parent_time: Time | None = Time(0)
+        self._local_optimize_stack: ApplyQueue = ApplyQueue()
 
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
         """
@@ -45,10 +48,24 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
+        """
+        Set specification of schedule
+
+        :param spec:
+        :return:
+        """
         self._spec = spec
         return self
 
     def time_shift(self, time: Time) -> 'InputPipeline':
+        """
+        If the schedule should start at a certain time
+
+        :param time:
+        :type time:
+        :return:
+        :rtype:
+        """
         self._assigned_parent_time = time
         return self
 

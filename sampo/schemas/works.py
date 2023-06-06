@@ -12,7 +12,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.serializers import custom_serializer
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
@@ -93,7 +92,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         """
         return self._abstract_estimate(worker_list, get_stochastic_by_worker, rand)
 
-    # TODO: describe the function (description, parameters, return type)
     def _abstract_estimate(self, worker_list: list[Worker],
                            get_productivity: Callable[[Worker, Random], float],
                            rand: Random = None) -> Time:
@@ -143,19 +141,19 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.display_name = new_work_unit.display_name
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
     """
+    Receive productivity of certain worker
 
-    :param w:
-    :param _:
-    :return:
+    :param w: certain worker
+    :param _: parameter for stochastic part
+    :return: result of method get_static_productivity()
     """
     return w.get_static_productivity()
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
+    """Return the stochastic productivity of worker team"""
     return w.get_stochastic_productivity(rand)
 
 

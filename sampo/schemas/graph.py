@@ -67,7 +67,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def __getstate__(self):
         # custom method to avoid calling __hash__() on GraphNode objects
         return self._work_unit._serialize(), \
-               [(e.start.id, e.lag, e.type.value) for e in self._parent_edges]
+            [(e.start.id, e.lag, e.type.value) for e in self._parent_edges]
 
     def __setstate__(self, state):
         # custom method to avoid calling __hash__() on GraphNode objects
@@ -212,13 +212,11 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return self._children_edges
 
-    # TODO: describe the function (description, return type)
     @property
     def work_unit(self) -> WorkUnit:
 
         return self._work_unit
 
-    # TODO: describe the function (description, return type)
     @property
     def id(self) -> str:
         return self.work_unit.id
@@ -258,27 +256,37 @@ class GraphNode(JSONSerializable['GraphNode']):
             if inseparable_child \
             else []
 
-    # TODO: describe the function (description, parameters, return type)
     def _add_child_edge(self, child: GraphEdge):
+        """
+        Append new edge with child
+
+        :param child:
+        :return: current graph node
+        """
         self._children_edges.append(child)
 
 
 GraphNodeDict = Dict[str, GraphNode]
 
 
-# TODO: describe the class (description, parameters)
 # TODO Make property for list of GraphEdges??
 @dataclass(frozen=True)
 class WorkGraph(JSONSerializable['WorkGraph']):
+    """
+    Class to describe graph of works in future schedule. There are 2 additional vertex (service vertex):
+    start, finish - it's required to avoid checking beginning and end of graph
+    """
+    # service vertexes
     start: GraphNode
     finish: GraphNode
 
+    # list of works (i.e. GraphNode)
     nodes: List[GraphNode] = field(init=False)
     adj_matrix: dok_matrix = field(init=False)
+    # TODO: describe dict_nodes
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
 
-    # TODO: describe the function (description, parameters, return type)
     def __post_init__(self) -> None:
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
         # To avoid field set of frozen instance errors
@@ -307,15 +315,24 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'finish', deserialized.finish)
         self.__post_init__()
 
-    # TODO: describe the function (description, return type)
     def _serialize(self) -> T:
+        """
+        Make JSON structure from current graph for convenient transferring
+
+        :return: structure with serialized graph
+        """
         return {
             'nodes': [graph_node._serialize() for graph_node in self.nodes]
         }
 
-    # TODO: describe the function (description, parameters, return type)
     @classmethod
     def _deserialize(cls, representation: T) -> JS:
+        """
+        Receive WorkGraph from one of supported data structures
+
+        :param representation: data structure with deserialized graph
+        :return: object of WorkGraph
+        """
         serialized_nodes = [GraphNode._deserialize(node) for node in representation['nodes']]
         assert not serialized_nodes[0]['parent_edges']
         start_id, finish_id = (serialized_nodes[i]['work_unit'].id for i in (0, -1))
@@ -328,9 +345,14 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
         return WorkGraph(nodes_dict[start_id], nodes_dict[finish_id])
 
-    # TODO: describe the function (description, return type)
-    # TODO Check that adj matrix is really need
+    # TODO: describe the function (return type)
+    # TODO: Check that adj matrix is really need
     def _to_adj_matrix(self) -> Tuple[List[GraphNode], dok_matrix, Dict[str, GraphNode]]:
+        """
+        Receive adjacency matrix from current graph
+
+        :return:
+        """
         ordered_nodes: List[GraphNode] = list(self.start.traverse_children(topologically=True))
         node2ind: Dict[GraphNode, int] = {
             v: i for i, v in enumerate(ordered_nodes)

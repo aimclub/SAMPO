@@ -26,6 +26,7 @@ class ScheduleSpec:
     """
     Here are the container for externally given terms, that Schedule should satisfy.
     Must be used in schedulers.
+
     :param work2spec: work specs
     """
     _work2spec: Dict[str, WorkSpec] = defaultdict(WorkSpec)

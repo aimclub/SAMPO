@@ -59,6 +59,7 @@ def get_worker_contractor_pool(contractors: Union[List['Contractor'], 'Contracto
     """
     Gets agent dictionary from contractors list.
     Alias for frequently used functionality.
+
     :param contractors: List of all the considered contractors
     :return: Dictionary of workers by worker name, next by contractor id
     """

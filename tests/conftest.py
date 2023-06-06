@@ -130,12 +130,16 @@ def setup_scheduler_parameters(request, setup_wg) -> tuple[WorkGraph, list[Contr
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
-            resource_req[req.kind] = max(contractor_min_resources, req.min_count,
+            resource_req[req.kind] = max(contractor_min_resources,
                                          resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():
-        resource_req[req] //= resource_req_count[req]
+        resource_req[req] = resource_req[req] // resource_req_count[req] + 1
+
+    for node in setup_wg.nodes:
+        for req in node.work_unit.worker_reqs:
+            assert resource_req[req.kind] >= req.min_count
 
     # contractors are the same and universal(but multiple)
     contractors = []

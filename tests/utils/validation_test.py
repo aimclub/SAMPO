@@ -102,16 +102,16 @@ def break_schedule(break_type: BreakType, schedule: Schedule, wg: WorkGraph,
     elif break_type == BreakType.ResourcesNotEnoughToWorkReq:
         for swork in broken.values():
             for worker in swork.workers:
-                worker.count = 0
+                worker.count = -1
     elif break_type == BreakType.ResourcesTooBigToWorkReq:
         for swork in broken.values():
             worker2req = build_index(swork.work_unit.worker_reqs, attrgetter('kind'))
             for worker in swork.workers:
-                worker.count = worker2req[worker.name].max_count + 1
+                worker.count = worker2req[worker.name].max_count + 1000000
     elif break_type == BreakType.ResourcesTooBigToSupplyByThisContractor:
         for swork in broken.values():
             for worker in swork.workers:
-                worker.count = agents[worker.name][worker.contractor_id].count + 1
+                worker.count = agents[worker.name][worker.contractor_id].count + 1000000
 
     # print(f'Original: {list(schedule.to_schedule_work_dict.values())}')
     # print(f'Broken  : {list(broken.values())}')

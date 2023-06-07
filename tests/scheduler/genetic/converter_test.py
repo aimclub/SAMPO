@@ -25,7 +25,7 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
     validate_schedule(schedule, setup_wg, setup_contractors)
 
 
-def test_third_part_chromosome(setup_toolbox):
+def test_converter_with_borders_contractor_accounting(setup_toolbox):
     (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()

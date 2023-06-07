@@ -44,7 +44,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
 
     # resources for works part of chromosome
     # +1 stores contractors line
-    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
+    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=np.int32)
 
     for node in order:
         node_id = node.work_unit.id

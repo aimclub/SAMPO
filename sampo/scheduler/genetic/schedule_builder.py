@@ -10,7 +10,7 @@ from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
     FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
@@ -351,13 +351,7 @@ def build_schedule(wg: WorkGraph,
                                         mutate_resources, mutate_resources, selection_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes \
-        = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                         index2contractor_obj,
-                                         worker_pool_indices,
-                                         spec, timeline,
-                                         assigned_parent_time,
-                                         work_estimator)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome)
 
     if show_fitness_graph:
         sns.lineplot(

@@ -2,8 +2,8 @@ from uuid import uuid4
 
 from fixtures import *
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.utilities.validation import validate_schedule
 from sampo.schemas.resources import Worker
+from sampo.utilities.validation import validate_schedule
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
@@ -25,8 +25,8 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
     validate_schedule(schedule, setup_wg, setup_contractors)
 
 
-def test_third_part_chromosome(setup_toolbox, setup_contractors, setup_wg):
-    tb, _ = setup_toolbox
+def test_third_part_chromosome(setup_toolbox):
+    (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
 

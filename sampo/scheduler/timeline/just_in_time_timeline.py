@@ -70,11 +70,7 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= offer_count
                 ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
-
-        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
-
-        c_st = max(c_st, max_material_time)
+        c_st = max(max_agent_time, max_parent_time)
 
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
 
@@ -119,7 +115,6 @@ class JustInTimeTimeline(Timeline):
             while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
-
 
     def schedule(self,
                  node: GraphNode,

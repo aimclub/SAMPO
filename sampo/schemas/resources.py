@@ -97,6 +97,7 @@ class Equipment(Resource):
 # TODO: describe the class (description)
 @dataclass
 class Material(Resource):
+
     def __init__(self,
                  id: str,
                  name: str,

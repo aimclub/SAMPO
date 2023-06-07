@@ -71,6 +71,21 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = None, ) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+    """
+    Build schedule from received chromosome
+    It can be used in visualization of final solving of genetic algorithm
+
+    :param chromosome:
+    :param worker_pool:
+    :param index2node:
+    :param index2contractor:
+    :param worker_pool_indices:
+    :param spec:
+    :param timeline:
+    :param assigned_parent_time:
+    :param work_estimator:
+    :return:
+    """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):

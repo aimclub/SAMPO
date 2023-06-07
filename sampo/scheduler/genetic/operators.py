@@ -205,11 +205,26 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
 def is_chromosome_correct(chromosome: ChromosomeType,
                           node_indices: list[int],
                           parents: Dict[int, list[int]]) -> bool:
+    """
+    Check order of works and contractors
+
+    :param chromosome:
+    :param node_indices:
+    :param parents:
+    :return:
+    """
     return is_chromosome_order_correct(chromosome, parents) and \
            is_chromosome_contractors_correct(chromosome, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, list[int]]) -> bool:
+    """
+    Checks that assigned order of works is topologically correct
+
+    :param chromosome:
+    :param parents:
+    :return:
+    """
     work_order = chromosome[0]
     used = set()
     for work_index in work_order:
@@ -227,7 +242,6 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
     Checks that assigned contractors can supply assigned workers
 
     :param chromosome:
-    :param contractors_borders:
     :param work_indices:
     :return:
     """
@@ -243,6 +257,14 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
 
 
 def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
+    """
+    Get new tail in topologically order for chromosome
+    This function is needed to make crossover for order
+
+    :param head_set:
+    :param other:
+    :return:
+    """
     head_set = set(head_set)
     return np.array([node for node in other if node not in head_set])
 
@@ -372,6 +394,15 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
 
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
                               mate_positions: np.ndarray, rand: random.Random) -> (ChromosomeType, ChromosomeType):
+    """
+
+
+    :param ind1:
+    :param ind2:
+    :param mate_positions:
+    :param rand:
+    :return:
+    """
     ind1 = copy_chromosome(ind1)
     ind2 = copy_chromosome(ind2)
 

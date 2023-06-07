@@ -93,7 +93,7 @@ class JustInTimeTimeline(Timeline):
             # Consume needed workers
             while needed_count > 0:
                 next_time, next_count = worker_timeline.pop()
-                if next_count > needed_count:
+                if next_count > needed_count or len(worker_timeline) == 0:
                     worker_timeline.append((next_time, next_count - needed_count))
                     break
                 needed_count -= next_count

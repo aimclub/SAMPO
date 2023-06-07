@@ -1,5 +1,7 @@
 from deap.base import Toolbox
 
+from sampo.schemas.time import Time
+
 native = True
 try:
     from native import decodeEvaluationInfo
@@ -25,13 +27,16 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 class NativeWrapper:
     def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
-                 worker_pool_indices: dict[int, dict[int, Worker]], index2node: dict[int, GraphNode],
+                 worker_pool_indices: dict[int, dict[int, Worker]], parents: dict[int, list[int]],
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:
             def fit(chromosome: ChromosomeType) -> int:
-                sworks = toolbox.chromosome_to_schedule(chromosome)[0]
-                return max([swork.finish_time for swork in sworks.values()]).value
+                if toolbox.validate(chromosome):
+                    sworks = toolbox.chromosome_to_schedule(chromosome)[0]
+                    return max([swork.finish_time for swork in sworks.values()]).value
+                else:
+                    return Time.inf()
             self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
             self._cache = None
             return
@@ -49,6 +54,7 @@ class NativeWrapper:
         self.numeration = numeration
         # for each vertex index store list of parents' indices
         self.parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
+        head_parents = [parents[i] for i in range(len(parents))]
         # for each vertex index store list of whole it's inseparable chain indices
         self.inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain_with_self()]
                              for index in range(wg.vertex_count)]
@@ -58,8 +64,8 @@ class NativeWrapper:
             for worker in contractor.workers.values():
                 self.workers[i][worker_name2index[worker.name]] = worker.count
 
-        min_req = [[] for _ in range(len(numeration))] # np.zeros((len(numeration), len(worker_pool_indices)))
-        max_req = [[] for _ in range(len(numeration))] # np.zeros((len(numeration), len(worker_pool_indices)))
+        min_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
+        max_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
         for work_index, node in numeration.items():
             cur_min_req = [0 for _ in worker_name2index]
             cur_max_req = [0 for _ in worker_name2index]
@@ -80,7 +86,7 @@ class NativeWrapper:
         self.evaluator = evaluator
 
         # preparing C++ cache
-        self._cache = decodeEvaluationInfo(self, self.parents, self.inseparables, self.workers, self.totalWorksCount,
+        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers, self.totalWorksCount,
                                            False, volume, min_req, max_req)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:

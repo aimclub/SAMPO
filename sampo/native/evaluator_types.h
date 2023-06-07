@@ -13,26 +13,28 @@ using namespace std;
 template<typename T>
 class Array2D {
 private:
-    size_t length;
-    size_t stride;
-    T* data;
-    bool shallow;
+    size_t length = 0;
+    size_t stride = 0;
+    T* data = nullptr;
+    bool shallow = true;
 public:
-    Array2D(size_t length, size_t stride, T* data, bool shallow = true)
-        : length(length), stride(stride), data(data), shallow(shallow) {}
+    Array2D() = default;
 
-    explicit Array2D(size_t length = 1, size_t stride = 1, bool shallow = true)
-        : Array2D(length, stride, (T*) malloc(length * sizeof(T)), shallow) {}
+    Array2D(size_t length, size_t stride, T* data)
+        : length(length), stride(stride), data(data), shallow(true) {}
+
+//    Array2D(size_t length, size_t stride)
+//        : Array2D(length, stride, (T*) malloc(length * sizeof(T))), shallow(true) {}
 
     Array2D(const Array2D& other) : Array2D(other.length, other.stride, other.shallow) {
-        memcpy(this->data, other.data, length * sizeof(T));
+//        memcpy(this->data, other.data, length * sizeof(T));
         cout << "Copy" << endl;
     }
 
     ~Array2D() {
         if (!shallow) {
             cout << "Free array" << endl;
-            free(this->data);
+//            free(this->data);
         }
     }
 
@@ -74,7 +76,9 @@ private:
     Array2D<int> contractors;
     size_t DATA_SIZE;
 public:
-    explicit Chromosome(int worksCount, int resourcesCount, int contractorsCount)
+    int fitness = INT_MAX;  // infinity
+
+    Chromosome(int worksCount, int resourcesCount, int contractorsCount)
         : worksCount(worksCount), resourcesCount(resourcesCount), contractorsCount(contractorsCount) {
 //        cout << worksCount << " " << resourcesCount << " " << contractorsCount << endl;
         size_t ORDER_SHIFT = 0;
@@ -99,10 +103,11 @@ public:
 //        cout << contractors.width() << " " << contractors.height() << endl;
     }
 
-    explicit Chromosome(const Chromosome* other)
+    Chromosome(Chromosome* other)
         : Chromosome(other->worksCount, other->resourcesCount, other->contractorsCount) {
         // copy all packed data
         memcpy(this->data, other->data, DATA_SIZE);
+        this->fitness = other->fitness;
     }
 
     ~Chromosome() {
@@ -153,6 +158,7 @@ public:
 typedef struct {
     PyObject* pythonWrapper;
     vector<vector<int>> parents;
+    vector<vector<int>> headParents;
     vector<vector<int>> inseparables;
     vector<vector<int>> workers;
     vector<double> volume;

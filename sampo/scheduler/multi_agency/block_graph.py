@@ -4,6 +4,7 @@ from typing import Callable
 
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.works import WorkUnit
 from sampo.utilities.collections_util import build_index
 
 
@@ -51,7 +52,7 @@ class BlockGraph:
         """
         copied_nodes = deepcopy(self.nodes)
         for node in copied_nodes:
-            # node.wg = WorkGraph._deserialize(node.wg._serialize())
+            node.wg = WorkGraph._deserialize(node.wg._serialize())
             for wg_node in node.wg.nodes:
                 wg_node.__dict__.pop('parents', None)
                 wg_node.__dict__.pop('parents_set', None)
@@ -59,11 +60,23 @@ class BlockGraph:
                 wg_node.__dict__.pop('children_set', None)
                 wg_node.__dict__.pop('inseparable_parent', None)
                 wg_node.__dict__.pop('inseparable_son', None)
-        global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
-        global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
+                wg_node.__dict__.pop('get_inseparable_chain', None)
+
+        nodes_without_children = []
+
+        global_start = GraphNode(WorkUnit('start', 'start', is_service_unit=True), [])
 
         for end in copied_nodes:
             end.wg.start.add_parents([start.wg.finish for start in end.blocks_to])
+            if len(end.wg.start.parents) == 0:
+                end.wg.start.add_parents([global_start])
+            if len(end.wg.finish.children) == 0:
+                nodes_without_children.append(end.wg.finish)
+
+        global_end = GraphNode(WorkUnit('finish', 'finish', is_service_unit=True), nodes_without_children)
+
+        # global_start: GraphNode = [node for node in copied_nodes if len(node.blocks_to) == 0][0].wg.start
+        # global_end:   GraphNode = [node for node in copied_nodes if len(node.blocks_from) == 0][0].wg.finish
 
         return WorkGraph(global_start, global_end)
 

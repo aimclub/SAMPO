@@ -41,8 +41,12 @@ class JustInTimeTimeline(Timeline):
         if len(node2swork) == 0:
             return assigned_parent_time, assigned_parent_time, None
         # define the max end time of all parent tasks
-        max_parent_time = max(max([node2swork[parent_node].finish_time
+        max_parent_time = max(max([node2swork[parent_node].min_child_start_time
                                    for parent_node in node.parents], default=Time(0)), assigned_parent_time)
+
+        max_neighbor_time = Time(0)
+        if node.neighbors:
+            max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
 
@@ -61,13 +65,12 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= offer_count
                 ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time)
+        c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
 
         c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
         return c_st, c_ft, None
 
     def update_timeline(self,
-                        task_index: int,
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: Dict[GraphNode, ScheduledWork],
@@ -90,22 +93,21 @@ class JustInTimeTimeline(Timeline):
             # Consume needed workers
             while needed_count > 0:
                 next_time, next_count = worker_timeline.pop()
-                if next_count > needed_count:
+                if next_count > needed_count or len(worker_timeline) == 0:
                     worker_timeline.append((next_time, next_count - needed_count))
                     break
                 needed_count -= next_count
 
             # Add to the right place
-            # worker_timeline.append((finish, worker.count))
+            # worker_timeline.append((finish + 1, worker.count))
             # worker_timeline.sort(reverse=True)
-            worker_timeline.append((finish_time, worker.count))
+            worker_timeline.append((finish_time + 1, worker.count))
             ind = len(worker_timeline) - 1
             while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                 worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
                 ind -= 1
 
     def schedule(self,
-                 task_index: int,
                  node: GraphNode,
                  node2swork: Dict[GraphNode, ScheduledWork],
                  workers: List[Worker],
@@ -122,17 +124,16 @@ class JustInTimeTimeline(Timeline):
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
-            return self._schedule_with_inseparables(task_index, node, node2swork, workers, contractor, inseparable_chain,
+            return self._schedule_with_inseparables(node, node2swork, workers, contractor, inseparable_chain,
                                                     st, exec_times, work_estimator)
         else:
-            return self._schedule_with_inseparables(task_index, node, node2swork, workers, contractor, inseparable_chain,
+            return self._schedule_with_inseparables(node, node2swork, workers, contractor, inseparable_chain,
                                                     st, {}, work_estimator)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item]
 
     def _schedule_with_inseparables(self,
-                                    index: int,
                                     node: GraphNode,
                                     node2swork: Dict[GraphNode, ScheduledWork],
                                     workers: List[Worker],
@@ -161,7 +162,7 @@ class JustInTimeTimeline(Timeline):
             # (the same as in original work)
             # set the same workers on it
             # TODO Decide where this should be
-            max_parent_time = max((node2swork[pnode].finish_time
+            max_parent_time = max((node2swork[pnode].min_child_start_time
                                    for pnode in dep_node.parents),
                                   default=Time(0))
 
@@ -181,4 +182,4 @@ class JustInTimeTimeline(Timeline):
             # change finish time for using workers
             c_ft = new_finish_time
 
-        self.update_timeline(index, c_ft, node, node2swork, workers)
+        self.update_timeline(c_ft, node, node2swork, workers)

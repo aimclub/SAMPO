@@ -20,12 +20,21 @@ class EdgeType(Enum):
     FinishStart = 'FS'
     StartFinish = 'SF'
 
+    @staticmethod
+    def is_dependency(edge) -> bool:
+        if edge == '-1':  # ... no comments
+            return True
+        if isinstance(edge, EdgeType):
+            edge = edge.value
+        return edge == 'FS' or edge == 'IFS' or edge == 'FFS'
+
 
 # TODO: describe the class (description, parameters)
 @dataclass
 class GraphEdge:
     start: 'GraphNode'
     finish: 'GraphNode'
+    # TODO Remove Optional
     lag: Optional[float] = 0
     type: Optional[EdgeType] = None
 
@@ -142,7 +151,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     @cached_property
     # @property
     def parents(self) -> List['GraphNode']:
-        return list([edge.start for edge in self._parent_edges])
+        return list([edge.start for edge in self._parent_edges if EdgeType.is_dependency(edge.type)])
 
     # TODO Describe the function (description, return type)
     @cached_property
@@ -154,13 +163,17 @@ class GraphNode(JSONSerializable['GraphNode']):
     @cached_property
     # @property
     def children(self) -> List['GraphNode']:
-        return list([edge.finish for edge in self._children_edges])
+        return list([edge.finish for edge in self._children_edges if EdgeType.is_dependency(edge.type)])
 
     # TODO Describe the function (description, return type)
     @cached_property
     # @property
     def children_set(self) -> Set['GraphNode']:
         return set(self.children)
+
+    @cached_property
+    def neighbors(self):
+        return list([edge.start for edge in self._parent_edges if edge.type == EdgeType.StartStart])
 
     @property
     def edges_to(self) -> List[GraphEdge]:

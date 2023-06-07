@@ -41,7 +41,8 @@ class MomentumTimeline(Timeline):
                 return x.time, x.seq_id, x.event_type.priority
 
             if isinstance(x, Time):
-                return x, len(tasks), 1
+                # instances of Time must be greater than almost all ScheduleEvents with same time point
+                return x, Time.inf().value, 2
 
             if isinstance(x, tuple):
                 return x
@@ -61,6 +62,9 @@ class MomentumTimeline(Timeline):
             }
             for c in contractors
         }
+
+        # internal index, earlier - task_index parameter for schedule method
+        self._task_index = 0
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
@@ -89,9 +93,14 @@ class MomentumTimeline(Timeline):
             return max(time, assigned_start_time) if assigned_start_time is not None else time
 
         max_parent_time: Time = max(apply_time_spec(
-            max((node2swork[pnode].finish_time for pnode in node.parents), default=Time(0))
+            max((node2swork[pnode].min_child_start_time for pnode in node.parents), default=Time(0))
         ), assigned_parent_time)
-        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].finish_time),
+
+        if node.neighbors:
+            max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
+            max_parent_time = max(max_parent_time, max_neighbor_time)
+
+        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].min_child_start_time),
                                                                      assigned_parent_time)
                                                                  if pnode in node2swork else assigned_parent_time
                                                                  for pnode in n.parents),
@@ -105,7 +114,7 @@ class MomentumTimeline(Timeline):
         for i, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(worker_team, work_estimator)
-            lag_req = nodes_max_parent_times[chain_node] - max_parent_time  # - exec_time
+            lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 
             exec_times[chain_node] = lag, node_exec_time
@@ -209,7 +218,7 @@ class MomentumTimeline(Timeline):
             #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
             #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
             i += 1
-            end_idx = state.bisect_right(current_start_time + exec_time)
+            end_idx = state.bisect_right(current_start_time + exec_time + 1)
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start of the execution interval, i.e., current_start_idx - 1
@@ -217,7 +226,7 @@ class MomentumTimeline(Timeline):
             # that influence amount of available for us workers
             not_enough_workers_found = False
             for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
+                if state[idx].available_workers_count < required_worker_count or state[idx].time <= parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
@@ -239,7 +248,6 @@ class MomentumTimeline(Timeline):
         return current_start_time
 
     def update_timeline(self,
-                        task_index: int,
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: Dict[GraphNode, ScheduledWork],
@@ -259,11 +267,14 @@ class MomentumTimeline(Timeline):
         # Also, add events of the start and the end to worker's specializations
         # of the chosen contractor.
 
+        task_index = self._task_index
+        self._task_index += 1
+
         # experimental logics lightening. debugging showed its efficiency.
 
         swork = node2swork[node]  # masking the whole chain ScheduleEvent with the first node
         start = swork.start_time
-        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time
+        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time + 1
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)
@@ -274,7 +285,7 @@ class MomentumTimeline(Timeline):
                 assert event.available_workers_count >= w.count
                 event.available_workers_count -= w.count
 
-            # assert available_workers_count >= w.count
+            assert available_workers_count >= w.count
 
             if start_idx < end_idx:
                 event: ScheduleEvent = state[end_idx - 1]
@@ -288,7 +299,6 @@ class MomentumTimeline(Timeline):
             state.add(ScheduleEvent(task_index, EventType.End, end, swork, end_count))
 
     def schedule(self,
-                 task_index: int,
                  node: GraphNode,
                  node2swork: Dict[GraphNode, ScheduledWork],
                  workers: List[Worker],
@@ -306,11 +316,10 @@ class MomentumTimeline(Timeline):
                           for n in inseparable_chain}
 
         # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
-        self._schedule_with_inseparables(task_index, node, node2swork, inseparable_chain,
+        self._schedule_with_inseparables(node, node2swork, inseparable_chain,
                                          workers, contractor, st, exec_times)
 
     def _schedule_with_inseparables(self,
-                                    task_index: int,
                                     node: GraphNode,
                                     node2swork: Dict[GraphNode, ScheduledWork],
                                     inseparable_chain: List[GraphNode],
@@ -320,7 +329,7 @@ class MomentumTimeline(Timeline):
                                     exec_times: Dict[GraphNode, Tuple[Time, Time]]):
         # 6. create a schedule entry for the task
 
-        nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].finish_time
+        nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
                                                             if pnode in node2swork else Time(0)
                                                             for pnode in n.parents),
                                                            default=Time(0))
@@ -345,7 +354,7 @@ class MomentumTimeline(Timeline):
             curr_time += node_time + node_lag
             node2swork[chain_node] = swork
 
-        self.update_timeline(task_index, curr_time, node, node2swork, worker_team)
+        self.update_timeline(curr_time, node, node2swork, worker_team)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

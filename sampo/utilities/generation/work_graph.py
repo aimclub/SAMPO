@@ -6,7 +6,6 @@ from sampo.generator.environment.contractor import get_contractor, get_contracto
 from sampo.generator.pipeline.project import get_graph, SyntheticGraphType
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
-from sampo.structurator.base import graph_restructuring
 
 
 # TODO check outer usage
@@ -22,13 +21,12 @@ def graph_from_file(filepath: str, number_of_workers_in_contractors: int) -> Tup
 
 # TODO check outer usage
 # Functions for generating synthetic graphs
-def generate_work_graph(graph_mode: SyntheticGraphType, bottom_border: int, use_lag_edge_optimization: bool,
+def generate_work_graph(graph_mode: SyntheticGraphType, bottom_border: int,
                         rand: Optional[Random] = None) -> WorkGraph:
-    work_graph = get_graph(mode=graph_mode,
-                           bottom_border=int(bottom_border),
-                           addition_cluster_probability=0,
-                           rand=rand)
-    return graph_restructuring(work_graph, use_lag_edge_optimization=use_lag_edge_optimization)
+    return get_graph(mode=graph_mode,
+                     bottom_border=int(bottom_border),
+                     addition_cluster_probability=0,
+                     rand=rand)
 
 
 def generate_resources_pool(contractor_capacity: int, num_contractors: int = 1) -> List[Contractor]:

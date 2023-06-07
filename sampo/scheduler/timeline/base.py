@@ -13,7 +13,6 @@ class Timeline(ABC):
 
     @abstractmethod
     def schedule(self,
-                 task_index: int,
                  node: GraphNode,
                  node2swork: Dict[GraphNode, ScheduledWork],
                  passed_agents: List[Worker],
@@ -56,7 +55,6 @@ class Timeline(ABC):
 
     @abstractmethod
     def update_timeline(self,
-                        task_index: int,
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: Dict[GraphNode, ScheduledWork],

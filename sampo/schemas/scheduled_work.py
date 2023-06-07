@@ -84,6 +84,10 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def finish_time(self) -> Time:
         return self.start_end_time[1]
 
+    @property
+    def min_child_start_time(self) -> Time:
+        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
+
     # TODO: describe the function (description, parameters, return type)
     @finish_time.setter
     def finish_time(self, val: Time):

@@ -28,21 +28,28 @@ class FullScanResourceOptimizer(ResourceOptimizer):
                 worker_team[worker_ind].count = worker_count[worker_ind]
             return get_finish_time(worker_team)
 
-        cur = down_border.copy()
-        cur_ft = fitness(cur)
+        right_fit = fitness(up_border)
+        left_fit = fitness(down_border)
+
+        m = up_border
 
         # Trying to +1 to all workers
-        while (up_border > cur).all():
-            cur += 1
-            next_ft = fitness(cur)
-            if next_ft >= cur_ft:
-                cur -= 1
+        while (m > down_border).any():
+            m = (up_border + down_border) // 2
+            next_fit = fitness(m)
+            if next_fit < right_fit:
+                down_border = m
+                left_fit = next_fit
+            elif next_fit > left_fit:
+                up_border = m
+                right_fit = next_fit
+            else:
                 break
 
         # Insert cur into coordinate-descent optimizer as down_border
         self._coordinate_descent_optimizer.optimize_resources(worker_pool,
                                                               worker_team,
                                                               optimize_array,
-                                                              cur,
+                                                              m,
                                                               up_border,
                                                               get_finish_time)

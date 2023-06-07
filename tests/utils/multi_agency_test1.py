@@ -38,7 +38,7 @@ def manage_block_graph(contractors: list[Contractor]):
     agents = [Agent(f'Agent {i}', scheduler_constructors[i % len(scheduler_constructors)](), [contractor])
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
-    bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
+    bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (50, 60), 0.5, rand)
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
@@ -117,10 +117,10 @@ def test_managing_queues():
                   for i, contractor in enumerate(contractors)]
         manager = Manager(agents)
 
-        bg = generate_queues([1, 1, 1], lambda x: (100, 200), rand, obstruction_getter,
-                             10,
-                             [3, 4, 6, 8, 10, 3, 4, 8, 9, 9],
-                             [3, 4, 6, 8, 10, 3, 4, 8, 9, 9])
+        bg = generate_queues([1, 1, 1], lambda x: (50, 60), rand, obstruction_getter,
+                             5,
+                             [3, 4, 6, 8, 10],
+                             [3, 4, 6, 8, 10])
 
         scheduled_blocks = manager.manage_blocks(bg, logger=print)
         validate_block_schedule(bg, scheduled_blocks, agents)

@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable
 
 from deap.base import Toolbox
 
@@ -9,11 +9,13 @@ from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -124,32 +126,47 @@ class GeneticScheduler(Scheduler):
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
-        """
+        def init_k_schedule(scheduler_class, k):
+            try:
+                return (scheduler_class(work_estimator=self.work_estimator,
+                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
+                        list(reversed(prioritization(wg, self.work_estimator))))
+            except NoSufficientContractorError:
+                return None, None
 
-
-        :param wg:
-        :param contractors:
-        :return:
-        """
         if self._deadline is None:
             def init_schedule(scheduler_class):
-                return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
-                        list(reversed(prioritization(wg, self.work_estimator))))
+                try:
+                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                            list(reversed(prioritization(wg, self.work_estimator))))
+                except NoSufficientContractorError:
+                    return None, None
 
             return {
                 "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler)
+                "heft_between": init_schedule(HEFTBetweenScheduler),
+                "12.5%": init_k_schedule(HEFTScheduler, 8),
+                "25%": init_k_schedule(HEFTScheduler, 4),
+                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
             }
         else:
             def init_schedule(scheduler_class):
-                schedule = AverageBinarySearchResourceOptimizingScheduler(
-                    scheduler_class(work_estimator=self.work_estimator)
-                ).schedule_with_cache(wg, contractors, self._deadline)[0]
-                return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                try:
+                    schedule = AverageBinarySearchResourceOptimizingScheduler(
+                        scheduler_class(work_estimator=self.work_estimator)
+                    ).schedule_with_cache(wg, contractors, self._deadline)[0]
+                    return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                except NoSufficientContractorError:
+                    return None, None
 
             return {
                 "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler)
+                "heft_between": init_schedule(HEFTBetweenScheduler),
+                "12.5%": init_k_schedule(HEFTScheduler, 8),
+                "25%": init_k_schedule(HEFTScheduler, 4),
+                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
             }
 
     def schedule_with_cache(self, wg: WorkGraph,
@@ -163,11 +180,11 @@ class GeneticScheduler(Scheduler):
         init_schedules = self.generate_first_population(wg, contractors)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
-        agents = get_worker_contractor_pool(contractors)
+        worker_pool = get_worker_contractor_pool(contractors)
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
-                                                                                     agents,
+                                                                                     worker_pool,
                                                                                      size_of_population,
                                                                                      self.number_of_generation,
                                                                                      size_selection,

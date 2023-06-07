@@ -1,6 +1,7 @@
 from _pytest.fixtures import fixture
 
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.schemas.contractor import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
@@ -10,7 +11,9 @@ from sampo.schemas.works import WorkUnit
 
 
 @fixture(scope='module')
-def setup_timeline_context(setup_wg, setup_contractors, setup_worker_pool):
+def setup_timeline_context(setup_scheduler_parameters):
+    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_worker_pool = get_worker_contractor_pool(setup_contractors)
     worker_kinds = set([w_kind for contractor in setup_contractors for w_kind in contractor.workers.keys()])
     return MomentumTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool), \
         setup_wg, setup_contractors, setup_worker_pool, worker_kinds

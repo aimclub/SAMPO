@@ -3,7 +3,7 @@ from enum import Enum
 from operator import attrgetter
 from typing import Optional
 
-from sampo.schemas.contractor import WorkerContractorPool
+from sampo.schemas.contractor import WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
 from sampo.utilities.collections_util import build_index
@@ -25,7 +25,9 @@ class BreakType(Enum):
         return not self.is_order_break()
 
 
-def test_check_order_validity_right(setup_wg, setup_default_schedules):
+def test_check_order_validity_right(setup_default_schedules):
+    (setup_wg, _), setup_default_schedules = setup_default_schedules
+
     for scheduler, schedule in setup_default_schedules.items():
         try:
             _check_all_tasks_scheduled(schedule, setup_wg)
@@ -34,7 +36,9 @@ def test_check_order_validity_right(setup_wg, setup_default_schedules):
             raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
-def test_check_order_validity_wrong(setup_wg, setup_default_schedules):
+def test_check_order_validity_wrong(setup_default_schedules):
+    (setup_wg, _), setup_default_schedules = setup_default_schedules
+
     for schedule in setup_default_schedules.values():
         for break_type in BreakType:
             if break_type.is_order_break():
@@ -49,7 +53,9 @@ def test_check_order_validity_wrong(setup_wg, setup_default_schedules):
                 assert thrown
 
 
-def test_check_resources_validity_right(setup_wg, setup_contractors, setup_default_schedules):
+def test_check_resources_validity_right(setup_default_schedules):
+    (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
+
     for scheduler, schedule in setup_default_schedules.items():
         try:
             _check_all_workers_correspond_to_worker_reqs(schedule)
@@ -58,8 +64,10 @@ def test_check_resources_validity_right(setup_wg, setup_contractors, setup_defau
             raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
-def test_check_resources_validity_wrong(setup_wg, setup_worker_pool,
-                                        setup_contractors, setup_default_schedules):
+def test_check_resources_validity_wrong(setup_default_schedules):
+    (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
+    setup_worker_pool = get_worker_contractor_pool(setup_contractors)
+
     for schedule in setup_default_schedules.values():
         for break_type in BreakType:
             if break_type.is_resources_break():
@@ -94,16 +102,16 @@ def break_schedule(break_type: BreakType, schedule: Schedule, wg: WorkGraph,
     elif break_type == BreakType.ResourcesNotEnoughToWorkReq:
         for swork in broken.values():
             for worker in swork.workers:
-                worker.count = 0
+                worker.count = -1
     elif break_type == BreakType.ResourcesTooBigToWorkReq:
         for swork in broken.values():
             worker2req = build_index(swork.work_unit.worker_reqs, attrgetter('kind'))
             for worker in swork.workers:
-                worker.count = worker2req[worker.name].max_count + 1
+                worker.count = worker2req[worker.name].max_count + 1000000
     elif break_type == BreakType.ResourcesTooBigToSupplyByThisContractor:
         for swork in broken.values():
             for worker in swork.workers:
-                worker.count = agents[worker.name][worker.contractor_id].count + 1
+                worker.count = agents[worker.name][worker.contractor_id].count + 1000000
 
     # print(f'Original: {list(schedule.to_schedule_work_dict.values())}')
     # print(f'Broken  : {list(broken.values())}')

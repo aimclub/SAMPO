@@ -15,6 +15,7 @@ from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -105,14 +106,20 @@ class GeneticScheduler(Scheduler):
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
         def init_k_schedule(scheduler_class, k):
-            return (scheduler_class(work_estimator=self.work_estimator,
-                                    resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
-                    list(reversed(prioritization(wg, self.work_estimator))))
+            try:
+                return (scheduler_class(work_estimator=self.work_estimator,
+                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
+                        list(reversed(prioritization(wg, self.work_estimator))))
+            except NoSufficientContractorError:
+                return None, None
 
         if self._deadline is None:
             def init_schedule(scheduler_class):
-                return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
-                        list(reversed(prioritization(wg, self.work_estimator))))
+                try:
+                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                            list(reversed(prioritization(wg, self.work_estimator))))
+                except NoSufficientContractorError:
+                    return None, None
 
             return {
                 "heft_end": init_schedule(HEFTScheduler),
@@ -124,10 +131,13 @@ class GeneticScheduler(Scheduler):
             }
         else:
             def init_schedule(scheduler_class):
-                schedule = AverageBinarySearchResourceOptimizingScheduler(
-                    scheduler_class(work_estimator=self.work_estimator)
-                ).schedule_with_cache(wg, contractors, self._deadline)[0]
-                return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                try:
+                    schedule = AverageBinarySearchResourceOptimizingScheduler(
+                        scheduler_class(work_estimator=self.work_estimator)
+                    ).schedule_with_cache(wg, contractors, self._deadline)[0]
+                    return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                except NoSufficientContractorError:
+                    return None, None
 
             return {
                 "heft_end": init_schedule(HEFTScheduler),

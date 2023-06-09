@@ -130,7 +130,7 @@ def create_toolbox(wg: WorkGraph,
                         work_estimator), resources_border
 
 
-@fixture(scope='function')
+@fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
     (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)

@@ -11,8 +11,10 @@ from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.works import WorkUnit
 
 
-# TODO: describe the class (description, parameters)
 class EdgeType(Enum):
+    """
+    Class to define certain type of edge in graph
+    """
     InseparableFinishStart = 'IFS'
     LagFinishStart = 'FFS'
     StartStart = 'SS'
@@ -29,9 +31,11 @@ class EdgeType(Enum):
         return edge == 'FS' or edge == 'IFS' or edge == 'FFS'
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class GraphEdge:
+    """
+    The edge of graph with start and finish vertexes
+    """
     start: 'GraphNode'
     finish: 'GraphNode'
     # TODO Remove Optional
@@ -39,13 +43,14 @@ class GraphEdge:
     type: Optional[EdgeType] = None
 
 
-# TODO: describe the class (description, parameters)
 class GraphNode(JSONSerializable['GraphNode']):
+    """
+    Class to describe Node in graph
+    """
     _work_unit: WorkUnit
     _parent_edges: List[GraphEdge]
     _children_edges: List[GraphEdge]
 
-    # TODO: describe the function (description, parameters, return type)
     def __init__(self, work_unit: WorkUnit,
                  parent_works: Union[List['GraphNode'], List[Tuple['GraphNode', float, EdgeType]]]):
         self._work_unit = work_unit
@@ -72,7 +77,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         # self._work_unit = representation['work_unit']
         # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
 
-    # TODO: describe the function (description, return type)
     def _serialize(self) -> T:
         return {
             'work_unit': self._work_unit._serialize(),
@@ -80,7 +84,6 @@ class GraphNode(JSONSerializable['GraphNode']):
             # 'child_edges': [(e.finish.work_unit.id, e.lag, e.type.value) for e in self._children_edges]
         }
 
-    # TODO: describe the function (description, parameters, return type)
     @classmethod
     def _deserialize(cls, representation: T) -> dict:
         representation['work_unit'] = WorkUnit._deserialize(representation['work_unit'])
@@ -88,16 +91,14 @@ class GraphNode(JSONSerializable['GraphNode']):
         # representation['child_edges'] = [(e[0], e[1], EdgeType(e[2])) for e in representation['child_edges']]
         return representation
 
-    # TODO: describe the function (description, parameters, return type)
     def update_work_unit(self, work_unit: WorkUnit) -> None:
         self._work_unit = work_unit
 
-    # TODO: add a comment about the returned type and complete the description
     def add_parents(self, parent_works: List['GraphNode'] or List[Tuple['GraphNode', float, EdgeType]]) -> None:
         """
-        Two-sided linking of children and parents
+        Two-sided linking of successors and predecessors
 
-        :param parent_works:
+        :param parent_works: list of parent works
         """
         edges: List[GraphEdge] = []
         if len(parent_works) > 0 and isinstance(parent_works[0], GraphNode):
@@ -110,16 +111,18 @@ class GraphNode(JSONSerializable['GraphNode']):
             p._add_child_edge(edges[i])
         self._parent_edges += edges
 
-    # TODO: describe the function (description, return type)
     def is_inseparable_parent(self) -> bool:
         return self.inseparable_son is not None
 
-    # TODO: describe the function (description, return type)
     def is_inseparable_son(self) -> bool:
         return self.inseparable_parent is not None
 
-    # TODO: describe the function (description, parameters, return type)
     def traverse_children(self, topologically: bool = False):
+        """
+        DFS from current vertex to down
+        :param topologically: is DFS need to go in topologically way
+        :return:
+        """
         visited_vertexes = set()
         vertexes_to_visit = deque([self])
         while len(vertexes_to_visit) > 0:
@@ -132,64 +135,87 @@ class GraphNode(JSONSerializable['GraphNode']):
                 vertexes_to_visit.extend(v.children)
                 yield v
 
-    # TODO: describe the function (description, return type)
     @cached_property
     # @property
     def inseparable_son(self) -> Optional['GraphNode']:
+        """
+        Return inseparable son (amount of inseparable sons at most 1)
+        :return: inseparable son
+        """
         inseparable_children = list([x.finish for x in self._children_edges
                                      if x.type == EdgeType.InseparableFinishStart])
         return inseparable_children[0] if inseparable_children else None
 
-    # TODO: describe the function (description, return type)
     @cached_property
     # @property
     def inseparable_parent(self) -> Optional['GraphNode']:
+        """
+        Return predecessor of current vertex in inseparable chain
+        :return: inseparable parent
+        """
         inseparable_parents = list([x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart])
         return inseparable_parents[0] if inseparable_parents else None
 
-    # TODO Describe the function (description, return type)
     @cached_property
     # @property
-    def parents(self) -> List['GraphNode']:
+    def parents(self) -> list['GraphNode']:
+        """
+        Return list of predecessors of current vertex
+        :return: list of parents
+        """
         return list([edge.start for edge in self._parent_edges if EdgeType.is_dependency(edge.type)])
 
-    # TODO Describe the function (description, return type)
     @cached_property
     # @property
-    def parents_set(self) -> Set['GraphNode']:
+    def parents_set(self) -> set['GraphNode']:
+        """
+        Return unique predecessors of current vertex
+        :return: set of parents
+        """
         return set(self.parents)
 
-    # TODO Describe the function (description, return type)
     @cached_property
     # @property
-    def children(self) -> List['GraphNode']:
+    def children(self) -> list['GraphNode']:
+        """
+        Return list of successors of current vertex
+        :return: list of children
+        """
         return list([edge.finish for edge in self._children_edges if EdgeType.is_dependency(edge.type)])
 
-    # TODO Describe the function (description, return type)
     @cached_property
     # @property
-    def children_set(self) -> Set['GraphNode']:
+    def children_set(self) -> set['GraphNode']:
+        """
+        Return unique successors of current vertex
+        :return: set of children
+        """
         return set(self.children)
 
     @cached_property
     def neighbors(self):
+        """
+        Get all edges that have types SS with current vertex
+        :return: list of neighbours
+        """
         return list([edge.start for edge in self._parent_edges if edge.type == EdgeType.StartStart])
 
     @property
-    def edges_to(self) -> List[GraphEdge]:
+    def edges_to(self) -> list[GraphEdge]:
         return self._parent_edges
 
-    # TODO: describe the function (description, return type)
     @property
-    def edges_from(self) -> List[GraphEdge]:
+    def edges_from(self) -> list[GraphEdge]:
+        """
+        Return all successors of current vertex
+        :return: list of successors
+        """
         return self._children_edges
 
-    # TODO: describe the function (description, return type)
     @property
     def work_unit(self) -> WorkUnit:
         return self._work_unit
 
-    # TODO: describe the function (description, return type)
     @property
     def id(self) -> str:
         return self.work_unit.id
@@ -229,8 +255,13 @@ class GraphNode(JSONSerializable['GraphNode']):
             if inseparable_child \
             else []
 
-    # TODO: describe the function (description, parameters, return type)
     def _add_child_edge(self, child: GraphEdge):
+        """
+        Append new edge with children
+
+        :param child:
+        :return: current graph node
+        """
         self._children_edges.append(child)
 
 

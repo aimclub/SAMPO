@@ -1,4 +1,4 @@
-from collections import defaultdict
+from random import Random
 from random import Random
 from typing import Dict, Optional
 from uuid import uuid4
@@ -14,7 +14,7 @@ from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.resources import Worker
@@ -40,8 +40,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(scope='module',
-         params=[(graph_type, lag) for lag in [True, False]
+@fixture(params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
                                     'small plain synthetic', 'big plain synthetic',]],
                                     # 'small advanced synthetic', 'big advanced synthetic']],
@@ -107,20 +106,8 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture(scope='module')
-def setup_worker_pool(setup_scheduler_parameters) -> WorkerContractorPool:
-    _, setup_contractors = setup_scheduler_parameters
-
-    worker_pool = defaultdict(dict)
-    for contractor in setup_contractors:
-        for worker in contractor.workers.values():
-            worker_pool[worker.name][worker.contractor_id] = worker
-    return worker_pool
-
-
 # TODO Make parametrization with different(specialized) contractors
-@fixture(scope='module',
-         params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
+@fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
 def setup_scheduler_parameters(request, setup_wg) -> tuple[WorkGraph, list[Contractor]]:
     resource_req: Dict[str, int] = {}
@@ -153,7 +140,7 @@ def setup_scheduler_parameters(request, setup_wg) -> tuple[WorkGraph, list[Contr
     return setup_wg, contractors
 
 
-@fixture(scope='module')
+@fixture
 def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: Optional[WorkTimeEstimator] = None
 
@@ -187,7 +174,7 @@ def setup_scheduler_type(request):
     return request.param
 
 
-@fixture(scope='module')
+@fixture
 def setup_schedule(setup_scheduler_type, setup_scheduler_parameters):
     setup_wg, setup_contractors = setup_scheduler_parameters
 

@@ -64,6 +64,12 @@ class GeneticScheduler(Scheduler):
                f']'
 
     def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+        """
+        Return params for model to make new population
+
+        :param works_count:
+        :return:
+        """
         size_selection = self.size_selection
         if size_selection is None:
             if works_count < 300:
@@ -96,12 +102,27 @@ class GeneticScheduler(Scheduler):
         return size_selection, mutate_order, mutate_resources, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
+        """
+        Set the number of CPU cores
+
+        :param n_cpu:
+        """
         self._n_cpu = n_cpu
 
     def set_time_border(self, time_border: int):
+        """
+        Set the borders of time
+
+        :param time_border:
+        """
         self._time_border = time_border
 
     def set_deadline(self, deadline: Time):
+        """
+        Set the deadline of tasks
+
+        :param deadline:
+        """
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):

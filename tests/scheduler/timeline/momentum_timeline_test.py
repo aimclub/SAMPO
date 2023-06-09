@@ -10,7 +10,7 @@ from sampo.schemas.types import ScheduleEvent, EventType
 from sampo.schemas.works import WorkUnit
 
 
-@fixture(scope='module')
+@fixture
 def setup_timeline_context(setup_scheduler_parameters):
     setup_wg, setup_contractors = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)

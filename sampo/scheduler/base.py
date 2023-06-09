@@ -32,7 +32,7 @@ class Scheduler(ABC):
     def __init__(self,
                  scheduler_type: SchedulerType,
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
-                 work_estimator: Optional[WorkTimeEstimator] = None):
+                 work_estimator: WorkTimeEstimator | None = None):
         self.scheduler_type = scheduler_type
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator

@@ -12,6 +12,10 @@ from sampo.schemas.types import AgentId
 
 
 class JustInTimeTimeline(Timeline):
+    """
+    In this structure, only the time of their release is stored for resources
+    For each contractor and worker type store a descending list of pairs of time and number of available workers of this type of this contractor
+    """
 
     def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
         self._timeline = {}
@@ -20,9 +24,10 @@ class JustInTimeTimeline(Timeline):
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
-    def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
+    def find_min_start_time_with_additional(self, node: GraphNode,
+                                            worker_team: List[Worker],
                                             node2swork: Dict[GraphNode, ScheduledWork],
-                                            assigned_start_time: Optional[Time] = None,
+                                            assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
                                             work_estimator: Optional[WorkTimeEstimator] = None) \
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
@@ -31,6 +36,8 @@ class JustInTimeTimeline(Timeline):
         1. end time of all parent tasks
         2. time previous job off all needed workers to complete current task
 
+        :param assigned_parent_time:
+        :param assigned_start_time:
         :param node: target node
         :param worker_team: worker team under testing
         :param node2swork:
@@ -77,6 +84,7 @@ class JustInTimeTimeline(Timeline):
                         worker_team: List[Worker]):
         """
         Adds given `worker_team` to the timeline at the moment `finish`
+
         :param task_index:
         :param finish_time:
         :param node:
@@ -144,7 +152,7 @@ class JustInTimeTimeline(Timeline):
                                     work_estimator: Optional[WorkTimeEstimator] = None):
         """
         Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
-        and adds it ti given `id2swork`. Also does the same for all inseparable nodes starts from this one
+        and adds it to given `id2swork`. Also does the same for all inseparable nodes starts from this one
 
         :param node2swork:
         :param workers:

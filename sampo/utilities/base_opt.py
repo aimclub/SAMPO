@@ -2,10 +2,10 @@ from typing import Callable, Optional
 
 import numpy as np
 
-# float version
 from sampo.schemas.time import Time
 
 
+# float version
 def dichotomy_float(lo: float, hi: float, func, eps: float = 0.000001):
     delta = eps / 5
     while hi - lo > eps:
@@ -48,5 +48,6 @@ def coordinate_descent(lo: np.ndarray, hi: np.ndarray,
         def part(x):
             cur[i] = x
             return fitness(cur)
+
         cur[i] = method(lo[i], hi[i], part)
     return cur

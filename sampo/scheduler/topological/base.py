@@ -13,6 +13,9 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class TopologicalScheduler(GenericScheduler):
+    """
+    Build schedule in just topologic order
+    """
 
     def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):

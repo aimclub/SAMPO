@@ -13,6 +13,10 @@ from sampo.schemas.time import Time
 
 
 class Agent:
+    """
+    Class, that implement the logic of Agent actions in a multi-agent model
+    Agent have 2 actions: give offer and accept offer
+    """
 
     def __init__(self, name: str, scheduler: Scheduler, contractors: list[Contractor]):
         self.name = name
@@ -104,6 +108,9 @@ class ScheduledBlock:
 
 
 class Manager:
+    """
+    Manager interact with agents
+    """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
             raise Exception("Manager can't work with empty list of agents")

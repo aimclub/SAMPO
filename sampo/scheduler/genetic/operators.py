@@ -395,7 +395,7 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
                               mate_positions: np.ndarray, rand: random.Random) -> (ChromosomeType, ChromosomeType):
     """
-
+    Crossover for contractors' resource borders.
 
     :param ind1:
     :param ind2:

@@ -16,10 +16,13 @@ from sampo.utilities.collections_util import build_index
 
 
 class MomentumTimeline(Timeline):
+    """
+    In this structure, the intervals in which it is occupied are stored for each resource
+    """
 
     def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
         """
-        This should create empty Timeline from given list of tasks and contractor list
+        This should create an empty Timeline from given a list of tasks and contractor list
 
         :param tasks:
         :param contractors:
@@ -75,10 +78,10 @@ class MomentumTimeline(Timeline):
                                             work_estimator: Optional[WorkTimeEstimator] = None) \
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
         """
-        Computes start time, max parent time, contractor and exec times for given node
+        Looking for an available time slot for given 'GraphNode'
 
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
-        :param node:
+        :param node: info about given work (i.e., node in WorkGraph)
         :param node2swork:
         :param assigned_start_time:
         :param assigned_parent_time:
@@ -137,6 +140,16 @@ class MomentumTimeline(Timeline):
                              parent_time: Time,
                              exec_time: Time,
                              passed_agents: List[Worker]) -> Time:
+        """
+        Find start time for the whole 'GraphNode'
+
+        :param resource_timeline:
+        :param inseparable_chain:
+        :param parent_time:
+        :param exec_time:
+        :param passed_agents:
+        :return:
+        """
         # if it is a service unit, than it can be satisfied by any contractor at any moment
         # because no real workers is going to be used to execute the task
         # however, we still should respect dependencies of the service task
@@ -206,6 +219,15 @@ class MomentumTimeline(Timeline):
                                  parent_time: Time,
                                  exec_time: Time,
                                  required_worker_count: int) -> Time:
+        """
+        Searches for the earliest time starting from start_time, when a slot in exec_time is available, when required_worker_count of resources is available
+
+        :param state:
+        :param parent_time: start time
+        :param exec_time: execution time
+        :param required_worker_count: requirements amount of Worker
+        :return:
+        """
         current_start_time = parent_time
         current_start_idx = state.bisect_right(current_start_time) - 1
 
@@ -254,7 +276,7 @@ class MomentumTimeline(Timeline):
                         worker_team: List[Worker]):
         """
         Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
-        :param task_index:
+
         :param finish_time:
         :param node:
         :param node2swork:

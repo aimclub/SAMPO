@@ -14,7 +14,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 class TopologicalScheduler(GenericScheduler):
     """
-    Build schedule in just topologic order
+    Build schedule in topological order
     """
 
     def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
@@ -41,6 +41,9 @@ class TopologicalScheduler(GenericScheduler):
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):
+    """
+    Build the scheduler in topological order with the possibility of shuffling nodes that are on the same level
+    """
     def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
         super().__init__(work_estimator=work_estimator)
@@ -48,6 +51,13 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
 
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> List[GraphNode]:
         def shuffle(nodes: Set[GraphNode]) -> List[GraphNode]:
+            """
+            Shuffle set of GraphNodes
+            Nodes are on the same level
+
+            :param nodes: set of nodes, that are on the same level
+            :return: shuffled nodes
+            """
             nds = list(nodes)
             indices = np.arange(len(nds))
             self._random_state.shuffle(indices)

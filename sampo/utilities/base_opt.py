@@ -4,6 +4,10 @@ import numpy as np
 
 from sampo.schemas.time import Time
 
+"""
+This file contains base optimization methods
+"""
+
 
 # float version
 def dichotomy_float(lo: float, hi: float, func, eps: float = 0.000001):

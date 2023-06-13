@@ -11,6 +11,7 @@ STAGE_SEP = '_stage_'
 def make_start_id(work_unit_id: str, ind: int) -> str:
     """
     Creates an auxiliary id for restructuring the graph
+
     :param work_unit_id: str - work unit id
     :param ind: int - sequence number of work_unit stage
     :return:
@@ -21,8 +22,8 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
 
 def find_lags(edges: List[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (List[Tuple[float, float, bool]]):
     """
-    Searches for the maximum lag among the given edges and type of edge,
-        for the maximum lag saves the amount of parental work
+    Searches for the maximum lag among the given edges and type of edge for the maximum lag saves the amount of parental work
+
     :param is_reversed: bool - Used to specify from which node lag is used
     :param edges: List[GraphEdge] - the given edges
     :param edge_type: str - the given type of edge
@@ -44,6 +45,7 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
     for the second one it remains the same, so that it is more convenient to restore the edges. The resulting nodes are
     created without edges. It connects two obtained nodes with an unbreakable edge,
     which does not allow to perform tasks in any way
+
     :param lags_volumes_list: List[Tuple[float, float, bool]] -
     :param origin_node: GraphNode - Node to be divided into two parts
     :param id2new_nodes: GraphNodeDict - Dictionary with restructured new nodes where the restructured nodes will

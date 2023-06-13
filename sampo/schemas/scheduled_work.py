@@ -14,6 +14,9 @@ from sampo.utilities.serializers import custom_serializer
 # TODO: describe the class (description, parameters)
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
+    """
+    Representation of work as item of schedule
+    """
 
     ignored_fields = ['equipments', 'materials', 'object']
 

@@ -4,8 +4,13 @@ from typing import List, Union, Dict, TypeVar, Callable
 T = TypeVar('T')
 
 
-# Returns a generator which should flatten any heterogeneous iterable
 def flatten(xs: Iterable[Union[List[T], T]]) -> Iterable[T]:
+    """
+    Returns a generator which should flatten any heterogeneous iterable
+
+    :param xs:
+    :return:
+    """
     for x in xs:
         if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
             yield from flatten(x)

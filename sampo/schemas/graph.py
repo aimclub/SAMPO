@@ -214,7 +214,6 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     @property
     def work_unit(self) -> WorkUnit:
-
         return self._work_unit
 
     @property
@@ -283,7 +282,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     # list of works (i.e. GraphNode)
     nodes: List[GraphNode] = field(init=False)
     adj_matrix: dok_matrix = field(init=False)
-    # TODO: describe dict_nodes
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
 

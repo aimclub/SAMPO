@@ -17,7 +17,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
     Class that describe vertex in graph (one work/task)
     """
-    def __init__(self, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
+    def __init__(self, id: str, name: str, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
                  material_reqs: list[MaterialReq] = [], object_reqs: list[ConstructionObjectReq] = [],
                  group: str = 'default', is_service_unit=False, volume: float = 0,
                  volume_type: str = "unit", display_name: str = ""):
@@ -32,6 +32,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param volume_type: unit of scope of work
         :param display_name: name of work
         """
+        super(WorkUnit, self).__init__(id, name)
         self.worker_reqs = worker_reqs
         self.equipment_reqs = equipment_reqs
         self.object_reqs = object_reqs

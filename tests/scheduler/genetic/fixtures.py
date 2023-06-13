@@ -7,7 +7,7 @@ from pytest import fixture
 
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -130,9 +130,11 @@ def create_toolbox(wg: WorkGraph,
                         work_estimator), resources_border
 
 
-@fixture(scope='function')
-def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
-                  setup_default_schedules) -> Tuple[Toolbox, np.ndarray]:
+@fixture
+def setup_toolbox(setup_default_schedules) -> tuple:
+    (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
+    setup_worker_pool = get_worker_contractor_pool(setup_contractors)
+
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
     work_estimator: Optional[WorkTimeEstimator] = None
@@ -145,4 +147,4 @@ def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
                           mutate_resources,
                           setup_default_schedules,
                           rand,
-                          work_estimator=work_estimator)
+                          work_estimator=work_estimator), setup_wg, setup_contractors, setup_default_schedules

@@ -2,6 +2,8 @@ from typing import List, Tuple
 
 import numpy as np
 
+import copy
+
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
@@ -67,9 +69,11 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    spec: ScheduleSpec,
+                                   worker_name2index: dict[str, int],
+                                   contractor2index: dict[str, int],
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
-                                   work_estimator: WorkTimeEstimator = None, ) \
+                                   work_estimator: WorkTimeEstimator = None,) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
     """
     Build schedule from received chromosome
@@ -88,10 +92,19 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
-    if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
     works_order = chromosome[0]
     works_resources = chromosome[1]
+    border = chromosome[2]
+    worker_pool = copy.deepcopy(worker_pool)
+
+    # use 3rd part of chromosome in schedule generator
+    for worker_index in worker_pool:
+        for contractor_index in worker_pool[worker_index]:
+            worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index], worker_name2index[worker_index]])
+
+    if not isinstance(timeline, JustInTimeTimeline):
+        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
+
     order_nodes = []
 
     for order_index, work_index in enumerate(works_order):
@@ -105,7 +118,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         resources = works_resources[work_index, :-1]
         contractor_index = works_resources[work_index, -1]
         contractor = index2contractor[contractor_index]
-        worker_team: List[Worker] = [worker_pool_indices[worker_index][contractor_index]
+        worker_team: list[Worker] = [worker_pool_indices[worker_index][contractor_index]
                                      .copy().with_count(worker_count)
                                      for worker_index, worker_count in enumerate(resources)
                                      if worker_count > 0]

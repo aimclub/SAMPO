@@ -17,7 +17,7 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contr
 
     :param contractors:
     :param wg:
-    :param schedule: to apply verification to
+    :param schedule: to apply verification
     """
     # checking preconditions
     # check_all_workers_have_same_qualification(schedule.workGraph, schedule.resourcePools)

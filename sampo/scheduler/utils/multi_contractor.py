@@ -73,6 +73,6 @@ def run_contractor_search(contractors: List[Contractor],
             best_contractor_size = contractor_size
 
     if best_contractor is None:
-        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search')
+        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: {contractors}')
 
     return best_start_time, best_finish_time, best_contractor, best_worker_team

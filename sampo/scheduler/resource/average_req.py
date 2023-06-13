@@ -14,6 +14,9 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
     """
 
     def __init__(self, k: float = 2):
+        """
+        :param k: coefficient of average
+        """
         self.k = k
 
     def optimize_resources(self,

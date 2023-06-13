@@ -23,7 +23,7 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
     n = len(work_reqs)
     min_worker_team = np.zeros(n, dtype=int)
     max_worker_team = np.zeros(n, dtype=int)
-    workers: List[Worker] = []
+    workers: list[Worker] = []
 
     for i, req in enumerate(work_reqs):
         w = agents[req.kind].get(contractor.id, None)
@@ -43,7 +43,7 @@ def run_contractor_search(contractors: List[Contractor],
                           runner: Callable[[Contractor], tuple[Time, Time, List[Worker]]]) \
         -> tuple[Time, Time, Contractor, List[Worker]]:
     """
-    Performs the best contractor search.
+    Performs the best contractor search
     
     :param contractors: contractors' list
     :param runner: a runner function, should be inner of the calling code.

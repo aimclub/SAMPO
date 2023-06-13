@@ -64,10 +64,10 @@ def get_swap_candidates(node: GraphNode,
     :param node: target node
     :param node_index: index of target node in global sequence
     :param candidates: list of candidates to swapping
-    :param node2ind: a dict from node to it's index
+    :param node2ind: a dict from node to its index
     :param processed: a set of nodes that should not be swapped yet
     """
-    cur_children: Set[GraphNode] = node.children_set
+    cur_children: set[GraphNode] = node.children_set
 
     def is_candidate_accepted(candidate: GraphNode) -> bool:
         if candidate in cur_children or candidate in processed:
@@ -87,10 +87,17 @@ def get_swap_candidates(node: GraphNode,
 
 class SwapOrderLocalOptimizer(OrderLocalOptimizer):
     """
-    This performs just small shuffle that not break topological order
+    This performs just small shuffle that not breaks topological order
     """
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
+        """
+        Change order of nodes (not breaks topological order) by swapping 2 nodes
+
+        :param node_order:
+        :param area:
+        :return:
+        """
         if node_order is None:
             return
 
@@ -101,19 +108,19 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
         # node2cost = {node: work_priority(node, calculate_working_time_cascade, work_estimator) for node in sub_seq}
 
         # preprocessing
-        node2ind: Dict[GraphNode, int] = {node: start_index + ind for ind, node in
+        node2ind: dict[GraphNode, int] = {node: start_index + ind for ind, node in
                                           enumerate(node_order[start_index:end_index])}
 
         # temporary for usability measurement
         swapped = 0
 
-        processed: Set[GraphNode] = set()
+        processed: set[GraphNode] = set()
         for i in reversed(area):
             node = node_order[i]
             if node in processed:
                 continue
             # cur_cost = node2cost[node]
-            chain_candidates: List[GraphNode] = node_order[start_index:i]
+            chain_candidates: list[GraphNode] = node_order[start_index:i]
 
             accepted_candidates = get_swap_candidates(node, i, chain_candidates, node2ind, processed)
 
@@ -135,7 +142,7 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     """
-    This method finds near placed works and turns it to run in parallel.
+    This method finds near placed works and turns it to run in parallel
     It will take effect only if it's launched after scheduling
     """
 
@@ -154,6 +161,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         Recalculates duration and start-finish times in the whole given `seq`.
         This will be useful to call after `parallelize_local_sequence` method
         or other methods that can change the appointed set of workers.
+
         :param node_order: scheduled works to process
         :param contractors:
         :param spec:
@@ -164,7 +172,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         """
 
         timeline = self._timeline_type(node_order, contractors, worker_pool)
-        node2swork_new: Dict[GraphNode, ScheduledWork] = {}
+        node2swork_new: dict[GraphNode, ScheduledWork] = {}
 
         id2contractor = build_index(contractors, attrgetter('name'))
 
@@ -185,14 +193,27 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                  contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
+        """
+        Finds near placed works and turns it to run in parallel
+
+        :param scheduled_works:
+        :param node_order:
+        :param contractors:
+        :param spec:
+        :param worker_pool:
+        :param work_estimator:
+        :param assigned_parent_time:
+        :param area:
+        :return:
+        """
         start_index = area.start
         end_index = area.stop
         
         # preprocessing
-        node2ind: Dict[GraphNode, int] = {node: start_index + ind for ind, node in
+        node2ind: dict[GraphNode, int] = {node: start_index + ind for ind, node in
                                           enumerate(node_order[start_index:end_index])}
 
-        processed: Set[GraphNode] = set()
+        processed: set[GraphNode] = set()
 
         for i in reversed(area):
             node = node_order[i]

@@ -14,7 +14,7 @@ from sampo.schemas.time import Time
 
 class Agent:
     """
-    Class, that implement the logic of Agent actions in a multi-agent model
+    Agent entity representation in the multi-agent model
     Agent have 2 actions: give offer and accept offer
     """
 
@@ -109,6 +109,7 @@ class ScheduledBlock:
 
 class Manager:
     """
+    Manager entity representation in the multi-agent model
     Manager interact with agents
     """
     def __init__(self, agents: list[Agent]):

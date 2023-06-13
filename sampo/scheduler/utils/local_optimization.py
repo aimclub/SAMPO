@@ -92,11 +92,7 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
         """
-        Change order of nodes (not breaks topological order) by swapping 2 nodes
-
-        :param node_order:
-        :param area:
-        :return:
+        Change order of nodes (not breaks topological order) by swapping several nodes
         """
         if node_order is None:
             return

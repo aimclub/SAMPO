@@ -13,7 +13,8 @@ from sampo.schemas.time import Time
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
-    Builds schedule, that optimize resources by binary search
+    The scheduler optimizes resources to deadline
+    Scheduler uses binary search to optimize resources
     """
 
     def __init__(self, base_scheduler: Scheduler):

@@ -272,8 +272,7 @@ GraphNodeDict = Dict[str, GraphNode]
 @dataclass(frozen=True)
 class WorkGraph(JSONSerializable['WorkGraph']):
     """
-    Class to describe graph of works in future schedule. There are 2 additional vertex (service vertex):
-    start, finish - it's required to avoid checking beginning and end of graph
+    Class to describe graph of works in future schedule
     """
     # service vertexes
     start: GraphNode
@@ -315,9 +314,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     def _serialize(self) -> T:
         """
-        Make JSON structure from current graph for convenient transferring
+        Converts all the meaningful information from WorkGraph to a generic representation
 
-        :return: structure with serialized graph
+        :return: serialized graph
         """
         return {
             'nodes': [graph_node._serialize() for graph_node in self.nodes]
@@ -326,9 +325,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     @classmethod
     def _deserialize(cls, representation: T) -> JS:
         """
-        Receive WorkGraph from one of supported data structures
+        Receive WorkGraph from generic representation
 
-        :param representation: data structure with deserialized graph
+        :param representation: generic representation
         :return: object of WorkGraph
         """
         serialized_nodes = [GraphNode._deserialize(node) for node in representation['nodes']]
@@ -347,9 +346,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     # TODO: Check that adj matrix is really need
     def _to_adj_matrix(self) -> Tuple[List[GraphNode], dok_matrix, Dict[str, GraphNode]]:
         """
-        Receive adjacency matrix from current graph
-
-        :return:
+        Build adjacency matrix from current graph
         """
         ordered_nodes: List[GraphNode] = list(self.start.traverse_children(topologically=True))
         node2ind: Dict[GraphNode, int] = {

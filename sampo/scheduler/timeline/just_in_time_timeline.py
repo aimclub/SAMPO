@@ -13,7 +13,7 @@ from sampo.schemas.types import AgentId
 
 class JustInTimeTimeline(Timeline):
     """
-    In this structure, only the time of their release is stored for resources
+    Timeline that stored the time of resources release
     For each contractor and worker type store a descending list of pairs of time and number of available workers of this type of this contractor
     """
 
@@ -29,19 +29,19 @@ class JustInTimeTimeline(Timeline):
                                             node2swork: Dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: Optional[WorkTimeEstimator] = None) \
+                                            work_estimator: WorkTimeEstimator | None = None) \
             -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
         """
-        Define the nearest possible start time for current job. It is equal the max value from:
+        Define the nearest possible start time for the current job. It is equal the max value from:
         1. end time of all parent tasks
-        2. time previous job off all needed workers to complete current task
+        2. time previous job off all needed workers to complete the current task
 
-        :param assigned_parent_time:
+        :param assigned_parent_time: minimum start time
         :param assigned_start_time:
-        :param node: target node
-        :param worker_team: worker team under testing
-        :param node2swork:
-        :param work_estimator:
+        :param node: the GraphNode whose minimum time we are trying to find
+        :param worker_team: the worker team under testing
+        :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
+        :param work_estimator: function that calculates execution time of the GraphNode
         :return: start time, end time, None(exec_times not needed in this timeline)
         """
         # if current job is the first

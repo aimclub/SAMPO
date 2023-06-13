@@ -11,7 +11,7 @@ from sampo.utilities.base_opt import coordinate_descent
 
 class CoordinateDescentResourceOptimizer(ResourceOptimizer):
     """
-    Class that optimize number of resources by discrete analogue of coordinate gradient descent
+    Class that optimize number of resources by discrete analogue of coordinate descent
     """
 
     def __init__(self, one_dimension_optimizer: Callable[[int, int, Callable[[int], Time]], Time]):
@@ -25,7 +25,7 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
                            up_border: np.ndarray,
                            get_finish_time: Callable[[list[Worker]], Time]):
         """
-        The resource optimization module, that search optimal number of resources by coordinate gradient descent
+        The resource optimization module, that search optimal number of resources by coordinate descent
 
         :param worker_pool: global resources pool
         :param worker_team: worker team to optimize

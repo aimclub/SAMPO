@@ -7,12 +7,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 def ford_bellman(wg: WorkGraph, weights: Dict[GraphNode, float]) -> Dict[GraphNode, float]:
     """
-    Find critical path of received work graph
-    Critical path contains all nodes, on which finish time depends
-
-    :param wg:
-    :param weights:
-    :return:
+    Runs heuristic ford-bellman algorithm for given graph and weights
     """
     path_weights: Dict[GraphNode, float] = {node: 0 for node in wg.nodes}
     # cache graph edges
@@ -55,10 +50,6 @@ def prioritization(wg: WorkGraph, work_estimator: Optional[WorkTimeEstimator] = 
     """
     Return ordered critical nodes
     Finish time is depend on these ordered nodes
-
-    :param wg:
-    :param work_estimator:
-    :return:
     """
     # inverse weights
     weights = {node: -work_priority(node, calculate_working_time_cascade, work_estimator)

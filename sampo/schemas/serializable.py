@@ -36,6 +36,7 @@ TYPE_HINTS = '_serializable_type_hints'
 class Serializable(ABC, Generic[T, S]):
     """
     Parent class for (de-)serialization different data structures
+
     :param ABC: helper class to create custom abstract classes
     :param Generic[T, S]: base class to make Serializable as universal class, using user's types T, S
     """
@@ -49,6 +50,7 @@ class Serializable(ABC, Generic[T, S]):
     def _serialize(self) -> T:
         """
         Converts all the meaningful information from this instance to a generic representation
+
         :return: A generic representation
         """
         ...
@@ -100,6 +102,7 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
     """
     Parent class for serialization of classes, which can be converted to String representation or given from String
     representation
+
     :param Serializable[str, SS]:
     :param ABC: helper class to create custom abstract classes
     :param Generic[SS]: base class to make StrSerializable as universal class,

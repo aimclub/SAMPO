@@ -1,9 +1,8 @@
-from typing import List
-
-from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -12,7 +11,8 @@ from sampo.schemas.time import Time
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
-    Scheduler that uses binary search to optimize resources
+    The scheduler optimizes resources to deadline
+    Scheduler uses binary search to optimize resources
     """
 
     def __init__(self, base_scheduler: Scheduler):
@@ -29,10 +29,13 @@ class AverageBinarySearchResourceOptimizingScheduler:
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def call_scheduler(k) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
             self._resource_optimizer.k = k
-            return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+            try:
+                return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+            except NoSufficientContractorError:
+                return None, Time.inf(), None, None
 
         def fitness(k):
-            result = call_scheduler(k)[0].execution_time
+            result = call_scheduler(k)[1]
             if result > deadline:
                 result = Time.inf()
             return result
@@ -40,12 +43,17 @@ class AverageBinarySearchResourceOptimizingScheduler:
         k_min = 1
         k_max = 10000
 
+        last_correct = k_max
+
         while k_max - k_min > 0.05:
             m = (k_min + k_max) / 2
             time_m = fitness(m)
             if time_m.is_inf():
                 k_max = m
             else:
+                last_correct = m
                 k_min = m
 
-        return call_scheduler(k_min)
+        res = call_scheduler(last_correct)
+
+        return res

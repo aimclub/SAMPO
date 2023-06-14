@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from random import Random
-from typing import List, Optional, Callable
+from typing import Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
@@ -17,7 +17,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
     Class that describe vertex in graph (one work/task)
     """
-    def __init__(self, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
+    def __init__(self, id: str, name: str, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
                  material_reqs: list[MaterialReq] = [], object_reqs: list[ConstructionObjectReq] = [],
                  group: str = 'default', is_service_unit=False, volume: float = 0,
                  volume_type: str = "unit", display_name: str = ""):
@@ -32,6 +32,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param volume_type: unit of scope of work
         :param display_name: name of work
         """
+        super(WorkUnit, self).__init__(id, name)
         self.worker_reqs = worker_reqs
         self.equipment_reqs = equipment_reqs
         self.object_reqs = object_reqs
@@ -64,7 +65,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         return [WorkerReq._deserialize(wr) for wr in value]
 
     # TODO: move this logit to WorkTimeEstimator
-    def estimate_static(self, worker_list: List[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
+    def estimate_static(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
         """
         Calculate summary time of task execution (without stochastic part)
 
@@ -143,11 +144,11 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
 
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
     """
-    Receive productivity of certain worker
+    Calculate productivity of the Worker
 
-    :param w: certain worker
+    :param w: the worker
     :param _: parameter for stochastic part
-    :return: result of method get_static_productivity()
+    :return: productivity of received worker
     """
     return w.get_static_productivity()
 
@@ -161,7 +162,6 @@ def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
 # increases, after the maximum number of commands begins to decrease in efficiency, and its growth rate depends on
 # the maximum number of commands.
 # sum(1 - ((x-1)^2 / max_groups^2), where x from 1 to groups_count
-# TODO: describe the function (description, parameters, return type)
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups

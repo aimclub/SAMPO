@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -12,7 +12,7 @@ from sampo.utilities.base_opt import dichotomy_int
 
 class FullScanResourceOptimizer(ResourceOptimizer):
     """
-    Class that optimize number of resources by a complete search method
+    Class that optimize number of resources by the smart search method
     """
 
     _coordinate_descent_optimizer = CoordinateDescentResourceOptimizer(dichotomy_int)
@@ -25,7 +25,7 @@ class FullScanResourceOptimizer(ResourceOptimizer):
                            up_border: np.ndarray,
                            get_finish_time: Callable[[list[Worker]], Time]):
         """
-        The resource optimization module, that search optimal number of resources by a complete search method
+        The resource optimization module, that search optimal number of resources by the smart search method
 
         :param worker_pool: global resources pool
         :param worker_team: worker team to optimize
@@ -52,7 +52,7 @@ class FullScanResourceOptimizer(ResourceOptimizer):
 
         m = up_border
 
-        # Find down border with binary search
+        # Find the optimal point on the search area diagonal
         while (m > down_border).any():
             m = (up_border + down_border) // 2
             next_fit = fitness(m)

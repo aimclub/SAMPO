@@ -10,7 +10,9 @@ from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
-def test_comparing_to_heft(setup_wg, setup_contractors):
+def test_comparing_to_heft(setup_scheduler_parameters):
+    setup_wg, setup_contractors = setup_scheduler_parameters
+
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):

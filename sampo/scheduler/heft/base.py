@@ -13,7 +13,7 @@ from sampo.utilities.base_opt import dichotomy_int
 
 class HEFTScheduler(GenericScheduler):
     """
-    Type of scheduler that use method of critical path
+    Scheduler that use method of critical path
     The scheduler give opportunity to add work only to end
     """
 

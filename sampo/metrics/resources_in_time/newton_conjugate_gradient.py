@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Tuple, Optional, List, Union, Dict, Callable
+from typing import Optional, Union, Callable
 
 import numpy as np
 import scipy.optimize
@@ -32,7 +32,7 @@ class NewtonCGOptimizer(ResourceOptimizer):
     _opt_result: ndarray = field(init=False)
     _nfev: int = field(init=False, default=0)  # Number of Function EValuations
     _worker_weights: ndarray = field(init=False)
-    _opt_bounds: Tuple[ndarray, ndarray] = field(init=False)
+    _opt_bounds: tuple[ndarray, ndarray] = field(init=False)
     _margin: int = field(init=False, default=None)
 
     _can_satisfy_deadline: Callable[[ndarray], bool] = field(init=False, default=None)
@@ -41,9 +41,9 @@ class NewtonCGOptimizer(ResourceOptimizer):
 
     def optimize(self, wg: WorkGraph,
                  deadline: Time,
-                 worker_weights: Dict[str, Union[int, float]] = None,
+                 worker_weights: dict[str, Union[int, float]] = None,
                  agents: Optional[WorkerContractorPool] = None,
-                 dry_resources: Optional[bool] = False) -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
+                 dry_resources: Optional[bool] = False) -> Union[tuple[Contractor, Time], tuple[None, None]]:
         self._nfev = 0
         left_counts, right_counts, agent_names = init_borders(wg, self.scheduler, deadline,
                                                               self.worker_factor, self.max_workers, agents)
@@ -94,7 +94,7 @@ class NewtonCGOptimizer(ResourceOptimizer):
             rg = self._can_satisfy_deadline(agent_counts=result)
         return (result + 1) / self.gradient_scale, result / self.gradient_scale
 
-    def _init_worker_weights(self, agent_names: List[str], agent_weights: Dict[str, Union[float, int]]):
+    def _init_worker_weights(self, agent_names: list[str], agent_weights: dict[str, Union[float, int]]):
         self._worker_weights = np.array([agent_weights[name] for name in agent_names])
 
     def _in_bounds(self, x: ndarray):

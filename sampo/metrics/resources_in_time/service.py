@@ -3,7 +3,7 @@ This file contains high-level functions for calling the resource optimization
 """
 from enum import Enum, auto
 from functools import partial
-from typing import Union, Tuple
+from typing import Union
 
 from sampo.metrics.resources_in_time.binary_search import BinarySearchOptimizationType, BinarySearchOptimizer
 from sampo.metrics.resources_in_time.newton_conjugate_gradient import NewtonCGOptimizer
@@ -26,7 +26,7 @@ def apply_binary_optimization(scheduler: Scheduler, work_graph: WorkGraph, deadl
                               method: BinarySearchOptimizationType = BinarySearchOptimizationType.ItemByItemFastInit,
                               agents_from_manual_input: WorkerContractorPool = None,
                               dry_resources: bool = False) \
-        -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
+        -> Union[dict[Contractor, Time], dict[None, None]]:
     """
     Applies resource optimization by means of binary search to the given work graph with the given scheduler
     :param dry_resources:
@@ -48,7 +48,7 @@ def apply_gradient_optimization(scheduler: Scheduler, work_graph: WorkGraph, dea
                                 start: str,
                                 agents_from_manual_input: WorkerContractorPool = None,
                                 dry_resources: bool = False) \
-        -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
+        -> Union[dict[Contractor, Time], dict[None, None]]:
     """
     WARNING: Gradient resource optimization has not been implemented properly
     Applies resource optimization by means of gradient methods to the given work graph with the given scheduler
@@ -70,7 +70,7 @@ def apply_resource_optimization(optimization_type: ResourceOptimizationType, sch
                                 start: str,
                                 agents_from_manual_input: WorkerContractorPool = None,
                                 dry_resources: bool = False) \
-        -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
+        -> Union[dict[Contractor, Time], dict[None, None]]:
     if optimization_type is ResourceOptimizationType.BinarySearch:
         optimizer = partial(apply_binary_optimization, method=BinarySearchOptimizationType.ItemByItemFastInit)
     elif optimization_type is ResourceOptimizationType.NewtonCG:

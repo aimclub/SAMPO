@@ -41,7 +41,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     :param count_supplier: function that computes the borders of block size from it's index
     :param edge_prob: edge existence probability
     :param rand: a random reference
-    :param obstruction_getter:
+    :param obstruction_getter: obstruction, that can be inserted in BlockGraph
     :return: generated block graph
     """
     ss = SimpleSynthetic(rand)

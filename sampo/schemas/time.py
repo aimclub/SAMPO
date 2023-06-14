@@ -22,9 +22,7 @@ class Time(AutoJSONSerializable['Time']):
     @staticmethod
     def inf():
         """
-        Return very big time (tending to infinity)
-
-        :return: object Time with infinity as value
+        Return time, that is obviously longer
         """
         return Time(TIME_INF)
 

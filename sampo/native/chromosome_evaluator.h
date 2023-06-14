@@ -19,8 +19,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <omp.h>
-
-using namespace std;
+#include <set>
 
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
@@ -30,6 +29,7 @@ typedef vector<vector<vector<pair<int, int>>>> Timeline;
 class ChromosomeEvaluator {
 private:
     const vector<vector<int>>& parents;      // vertices' parents
+    const vector<vector<int>>& headParents;  // vertices' parents without inseparables
     const vector<vector<int>>& inseparables; // inseparable chains with self
     const vector<vector<int>>& workers;      // contractor -> worker -> count
     vector<double> volume;                   // work -> worker -> WorkUnit.min_req
@@ -39,7 +39,6 @@ private:
     int totalWorksCount;
     PyObject* pythonWrapper;
     bool useExternalWorkEstimator;
-    int numThreads;
 
     inline static float get_productivity(size_t workerType, int worker_count) {
         // TODO
@@ -110,7 +109,7 @@ private:
         int maxAgentTime = 0;
 
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = 1;//resources[worker];
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -127,7 +126,7 @@ private:
                 }
                 need_count -= offer_count;
                 if (ind == 0 && need_count > 0) {
-                    cerr << "Not enough workers" << endl;
+//                    cerr << "Not enough workers" << endl;
                     return TIME_INF;
                 }
                 ind--;
@@ -210,35 +209,69 @@ private:
     }
 
 public:
+    int numThreads;
+
     explicit ChromosomeEvaluator(EvaluateInfo* info)
-        : parents(info->parents), inseparables(info->inseparables), workers(info->workers) {
+        : parents(info->parents), headParents(info->headParents), inseparables(info->inseparables), workers(info->workers) {
         this->totalWorksCount = info->totalWorksCount;
         this->pythonWrapper = info->pythonWrapper;
         this->useExternalWorkEstimator = info->useExternalWorkEstimator;
-//         this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
-        this->numThreads = 1;
+        this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
         this->volume = info->volume;
         this->minReqs = info->minReq;
         this->maxReqs = info->maxReq;
 
-//        cout << volume.size() << endl;
-//        cout << minReqs[5].size() << " " << minReqs.size() << endl;
-//        cout << maxReqs[5].size() << " " << maxReqs.size() << endl;
+//        for (int i = 0; i < headParents.size(); i++) {
+//            cout << i << " | ";
+//            for (int p : headParents[i]) {
+//                cout << p << " ";
+//            }
+//            cout << endl;
+//        }
 
-//         printf("Threads: %i\n", this->numThreads);
+         printf("Genetic running threads: %i\n", this->numThreads);
     }
 
     ~ChromosomeEvaluator() = default;
 
-    vector<int> evaluate(vector<Chromosome*>& chromosomes) {
-        auto results = vector<int>();
-        results.resize(chromosomes.size());
+    bool isValid(Chromosome* chromosome) {
+        bool* visited = new bool[chromosome->numWorks()] { false };
 
-//        #pragma omp parallel for firstprivate(chromosomes) shared(results) default (none) num_threads(this->numThreads)
-        for (int i = 0; i < chromosomes.size(); i++) {
-            results[i] = evaluate(i, chromosomes[i]);
+        // check edges
+        for (int i = 0; i < chromosome->numWorks(); i++) {
+            int node = *chromosome->getOrder()[i];
+            visited[node] = true;
+            for (int parent : headParents[node]) {
+                if (!visited[parent]) {
+                    return false;
+                }
+            }
         }
-        return results;
+
+        delete[] visited;
+        // check resources
+        for (int node = 0; node < chromosome->numWorks(); node++) {
+            int contractor = chromosome->getContractor(node);
+            for (int res = 0; res < chromosome->numResources(); res++) {
+                int count = chromosome->getResources()[node][res];
+                if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void evaluate(vector<Chromosome*>& chromosomes) {
+        #pragma omp parallel for shared(chromosomes) default (none) num_threads(this->numThreads)
+        for (int i = 0; i < chromosomes.size(); i++) {
+            if (isValid(chromosomes[i])) {
+                chromosomes[i]->fitness = evaluate(i, chromosomes[i]);
+            } else {
+                chromosomes[i]->fitness = INT_MAX;
+            }
+        }
     }
 
     int evaluate(int chromosome_ind, Chromosome* chromosome) {
@@ -247,7 +280,14 @@ public:
         auto completed = vector<int>();
         completed.resize(totalWorksCount);
 
+//        cout << "Evaluated" << endl;
+
         int finishTime = 0;
+
+//        for (int w = 0; w < chromosome->numWorks(); w++) {
+//            cout << *chromosome->getOrder()[w] << " ";
+//        }
+//        cout << endl;
 
         // scheduling works one-by-one
         for (int i = 0; i < chromosome->numWorks(); i++) {

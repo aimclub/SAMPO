@@ -1,13 +1,16 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
-#include "numpy/arrayobject.h"
+
+#include <iostream>
 
 #include "chromosome_evaluator.h"
 #include "pycodec.h"
 #include "genetic.h"
 #include "python_deserializer.h"
+#include "utils/use_numpy.h"
 
-#include <iostream>
+
+#include <chrono>
 
 // GLOBAL TODOS
 // TODO Make all classes with encapsulation - remove public fields
@@ -24,10 +27,6 @@ static vector<int> decodeIntList(PyObject* object) {
     return PyCodec::fromList(object, PyLong_AsInt);
 }
 
-static PyObject* pyObjectIdentity(PyObject* object) {
-    return object;
-}
-
 static PyObject* evaluate(PyObject *self, PyObject *args) {
     EvaluateInfo* infoPtr;
     PyObject* pyChromosomes;
@@ -38,12 +37,12 @@ static PyObject* evaluate(PyObject *self, PyObject *args) {
 
     ChromosomeEvaluator evaluator(infoPtr);
 
-    vector<int> results = evaluator.evaluate(chromosomes);
+    evaluator.evaluate(chromosomes);
 
-    PyObject* pyList = PyList_New(results.size());
+    PyObject* pyList = PyList_New(chromosomes.size());
     Py_INCREF(pyList);
-    for (int i = 0; i < results.size(); i++) {
-        PyObject* pyInt = Py_BuildValue("i", results[i]);
+    for (int i = 0; i < chromosomes.size(); i++) {
+        PyObject* pyInt = Py_BuildValue("i", chromosomes[i]->fitness);
         PyList_SetItem(pyList, i, pyInt);
     }
     return pyList;
@@ -61,24 +60,30 @@ static PyObject* runGenetic(PyObject* self, PyObject* args) {
                           &crossOrderProb, &crossResourcesProb, &crossContractorsProb, &sizeSelection)) {
         cout << "Can't parse arguments" << endl;
     }
+    auto start = chrono::high_resolution_clock::now();
     auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+    cout << "Chromosomes decoded in " << duration.count() << " ms" << endl;
 
     ChromosomeEvaluator evaluator(infoPtr);
     Genetic g(infoPtr->minReq,
               mutateOrderProb, mutateResourcesProb, mutateContractorsProb,
               crossOrderProb, crossResourcesProb, crossContractorsProb,
               sizeSelection, evaluator);
-
-    auto result = g.run(chromosomes);
-//    return PythonDeserializer::encodeChromosome(result);
-//    Py_INCREF(Py_None);
-//    return Py_None;
-    Py_RETURN_NONE;
+    Chromosome* result;
+//    Py_BEGIN_ALLOW_THREADS;
+    result = g.run(chromosomes);
+//    Py_END_ALLOW_THREADS;
+    auto pyResult = PythonDeserializer::encodeChromosome(result);
+    delete result;
+    return pyResult;
 }
 
 static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* pythonWrapper;
     PyObject* pyParents;
+    PyObject* pyHeadParents;
     PyObject* pyInseparables;
     PyObject* pyWorkers;
     int totalWorksCount;
@@ -87,8 +92,8 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* minReq;
     PyObject* maxReq;
 
-    if (!PyArg_ParseTuple(args, "OOOOipOOO",
-                          &pythonWrapper, &pyParents, &pyInseparables,
+    if (!PyArg_ParseTuple(args, "OOOOOipOOO",
+                          &pythonWrapper, &pyParents, &pyHeadParents, &pyInseparables,
                           &pyWorkers, &totalWorksCount, &useExternalWorkEstimator,
                           &volume, &minReq, &maxReq)) {
         cout << "Can't parse arguments" << endl;
@@ -97,6 +102,7 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     auto* info = new EvaluateInfo {
         pythonWrapper,
         PyCodec::fromList(pyParents, decodeIntList),
+        PyCodec::fromList(pyHeadParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
         PyCodec::fromList(pyWorkers, decodeIntList),
         PyCodec::fromList(volume, PyFloat_AsDouble),
@@ -117,8 +123,7 @@ static PyObject* freeEvaluationInfo(PyObject *self, PyObject *args) {
         cout << "Can't parse arguments" << endl;
     }
     delete infoPtr;
-    Py_INCREF(Py_None);
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyMethodDef nativeMethods[] = {
@@ -145,7 +150,7 @@ PyMODINIT_FUNC
 PyInit_native(void) {
     assert(! PyErr_Occurred());
     // Initialise Numpy
-    import_array()
+    import_array();
     if (PyErr_Occurred()) {
         return nullptr;
     }
@@ -160,7 +165,7 @@ int main() {
                                          { 2 }, { 4 }, { 11, 10 }, { 6, 12 }};
     vector<vector<int>> inseparables = { { 0 }, { 1 }, { 2, 10 }, { 3 }, { 4, 11, 12 }, { 5 },
                                          { 6, 13 }, { 7 }, { 8 }, { 9 }, { 10 }, { 11 }, { 12 }, { 13 },};
-    vector<vector<int>> workers      = { { 50, 50, 50, 50, 50, 50 } };               // one contractor with 6 types of workers
+    vector<vector<int>> workers      = { { 50, 50, 50, 50, 50, 50 } };  // one contractor with 6 types of workers
 
     vector<int> chromosomeOrder = { 0, 1, 2, 3, 5, 7, 4, 8, 6, 9 };
     vector<vector<int>> chromosomeResources = {

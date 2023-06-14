@@ -1,7 +1,7 @@
 import math
 import random
 import time
-from typing import Dict, List, Tuple, Callable
+from typing import Callable
 
 import numpy as np
 import seaborn as sns
@@ -10,13 +10,12 @@ from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, is_chromosome_correct
+    FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
-from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -26,18 +25,18 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 def build_schedule(wg: WorkGraph,
-                   contractors: List[Contractor],
+                   contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
                    population_size: int,
                    generation_number: int,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
-                   FitnessFunction] = TimeFitness,
+                                                 FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -84,8 +83,8 @@ def build_schedule(wg: WorkGraph,
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
-    index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
-    work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
+    index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
+    work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
@@ -122,9 +121,9 @@ def build_schedule(wg: WorkGraph,
             inseparable_parents[child] = node
 
     # here we aggregate information about relationships from the whole inseparable chain
-    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
-                                         for inseparable in node.get_inseparable_chain_with_self()
-                                         for child in inseparable.children]
+    children = {work_id2index[node.id]: list(set([work_id2index[inseparable_parents[child].id]
+                                                  for inseparable in node.get_inseparable_chain_with_self()
+                                                  for child in inseparable.children]))
                 for node in nodes}
 
     parents = {work_id2index[node.id]: [] for node in nodes}
@@ -137,9 +136,10 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     # initial chromosomes construction
-    init_chromosomes: Dict[str, ChromosomeType] = \
+    init_chromosomes: dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, order)
+            if schedule is not None else None
          for name, (schedule, order) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
@@ -149,14 +149,16 @@ def build_schedule(wg: WorkGraph,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
                            assigned_parent_time, work_estimator)
 
-    for name, chromosome in init_chromosomes.items():
-        if not is_chromosome_correct(chromosome, node_indices, parents):
-            raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+    # for name, chromosome in init_chromosomes.items():
+    #     if not is_chromosome_correct(chromosome, node_indices, parents):
+    #         raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
-                           index2node, work_estimator)
+                           parents, work_estimator)
     # create population of a given size
     pop = toolbox.population(n=population_size)
+
+    print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     if not native.native:
         # save best individuals
@@ -171,7 +173,6 @@ def build_schedule(wg: WorkGraph,
 
         fitness_f = fitness_constructor(native.evaluate)
 
-        print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
         start = time.time()
 
         # map to each individual fitness function
@@ -342,19 +343,15 @@ def build_schedule(wg: WorkGraph,
 
         print(f'Final time: {hof[0].fitness.values[0]}')
         print(f'Generations processing took {(time.time() - start) * 1000} ms')
-        print(f'Evaluation time: {evaluation_time}')
+        print(f'Evaluation time: {evaluation_time * 1000}')
     else:
+        native_start = time.time()
         chromosome = native.run_genetic(list([ind[0] for ind in pop]),
                                         mutate_order, mutate_order, mutate_resources, mutate_resources,
                                         mutate_resources, mutate_resources, selection_size)
+        print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes \
-        = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
-                                         index2contractor_obj,
-                                         worker_pool_indices,
-                                         spec, timeline,
-                                         assigned_parent_time,
-                                         work_estimator)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome)
 
     if show_fitness_graph:
         sns.lineplot(
@@ -368,7 +365,7 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
+def compare_individuals(a: tuple[ChromosomeType], b: tuple[ChromosomeType]):
     return (a[0][0] == b[0][0]).all() and (a[0][1] == b[0][1]).all()
 
 

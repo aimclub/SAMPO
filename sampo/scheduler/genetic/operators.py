@@ -1,7 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import List, Dict, Iterable, Callable
+from typing import Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
@@ -64,7 +64,8 @@ class DeadlineResourcesFitness(FitnessFunction):
 
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
-        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
+        return [int(int(np.sum(chromosome[2])) * max(1.0, finish_time / self._deadline.value))
+                for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -84,7 +85,7 @@ class DeadlineCostFitness(FitnessFunction):
         evaluated = self._evaluator(chromosomes)
         # TODO Integrate cost calculation to native module
         # here we know that all resources costs `10` coins
-        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2] * 10))
+        return [int(int(np.sum(chromosome[2]) * 10) * max(1.0, finish_time / self._deadline.value))
                 for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
@@ -95,13 +96,17 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
 
-def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: WorkerContractorPool,
-                 index2node: Dict[int, GraphNode],
-                 work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                 index2contractor: Dict[int, str],
-                 index2contractor_obj: Dict[int, Contractor],
-                 init_chromosomes: Dict[str, ChromosomeType],
-                 mutate_order: float, mutate_resources: float, selection_size: int,
+def init_toolbox(wg: WorkGraph, contractors: list[Contractor],
+                 worker_pool: WorkerContractorPool,
+                 index2node: dict[int, GraphNode],
+                 work_id2index: dict[str, int],
+                 worker_name2index: dict[str, int],
+                 index2contractor: dict[int, str],
+                 index2contractor_obj: dict[int, Contractor],
+                 init_chromosomes: dict[str, ChromosomeType],
+                 mutate_order: float,
+                 mutate_resources: float,
+                 selection_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
                  worker_pool_indices: dict[int, dict[int, Worker]],
@@ -109,12 +114,12 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
-                 parents: Dict[int, list[int]],
+                 parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
-    List of parameters, that received this function, is sufficient and complete to manipulate with genetic
+    list of parameters, that received this function, is sufficient and complete to manipulate with genetic
 
     :return: Object, included tools for genetic
     """
@@ -155,7 +160,7 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
-                     work_estimator=work_estimator)
+                     work_estimator=work_estimator, worker_name2index=worker_name2index, contractor2index=contractor2index)
     return toolbox
 
 
@@ -163,10 +168,10 @@ def copy_chromosome(c: ChromosomeType) -> ChromosomeType:
     return c[0].copy(), c[1].copy(), c[2].copy()
 
 
-def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node_list: list[tuple[int, GraphNode]],
-                        work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                        contractor2index: Dict[str, int], contractor_borders: np.ndarray,
-                        init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
+def generate_chromosome(wg: WorkGraph, contractors: list[Contractor], index2node_list: list[tuple[int, GraphNode]],
+                        work_id2index: dict[str, int], worker_name2index: dict[str, int],
+                        contractor2index: dict[str, int], contractor_borders: np.ndarray,
+                        init_chromosomes: dict[str, ChromosomeType], rand: random.Random,
                         work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
@@ -188,23 +193,39 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     :param init_chromosomes:
     :return: chromosome
     """
+
+    def randomized_init() -> ChromosomeType:
+        schedule = RandomizedTopologicalScheduler(work_estimator,
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors)
+        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                                    contractor2index, contractor_borders, schedule)
+
     chance = rand.random()
     if chance < 0.2:
         chromosome = init_chromosomes["heft_end"]
     elif chance < 0.4:
         chromosome = init_chromosomes["heft_between"]
+    elif chance < 0.5:
+        chromosome = init_chromosomes["12.5%"]
+    elif chance < 0.6:
+        chromosome = init_chromosomes["25%"]
+    elif chance < 0.7:
+        chromosome = init_chromosomes["75%"]
+    elif chance < 0.8:
+        chromosome = init_chromosomes["87.5%"]
     else:
-        schedule = RandomizedTopologicalScheduler(work_estimator,
-                                                  int(rand.random() * 1000000)) \
-            .schedule(wg, contractors)
-        chromosome = convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                                    contractor2index, contractor_borders, schedule)
+        chromosome = randomized_init()
+
+    if chromosome is None:
+        chromosome = randomized_init()
+
     return chromosome
 
 
 def is_chromosome_correct(chromosome: ChromosomeType,
                           node_indices: list[int],
-                          parents: Dict[int, list[int]]) -> bool:
+                          parents: dict[int, list[int]]) -> bool:
     """
     Check order of works and contractors
 
@@ -217,7 +238,7 @@ def is_chromosome_correct(chromosome: ChromosomeType,
            is_chromosome_contractors_correct(chromosome, node_indices)
 
 
-def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, list[int]]) -> bool:
+def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, list[int]]) -> bool:
     """
     Checks that assigned order of works is topologically correct
 
@@ -355,14 +376,21 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     """
     ind = copy_chromosome(ind)
 
+    num_resources = len(resources_min_border)
     num_contractors = len(ind[2])
-    for i in range(num_contractors):
+    for contractor in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
-            ind[2][i][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
+            ind[2][contractor][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
                                                       max(resources_min_border[type_of_worker] + 1,
-                                                          ind[2][i][type_of_worker] // 10))
-            if ind[2][i][type_of_worker] <= 0:
-                ind[2][i][type_of_worker] = 1
+                                                          ind[2][contractor][type_of_worker] // 10))
+            if ind[2][contractor][type_of_worker] <= 0:
+                ind[2][contractor][type_of_worker] = 1
+
+            # find and correct all invalidated resource assignments
+            for work in range(len(ind[0])):
+                if ind[1][work][num_resources] == contractor:
+                    ind[1][work][type_of_worker] = min(ind[1][work][type_of_worker],
+                                                       ind[2][contractor][type_of_worker])
 
     return ind
 

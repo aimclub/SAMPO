@@ -3,7 +3,7 @@ import os
 import pydoc
 from abc import ABC, abstractmethod
 from itertools import chain
-from typing import Generic, TypeVar, Dict, Union
+from typing import Generic, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -36,6 +36,7 @@ TYPE_HINTS = '_serializable_type_hints'
 class Serializable(ABC, Generic[T, S]):
     """
     Parent class for (de-)serialization different data structures
+
     :param ABC: helper class to create custom abstract classes
     :param Generic[T, S]: base class to make Serializable as universal class, using user's types T, S
     """
@@ -49,6 +50,7 @@ class Serializable(ABC, Generic[T, S]):
     def _serialize(self) -> T:
         """
         Converts all the meaningful information from this instance to a generic representation
+
         :return: A generic representation
         """
         ...
@@ -100,6 +102,7 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
     """
     Parent class for serialization of classes, which can be converted to String representation or given from String
     representation
+
     :param Serializable[str, SS]:
     :param ABC: helper class to create custom abstract classes
     :param Generic[SS]: base class to make StrSerializable as universal class,
@@ -154,7 +157,7 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
             write_file.write(serialized_str)
 
 
-class JSONSerializable(Serializable[Dict[str,
+class JSONSerializable(Serializable[dict[str,
                                          Union[
                                              dict,
                                              Union[list, tuple],
@@ -275,7 +278,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
         """
         return []
 
-    def _serialize(self) -> Dict[str,
+    def _serialize(self) -> dict[str,
                                  Union[
                                      dict,
                                      Union[list, tuple],

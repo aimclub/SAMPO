@@ -1,6 +1,6 @@
 from collections import defaultdict
 from copy import copy
-from typing import List, Dict, Optional, Union
+from typing import Optional, Union
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
@@ -17,8 +17,8 @@ class WorkSpec:
     :param assigned_workers: predefined worker team (scheduler should assign this worker team to this work)
     :param assigned_time: predefined work time (scheduler should schedule this work with this execution time)
     """
-    chain: Optional[List[WorkUnit]] = None  # TODO Add support
-    assigned_workers: Dict[WorkerName, int] = {}
+    chain: Optional[list[WorkUnit]] = None  # TODO Add support
+    assigned_workers: dict[WorkerName, int] = {}
     assigned_time: Optional[Time] = None
 
 
@@ -29,7 +29,7 @@ class ScheduleSpec:
 
     :param work2spec: work specs
     """
-    _work2spec: Dict[str, WorkSpec] = defaultdict(WorkSpec)
+    _work2spec: dict[str, WorkSpec] = defaultdict(WorkSpec)
 
     def set_exec_time(self, work: Union[str, WorkUnit], time: Time) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):
@@ -37,13 +37,13 @@ class ScheduleSpec:
         self._work2spec[work].assigned_time = time
         return self
 
-    def assign_workers_dict(self, work: str, workers: Dict[WorkerName, int]) -> 'ScheduleSpec':
+    def assign_workers_dict(self, work: str, workers: dict[WorkerName, int]) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):
             work = work.id
         self._work2spec[work].assigned_workers = copy(workers)
         return self
 
-    def assign_workers(self, work: str, workers: List[Worker]) -> 'ScheduleSpec':
+    def assign_workers(self, work: str, workers: list[Worker]) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):
             work = work.id
         self._work2spec[work].assigned_workers = {worker.name: worker.count for worker in workers}

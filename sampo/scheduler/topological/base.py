@@ -1,4 +1,4 @@
-from typing import List, Dict, Set, Optional
+from typing import Optional
 
 import numpy as np
 from toposort import toposort_flatten, toposort
@@ -13,6 +13,9 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class TopologicalScheduler(GenericScheduler):
+    """
+    Scheduler, that represent 'WorkGraph' in topological order
+    """
 
     def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
@@ -24,34 +27,50 @@ class TopologicalScheduler(GenericScheduler):
                          work_estimator=work_estimator)
 
     # noinspection PyMethodMayBeStatic
-    def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> List[GraphNode]:
+    def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
+        """
+        Sort 'WorkGraph' in topological order
+
+        :param wg: WorkGraph
+        :param work_estimator: function that calculates execution time of the work
+        :return: list of sorted nodes in graph
+        """
         node2ind = {node: i for i, node in enumerate(wg.nodes)}
 
-        dependents: Dict[int, Set[int]] = {
+        dependents: dict[int, set[int]] = {
             node2ind[v]: {node2ind[node] for node in v.parents}
             for v in wg.nodes
         }
 
-        tsorted_nodes_indices: List[int] = toposort_flatten(dependents, sort=True)
+        tsorted_nodes_indices: list[int] = toposort_flatten(dependents, sort=True)
         tsorted_nodes = [wg.nodes[i] for i in tsorted_nodes_indices]
         return list(reversed(tsorted_nodes))
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):
+    """
+    Scheduler, that represent 'WorkGraph' in topological order with random
+    """
     def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
-    def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> List[GraphNode]:
-        def shuffle(nodes: Set[GraphNode]) -> List[GraphNode]:
+    def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
+        def shuffle(nodes: set[GraphNode]) -> list[GraphNode]:
+            """
+            Shuffle nodes that are on the same level
+
+            :param nodes: list of nodes
+            :return: list of shuffled indices
+            """
             nds = list(nodes)
             indices = np.arange(len(nds))
             self._random_state.shuffle(indices)
             return [nds[ind] for ind in indices]
 
-        dependents: Dict[GraphNode, Set[GraphNode]] = {v: v.parents_set for v in wg.nodes}
-        tsorted_nodes: List[GraphNode] = [
+        dependents: dict[GraphNode, set[GraphNode]] = {v: v.parents_set for v in wg.nodes}
+        tsorted_nodes: list[GraphNode] = [
             node for level in toposort(dependents)
             for node in shuffle(level)
         ]

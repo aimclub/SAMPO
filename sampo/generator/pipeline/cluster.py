@@ -10,9 +10,11 @@ from sampo.schemas.works import WorkUnit
 
 
 def _add_addition_work(probability: float, rand: Random | None = None) -> bool:
+    """Return answer, if addition work will be added"""
     return IntervalUniform(0, 1).rand_float(rand) <= probability
 
 
+# TODO: describe
 def _get_roads(parents: list[GraphNode], cluster_name: str, dist: float,
                rand: Random | None = None) -> dict[str, GraphNode]:
     road_nodes = dict()
@@ -28,7 +30,7 @@ def _get_roads(parents: list[GraphNode], cluster_name: str, dist: float,
     road_nodes['final'] = GraphNode(final_r, [(road_nodes['temp'], wr.ATOMIC_ROAD_LEN, EdgeType.LagFinishStart)])
     return road_nodes
 
-
+# TODO: describe
 def _get_engineering_preparation(parents: list[GraphNode], cluster_name: str, boreholes_count: int,
                                  rand: Random | None = None) -> GraphNode:
     worker_req = wr.mul_borehole_volume(wr.ENGINEERING_PREPARATION, boreholes_count, wr.ENGINEERING_PREPARATION_BASE)
@@ -38,7 +40,7 @@ def _get_engineering_preparation(parents: list[GraphNode], cluster_name: str, bo
     node = GraphNode(work, parents)
     return node
 
-
+# TODO: describe
 def _get_power_lines(parents: list[GraphNode], cluster_name: str, dist_line: float,
                      dist_high_line: float | None = None, rand: Random | None = None) -> list[GraphNode]:
     worker_req = wr.scale_reqs(wr.POWER_LINE, dist_line)
@@ -61,7 +63,7 @@ def _get_power_lines(parents: list[GraphNode], cluster_name: str, dist_line: flo
 
     return power_lines
 
-
+# TODO: describe
 def _get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: list[float],
                     rand: Random | None = None) -> list[GraphNode]:
     worker_req_pipe = wr.scale_reqs(wr.PIPE_LINE, pipe_dists[0])
@@ -85,7 +87,7 @@ def _get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: lis
     graph_nodes.append(GraphNode(looping, graph_nodes[0:1]))
     return graph_nodes
 
-
+# TODO: describe
 def _get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, group_ind: int, borehole_count: int,
                                    rand: Random | None = None) -> list[GraphNode]:
     metering_install = WorkUnit(uuid_str(rand), "metering installation",
@@ -105,7 +107,7 @@ def _get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, 
     ]
     return nodes
 
-
+# TODO: describe
 def _get_boreholes_equipment_shared(parents: list[GraphNode], cluster_name: str,
                                     rand: Random | None = None) -> list[GraphNode]:
     water_block = WorkUnit(uuid_str(rand), "block water distribution", wr.WATER_BLOCK,
@@ -126,7 +128,7 @@ def _get_boreholes_equipment_shared(parents: list[GraphNode], cluster_name: str,
     ]
     return nodes
 
-
+# TODO: describe
 def _get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, borehole_count: int,
                    rand: Random | None = None) -> list[GraphNode]:
     nodes = []
@@ -136,7 +138,7 @@ def _get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, 
         nodes.append(GraphNode(borehole_work, parents))
     return nodes
 
-
+# TODO: describe
 def _get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str, pipes_count: int, masts_count: int,
                                      rand: Random | None = None) -> list[GraphNode]:
     nodes = []
@@ -160,7 +162,7 @@ def _get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str
         nodes.append(GraphNode(light_mast_work, parents))
     return nodes
 
-
+# TODO: describe
 def _get_handing_stage(parents: list[GraphNode], cluster_name: str, borehole_count: int,
                        rand: Random | None = None) -> GraphNode:
     worker_req = wr.mul_borehole_volume(wr.HANDING_STAGE, borehole_count, wr.HANDING_STAGE_BASE)

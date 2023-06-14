@@ -1,6 +1,6 @@
 import math
 import random
-from typing import List, Tuple, Optional, Callable
+from typing import Optional, Callable
 
 from deap.base import Toolbox
 
@@ -25,6 +25,10 @@ from sampo.utilities.validation import validate_schedule
 
 
 class GeneticScheduler(Scheduler):
+    """
+    Class for hybrid scheduling algorithm, that uses heuristic algorithm to generate
+    first population and genetic algorithm to search the best solving
+    """
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
@@ -63,9 +67,9 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
         """
-        Return params for model to make new population
+        Return base parameters for model to make new population
 
         :param works_count:
         :return:
@@ -110,11 +114,6 @@ class GeneticScheduler(Scheduler):
         self._n_cpu = n_cpu
 
     def set_time_border(self, time_border: int):
-        """
-        Set the borders of time
-
-        :param time_border:
-        """
         self._time_border = time_border
 
     def set_deadline(self, deadline: Time):
@@ -126,6 +125,14 @@ class GeneticScheduler(Scheduler):
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+        """
+        Heuristic algorithm, that generate first population
+
+        :param wg: graph of works
+        :param contractors:
+        :return:
+        """
+
         def init_k_schedule(scheduler_class, k):
             try:
                 return (scheduler_class(work_estimator=self.work_estimator,
@@ -170,13 +177,24 @@ class GeneticScheduler(Scheduler):
             }
 
     def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+        """
+        Build schedule for received graph of workers and return the current state of schedule
+        It's needed to use this method in multy agents model
 
+        :param wg:
+        :param contractors:
+        :param spec:
+        :param validate:
+        :param assigned_parent_time:
+        :param timeline:
+        :return:
+        """
         init_schedules = self.generate_first_population(wg, contractors)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)

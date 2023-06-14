@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 import numpy as np
 
 import copy
@@ -15,7 +13,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
-ChromosomeType = Tuple[np.ndarray, np.ndarray, np.ndarray]
+ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
 def convert_schedule_to_chromosome(wg: WorkGraph,
@@ -75,6 +73,21 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = None,) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+    """
+    Build schedule from received chromosome
+    It can be used in visualization of final solving of genetic algorithm
+
+    :param chromosome:
+    :param worker_pool:
+    :param index2node:
+    :param index2contractor:
+    :param worker_pool_indices:
+    :param spec:
+    :param timeline:
+    :param assigned_parent_time:
+    :param work_estimator:
+    :return:
+    """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     works_order = chromosome[0]

@@ -9,6 +9,9 @@ from sampo.schemas.utils import uuid_str
 
 def _get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: dict[str, float] | None,
                            available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
+    """
+    Return random quantity of each type of resources. Random value is gotten from Gaussian distribution
+    """
     available_types = available_types or list(proportions.keys())
     counts = {name: prop * pack_count for name, prop in proportions.items() if name in available_types}
     stochastic_counts = {
@@ -51,6 +54,7 @@ def get_contractor(pack_worker_count: float,
                    available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
     """
     Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
+
     :param pack_worker_count: The number of resource sets
     :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
     transferred proportions

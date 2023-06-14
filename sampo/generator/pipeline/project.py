@@ -14,11 +14,11 @@ from sampo.schemas.works import WorkUnit
 
 def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
     """
-    Creates a small graph of works consisting of 30-50 vertices;
+    Creates a small graph of works consisting of 30-50 vertices
+
     :param cluster_name: str - the first cluster name
     :param rand: Optional[Random] - generator of numbers with a given seed or None
-    :return:
-       work_graph: WorkGraph - work graph where count of vertex between 30 and 50
+    :return: work_graph: WorkGraph - work graph where count of vertex between 30 and 50
     """
 
     s = get_start_stage()
@@ -73,8 +73,8 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
               top_border: int | None = 0,
               rand: Random | None = None) -> WorkGraph:
     """
-    Invokes a graph of the given type if at least one positive value of
-        cluster_counts, addition_cluster_probability, bottom_border is given;
+    Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability, bottom_border is given
+
     :param mode: str - 'general' or 'sequence' or 'parallel - the type of the returned graph
     :param cluster_name_prefix: str -  cluster name prefix, if the prefix is 'C',
         the clusters will be called 'C1', 'C2' etc.

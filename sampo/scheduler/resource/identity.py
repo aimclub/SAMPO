@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -12,10 +12,10 @@ class IdentityResourceOptimizer(ResourceOptimizer):
 
     def optimize_resources(self,
                            worker_pool: WorkerContractorPool,
-                           worker_team: List[Worker],
+                           worker_team: list[Worker],
                            optimize_array: np.ndarray,
                            down_border: np.ndarray,
                            up_border: np.ndarray,
-                           get_finish_time: Callable[[List[Worker]], Time]):
+                           get_finish_time: Callable[[list[Worker]], Time]):
         # no actions here
         pass

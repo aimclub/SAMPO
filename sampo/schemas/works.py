@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from random import Random
-from typing import List, Optional, Callable
+from typing import Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
@@ -12,7 +12,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.serializers import custom_serializer
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
@@ -66,7 +65,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         return [WorkerReq._deserialize(wr) for wr in value]
 
     # TODO: move this logit to WorkTimeEstimator
-    def estimate_static(self, worker_list: List[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
+    def estimate_static(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
         """
         Calculate summary time of task execution (without stochastic part)
 
@@ -94,7 +93,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         """
         return self._abstract_estimate(worker_list, get_stochastic_by_worker, rand)
 
-    # TODO: describe the function (description, parameters, return type)
     def _abstract_estimate(self, worker_list: list[Worker],
                            get_productivity: Callable[[Worker, Random], float],
                            rand: Random = None) -> Time:
@@ -144,19 +142,19 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.display_name = new_work_unit.display_name
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
     """
+    Calculate productivity of the Worker
 
-    :param w:
-    :param _:
-    :return:
+    :param w: the worker
+    :param _: parameter for stochastic part
+    :return: productivity of received worker
     """
     return w.get_static_productivity()
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
+    """Return the stochastic productivity of worker team"""
     return w.get_stochastic_productivity(rand)
 
 
@@ -164,7 +162,6 @@ def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
 # increases, after the maximum number of commands begins to decrease in efficiency, and its growth rate depends on
 # the maximum number of commands.
 # sum(1 - ((x-1)^2 / max_groups^2), where x from 1 to groups_count
-# TODO: describe the function (description, parameters, return type)
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups

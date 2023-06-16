@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from enum import auto, Enum
 from itertools import chain
 from operator import itemgetter, attrgetter
-from typing import Dict, List, Optional, Union, Tuple, Callable
+from typing import Optional, Union, Callable
 
 import numpy as np
 import plotly.graph_objects
@@ -33,7 +33,7 @@ def resource_employment_fig(schedule: Union[DataFrame, Schedule],
                             vis_mode: VisualizationMode = VisualizationMode.ShowFig,
                             file_name: Optional[str] = None,
                             project_start: datetime = datetime(year=2020, month=1, day=1),
-                            converter: Callable[[Dict[str, np.ndarray]], dict] = None) \
+                            converter: Callable[[dict[str, np.ndarray]], dict] = None) \
         -> Optional[Union[plt.Figure, plotly.graph_objects.Figure]]:
 
     graph_data = (convert_schedule_df(schedule, fig_type, converter)
@@ -121,25 +121,25 @@ def create_employment_fig(resources: Union[DataFrame, ResourceSchedule],
 
 
 def get_resources(item):
-    workers: Union[str, Dict[str, int]] = item['workers']
-    resources: Dict[str, int] = item['workers_dict'] \
+    workers: Union[str, dict[str, int]] = item['workers']
+    resources: dict[str, int] = item['workers_dict'] \
         if 'workers_dict' in item.index \
         else (literal_eval(workers) if isinstance(workers, str) else workers)
     return resources
 
 
 def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType,
-                        converter: Callable[[Dict[str, np.ndarray]], dict] = None) -> DataFrame:
+                        converter: Callable[[dict[str, np.ndarray]], dict] = None) -> DataFrame:
     first_day = schedule['start'].min()
     first_day = datetime(year=first_day.year, month=first_day.month, day=first_day.day)
 
     if fig_type is EmploymentFigType.DateLabeled:
         total_days = (schedule['finish'].max() - first_day).days + 1
-        resource_schedule: Dict[str, np.ndarray] = {}
+        resource_schedule: dict[str, np.ndarray] = {}
         for _, item in schedule.iterrows():
             start: Timestamp = (item['start'] - first_day).days
             finish: Timestamp = (item['finish'] - first_day).days
-            resources: Dict[str, int] = get_resources(item)
+            resources: dict[str, int] = get_resources(item)
             for name in resources:
                 if name not in resource_schedule:
                     resource_schedule[name] = np.array([0] * total_days)
@@ -158,7 +158,7 @@ def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType,
         return result
 
     if fig_type is EmploymentFigType.WorkLabeled:
-        resource_schedule: Dict[str, List[Tuple[int, str, int]]] = {}
+        resource_schedule: dict[str, list[tuple[int, str, int]]] = {}
         schedule.index = list(range(schedule.shape[0]))
 
         i = 0
@@ -184,11 +184,11 @@ def convert_schedule_df(schedule: DataFrame, fig_type: EmploymentFigType,
 def get_schedule_df(schedule: ScheduleWorkDict, fig_type: EmploymentFigType, project_start: datetime) -> DataFrame:
     if fig_type == EmploymentFigType.DateLabeled:
         max_time = max(schedule.values(), key=attrgetter('finish_time')).finish_time + 1
-        resource_schedule: Dict[str, List[int]] = {}
+        resource_schedule: dict[str, list[int]] = {}
         for item in schedule.values():
             start: Time = item.start_time
             finish: Time = item.finish_time
-            resources: List[Worker] = item.workers
+            resources: list[Worker] = item.workers
             for worker in resources:
                 if worker.name not in resource_schedule:
                     resource_schedule[worker.name] = np.array([0] * int(max_time))
@@ -201,9 +201,9 @@ def get_schedule_df(schedule: ScheduleWorkDict, fig_type: EmploymentFigType, pro
         return result
 
     if fig_type == EmploymentFigType.WorkLabeled:
-        resource_schedule: Dict[str, List[Tuple[int, str, int]]] = {}
+        resource_schedule: dict[str, list[tuple[int, str, int]]] = {}
         for i, (work, item) in enumerate(sorted(list(schedule.items()), key=lambda x: x[1].start_time)):
-            resources: List[Worker] = item.workers
+            resources: list[Worker] = item.workers
             w_name = item.name
             for worker in resources:
                 if worker.count > 0:
@@ -220,23 +220,23 @@ def get_schedule_df(schedule: ScheduleWorkDict, fig_type: EmploymentFigType, pro
 
 def get_workers_intervals(schedule: Schedule, group_workers_by_specializations: bool = False) \
         -> ResourceSchedule:
-    resources_time_intervals_dict: Dict[Time, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    resources_time_intervals_dict: dict[Time, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for item in schedule.works:
         start: Time = item.start_time
         finish: Time = item.finish_time
-        workers: List[Worker] = item.workers
+        workers: list[Worker] = item.workers
         for worker in workers:
             resources_time_intervals_dict[start][worker.name] -= worker.count
             resources_time_intervals_dict[finish][worker.name] += worker.count
 
-    min_resources: Dict[str, int] = defaultdict(int)
+    min_resources: dict[str, int] = defaultdict(int)
     for milestone, resources in resources_time_intervals_dict.items():
         resources_time_intervals_dict[milestone] = dict(resources)
         for name in resources:
             min_resources[name] = min(min_resources[name], resources[name])
     resources_time_intervals_dict = dict(resources_time_intervals_dict)
 
-    resources_time_intervals: List[Time, Dict[str, int]] = list(resources_time_intervals_dict.items())
+    resources_time_intervals: list[Time, dict[str, int]] = list(resources_time_intervals_dict.items())
     resources_time_intervals = sorted(resources_time_intervals, key=itemgetter(0))
     workers_intervals = defaultdict(list)
     for index, (start, resources) in enumerate(resources_time_intervals[:-1]):

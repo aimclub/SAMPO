@@ -14,6 +14,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections_util import reverse_dictionary
+from sampo.schemas.landscape import LandscapeConfiguration
 
 
 def get_params(works_count: int) -> Tuple[int, float, float, int]:
@@ -50,7 +51,8 @@ def create_toolbox(wg: WorkGraph,
                    init_schedules: Dict[str, Schedule],
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
-                   work_estimator: WorkTimeEstimator = None) -> Tuple[Toolbox, np.ndarray]:
+                   work_estimator: WorkTimeEstimator = None,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Tuple[Toolbox, np.ndarray]:
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
@@ -109,6 +111,7 @@ def create_toolbox(wg: WorkGraph,
     return init_toolbox(wg,
                         contractors,
                         worker_pool,
+                        landscape,
                         index2node,
                         work_id2index,
                         worker_name2index,
@@ -130,9 +133,9 @@ def create_toolbox(wg: WorkGraph,
                         work_estimator), resources_border
 
 
-@fixture(scope='function')
+@fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
-    (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
+    (setup_wg, setup_contractors, landscape), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
 
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
@@ -147,4 +150,5 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                           mutate_resources,
                           setup_default_schedules,
                           rand,
-                          work_estimator=work_estimator), setup_wg, setup_contractors, setup_default_schedules
+                          work_estimator=work_estimator,
+                          landscape=landscape), setup_wg, setup_contractors, setup_default_schedules

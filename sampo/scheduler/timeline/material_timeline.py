@@ -2,7 +2,7 @@ import math
 from operator import itemgetter
 from typing import Callable
 
-from sampo.schemas.exceptions import NotEnoughMaterialsInDepots
+from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
 from sampo.schemas.resources import Material
 from sampo.schemas.sorted_list import ExtendedSortedList
@@ -63,6 +63,8 @@ class SupplyTimeline:
     def _find_best_supply(self, material: str, count: int) -> str:
         # TODO Make better algorithm
         # Return the first depot that can supply given materials
+        if len(self._resource_sources) == 0:
+            raise NoAvailableResources(f"Schedule can not be built. No available resource {material}")
         depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
                   if depot_count >= count]
         if len(depots) == 0:
@@ -174,7 +176,10 @@ class SupplyTimeline:
         going_right = False
 
         for material in materials:
-            depot = self._find_best_supply(material.name, material.count)
+            try:
+                depot = self._find_best_supply(material.name, material.count)
+            except Exception as e:
+                raise Exception(f"{material}\n", e)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
 
@@ -224,3 +229,7 @@ class SupplyTimeline:
             min_start_time = min(min_start_time, cur_start_time)
 
         return delivery, min_start_time
+
+    @property
+    def resource_sources(self):
+        return self._resource_sources

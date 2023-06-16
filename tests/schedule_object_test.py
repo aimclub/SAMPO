@@ -1,5 +1,5 @@
 def test_schedule_object(setup_schedule):
-    schedule, scheduler = setup_schedule
+    schedule, scheduler, _ = setup_schedule
 
     # check that main properties are not failing to access
     full_df = schedule.full_schedule_df

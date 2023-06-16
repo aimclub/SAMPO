@@ -10,9 +10,9 @@ from sampo.utilities.resource_cost import schedule_cost
 
 
 def test_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
-    scheduler = AverageBinarySearchResourceOptimizingScheduler(HEFTScheduler())
+    scheduler = AverageBinarySearchResourceOptimizingScheduler(HEFTScheduler(landscape=landscape))
 
     deadline = Time(30)
 
@@ -23,7 +23,7 @@ def test_deadline_planning(setup_scheduler_parameters):
 
     print(f'Planning for deadline time: {schedule.execution_time}, cost: {schedule_cost(schedule)}')
 
-    scheduler = HEFTScheduler()
+    scheduler = HEFTScheduler(landscape=landscape)
 
     schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors)
 
@@ -31,10 +31,10 @@ def test_deadline_planning(setup_scheduler_parameters):
 
 
 def test_genetic_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
-    scheduler = GeneticScheduler(fitness_constructor=DeadlineResourcesFitness.prepare(deadline))
+    scheduler = GeneticScheduler(fitness_constructor=DeadlineResourcesFitness.prepare(deadline), landscape=landscape)
     scheduler.set_deadline(deadline)
 
     try:

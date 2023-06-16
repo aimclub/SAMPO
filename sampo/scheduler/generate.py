@@ -1,5 +1,5 @@
 import time
-from typing import Union, List, Callable
+from typing import Union, Callable
 
 from sampo.scheduler.base import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
@@ -29,17 +29,17 @@ def get_scheduler_ctor(scheduling_algorithm_type: SchedulerType) \
 def generate_schedule(scheduling_algorithm_type: SchedulerType,
                       work_time_estimator: WorkTimeEstimator,
                       work_graph: WorkGraph,
-                      contractors: Union[Contractor, List[Contractor]],
+                      contractors: Union[Contractor, list[Contractor]],
                       validate_schedule: bool,
                       landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Schedule:
-    scheduler = get_scheduler_ctor(scheduling_algorithm_type)(work_estimator=work_time_estimator)
+    scheduler = get_scheduler_ctor(scheduling_algorithm_type)(work_estimator=work_time_estimator, landscape=landscape)
     start_time = time.time()
     if isinstance(scheduler, GeneticScheduler):
         scheduler.set_use_multiprocessing(n_cpu=4)
 
     schedule = scheduler.schedule(work_graph,
                                   [contractors] if isinstance(contractors, Contractor) else contractors,
-                                  validate=validate_schedule, landscape=landscape)
+                                  validate=validate_schedule)
 
     print(f'Time: {(time.time() - start_time) * 1000} ms')
     print(f'Cost: {schedule_cost(schedule)}')

@@ -10,7 +10,8 @@ def ftime(dt: datetime, f: str = '%y-%m-%d %H:%M:%S') -> str:
 
 def parse_datetime(dts: str, f: Optional[str] = None) -> datetime:
     """
-    Parses datetime from string.
+    Parses datetime from string
+
     :param dts: String datetime
     :param f: String format. If not provided, '%Y-%m-%d' and then '%y-%m-%d %H:%M:%S' are tried.
     :return:
@@ -27,7 +28,8 @@ def add_time_delta(base_datetime: Union[datetime, str],
                    time_delta: Union[Time, float],
                    time_units: Optional[str] = 'days') -> datetime:
     """
-    Adds time delta to base datetime.
+    Adds time delta to base datetime
+
     :param base_datetime:
     :param time_delta:
     :param time_units: can be days, seconds, microseconds, milliseconds, minutes, hours, weeks

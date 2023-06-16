@@ -1,4 +1,4 @@
-from typing import Type, List, Callable, Iterable
+from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
@@ -20,7 +20,8 @@ from sampo.utilities.validation import validate_schedule
 def get_finish_time_default(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator):
     return timeline.find_min_start_time(node, worker_team, node2swork,
                                         assigned_parent_time, work_estimator) \
-        + calculate_working_time_cascade(node, worker_team, work_estimator)  # TODO Кажется, это не работает - лаги не учитываются
+        + calculate_working_time_cascade(node, worker_team,
+                                         work_estimator)  # TODO Кажется, это не работает - лаги не учитываются
 
 
 class GenericScheduler(Scheduler):
@@ -32,22 +33,24 @@ class GenericScheduler(Scheduler):
                  prioritization_f: Callable[[WorkGraph, WorkTimeEstimator], list[GraphNode]],
                  optimize_resources_f: Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                                                  dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
-                                                tuple[Time, Time, Contractor, list[Worker]]],
-                 work_estimator: WorkTimeEstimator | None = None):
+                 tuple[Time, Time, Contractor, list[Worker]]],
+                 work_estimator: WorkTimeEstimator | None = None,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration()):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
         self._timeline_type = timeline_type
         self.prioritization = prioritization_f
         self.optimize_resources = optimize_resources_f
+        self.landscape = landscape
 
-    def get_default_res_opt_function(self, get_finish_time = get_finish_time_default) \
+    def get_default_res_opt_function(self, get_finish_time=get_finish_time_default) \
             -> Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                          dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
-                         tuple[Time, Time, Contractor, list[Worker]]]:
+            tuple[Time, Time, Contractor, list[Worker]]]:
 
         def optimize_resources_def(node: GraphNode, contractors: list[Contractor], work_spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator):
-            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
+            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, list[Worker]]:
                 min_count_worker_team, max_count_worker_team, workers \
                     = get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
 
@@ -57,7 +60,8 @@ class GenericScheduler(Scheduler):
                 workers = [worker.copy() for worker in workers]
 
                 def ft_getter(worker_team):
-                    return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator)
+                    return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline,
+                                           work_estimator)
 
                 # apply worker team spec
                 self.optimize_resources_using_spec(node.work_unit, workers, work_spec,
@@ -77,7 +81,7 @@ class GenericScheduler(Scheduler):
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             landscape: LandscapeConfiguration() = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
@@ -87,7 +91,8 @@ class GenericScheduler(Scheduler):
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator, assigned_parent_time, timeline)
+            self.build_scheduler(ordered_nodes, contractors, self.landscape, spec, self.work_estimator,
+                                 assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -99,10 +104,10 @@ class GenericScheduler(Scheduler):
         return schedule, schedule_start_time, timeline, ordered_nodes
 
     def build_scheduler(self,
-                        ordered_nodes: List[GraphNode],
-                        contractors: List[Contractor],
-                        landscape: LandscapeConfiguration(),
-                        spec: ScheduleSpec,
+                        ordered_nodes: list[GraphNode],
+                        contractors: list[Contractor],
+                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                        spec: ScheduleSpec = ScheduleSpec(),
                         work_estimator: WorkTimeEstimator = None,
                         assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \

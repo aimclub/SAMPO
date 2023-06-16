@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Optional, Iterable
+from typing import Optional, Iterable
 
 from sampo.scheduler.heft.time_computaion import calculate_working_time, calculate_working_time_cascade
 from sampo.scheduler.timeline.base import Timeline
@@ -6,7 +6,7 @@ from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.resources import Worker, Resource, Material
+from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -14,6 +14,10 @@ from sampo.schemas.types import AgentId
 
 
 class JustInTimeTimeline(Timeline):
+    """
+    Timeline that stored the time of resources release
+    For each contractor and worker type store a descending list of pairs of time and number of available workers of this type of this contractor
+    """
 
     def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
                  worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
@@ -25,21 +29,24 @@ class JustInTimeTimeline(Timeline):
 
         self._material_timeline = SupplyTimeline(landscape)
 
-    def find_min_start_time_with_additional(self, node: GraphNode, worker_team: List[Worker],
-                                            node2swork: Dict[GraphNode, ScheduledWork],
-                                            assigned_start_time: Optional[Time] = None,
+    def find_min_start_time_with_additional(self, node: GraphNode,
+                                            worker_team: list[Worker],
+                                            node2swork: dict[GraphNode, ScheduledWork],
+                                            assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: Optional[WorkTimeEstimator] = None) \
-            -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
+                                            work_estimator: WorkTimeEstimator | None = None) \
+            -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         """
-        Define the nearest possible start time for current job. It is equal the max value from:
+        Define the nearest possible start time for the current job. It is equal the max value from:
         1. end time of all parent tasks
-        2. time previous job off all needed workers to complete current task
+        2. time previous job off all needed workers to complete the current task
 
-        :param node: target node
-        :param worker_team: worker team under testing
-        :param node2swork:
-        :param work_estimator:
+        :param assigned_parent_time: minimum start time
+        :param assigned_start_time:
+        :param node: the GraphNode whose minimum time we are trying to find
+        :param worker_team: the worker team under testing
+        :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
+        :param work_estimator: function that calculates execution time of the GraphNode
         :return: start time, end time, None(exec_times not needed in this timeline)
         """
         # if current job is the first
@@ -72,7 +79,11 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(max_agent_time, max_parent_time)
 
+        # try:
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
+        # except Exception as e:
+        #     raise Exception(f"Node id: {node.id} ------ Materials of nodes: {node.work_unit.need_materials()} \n "
+        #                     f"Landscape: {self._material_timeline.resource_sources}")
 
         c_st = max(c_st, max_material_time)
 
@@ -82,11 +93,12 @@ class JustInTimeTimeline(Timeline):
     def update_timeline(self,
                         finish_time: Time,
                         node: GraphNode,
-                        node2swork: Dict[GraphNode, ScheduledWork],
-                        worker_team: List[Worker]):
+                        node2swork: dict[GraphNode, ScheduledWork],
+                        worker_team: list[Worker]):
         """
         Adds given `worker_team` to the timeline at the moment `finish`
 
+        :param task_index:
         :param finish_time:
         :param node:
         :param node2swork:
@@ -118,8 +130,8 @@ class JustInTimeTimeline(Timeline):
 
     def schedule(self,
                  node: GraphNode,
-                 node2swork: Dict[GraphNode, ScheduledWork],
-                 workers: List[Worker],
+                 node2swork: dict[GraphNode, ScheduledWork],
+                 workers: list[Worker],
                  contractor: Contractor,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
@@ -145,16 +157,16 @@ class JustInTimeTimeline(Timeline):
 
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
-                                    node2swork: Dict[GraphNode, ScheduledWork],
-                                    workers: List[Worker],
+                                    node2swork: dict[GraphNode, ScheduledWork],
+                                    workers: list[Worker],
                                     contractor: Contractor,
-                                    inseparable_chain: List[GraphNode],
+                                    inseparable_chain: list[GraphNode],
                                     start_time: Time,
-                                    exec_times: Dict[GraphNode, Tuple[Time, Time]],
+                                    exec_times: dict[GraphNode, tuple[Time, Time]],
                                     work_estimator: Optional[WorkTimeEstimator] = None):
         """
         Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
-        and adds it ti given `id2swork`. Also does the same for all inseparable nodes starts from this one
+        and adds it to given `id2swork`. Also does the same for all inseparable nodes starts from this one
 
         :param node2swork:
         :param workers:

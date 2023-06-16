@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable
 from uuid import uuid4
 
 from sampo.schemas.graph import GraphNode
@@ -8,7 +8,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 
 
-def calculate_working_time_cascade(node: GraphNode, appointed_worker: List[Worker],
+def calculate_working_time_cascade(node: GraphNode, appointed_worker: list[Worker],
                                    work_estimator: WorkTimeEstimator = None) -> Time:
     """
     Calculate working time of the appointed workers at current job for prioritization
@@ -32,7 +32,7 @@ def calculate_working_time_cascade(node: GraphNode, appointed_worker: List[Worke
     return common_time
 
 
-def calculate_working_time(work_unit: WorkUnit, appointed_worker: List[Worker],
+def calculate_working_time(work_unit: WorkUnit, appointed_worker: list[Worker],
                            work_estimator: WorkTimeEstimator = None) -> Time:
     """
     Calculate working time of the appointed workers at current job for final schedule
@@ -49,7 +49,7 @@ PRIORITY_DELTA = 1
 
 
 def work_priority(node: GraphNode,
-                  comp_cost: Callable[[GraphNode, List[Worker], WorkTimeEstimator], Time],
+                  comp_cost: Callable[[GraphNode, list[Worker], WorkTimeEstimator], Time],
                   work_estimator: WorkTimeEstimator = None) -> float:
     """
     Calculate the average time to complete the work when assigning the minimum and maximum number of employees

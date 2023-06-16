@@ -1,7 +1,7 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from random import Random
-from typing import List, Optional, Callable
+from typing import Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
@@ -12,39 +12,71 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.serializers import custom_serializer
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
-    worker_reqs: List[WorkerReq] = field(default_factory=list)
-    equipment_reqs: List[EquipmentReq] = field(default_factory=list)
-    material_reqs: List[MaterialReq] = field(default_factory=list)
-    object_reqs: List[ConstructionObjectReq] = field(default_factory=list)
-    group: Optional[str] = "default"
-    is_service_unit: Optional[bool] = False
-    # TODO Remove optional
-    volume: Optional[float] = 0
-    volume_type: Optional[str] = "unit"
-    workground_size: int = 100
-
-    display_name: str = ''
+    """
+    Class that describe vertex in graph (one work/task)
+    """
+    def __init__(self, id: str, name: str, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
+                 material_reqs: list[MaterialReq] = [], object_reqs: list[ConstructionObjectReq] = [],
+                 group: str = 'default', is_service_unit=False, volume: float = 0,
+                 volume_type: str = "unit", display_name: str = "", workground_size: int = 100):
+        """
+        :param worker_reqs: list of required professions (i.e. workers)
+        :param equipment_reqs: list of required equipment
+        :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
+        :param object_reqs: list of required objects (e.g. electricity, pipelines, roads)
+        :param group: union block of works
+        :param is_service_unit: service units are additional vertexes
+        :param volume: scope of work
+        :param volume_type: unit of scope of work
+        :param display_name: name of work
+        """
+        super(WorkUnit, self).__init__(id, name)
+        self.worker_reqs = worker_reqs
+        self.equipment_reqs = equipment_reqs
+        self.object_reqs = object_reqs
+        self.material_reqs = material_reqs
+        self.group = group
+        self.is_service_unit = is_service_unit
+        self.volume = volume
+        self.volume_type = volume_type
+        self.display_name = display_name
+        self.workground_size = workground_size
 
     def need_materials(self) -> list[Material]:
         return [req.material() for req in self.material_reqs]
 
-    # TODO: describe the function (description, parameters, return type)
     @custom_serializer('worker_reqs')
-    def worker_reqs_serializer(self, value):
+    def worker_reqs_serializer(self, value: list[WorkerReq]):
+        """
+        Return serialized list of worker requirements
+
+        :param value: list of worker requirements
+        :return: list of worker requirements
+        """
         return [wr._serialize() for wr in value]
 
-    # TODO: describe the function (description, parameters, return type)
     @classmethod
     @custom_serializer('worker_reqs', deserializer=True)
     def worker_reqs_deserializer(cls, value):
+        """
+        Get list of worker requirements
+
+        :param value: serialized list of work requirements
+        :return: list of worker requirements
+        """
         return [WorkerReq._deserialize(wr) for wr in value]
 
-    # TODO: describe the function (description, parameters, return type)
     # TODO: move this logit to WorkTimeEstimator
-    def estimate_static(self, worker_list: List[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
+    def estimate_static(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
+        """
+        Calculate summary time of task execution (without stochastic part)
+
+        :param worker_list:
+        :param work_estimator:
+        :return: time of task execution
+        """
         if work_estimator:
             # TODO What?? We are loosing much performance
             #  when processing worker names EACH estimation
@@ -55,14 +87,27 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
 
         return self._abstract_estimate(worker_list, get_static_by_worker)
 
-    # TODO: describe the function (description, parameters, return type)
-    def estimate_stochastic(self, worker_list: List[Worker], rand: Optional[Random] = None) -> Time:
+    def estimate_stochastic(self, worker_list: list[Worker], rand: Random = None) -> Time:
+        """
+        Calculate summary time of task execution (considering stochastic part)
+
+        :param worker_list:
+        :param rand: random number
+        :return: time of task execution
+        """
         return self._abstract_estimate(worker_list, get_stochastic_by_worker, rand)
 
-    # TODO: describe the function (description, parameters, return type)
-    def _abstract_estimate(self, worker_list: List[Worker],
-                           get_productivity: Callable[[Worker, Optional[Random]], float],
-                           rand: Optional[Random] = None) -> Time:
+    def _abstract_estimate(self, worker_list: list[Worker],
+                           get_productivity: Callable[[Worker, Random], float],
+                           rand: Random = None) -> Time:
+        """
+        Abstract method that can estimate time of task execution using certain function get_productivity()
+
+        :param worker_list: list of workers
+        :param get_productivity: function, that calculate time of task productivity
+        :param rand: stochastic part
+        :return: maximum time of task execution
+        """
         groups = defaultdict(list)
         for w in worker_list:
             groups[w.name].append(w)
@@ -99,15 +144,22 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
+        self.workground_size = new_work_unit.workground_size
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
+    """
+    Calculate productivity of the Worker
+
+    :param w: the worker
+    :param _: parameter for stochastic part
+    :return: productivity of received worker
+    """
     return w.get_static_productivity()
 
 
-# TODO: describe the function (description, parameters, return type)
 def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
+    """Return the stochastic productivity of worker team"""
     return w.get_stochastic_productivity(rand)
 
 
@@ -115,7 +167,6 @@ def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
 # increases, after the maximum number of commands begins to decrease in efficiency, and its growth rate depends on
 # the maximum number of commands.
 # sum(1 - ((x-1)^2 / max_groups^2), where x from 1 to groups_count
-# TODO: describe the function (description, parameters, return type)
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups

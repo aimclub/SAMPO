@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, Callable
+from typing import Callable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
@@ -13,6 +13,10 @@ from sampo.schemas.time import Time
 
 
 class Agent:
+    """
+    Agent entity representation in the multi-agent model
+    Agent have 2 actions: give offer and accept offer
+    """
 
     def __init__(self, name: str, scheduler: Scheduler, contractors: list[Contractor]):
         self.name = name
@@ -104,13 +108,17 @@ class ScheduledBlock:
 
 
 class Manager:
+    """
+    Manager entity representation in the multi-agent model
+    Manager interact with agents
+    """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
             raise Exception("Manager can't work with empty list of agents")
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> Dict[str, ScheduledBlock]:
+    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
         Runs multi-agent system based on auction on given BlockGraph.
         

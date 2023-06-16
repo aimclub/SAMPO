@@ -1,7 +1,7 @@
 import hashlib
 import queue
 from collections import defaultdict
-from typing import Tuple, Dict, List, Set, Optional, Callable
+from typing import Optional, Callable
 
 import pandas as pd
 from matplotlib import pyplot as plt, patches, axes
@@ -35,15 +35,15 @@ DEFAULT_DPI = 50
 DPI_LIMIT = 3e5 / SIZE_LIMIT
 
 
-def work_graph_fig(graph: WorkGraph or GraphNode, fig_size: Tuple[int, int],
+def work_graph_fig(graph: WorkGraph or GraphNode, fig_size: tuple[int, int],
                    fig_dpi: Optional[int] = 300,
                    max_deep: Optional[int] = None,
                    show_names: Optional[bool] = False, show_arrows: Optional[bool] = True,
-                   hide_node_ids: Optional[List[str]] = None,
+                   hide_node_ids: Optional[list[str]] = None,
                    legend_shift: Optional[int] = 0,
                    show_only_not_dotted: Optional[bool] = False,
-                   dotted_edges: Set[Tuple[str, str]] = None,
-                   black_list_edges: Set[Tuple[str, str]] = None,
+                   dotted_edges: set[tuple[str, str]] = None,
+                   black_list_edges: set[tuple[str, str]] = None,
                    jobs2text_function: Optional[Callable[[pd.Series], str]] = None,
                    text_size: Optional[int] = 1) -> Figure:
     start = graph.start if type(graph) == WorkGraph else graph
@@ -81,14 +81,14 @@ def calculate_work_volume(work_unit: WorkUnit) -> float:
     return volume
 
 
-def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (List[Dict], Dict[str, int], Dict[str, str]):
+def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (list[dict], dict[str, int], dict[str, str]):
     max_deep = max_deep or INF_INT
     q = queue.Queue()
     q.put((0, start))
-    id_to_job: Dict[str, int] = dict()
-    used: Set[str] = {start.id}
-    jobs: List[Dict] = []
-    colors: Dict[str, str] = dict()
+    id_to_job: dict[str, int] = dict()
+    used: set[str] = {start.id}
+    jobs: list[dict] = []
+    colors: dict[str, str] = dict()
     max_volume: float = 0
 
     while not q.empty():
@@ -114,8 +114,8 @@ def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (List[Dict
     return jobs, id_to_job, colors
 
 
-def setup_jobs(start: GraphNode, jobs: List[Dict], id_to_job: Dict[str, int]) -> List[Dict]:
-    cluster_deep_counts: Dict[str, Dict[int, int]] = defaultdict(lambda: defaultdict(int))
+def setup_jobs(start: GraphNode, jobs: list[dict], id_to_job: dict[str, int]) -> list[dict]:
+    cluster_deep_counts: dict[str, dict[int, int]] = defaultdict(lambda: defaultdict(int))
 
     not_used_parents = {job["job_id"]: len(job["parents"]) for job in jobs}
 
@@ -137,7 +137,7 @@ def setup_jobs(start: GraphNode, jobs: List[Dict], id_to_job: Dict[str, int]) ->
             if not_used_parents[child_ind] <= 0:
                 q.put((deep + 1, child_ind))
 
-    max_y_pos: Dict[int, int] = dict()
+    max_y_pos: dict[int, int] = dict()
 
     def dfs(v_ind: int, y_pos: int) -> int:
         jobs[v_ind]["y_position"] = y_pos
@@ -157,7 +157,7 @@ def setup_jobs(start: GraphNode, jobs: List[Dict], id_to_job: Dict[str, int]) ->
     return jobs
 
 
-def ax_add_works(ax: axes.Axes, df: pd.DataFrame, show_names: bool, hide_nodes_id: Set[str],
+def ax_add_works(ax: axes.Axes, df: pd.DataFrame, show_names: bool, hide_nodes_id: set[str],
                  jobs2text_function: Optional[Callable[[pd.Series], str]] = None, text_size: Optional[int] = 1):
     if jobs2text_function is None:
         jobs2text_function = default_job2text
@@ -176,9 +176,9 @@ def ax_add_works(ax: axes.Axes, df: pd.DataFrame, show_names: bool, hide_nodes_i
         ax.text(x + TEXT_X_DELTA, y + TEXT_Y_DELTA, jobs2text_function(row), fontsize=text_size)
 
 
-def ax_add_dependencies(ax: axes.Axes, df: pd.DataFrame, id_to_job: Dict[str, int],
-                        dotted_edges: Set[Tuple[str, str]], hide_nodes_id: Set[str], show_only_not_dotted: bool,
-                        black_list_edges: Set[Tuple[str, str]]):
+def ax_add_dependencies(ax: axes.Axes, df: pd.DataFrame, id_to_job: dict[str, int],
+                        dotted_edges: set[tuple[str, str]], hide_nodes_id: set[str], show_only_not_dotted: bool,
+                        black_list_edges: set[tuple[str, str]]):
     for ind, job in df.iterrows():
         if job.work_id in hide_nodes_id:
             continue

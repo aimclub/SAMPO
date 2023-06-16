@@ -11,12 +11,12 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 def test_comparing_to_heft(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     work_estimator: Optional[WorkTimeEstimator] = None
 
     def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors)
+        return scheduler_class(work_estimator=work_estimator, landscape=landscape).schedule(setup_wg, setup_contractors)
 
     try:
         start_time = time()

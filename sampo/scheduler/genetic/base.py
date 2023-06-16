@@ -1,6 +1,6 @@
 import math
 import random
-from typing import List, Tuple, Optional, Callable
+from typing import Optional, Callable
 
 from deap.base import Toolbox
 
@@ -26,14 +26,18 @@ from sampo.utilities.validation import validate_schedule
 
 
 class GeneticScheduler(Scheduler):
+    """
+    Class for hybrid scheduling algorithm, that uses heuristic algorithm to generate
+    first population and genetic algorithm to search the best solving
+    """
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
                  size_selection: Optional[int or None] = None,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
                  size_of_population: Optional[float or None] = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
@@ -66,7 +70,13 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
+        """
+        Return base parameters for model to make new population
+
+        :param works_count:
+        :return:
+        """
         size_selection = self.size_selection
         if size_selection is None:
             if works_count < 300:
@@ -99,19 +109,38 @@ class GeneticScheduler(Scheduler):
         return size_selection, mutate_order, mutate_resources, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
+        """
+        Set the number of CPU cores
+
+        :param n_cpu:
+        """
         self._n_cpu = n_cpu
 
     def set_time_border(self, time_border: int):
         self._time_border = time_border
 
     def set_deadline(self, deadline: Time):
+        """
+        Set the deadline of tasks
+
+        :param deadline:
+        """
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+        """
+        Heuristic algorithm, that generate first population
+
+        :param wg: graph of works
+        :param contractors:
+        :return:
+        """
+
         def init_k_schedule(scheduler_class, k):
             try:
                 return (scheduler_class(work_estimator=self.work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
+                                        resource_optimizer=AverageReqResourceOptimizer(k),
+                                        landscape=self.landscape).schedule(wg, contractors),
                         list(reversed(prioritization(wg, self.work_estimator))))
             except NoSufficientContractorError:
                 return None, None
@@ -119,7 +148,7 @@ class GeneticScheduler(Scheduler):
         if self._deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                    return (scheduler_class(work_estimator=self.work_estimator, landscape=self.landscape).schedule(wg, contractors),
                             list(reversed(prioritization(wg, self.work_estimator))))
                 except NoSufficientContractorError:
                     return None, None
@@ -136,7 +165,8 @@ class GeneticScheduler(Scheduler):
             def init_schedule(scheduler_class):
                 try:
                     schedule = AverageBinarySearchResourceOptimizingScheduler(
-                        scheduler_class(work_estimator=self.work_estimator)
+                        scheduler_class(work_estimator=self.work_estimator,
+                                        landscape=self.landscape)
                     ).schedule_with_cache(wg, contractors, self._deadline)[0]
                     return schedule, list(reversed(prioritization(wg, self.work_estimator)))
                 except NoSufficientContractorError:
@@ -153,14 +183,25 @@ class GeneticScheduler(Scheduler):
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+        """
+        Build schedule for received graph of workers and return the current state of schedule
+        It's needed to use this method in multy agents model
 
+        :param wg:
+        :param contractors:
+        :param spec:
+        :param validate:
+        :param assigned_parent_time:
+        :param timeline:
+        :return:
+        """
         init_schedules = self.generate_first_population(wg, contractors)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)

@@ -17,6 +17,7 @@ from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -35,6 +36,7 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
                                                  FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
@@ -355,7 +357,7 @@ def build_schedule(wg: WorkGraph,
         = convert_chromosome_to_schedule(chromosome, worker_pool, index2node,
                                          index2contractor_obj,
                                          worker_pool_indices,
-                                         spec, timeline,
+                                         spec, landscape, timeline,
                                          assigned_parent_time,
                                          work_estimator)
 

@@ -17,6 +17,7 @@ from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -32,6 +33,7 @@ class GeneticScheduler(Scheduler):
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
                  size_of_population: Optional[float or None] = None,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
@@ -51,6 +53,7 @@ class GeneticScheduler(Scheduler):
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
         self._n_cpu = n_cpu
+        self.landscape = landscape
 
         self._time_border = None
         self._deadline = None
@@ -148,8 +151,10 @@ class GeneticScheduler(Scheduler):
                 "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
             }
 
-    def schedule_with_cache(self, wg: WorkGraph,
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
                             contractors: List[Contractor],
+                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -172,6 +177,7 @@ class GeneticScheduler(Scheduler):
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
+                                                                                     self.landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      n_cpu=self._n_cpu,

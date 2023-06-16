@@ -7,6 +7,7 @@ from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -66,6 +67,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
                                    index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    spec: ScheduleSpec,
+                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = None, ) \
@@ -73,7 +75,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType, worker_pool: Work
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
+        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool, landscape=landscape)
     works_order = chromosome[0]
     works_resources = chromosome[1]
     order_nodes = []

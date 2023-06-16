@@ -7,16 +7,6 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
-from sampo.scheduler.utils.multi_contractor import get_worker_borders, run_contractor_search
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
-from sampo.schemas.graph import GraphNode
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
-from sampo.schemas.graph import WorkGraph, GraphNode
-from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.resources import Worker
-from sampo.schemas.schedule_spec import WorkSpec
-from sampo.schemas.scheduled_work import ScheduledWork
-from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.base_opt import dichotomy_int
 

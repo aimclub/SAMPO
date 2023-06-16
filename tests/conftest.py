@@ -17,7 +17,10 @@ from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
+from sampo.schemas.interval import IntervalGaussian
+from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.requirements import MaterialReq
+from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.structurator.base import graph_restructuring
@@ -36,6 +39,21 @@ def setup_rand() -> Random:
     return Random(231)
 
 
+@fixture
+def setup_landscape():
+    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
+                                                          materials=[Material('111', 'mat1', 100000)])])
+
+
+@fixture
+def setup_landscape_with_many_holders():
+    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
+                                                          materials=[Material('111', 'mat1', 100000)]),
+                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
+                                                          materials=[Material('222', 'mat2', 100000)])
+                                           ])
+
+
 @fixture(scope='session')
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
@@ -44,13 +62,13 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
 @fixture(scope='module',
          params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
-                                    'small plain synthetic', 'big plain synthetic',]],
-                                    # 'small advanced synthetic', 'big advanced synthetic']],
+                                    'small plain synthetic', 'big plain synthetic', ]],
+         # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
               for lag_opt in [True, False]
               for graph_type in ['manual',
-                                 'small plain synthetic', 'big plain synthetic',]])
-                                 # 'small advanced synthetic', 'big advanced synthetic']])
+                                 'small plain synthetic', 'big plain synthetic', ]])
+# 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
     BIG_GRAPH_SIZE = 300
@@ -66,15 +84,15 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             s = get_start_stage()
 
             l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
-            l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50), MaterialReq('mat2', 25)]
             l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
-            l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50), MaterialReq('mat2', 25)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
             l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                           (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-            l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50), MaterialReq('mat2', 25)]
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
             l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
@@ -163,30 +181,29 @@ def setup_scheduler_parameters(request, setup_wg) -> tuple[WorkGraph, list[Contr
 
 
 @fixture(scope='module')
-def setup_default_schedules(setup_scheduler_parameters):
+def setup_default_schedules(setup_scheduler_parameters, setup_landscape_with_many_holders):
     work_estimator: Optional[WorkTimeEstimator] = None
 
     setup_wg, setup_contractors = setup_scheduler_parameters
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors)
+                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors,
+                                                                                        landscape=setup_landscape_with_many_holders)
 
     def init_k_schedule(scheduler_class, k):
         return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors)
+                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors,
+                                                                                           landscape=setup_landscape_with_many_holders)
 
-    try:
-        return setup_scheduler_parameters, {
-            "heft_end": init_schedule(HEFTScheduler),
-            "heft_between": init_schedule(HEFTBetweenScheduler),
-            "12.5%": init_k_schedule(HEFTScheduler, 8),
-            "25%": init_k_schedule(HEFTScheduler, 4),
-            "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-            "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-        }
-    except NoSufficientContractorError:
-        pytest.skip('Given contractor configuration can\'t support given work graph')
+    return setup_scheduler_parameters, {
+        "heft_end": init_schedule(HEFTScheduler),
+        "heft_between": init_schedule(HEFTBetweenScheduler),
+        "12.5%": init_k_schedule(HEFTScheduler, 8),
+        "25%": init_k_schedule(HEFTScheduler, 4),
+        "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+        "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+    }
 
 
 @fixture(scope='session',
@@ -197,7 +214,7 @@ def setup_scheduler_type(request):
 
 
 @fixture(scope='module')
-def setup_schedule(setup_scheduler_type, setup_scheduler_parameters):
+def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_landscape_with_many_holders):
     setup_wg, setup_contractors = setup_scheduler_parameters
 
     try:
@@ -205,6 +222,7 @@ def setup_schedule(setup_scheduler_type, setup_scheduler_parameters):
                                  work_time_estimator=None,
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
-                                 validate_schedule=False), setup_scheduler_type
+                                 validate_schedule=False,
+                                 landscape=setup_landscape_with_many_holders), setup_scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

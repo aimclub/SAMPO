@@ -2,6 +2,7 @@ import math
 from operator import itemgetter
 from typing import Callable
 
+from sampo.schemas.exceptions import NotEnoughMaterialsInDepots
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
 from sampo.schemas.resources import Material
 from sampo.schemas.sorted_list import ExtendedSortedList
@@ -64,6 +65,8 @@ class SupplyTimeline:
         # Return the first depot that can supply given materials
         depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
                   if depot_count >= count]
+        if len(depots) == 0:
+            raise NotEnoughMaterialsInDepots(f"Schedule can not be built. No one supplier has enough '{material}' material")
         return depots[0]
 
     @staticmethod

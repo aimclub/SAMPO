@@ -8,9 +8,8 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import WorkGraph
-from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
@@ -44,7 +43,7 @@ class Scheduler(ABC):
 
     def schedule(self, wg: WorkGraph,
                  contractors: List[Contractor],
-                 landscape_config: LandscapeConfiguration = LandscapeConfiguration(),
+                 landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),
@@ -54,7 +53,7 @@ class Scheduler(ABC):
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedule = self.schedule_with_cache(wg, contractors, landscape_config, spec, validate, start_time, timeline)[0]
+        schedule = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)[0]
         # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedule
 

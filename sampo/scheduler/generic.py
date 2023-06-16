@@ -7,6 +7,7 @@ from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.multi_contractor import run_contractor_search, get_worker_borders
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
@@ -74,8 +75,10 @@ class GenericScheduler(Scheduler):
 
         return optimize_resources_def
 
-    def schedule_with_cache(self, wg: WorkGraph,
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
                             contractors: List[Contractor],
+                            landscape: LandscapeConfiguration() = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -84,7 +87,7 @@ class GenericScheduler(Scheduler):
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, spec, self.work_estimator, assigned_parent_time, timeline)
+            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator, assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -98,6 +101,7 @@ class GenericScheduler(Scheduler):
     def build_scheduler(self,
                         ordered_nodes: List[GraphNode],
                         contractors: List[Contractor],
+                        landscape: LandscapeConfiguration(),
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
                         assigned_parent_time: Time = Time(0),
@@ -108,6 +112,7 @@ class GenericScheduler(Scheduler):
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
         This is selected by iteration from minimum possible numbers of workers until then the finish time is decreasing
 
+        :param landscape:
         :param contractors:
         :param spec: spec for current scheduling
         :param ordered_nodes:
@@ -121,7 +126,7 @@ class GenericScheduler(Scheduler):
         node2swork: dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
         if not isinstance(timeline, self._timeline_type):
-            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool)
+            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool, landscape)
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit

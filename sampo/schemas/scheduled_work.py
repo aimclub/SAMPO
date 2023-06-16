@@ -1,10 +1,10 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.landscape import MaterialDelivery
-from sampo.schemas.resources import Equipment, ConstructionObject, Worker, Material
+from sampo.schemas.resources import Equipment, ConstructionObject, Worker
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -12,20 +12,30 @@ from sampo.schemas.works import WorkUnit
 from sampo.utilities.serializers import custom_serializer
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
+    """
+    Contains all neccessary info to represent WorkUnit in Scheduler:
+
+    * WorkUnit
+    * list of workers, that are required to complete task
+    * start and end time
+    * contractor, that complete task
+    * list of equipment, that is needed to complete the task
+    * list of materials - set of non-renewable resources
+    * object - variable, that is used in landscape
+    """
 
     ignored_fields = ['equipments', 'materials', 'object']
 
     def __init__(self,
                  work_unit: WorkUnit,
-                 start_end_time: Tuple[Time, Time],
-                 workers: List[Worker],
+                 start_end_time: tuple[Time, Time],
+                 workers: list[Worker],
                  contractor: Contractor | str,
-                 materials: Optional[List[MaterialDelivery]] = None,
-                 equipments: Optional[List[Equipment]] = None,
-                 object: Optional[ConstructionObject] = None):
+                 equipments: list[MaterialDelivery] | None = None,
+                 materials: list[Equipment] | None = None,
+                 object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
         self.workers = workers
@@ -117,7 +127,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         return start <= time < end
 
     # TODO: describe the function (description, return type)
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.work_unit.id,
             "task_name": self.work_unit.name,

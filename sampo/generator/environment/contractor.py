@@ -1,10 +1,7 @@
-from itertools import chain, groupby
-from operator import itemgetter
 from random import Random
 
 from sampo.generator.config.gen_counts import WORKER_PROPORTIONS
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import WorkGraph
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.resources import Worker
 from sampo.schemas.utils import uuid_str
@@ -12,6 +9,9 @@ from sampo.schemas.utils import uuid_str
 
 def _get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: dict[str, float] | None,
                            available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
+    """
+    Return random quantity of each type of resources. Random value is gotten from Gaussian distribution
+    """
     available_types = available_types or list(proportions.keys())
     counts = {name: prop * pack_count for name, prop in proportions.items() if name in available_types}
     stochastic_counts = {
@@ -54,6 +54,7 @@ def get_contractor(pack_worker_count: float,
                    available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
     """
     Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
+
     :param pack_worker_count: The number of resource sets
     :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
     transferred proportions
@@ -81,18 +82,3 @@ def get_contractor(pack_worker_count: float,
     return Contractor(contractor_id, f"Contractor {index}", workers, {})
 
 
-def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1) -> Contractor:
-    """
-    Finds the minimum set of resources of each type to execute a graph and multiplying by a scalar creates a contractor
-    :param wg: The graph of works for which it is necessary to find a set of resources
-    :param scaler: Multiplier for the number of resources in the contractor
-    :return: Contractor capable of completing the work schedule
-    """
-    if scaler < 1:
-        assert "scaler should be greater than 1"
-    wg_reqs = list(chain(*[n.work_unit.worker_reqs for n in wg.nodes]))
-    min_wg_reqs = [(req.kind, req.min_count) for req in wg_reqs]
-    maximal_min_req: dict[str, int] = \
-        dict(list(group[1])[-1] for group in groupby(sorted(min_wg_reqs), itemgetter(0)))
-    c = get_contractor(scaler, sigma_scaler=0, worker_proportions=maximal_min_req)
-    return c

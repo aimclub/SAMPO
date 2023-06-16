@@ -81,6 +81,11 @@ class BlockGraph:
         return WorkGraph(global_start, global_end)
 
     def toposort(self) -> list[BlockNode]:
+        """
+        Sort current 'BlockGraph' in topologically order
+
+        :return: ordered list of BlockNode
+        """
         visited = set()
         ans = []
 

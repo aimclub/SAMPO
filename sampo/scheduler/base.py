@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -33,7 +33,7 @@ class Scheduler(ABC):
     def __init__(self,
                  scheduler_type: SchedulerType,
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
-                 work_estimator: Optional[WorkTimeEstimator] = None):
+                 work_estimator: WorkTimeEstimator | None = None):
         self.scheduler_type = scheduler_type
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator
@@ -42,7 +42,7 @@ class Scheduler(ABC):
         return str(self.scheduler_type.name)
 
     def schedule(self, wg: WorkGraph,
-                 contractors: List[Contractor],
+                 contractors: list[Contractor],
                  landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
@@ -59,7 +59,7 @@ class Scheduler(ABC):
 
     @abstractmethod
     def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             landscape_config: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
@@ -77,7 +77,7 @@ class Scheduler(ABC):
         ...
 
     @staticmethod
-    def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: List[Worker], work_spec: WorkSpec,
+    def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: list[Worker], work_spec: WorkSpec,
                                       optimize_lambda: Callable[[np.ndarray], None] = lambda _: None):
         """
         Applies worker team spec to optimization process.

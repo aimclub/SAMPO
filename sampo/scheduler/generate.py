@@ -1,5 +1,5 @@
 import time
-from typing import Union, List, Callable
+from typing import Union, Callable
 
 from sampo.scheduler.base import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
@@ -29,7 +29,7 @@ def get_scheduler_ctor(scheduling_algorithm_type: SchedulerType) \
 def generate_schedule(scheduling_algorithm_type: SchedulerType,
                       work_time_estimator: WorkTimeEstimator,
                       work_graph: WorkGraph,
-                      contractors: Union[Contractor, List[Contractor]],
+                      contractors: Union[Contractor, list[Contractor]],
                       validate_schedule: bool,
                       landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Schedule:
     scheduler = get_scheduler_ctor(scheduling_algorithm_type)(work_estimator=work_time_estimator)

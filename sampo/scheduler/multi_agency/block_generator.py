@@ -41,7 +41,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     :param count_supplier: function that computes the borders of block size from it's index
     :param edge_prob: edge existence probability
     :param rand: a random reference
-    :param obstruction_getter:
+    :param obstruction_getter: obstruction, that can be inserted in BlockGraph
     :return: generated block graph
     """
     ss = SimpleSynthetic(rand)
@@ -88,6 +88,22 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
                          queues_blocks: list[int] | None = None,
                          queues_edges: list[int] | None = None,
                          logger: Callable[[str], None] = print) -> BlockGraph:
+    """
+    Generate synthetic block graph of received type
+
+    :param graph_type: type of Block Graph
+    :param n_blocks: number of blocks
+    :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential, Queues
+    :param count_supplier: function that computes the borders of block size from it's index
+    :param edge_prob: edge existence probability
+    :param rand: a random reference
+    :param obstruction_getter:
+    :param queues_num: number of queues in block graph
+    :param queues_blocks: list of queues. It contains number of blocks in each queue
+    :param queues_edges:
+    :param logger: for logging
+    :return: generated block graph
+    """
     if graph_type == SyntheticBlockGraphType.Queues:
         return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
                                queues_edges, logger)
@@ -111,8 +127,8 @@ def generate_queues(type_prop: list[int],
     :param count_supplier: function that computes the borders of block size from it's index
     :param rand: a random reference
     :param obstruction_getter:
-    :param queues_num:
-    :param queues_blocks:
+    :param queues_num: number of queues in block graph
+    :param queues_blocks: list of queues. It contains number of blocks in each queue
     :param queues_edges:
     :return: generated block graph
     """

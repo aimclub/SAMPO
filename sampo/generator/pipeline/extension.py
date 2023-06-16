@@ -53,6 +53,7 @@ def _update_work_name(node: GraphNode, name_to_suffixes: dict[str, list[str]], r
 def extend_resources(uniq_resources: int, wg: WorkGraph, rand: Random) -> WorkGraph:
     """
     Increases the number of unique resources in WorkGraph
+
     :param uniq_resources: the amount to which you need to increase
     :param wg: original WorkGraph
     :param rand: Number generator with a fixed seed, or None for no fixed seed
@@ -63,7 +64,8 @@ def extend_resources(uniq_resources: int, wg: WorkGraph, rand: Random) -> WorkGr
 
 def extend_names(uniq_activities: int, wg: WorkGraph, rand: Random) -> WorkGraph:
     """
-     Increases the number of unique work names in WorkGraph
+    Increases the number of unique work names in WorkGraph
+
     :param uniq_activities:  the amount to which you need to increase
     :param wg: original WorkGraph
     :param rand: Number generator with a fixed seed, or None for no fixed seed

@@ -12,14 +12,16 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "numpy/arrayobject.h"
-#include "pycodec.h"
-#include "evaluator_types.h"
 
 #include <vector>
 #include <iostream>
 #include <unordered_map>
 #include <omp.h>
 #include <set>
+
+#include "pycodec.h"
+#include "evaluator_types.h"
+#include "time_estimator.h"
 
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
@@ -32,28 +34,21 @@ private:
     const vector<vector<int>>& headParents;  // vertices' parents without inseparables
     const vector<vector<int>>& inseparables; // inseparable chains with self
     const vector<vector<int>>& workers;      // contractor -> worker -> count
-    vector<double> volume;                   // work -> worker -> WorkUnit.min_req
-    vector<vector<int>> minReqs;             // work -> worker -> WorkUnit.max_req
-    vector<vector<int>> maxReqs;             // work -> WorkUnit.volume
+    const vector<float>& volumes;           // work -> worker -> WorkUnit.min_req
+    const vector<vector<int>>& minReqs;      // work -> worker -> WorkUnit.max_req
+    const vector<vector<int>>& maxReqs;      // work -> WorkUnit.volume
+    const vector<string>& id2work;
+    const vector<string>& id2res;
 
     int totalWorksCount;
     PyObject* pythonWrapper;
-    bool useExternalWorkEstimator;
+    bool usePythonWorkEstimator;
 
-    inline static float get_productivity(size_t workerType, int worker_count) {
-        // TODO
-        return 1.0F * (float) worker_count;
-    }
+    WorkTimeEstimator* timeEstimator;
 
-    inline static float communication_coefficient(int workerCount, int maxWorkerCount) {
-        int n = workerCount;
-        int m = maxWorkerCount;
-        return 1 / (float) (6 * m * m) * (float) (-2 * n * n * n + 3 * n * n + (6 * m * m - 1) * n);
-    }
-
-    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, size_t teamSize) {
-        if (useExternalWorkEstimator) {
-            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)",
+    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, int teamSize) {
+        if (usePythonWorkEstimator) {
+            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time_ind", "(iii)",
                                            chromosome_ind, team_target, work);
             if (res == nullptr) {
                 cerr << "Result is NULL" << endl << flush;
@@ -62,39 +57,29 @@ private:
             Py_DECREF(res);
             return (int) PyLong_AsLong(res);
         } else {
-            // the _abstract_estimate from WorkUnit
-            int time = 0;
-
-            for (size_t i = 0; i < teamSize; i++) {
-                int minReq = this->minReqs[work][i];
-                if (minReq == 0)
-                    continue;
-                if (resources[i] < minReq) {
-//                    cout << "Not conforms to min_req: " << get_worker(resources, team_target, i) << " < " << minReq << " on work " << work
-//                         << " and worker " << i << ", chromosome " << chromosome_ind << ", teamSize=" << teamSize << endl;
-//                    cout << "Team: ";
-//                    for (size_t j = 0; j < teamSize; j++) {
-//                        cout << get_worker(resources, team_target, i) << " ";
-//                    }
-//                    cout << endl;
-                    return TIME_INF;
-                }
-                int maxReq = this->maxReqs[work][i];
-
-                float productivity = get_productivity(i, resources[i]);
-                productivity *= communication_coefficient(resources[i], maxReq);
-
-//                if (productivity < 0.000001) {
-//                    return TIME_INF;
-//                }
-//                productivity = 0.1;
-                int newTime = ceil((float) volume[work] / productivity);
-                if (newTime > time) {
-                    time = newTime;
+            // map resources from indices to names
+            vector<pair<string, int>> resourcesWithNames;
+            for (int i = 0; i < teamSize; i++) {
+                if (resources[i] != 0) {
+                    resourcesWithNames.emplace_back(id2res[i], resources[i]);
                 }
             }
+            return calculate_working_time(chromosome_ind, id2work[work], id2work[team_target], volumes[work], resourcesWithNames);
+        }
+    }
 
-            return time;
+    int calculate_working_time(int chromosome_ind, const string& work, const string& team_target, float volume, vector<pair<string, int>> &resources) {
+        if (usePythonWorkEstimator) {
+            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iss)",
+                                           chromosome_ind, team_target.data(), work.data());
+            if (res == nullptr) {
+                cerr << "Result is NULL" << endl << flush;
+                return 0;
+            }
+            Py_DECREF(res);
+            return (int) PyLong_AsLong(res);
+        } else {
+            return timeEstimator->estimateTime(work, volume, resources);
         }
     }
 
@@ -212,27 +197,38 @@ public:
     int numThreads;
 
     explicit ChromosomeEvaluator(EvaluateInfo* info)
-        : parents(info->parents), headParents(info->headParents), inseparables(info->inseparables), workers(info->workers) {
+        : parents(info->parents), headParents(info->headParents), inseparables(info->inseparables), workers(info->workers),
+          minReqs(info->minReq), maxReqs(info->maxReq), volumes(info->volume), id2work(info->id2work), id2res(info->id2res) {
         this->totalWorksCount = info->totalWorksCount;
         this->pythonWrapper = info->pythonWrapper;
-        this->useExternalWorkEstimator = info->useExternalWorkEstimator;
-        this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
-        this->volume = info->volume;
-        this->minReqs = info->minReq;
-        this->maxReqs = info->maxReq;
 
-//        for (int i = 0; i < headParents.size(); i++) {
-//            cout << i << " | ";
-//            for (int p : headParents[i]) {
-//                cout << p << " ";
-//            }
-//            cout << endl;
-//        }
+        unordered_map<string, unordered_map<string, int>> minReqNames;
+        unordered_map<string, unordered_map<string, int>> maxReqNames;
+        for (int i = 0; i < minReqs.size(); i++) {
+            auto& workName = id2work[i];
+            minReqNames[workName] = unordered_map<string, int>();
+            maxReqNames[workName] = unordered_map<string, int>();
+            for (int j = 0; j < minReqs[i].size(); j++) {
+                if (minReqs[i][j] != 0) {
+                    auto& resName = id2res[j];
+                    minReqNames[workName][resName] = minReqs[i][j];
+                    maxReqNames[workName][resName] = maxReqs[i][j];
+                }
+            }
+        }
 
-         printf("Genetic running threads: %i\n", this->numThreads);
+        this->numThreads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
+        printf("Genetic running threads: %i\n", this->numThreads);
+
+        this->usePythonWorkEstimator = info->usePythonWorkEstimator;
+        if (!usePythonWorkEstimator && !info->useExternalWorkEstimator) {
+            this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
+        }
     }
 
-    ~ChromosomeEvaluator() = default;
+    ~ChromosomeEvaluator() {
+        delete timeEstimator;
+    }
 
     bool isValid(Chromosome* chromosome) {
         bool* visited = new bool[chromosome->numWorks()] { false };

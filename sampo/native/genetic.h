@@ -354,7 +354,7 @@ public:
 
         int g = 0;
         // TODO Propagate from Python
-        const int MAX_GENERATIONS = 100;
+        const int MAX_GENERATIONS = 50;
 
         while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
 //            printf("--- Generation %i | fitness = %i\n", g, bestChromosome->fitness);

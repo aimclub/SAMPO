@@ -27,6 +27,14 @@ static vector<int> decodeIntList(PyObject* object) {
     return PyCodec::fromList(object, PyLong_AsInt);
 }
 
+static string decodeString(PyObject* object) {
+    return PyUnicode_AsUTF8(object);
+}
+
+static float decodeFloat(PyObject* object) {
+    return (float) PyFloat_AsDouble(object);
+}
+
 static PyObject* evaluate(PyObject *self, PyObject *args) {
     EvaluateInfo* infoPtr;
     PyObject* pyChromosomes;
@@ -87,15 +95,18 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* pyInseparables;
     PyObject* pyWorkers;
     int totalWorksCount;
+    bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;
     PyObject* volume;
     PyObject* minReq;
     PyObject* maxReq;
+    PyObject* id2work;
+    PyObject* id2res;
 
-    if (!PyArg_ParseTuple(args, "OOOOOipOOO",
+    if (!PyArg_ParseTuple(args, "OOOOOipOOOOO",
                           &pythonWrapper, &pyParents, &pyHeadParents, &pyInseparables,
-                          &pyWorkers, &totalWorksCount, &useExternalWorkEstimator,
-                          &volume, &minReq, &maxReq)) {
+                          &pyWorkers, &totalWorksCount, &usePythonWorkEstimator, &useExternalWorkEstimator,
+                          &volume, &minReq, &maxReq, &id2work, &id2res)) {
         cout << "Can't parse arguments" << endl;
     }
 
@@ -105,10 +116,13 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(pyHeadParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
         PyCodec::fromList(pyWorkers, decodeIntList),
-        PyCodec::fromList(volume, PyFloat_AsDouble),
+        PyCodec::fromList(volume, decodeFloat),
         PyCodec::fromList(minReq, decodeIntList),
         PyCodec::fromList(maxReq, decodeIntList),
+        PyCodec::fromList(id2work, decodeString),
+        PyCodec::fromList(id2res, decodeString),
         totalWorksCount,
+        usePythonWorkEstimator,
         useExternalWorkEstimator
     };
 

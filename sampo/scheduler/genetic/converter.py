@@ -1,8 +1,7 @@
-from typing import List, Tuple
+import copy
+from typing import Tuple
 
 import numpy as np
-
-import copy
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
@@ -46,7 +45,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
 
     # resources for works part of chromosome
     # +1 stores contractors line
-    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=np.int32)
+    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
     for node in order:
         node_id = node.work_unit.id

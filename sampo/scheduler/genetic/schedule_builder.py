@@ -12,10 +12,11 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness
+    FitnessFunction, TimeFitness, is_chromosome_correct
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -149,9 +150,10 @@ def build_schedule(wg: WorkGraph,
                            contractor2index, contractor_borders, node_indices, index2node_list, parents,
                            assigned_parent_time, work_estimator)
 
-    # for name, chromosome in init_chromosomes.items():
-    #     if not is_chromosome_correct(chromosome, node_indices, parents):
-    #         raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+    for name, chromosome in init_chromosomes.items():
+        if chromosome is not None:
+            if not is_chromosome_correct(chromosome, node_indices, parents):
+                raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
@@ -351,7 +353,8 @@ def build_schedule(wg: WorkGraph,
                                         mutate_resources, mutate_resources, selection_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome,
+                                                                                                 timeline=timeline)
 
     if show_fitness_graph:
         sns.lineplot(

@@ -16,11 +16,11 @@ def obstruction_getter(i: int):
 
 
 if __name__ == '__main__':
-    schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  GeneticScheduler(50, 100, 0.25, 0.5, 100),
-                  GeneticScheduler(50, 100, 0.5, 0.75, 100),
-                  GeneticScheduler(50, 100, 0.75, 0.75, 100),
-                  GeneticScheduler(50, 50, 0.9, 0.9, 100)]
+    schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),]
+                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 50, 0.5, 0.5, 100)]
 
     contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 
@@ -28,13 +28,15 @@ if __name__ == '__main__':
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    bg = generate_block_graph(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
-                              rand, obstruction_getter, 2, [3, 4], [3, 4], logger=print)
+    bg = generate_block_graph(SyntheticBlockGraphType.Queues, 2, [1, 1, 1], lambda x: (30, 50), 1.0,
+                              rand, obstruction_getter, 20, [3, 4] * 10, [3, 4] * 10, logger=print)
+
     conjuncted = bg.to_work_graph()
+    print(f'Conjunction finished: {conjuncted.vertex_count} works')
+
+    schedule = agents[0].scheduler.schedule(conjuncted, contractors)
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
-
-    print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
 
     min_downtime = Time.inf()
     best_genetic = None
@@ -47,4 +49,14 @@ if __name__ == '__main__':
 
     schedule = best_genetic.schedule(conjuncted, contractors)
 
-    print(f'Genetic res: {schedule.execution_time}')
+    ma_res = max(sblock.end_time for sblock in scheduled_blocks.values())
+    genetic_res = schedule.execution_time
+
+    filename = f'ma2genetic_results_{Random().randint(0, 10000000)}.txt'
+    with open(filename, 'w') as f:
+        f.write(f'Conjunction finished: {conjuncted.vertex_count} works\n')
+        f.write(f'Multi-agency res: {ma_res}\n')
+        f.write(f'Genetic res: {genetic_res}\n')
+        f.write(f'MA / Genetic win is {int((1 - ma_res / genetic_res) * 100)}%\n')
+
+    print(f'Results saved to {filename}')

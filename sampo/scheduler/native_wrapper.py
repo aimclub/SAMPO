@@ -78,6 +78,10 @@ class NativeWrapper:
 
         volume = [node.work_unit.volume for node in numeration.values()]
 
+        id2work = [numeration[i].work_unit.id for i in range(len(numeration))]
+        id2worker_name = reverse_dictionary(worker_name2index)
+        id2res = [id2worker_name[i] for i in range(len(id2worker_name))]
+
         self.totalWorksCount = wg.vertex_count
         self.time_estimator = time_estimator
         self.worker_pool_indices = worker_pool_indices
@@ -86,8 +90,8 @@ class NativeWrapper:
         self.evaluator = evaluator
 
         # preparing C++ cache
-        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers, self.totalWorksCount,
-                                           False, volume, min_req, max_req)
+        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
+                                           self.totalWorksCount, False, volume, min_req, max_req, id2work, id2res)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]

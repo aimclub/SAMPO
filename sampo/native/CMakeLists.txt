@@ -15,7 +15,7 @@ add_executable(native
         python_deserializer.cpp python_deserializer.h      # custom Python datastruct handler
         workgraph.h contractor.h basic_types.h             # custom Python types definition
         pycodec.h                                          # basic type transcoder
-        chromosome_evaluator.cpp chromosome_evaluator.h genetic.h evaluator_types.h utils/use_numpy.cpp utils/use_numpy.h)   # algorithms
+        chromosome_evaluator.cpp chromosome_evaluator.h genetic.h evaluator_types.h utils/use_numpy.cpp utils/use_numpy.h time_estimator.h time_estimator.cpp)   # algorithms
 
 find_package(OpenMP)
 if (OPENMP_FOUND)

@@ -127,7 +127,7 @@ class Manager:
             assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
 
             if logger:
-                logger(f'{agent._scheduler}')
+                logger(f'Scheduled {i} block: {agent._scheduler}')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
                                     start_time=start_time,
                                     end_time=end_time)

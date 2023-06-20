@@ -25,6 +25,7 @@ class SchedulerType(Enum):
     HEFTAddEnd = 'heft_add_end'
     HEFTAddBetween = 'heft_add_between'
 
+
 class Scheduler(ABC):
     scheduler_type: SchedulerType
     resource_optimizer: ResourceOptimizer

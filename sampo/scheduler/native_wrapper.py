@@ -91,7 +91,7 @@ class NativeWrapper:
 
         # preparing C++ cache
         self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
-                                           self.totalWorksCount, False, volume, min_req, max_req, id2work, id2res)
+                                           self.totalWorksCount, False, False, volume, min_req, max_req, id2work, id2res)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]

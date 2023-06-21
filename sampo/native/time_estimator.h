@@ -52,7 +52,7 @@ public:
 
     }
 
-    ~DefaultWorkTimeEstimator() override = default;
+//    ~DefaultWorkTimeEstimator() override = default;
 
     int estimateTime(const string &work, float volume, vector<pair<string, int>> &resources) override {
         // the _abstract_estimate from WorkUnit

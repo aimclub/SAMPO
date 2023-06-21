@@ -40,13 +40,16 @@ private:
     const vector<string>& id2work;
     const vector<string>& id2res;
 
+    unordered_map<string, unordered_map<string, int>> minReqNames;
+    unordered_map<string, unordered_map<string, int>> maxReqNames;
+
     int totalWorksCount;
     PyObject* pythonWrapper;
     bool usePythonWorkEstimator;
 
     WorkTimeEstimator* timeEstimator;
 
-    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, int teamSize) {
+    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, size_t teamSize) {
         if (usePythonWorkEstimator) {
             auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time_ind", "(iii)",
                                            chromosome_ind, team_target, work);
@@ -64,6 +67,8 @@ private:
                     resourcesWithNames.emplace_back(id2res[i], resources[i]);
                 }
             }
+//            cout << "Called WorkTimeEstimator!" << endl;
+//            return 1;
             return calculate_working_time(chromosome_ind, id2work[work], id2work[team_target], volumes[work], resourcesWithNames);
         }
     }
@@ -202,8 +207,6 @@ public:
         this->totalWorksCount = info->totalWorksCount;
         this->pythonWrapper = info->pythonWrapper;
 
-        unordered_map<string, unordered_map<string, int>> minReqNames;
-        unordered_map<string, unordered_map<string, int>> maxReqNames;
         for (int i = 0; i < minReqs.size(); i++) {
             auto& workName = id2work[i];
             minReqNames[workName] = unordered_map<string, int>();
@@ -217,18 +220,20 @@ public:
             }
         }
 
+        this->usePythonWorkEstimator = info->usePythonWorkEstimator;
         this->numThreads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
         printf("Genetic running threads: %i\n", this->numThreads);
 
-        this->usePythonWorkEstimator = info->usePythonWorkEstimator;
-        if (!usePythonWorkEstimator && !info->useExternalWorkEstimator) {
+        if (!usePythonWorkEstimator) {
             this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
         }
     }
 
-    ~ChromosomeEvaluator() {
-        delete timeEstimator;
-    }
+    // TODO Research why deleting timeEstimator causes Head Corruption crash
+//    ~ChromosomeEvaluator() {
+//        delete timeEstimator;
+//    }
+    ~ChromosomeEvaluator() = default;
 
     bool isValid(Chromosome* chromosome) {
         bool* visited = new bool[chromosome->numWorks()] { false };

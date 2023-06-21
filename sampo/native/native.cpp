@@ -28,7 +28,7 @@ static vector<int> decodeIntList(PyObject* object) {
 }
 
 static string decodeString(PyObject* object) {
-    return PyUnicode_AsUTF8(object);
+    return string {PyUnicode_AsUTF8(object) };
 }
 
 static float decodeFloat(PyObject* object) {
@@ -103,7 +103,7 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* id2work;
     PyObject* id2res;
 
-    if (!PyArg_ParseTuple(args, "OOOOOipOOOOO",
+    if (!PyArg_ParseTuple(args, "OOOOOippOOOOO",
                           &pythonWrapper, &pyParents, &pyHeadParents, &pyInseparables,
                           &pyWorkers, &totalWorksCount, &usePythonWorkEstimator, &useExternalWorkEstimator,
                           &volume, &minReq, &maxReq, &id2work, &id2res)) {

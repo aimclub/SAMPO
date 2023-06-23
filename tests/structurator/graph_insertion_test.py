@@ -1,4 +1,4 @@
-from sampo.structurator.graph_insertion import prepare_work_graph_copy
+from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy
 
 
 def test_prepare_wg_copy(setup_wg):

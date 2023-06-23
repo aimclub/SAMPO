@@ -3,7 +3,7 @@ from copy import deepcopy
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
-from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy
+from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_start_finish
 
 
 def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
@@ -18,7 +18,7 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
     :param slave_wg: WorkGraph to be inserted into master_wg
     :return: new union WorkGraph
     """
-    master_nodes, master_old_to_new_ids = prepare_work_graph_copy(master_wg, [])
+    master_nodes, master_old_to_new_ids = prepare_work_graph_copy(master_wg)
     slave_nodes, slave_old_to_new = prepare_work_graph_copy(slave_wg, [slave_wg.start, slave_wg.finish])
 
     # add parent links from slave_wg's nodes to master_start node from slave_wg's nodes
@@ -31,8 +31,7 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
     master_finish.add_parents([slave_nodes[slave_old_to_new[edge.start.id]]
                                for edge in slave_wg.finish.edges_to])
 
-    start = master_nodes[master_old_to_new_ids[master_wg.start.id]]
-    finish = master_nodes[master_old_to_new_ids[master_wg.finish.id]]
+    start, finish = new_start_finish(master_wg, master_nodes, master_old_to_new_ids)
     return WorkGraph(start, finish)
 
 # def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,

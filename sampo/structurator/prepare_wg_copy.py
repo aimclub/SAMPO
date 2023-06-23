@@ -38,7 +38,7 @@ def restore_parents(new_nodes: dict[str, GraphNode], original_wg: WorkGraph, old
                                   if edge.start.id in old_to_new_ids and edge.start.id not in excluded_ids])
 
 
-def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode], use_ids_simplification: bool = False,
+def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [], use_ids_simplification: bool = False,
                             id_offset: int = 0) -> (dict[str, GraphNode], dict[str, str]):
     """
     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
@@ -91,8 +91,8 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode], use_
 #
 #     return WorkGraph(new_start, new_finish), id_old_to_new
 
-def new_start_finish(original_wg: WorkGraph, original_nodes: dict[str, GraphNode],
-                     original_old_to_new_ids: dict[str, str]) -> (GraphNode, GraphNode):
-    new_start = original_nodes[original_old_to_new_ids[original_wg.start.id]]
-    new_finish = original_nodes[original_old_to_new_ids[original_wg.finish.id]]
-    return new_finish, new_finish
+def new_start_finish(original_wg: WorkGraph, copied_nodes: dict[str, GraphNode],
+                     old_to_new_ids: dict[str, str]) -> (GraphNode, GraphNode):
+    new_start = copied_nodes[old_to_new_ids[original_wg.start.id]]
+    new_finish = copied_nodes[old_to_new_ids[original_wg.finish.id]]
+    return new_start, new_finish

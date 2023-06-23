@@ -2,8 +2,7 @@ from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy
 
 
 def test_prepare_wg_copy(setup_wg):
-    copied_wg, old_to_new_ids = prepare_work_graph_copy(setup_wg, [])
-    copied_nodes = {node.id: node for node in copied_wg.nodes}
+    copied_nodes, old_to_new_ids = prepare_work_graph_copy(setup_wg)
 
     assert len(copied_nodes) == len(setup_wg.nodes)
 

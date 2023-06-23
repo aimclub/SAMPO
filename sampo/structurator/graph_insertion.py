@@ -38,8 +38,32 @@ def restore_parents(new_nodes: dict[str, GraphNode], original_wg: WorkGraph, old
                                   if edge.start.id in old_to_new_ids and edge.start.id not in excluded_ids])
 
 
-def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode], use_ids_simplification: bool = False,
-                            id_offset: int = 0) -> (dict[str, GraphNode], dict[str, str]):
+# def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode], use_ids_simplification: bool = False,
+#                             id_offset: int = 0) -> (dict[str, GraphNode], dict[str, str]):
+#     """
+#     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
+#     ignores all GraphNodes specified in the exception list and GraphEdges associated with them
+#     :param wg: original WorkGraph for copy
+#     :param excluded_nodes: GraphNodes to be excluded from the graph
+#     :param use_ids_simplification: If true, creates short numeric ids converted to strings,
+#     otherwise uses uuid to generate id
+#     :param id_offset: shift for numeric ids, used only if param use_ids_simplification is True
+#     :return: a dictionary with GraphNodes by their id
+#     and a dictionary linking the ids of GraphNodes of the original graph and the new GraphNode ids
+#     """
+#     excluded_nodes = {node.id for node in excluded_nodes}
+#     node_list = [(id_offset + ind, node) for ind, node in enumerate(wg.nodes)] \
+#         if use_ids_simplification \
+#         else [(None, node) for node in wg.nodes]
+#     nodes, old_to_new_ids = list(zip(*[copy_graph_node(node, ind) for ind, node in node_list
+#                                        if node.id not in excluded_nodes]))
+#     id_old_to_new = dict(old_to_new_ids)
+#     nodes = {node.id: node for node in nodes}
+#     restore_parents(nodes, wg, id_old_to_new, excluded_nodes)
+#     return nodes, id_old_to_new
+
+def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [], use_ids_simplification: bool = False,
+                            id_offset: int = 0) -> (WorkGraph, dict[str, str]):
     """
     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
     ignores all GraphNodes specified in the exception list and GraphEdges associated with them
@@ -60,7 +84,11 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode], use_
     id_old_to_new = dict(old_to_new_ids)
     nodes = {node.id: node for node in nodes}
     restore_parents(nodes, wg, id_old_to_new, excluded_nodes)
-    return nodes, id_old_to_new
+
+    new_start = nodes[id_old_to_new[wg.start.id]]
+    new_finish = nodes[id_old_to_new[wg.finish.id]]
+
+    return WorkGraph(new_start, new_finish), id_old_to_new
 
 
 def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
@@ -91,3 +119,30 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
     start = master_nodes[master_old_to_new_ids[master_wg.start.id]]
     finish = master_nodes[master_old_to_new_ids[master_wg.finish.id]]
     return WorkGraph(start, finish)
+
+# def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
+#                              slave_wg: WorkGraph) -> WorkGraph:
+#     """
+#     Inserts the slave Work Graph into the masterWork Graph,
+#     while the starting vertex slave_wg becomes the specified master_start,
+#     and the finishing vertex is correspondingly master_finish
+#     :param master_wg: The WorkGraph into which the insertion is performed
+#     :param master_start: GraphNode which will become the parent for the entire slave_wg
+#     :param master_finish: GraphNode which will become a child for the whole slave_wg
+#     :param slave_wg: WorkGraph to be inserted into master_wg
+#     :return: new union WorkGraph
+#     """
+#     copied_master_wg, master_old_to_new_ids = prepare_work_graph_copy(master_wg)
+#     copied_slave_wg, slave_old_to_new_ids = prepare_work_graph_copy(slave_wg, [slave_wg.start, slave_wg.finish])
+#
+#     # add parent links from slave_wg's nodes to master_start node from slave_wg's nodes
+#     master_nodes = {node.id: node for node in copied_master_wg.node}
+#     for edge in slave_wg.start.edges_from:
+#         master_nodes[slave_old_to_new_ids[edge.finish.id]].add_parents([copied_master_wg.start])
+#
+#     # add parent links from master_finish to slave_wg's nodes
+#     slave_nodes = {node.id: node for node in copied_slave_wg.node}
+#     copied_master_wg.finish.add_parents([slave_nodes[slave_old_to_new_ids[edge.start.id]]
+#                                          for edge in slave_wg.finish.edges_to])
+#
+#     return copied_master_wg

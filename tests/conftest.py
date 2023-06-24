@@ -1,5 +1,5 @@
 from random import Random
-from typing import Dict, Optional, Tuple, List, Any
+from typing import Dict, Optional, Any
 from uuid import uuid4
 
 import pytest
@@ -66,7 +66,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
               for lag_opt in [True, False]
               for graph_type in ['manual',
                                  'small plain synthetic', 'big plain synthetic']])
-# 'small advanced synthetic', 'big advanced synthetic']])
+        # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
     BIG_GRAPH_SIZE = 300
@@ -171,17 +171,17 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: Optional[WorkTimeEstimator] = None
 
-    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape_many_holders = setup_scheduler_parameters
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator,
                                resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors,
-                                                                                        landscape=landscape)
+                                                                                        landscape=setup_landscape_many_holders)
 
     def init_k_schedule(scheduler_class, k):
         return scheduler_class(work_estimator=work_estimator,
                                resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors,
-                                                                                           landscape=landscape)
+                                                                                           landscape=setup_landscape_many_holders)
 
     return setup_scheduler_parameters, {
         "heft_end": init_schedule(HEFTScheduler),

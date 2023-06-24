@@ -64,7 +64,7 @@ class SupplyTimeline:
         # TODO Make better algorithm
         # Return the first depot that can supply given materials
         if len(self._resource_sources) == 0:
-            raise NoAvailableResources(f"Schedule can not be built. No available resource {material}")
+            raise NoAvailableResources(f"Schedule can not be built. No available resource sources with material {material}")
         depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
                   if depot_count >= count]
         if len(depots) == 0:

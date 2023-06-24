@@ -9,12 +9,12 @@ from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_t
 from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections_util import reverse_dictionary
-from sampo.schemas.landscape import LandscapeConfiguration
 
 
 def get_params(works_count: int) -> Tuple[int, float, float, int]:
@@ -135,7 +135,7 @@ def create_toolbox(wg: WorkGraph,
 
 @fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
-    (setup_wg, setup_contractors, landscape), setup_default_schedules = setup_default_schedules
+    (setup_wg, setup_contractors, setup_landscape_many_holders), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
 
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
@@ -151,4 +151,5 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                           setup_default_schedules,
                           rand,
                           work_estimator=work_estimator,
-                          landscape=landscape), setup_wg, setup_contractors, setup_default_schedules
+                          landscape=setup_landscape_many_holders), setup_wg, setup_contractors, setup_default_schedules, \
+           setup_landscape_many_holders

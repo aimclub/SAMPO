@@ -11,11 +11,11 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, Ch
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.schemas.landscape import LandscapeConfiguration
 
 
 # logger = mp.log_to_stderr(logging.DEBUG)
@@ -247,7 +247,7 @@ def is_chromosome_correct(chromosome: ChromosomeType,
     :return:
     """
     return is_chromosome_order_correct(chromosome, parents) and \
-        is_chromosome_contractors_correct(chromosome, node_indices)
+           is_chromosome_contractors_correct(chromosome, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, list[int]]) -> bool:

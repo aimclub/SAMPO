@@ -6,8 +6,8 @@ from sampo.schemas.resources import Worker
 from sampo.utilities.validation import validate_schedule
 
 
-def test_convert_schedule_to_chromosome(setup_toolbox, setup_landscape_many_holders):
-    (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
+def test_convert_schedule_to_chromosome(setup_toolbox):
+    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
     schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape_many_holders)
 
@@ -16,7 +16,7 @@ def test_convert_schedule_to_chromosome(setup_toolbox, setup_landscape_many_hold
 
 
 def test_convert_chromosome_to_schedule(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
+    (tb, _), setup_wg, setup_contractors, _, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
@@ -26,16 +26,16 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
 
 
 def test_converter_with_borders_contractor_accounting(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
+    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
-    chromosome = tb.generate_chromosome()
+    chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
 
     for contractor_index in range(len(chromosome[2])):
         for resource_index in range(len(chromosome[2][contractor_index])):
             chromosome[1][:, resource_index] = chromosome[1][:, resource_index] / 2
             chromosome[2][contractor_index, resource_index] = max(chromosome[1][:, resource_index])
 
-    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
+    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome, landscape=setup_landscape_many_holders)
     workers = list(setup_contractors[0].workers.keys())
 
     contractors = []

@@ -6,6 +6,15 @@ from sortedcontainers import SortedKeyList
 
 # TODO: describe the class (description)
 class ExtendedSortedList(SortedKeyList, ABC):
+    def __setitem__(self, idx, value):
+        """
+        This should just set the item by internal index WITHOUT modifying the key
+
+        :param idx: the index
+        :param value: value. Should have tha same key even the old value reverenced by `idx`
+        """
+        self.merge(self[idx], value, lambda x, y: y)
+
     # TODO: describe the function (parameters (old), return type)
     def merge(self, old, value, merger):
         """

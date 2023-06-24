@@ -269,7 +269,7 @@ GraphNodeDict = dict[str, GraphNode]
 
 
 # TODO Make property for list of GraphEdges??
-@dataclass(frozen=True)
+@dataclass
 class WorkGraph(JSONSerializable['WorkGraph']):
     """
     Class to describe graph of works in future schedule
@@ -283,6 +283,16 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     adj_matrix: dok_matrix = field(init=False)
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
+    #
+    # def __init__(self, start: GraphNode, finish: GraphNode) -> None:
+    #     self.start = start
+    #     self.finish = finish
+    #     self.nodes: list[GraphNode] = []
+    #     self.adj_matrix: dok_matrix = dok_matrix((0, 0), dtype=float)
+    #     self.dict_nodes: GraphNodeDict = GraphNodeDict()
+    #     self.vertex_count: int = 0
+
+
 
     def __post_init__(self) -> None:
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
@@ -291,6 +301,10 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
+        # self.nodes = ordered_nodes
+        # self.adj_matrix = adj_matrix
+        # self.dict_nodes = dict_nodes
+        # self.vertex_count = len(ordered_nodes)
 
     def __hash__(self):
         return hash(self.start) + 17 * hash(self.finish)
@@ -354,6 +368,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         }
         id2node: dict[str, GraphNode] = {node.id: node for node in node2ind.keys()}
         adj_mx = dok_matrix((len(node2ind), len(node2ind)), dtype=np.short)
+        weight = 0
         for v, i in node2ind.items():
             for child in v.children:
                 c_i = node2ind[child]

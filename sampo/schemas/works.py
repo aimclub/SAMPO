@@ -1,11 +1,11 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from random import Random
 from typing import Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
-from sampo.schemas.resources import Worker
+from sampo.schemas.resources import Worker, Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -20,7 +20,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     def __init__(self, id: str, name: str, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
                  material_reqs: list[MaterialReq] = [], object_reqs: list[ConstructionObjectReq] = [],
                  group: str = 'default', is_service_unit=False, volume: float = 0,
-                 volume_type: str = "unit", display_name: str = ""):
+                 volume_type: str = "unit", display_name: str = "", workground_size: int = 100):
         """
         :param worker_reqs: list of required professions (i.e. workers)
         :param equipment_reqs: list of required equipment
@@ -42,6 +42,10 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = volume
         self.volume_type = volume_type
         self.display_name = display_name
+        self.workground_size = workground_size
+
+    def need_materials(self) -> list[Material]:
+        return [req.material() for req in self.material_reqs]
 
     @custom_serializer('worker_reqs')
     def worker_reqs_serializer(self, value: list[WorkerReq]):
@@ -140,6 +144,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
+        self.workground_size = new_work_unit.workground_size
 
 
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):

@@ -17,9 +17,9 @@ from sampo.utilities.collections_util import build_index
 
 @fixture(scope='function')
 def setup_timeline(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
-    return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool), \
+    return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool, landscape=landscape), \
         setup_wg, setup_contractors, setup_worker_pool
 
 

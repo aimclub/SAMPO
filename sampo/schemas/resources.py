@@ -13,7 +13,14 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     """
     A class summarizing the different resources used in the work: Human resources, equipment, materials, etc.
     """
-    pass
+    id: str
+    name: str
+    count: int
+    contractor_id: Optional[str] = ""
+
+    # TODO: describe the function (description, return type)
+    def get_agent_id(self) -> AgentId:
+        return self.contractor_id, self.name
 
 
 @dataclass
@@ -34,9 +41,7 @@ class Worker(Resource):
                  contractor_id: Optional[str] = "",
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
-        super(Worker, self).__init__(id, name)
-        self.count = count
-        self.contractor_id = contractor_id
+        super(Worker, self).__init__(id, name, count, contractor_id)
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
@@ -90,10 +95,12 @@ class Worker(Resource):
     def __str__(self):
         return self.__repr__()
 
+
 # TODO: describe the class (description)
 @dataclass
 class ConstructionObject(Resource):
     pass
+
 
 # TODO: describe the class (description, parameters)
 @dataclass(init=False)
@@ -101,12 +108,31 @@ class EmptySpaceConstructionObject(ConstructionObject):
     id: str = "00000000000000000"
     name: str = "empty space construction object"
 
+
 # TODO: describe the class (description)
 @dataclass
 class Equipment(Resource):
     pass
 
+
 # TODO: describe the class (description)
 @dataclass
 class Material(Resource):
-    pass
+
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 count: int,
+                 cost_one_unit: Optional[float] = 1):
+        super(Material, self).__init__(id, name, count)
+        self.cost_one_unit = cost_one_unit
+
+    # TODO: describe the function (description, return type)
+    def copy(self):
+        return Material(id=self.id,
+                        name=self.name,
+                        count=self.count)
+
+    def with_count(self, count: int) -> 'Material':
+        self.count = count
+        return self

@@ -17,6 +17,7 @@ from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -35,6 +36,7 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
                                                  FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = None,
@@ -53,6 +55,7 @@ def build_schedule(wg: WorkGraph,
     Generate resources from min to max
     Overall initial population is valid
 
+    :param landscape:
     :param fitness_constructor:
     :param show_fitness_graph:
     :param worker_pool:
@@ -142,7 +145,7 @@ def build_schedule(wg: WorkGraph,
             if schedule is not None else None
          for name, (schedule, order) in init_schedules.items()}
 
-    toolbox = init_toolbox(wg, contractors, worker_pool, index2node,
+    toolbox = init_toolbox(wg, contractors, worker_pool, landscape, index2node,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
@@ -351,7 +354,7 @@ def build_schedule(wg: WorkGraph,
                                         mutate_resources, mutate_resources, selection_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome, landscape=landscape)
 
     if show_fitness_graph:
         sns.lineplot(

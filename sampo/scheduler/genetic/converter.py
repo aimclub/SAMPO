@@ -1,12 +1,13 @@
-import numpy as np
-
 import copy
+
+import numpy as np
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -36,7 +37,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     order: list[GraphNode] = order if order is not None else [work for work in schedule.works
                                                               if not wg[work.work_unit.id].is_inseparable_son()]
 
-    # order works part of chromosome
+    # order works part of chromosom
     order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])
 
     # convert to convenient form
@@ -69,6 +70,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    spec: ScheduleSpec,
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
+                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = None,) \
@@ -101,7 +103,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
             worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index], worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool)
+        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool, landscape)
 
     order_nodes = []
 

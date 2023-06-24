@@ -10,7 +10,6 @@ from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.schemas.landscape import LandscapeConfiguration
 
 
 class TopologicalScheduler(GenericScheduler):
@@ -20,15 +19,13 @@ class TopologicalScheduler(GenericScheduler):
 
     def __init__(self,
                  scheduler_type: SchedulerType = SchedulerType.Topological,
-                 work_estimator: Optional[WorkTimeEstimator or None] = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration()):
+                 work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=AverageReqResourceOptimizer(),
                          timeline_type=MomentumTimeline,
                          prioritization_f=self._topological_sort,
                          optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
-                         work_estimator=work_estimator,
-                         landscape=landscape)
+                         work_estimator=work_estimator)
 
     # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
@@ -57,9 +54,8 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
     """
     def __init__(self,
                  work_estimator: Optional[WorkTimeEstimator or None] = None,
-                 random_seed: Optional[int] = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration()):
-        super().__init__(work_estimator=work_estimator, landscape=landscape)
+                 random_seed: Optional[int] = None):
+        super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:

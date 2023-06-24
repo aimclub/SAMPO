@@ -176,10 +176,7 @@ class SupplyTimeline:
         going_right = False
 
         for material in materials:
-            try:
-                depot = self._find_best_supply(material.name, material.count)
-            except Exception as e:
-                raise Exception(f"{material}\n", e)
+            depot = self._find_best_supply(material.name, material.count)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
 

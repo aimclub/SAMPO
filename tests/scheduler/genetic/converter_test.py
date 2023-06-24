@@ -6,10 +6,10 @@ from sampo.schemas.resources import Worker
 from sampo.utilities.validation import validate_schedule
 
 
-def test_convert_schedule_to_chromosome(setup_toolbox, setup_landscape_with_many_holders):
+def test_convert_schedule_to_chromosome(setup_toolbox, setup_landscape_many_holders):
     (tb, _), setup_wg, setup_contractors, _ = setup_toolbox
 
-    schedule = HEFTScheduler(landscape=setup_landscape_with_many_holders).schedule(setup_wg, setup_contractors, validate=True)
+    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape_many_holders)
 
     chromosome = tb.schedule_to_chromosome(schedule=schedule)
     assert tb.validate(chromosome)

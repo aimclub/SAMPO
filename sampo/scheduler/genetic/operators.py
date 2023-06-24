@@ -163,7 +163,8 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
-                     work_estimator=work_estimator, worker_name2index=worker_name2index, contractor2index=contractor2index,
+                     work_estimator=work_estimator, worker_name2index=worker_name2index,
+                     contractor2index=contractor2index,
                      landscape=landscape)
     return toolbox
 
@@ -205,13 +206,12 @@ def generate_chromosome(wg: WorkGraph,
     :return: chromosome
     """
 
-    def randomized_init(_landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
+    def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator,
-                                                  int(rand.random() * 1000000),
-                                                  landscape=_landscape) \
-            .schedule(wg, contractors)
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors, landscape=landscape)
         return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                                    contractor2index, contractor_borders, schedule)
+                                              contractor2index, contractor_borders, schedule)
 
     chance = rand.random()
     if chance < 0.2:
@@ -227,10 +227,10 @@ def generate_chromosome(wg: WorkGraph,
     elif chance < 0.8:
         chromosome = init_chromosomes["87.5%"]
     else:
-        chromosome = randomized_init(_landscape=landscape)
+        chromosome = randomized_init()
 
     if chromosome is None:
-        chromosome = randomized_init(_landscape=landscape)
+        chromosome = randomized_init()
 
     return chromosome
 
@@ -247,7 +247,7 @@ def is_chromosome_correct(chromosome: ChromosomeType,
     :return:
     """
     return is_chromosome_order_correct(chromosome, parents) and \
-           is_chromosome_contractors_correct(chromosome, node_indices)
+        is_chromosome_contractors_correct(chromosome, node_indices)
 
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, list[int]]) -> bool:
@@ -393,8 +393,8 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     for contractor in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
             ind[2][contractor][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
-                                                      max(resources_min_border[type_of_worker] + 1,
-                                                          ind[2][contractor][type_of_worker] // 10))
+                                                               max(resources_min_border[type_of_worker] + 1,
+                                                                   ind[2][contractor][type_of_worker] // 10))
             if ind[2][contractor][type_of_worker] <= 0:
                 ind[2][contractor][type_of_worker] = 1
 

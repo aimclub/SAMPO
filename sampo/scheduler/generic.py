@@ -33,19 +33,17 @@ class GenericScheduler(Scheduler):
                  prioritization_f: Callable[[WorkGraph, WorkTimeEstimator], list[GraphNode]],
                  optimize_resources_f: Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                                                  dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
-                 tuple[Time, Time, Contractor, list[Worker]]],
-                 work_estimator: WorkTimeEstimator | None = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration()):
+                                                 tuple[Time, Time, Contractor, list[Worker]]],
+                 work_estimator: WorkTimeEstimator | None = None):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
         self._timeline_type = timeline_type
         self.prioritization = prioritization_f
         self.optimize_resources = optimize_resources_f
-        self.landscape = landscape
 
     def get_default_res_opt_function(self, get_finish_time=get_finish_time_default) \
             -> Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                          dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
-            tuple[Time, Time, Contractor, list[Worker]]]:
+                         tuple[Time, Time, Contractor, list[Worker]]]:
 
         def optimize_resources_def(node: GraphNode, contractors: list[Contractor], work_spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
@@ -91,7 +89,7 @@ class GenericScheduler(Scheduler):
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, self.landscape, spec, self.work_estimator,
+            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator,
                                  assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,

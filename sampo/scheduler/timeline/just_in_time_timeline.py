@@ -77,13 +77,9 @@ class JustInTimeTimeline(Timeline):
                 needed_count -= offer_count
                 ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time)
+        c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
 
-        # try:
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
-        # except Exception as e:
-        #     raise Exception(f"Node id: {node.id} ------ Materials of nodes: {node.work_unit.need_materials()} \n "
-        #                     f"Landscape: {self._material_timeline.resource_sources}")
 
         c_st = max(c_st, max_material_time)
 

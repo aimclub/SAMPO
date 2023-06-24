@@ -33,12 +33,10 @@ class Scheduler(ABC):
     def __init__(self,
                  scheduler_type: SchedulerType,
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
-                 work_estimator: WorkTimeEstimator | None = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration()):
+                 work_estimator: WorkTimeEstimator | None = None):
         self.scheduler_type = scheduler_type
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator
-        self.landscape = landscape
 
     def __str__(self):
         return str(self.scheduler_type.name)
@@ -49,13 +47,14 @@ class Scheduler(ABC):
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),
-                 timeline: Timeline | None = None) \
+                 timeline: Timeline | None = None,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> Schedule:
         if wg is None or len(wg.nodes) == 0:
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedule = self.schedule_with_cache(wg, contractors, self.landscape, spec, validate, start_time, timeline)[0]
+        schedule = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)[0]
         # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedule
 

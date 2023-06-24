@@ -38,15 +38,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
                                                               if not wg[work.work_unit.id].is_inseparable_son()]
 
     # order works part of chromosom
-    # try:
-    #     order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])
-    # except Exception as e:
-    #     raise Exception(f'Not ndarray: {[work_id2index[work.work_unit.id] for work in order]}')
-    temp_list = []
-    for work in order:
-        temp_list.append(work_id2index[work.work_unit.id])
-    order_chromosome = np.array(temp_list)
-
+    order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])
 
     # convert to convenient form
     schedule = schedule.to_schedule_work_dict

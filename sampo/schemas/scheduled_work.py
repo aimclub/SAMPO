@@ -33,8 +33,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  start_end_time: tuple[Time, Time],
                  workers: list[Worker],
                  contractor: Contractor | str,
-                 equipments: list[MaterialDelivery] | None = None,
-                 materials: list[Equipment] | None = None,
+                 equipments: list[Equipment] | None = None,
+                 materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time

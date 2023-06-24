@@ -10,8 +10,14 @@ def test_just_in_time_scheduling_with_materials(setup_default_schedules):
     if setup_wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
-    scheduler = HEFTScheduler(landscape=landscape)
-    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True)
+    scheduler = HEFTScheduler()
+    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=landscape)
+
+    try:
+        validate_schedule(schedule, setup_wg, setup_contractors)
+
+    except AssertionError as e:
+        raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
 def test_momentum_scheduling_with_materials(setup_default_schedules):
@@ -19,8 +25,8 @@ def test_momentum_scheduling_with_materials(setup_default_schedules):
     if setup_wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
-    scheduler = HEFTBetweenScheduler(landscape=landscape)
-    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True)
+    scheduler = HEFTBetweenScheduler()
+    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=landscape)
 
     try:
         validate_schedule(schedule, setup_wg, setup_contractors)

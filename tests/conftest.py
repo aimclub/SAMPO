@@ -39,16 +39,16 @@ def setup_rand() -> Random:
 
 
 @fixture
-def setup_landscape():
+def setup_landscape_one_holder():
     return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
                                                           materials=[Material('111', 'mat1', 100000)])])
 
 
 @fixture
-def setup_landscape_with_many_holders():
-    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(100, 0),
+def setup_landscape_many_holders():
+    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
                                                           materials=[Material('111', 'mat1', 100000)]),
-                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(100, 0),
+                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
                                                           materials=[Material('222', 'mat2', 100000)])
                                            ])
 
@@ -60,13 +60,12 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
 
 @fixture(params=[(graph_type, lag) for lag in [True, False]
                  for graph_type in ['manual',
-                                    ]],
-         # 'small plain synthetic', 'big plain synthetic']],
+                                    'small plain synthetic', 'big plain synthetic']],
          # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
               for lag_opt in [True, False]
               for graph_type in ['manual',
-                                 ]])
+                                 'small plain synthetic', 'big plain synthetic']])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
@@ -136,7 +135,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 # TODO Make parametrization with different(specialized) contractors
 @fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
-def setup_scheduler_parameters(request, setup_wg, setup_landscape_with_many_holders) -> tuple[
+def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) -> tuple[
     WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
@@ -165,7 +164,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_with_many_hold
                                       workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
-    return setup_wg, contractors, setup_landscape_with_many_holders
+    return setup_wg, contractors, setup_landscape_many_holders
 
 
 @fixture
@@ -176,13 +175,13 @@ def setup_default_schedules(setup_scheduler_parameters):
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=FullScanResourceOptimizer(),
-                               landscape=landscape).schedule(setup_wg, setup_contractors)
+                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors,
+                                                                                        landscape=landscape)
 
     def init_k_schedule(scheduler_class, k):
         return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=AverageReqResourceOptimizer(k),
-                               landscape=landscape).schedule(setup_wg, setup_contractors)
+                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors,
+                                                                                           landscape=landscape)
 
     return setup_scheduler_parameters, {
         "heft_end": init_schedule(HEFTScheduler),
@@ -202,7 +201,7 @@ def setup_scheduler_type(request):
 
 
 @fixture
-def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_landscape_with_many_holders):
+def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_landscape_many_holders):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     try:

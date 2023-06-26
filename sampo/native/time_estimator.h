@@ -18,10 +18,17 @@ using namespace std;
 class WorkTimeEstimator {
 private:
     int mode = 0; // 0 - 10%, 1 - 50%, 2 - 90%
+    string path;
 
 public:
+    explicit WorkTimeEstimator(string path) : path(std::move(path)) {}
+
     void setMode(int mode) {
         this->mode = mode;
+    }
+
+    string& getPath() {
+        return this->path;
     }
 
     virtual int estimateTime(const string &work, float volume, vector<pair<string, int>> &resources) = 0;
@@ -48,7 +55,7 @@ private:
 public:
     DefaultWorkTimeEstimator(unordered_map<string, unordered_map<string, int>>& minReqs,
                              unordered_map<string, unordered_map<string, int>>& maxReqs)
-            : minReqs(minReqs), maxReqs(maxReqs) {
+            : WorkTimeEstimator(""), minReqs(minReqs), maxReqs(maxReqs) {
 
     }
 
@@ -90,6 +97,21 @@ public:
 
         return time;
     }
+};
+
+//class ExternalWorkTimeEstimator : public WorkTimeEstimator {
+//public:
+//    explicit ExternalWorkTimeEstimator(const string& path) : WorkTimeEstimator(path) {}
+//
+//    int estimateTime(const string &work, float volume, vector<pair<string, int>> &resources) override {
+//
+//    };
+//};
+
+// DLL compat
+class ITimeEstimatorLibrary {
+public:
+    virtual WorkTimeEstimator* create(const string& path) = 0;
 };
 
 #endif //NATIVE_TIME_ESTIMATOR_H

@@ -121,6 +121,7 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(maxReq, decodeIntList),
         PyCodec::fromList(id2work, decodeString),
         PyCodec::fromList(id2res, decodeString),
+        "", // TODO Propagate workEstimatorPath from Python
         totalWorksCount,
         usePythonWorkEstimator,
         useExternalWorkEstimator

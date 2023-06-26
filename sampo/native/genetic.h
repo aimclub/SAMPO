@@ -273,7 +273,7 @@ private:
      * @param array input array
      * @return indices w.r.t sorted array
      */
-    std::vector<size_t> argsort(const std::vector<Chromosome*> &array) {
+    inline std::vector<size_t> argsort(const std::vector<Chromosome*> &array) {
         std::vector<size_t> indices(array.size());
         std::iota(indices.begin(), indices.end(), 0);
         std::sort(indices.begin(), indices.end(),
@@ -290,7 +290,7 @@ private:
         return indices;
     }
 
-    vector<Chromosome *> selection(vector<Chromosome *> &population) {
+    inline vector<Chromosome *> selection(vector<Chromosome *> &population) {
         auto top = argsort(population);
         vector<Chromosome *> result;
         result.resize(min(population.size(), (size_t) sizeSelection));

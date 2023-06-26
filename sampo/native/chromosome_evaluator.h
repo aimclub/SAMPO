@@ -22,6 +22,8 @@
 #include "pycodec.h"
 #include "evaluator_types.h"
 #include "time_estimator.h"
+#include "DLLoader.h"
+#include "external.h"
 
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
@@ -48,6 +50,7 @@ private:
     bool usePythonWorkEstimator;
 
     WorkTimeEstimator* timeEstimator;
+    dlloader::DLLoader<ITimeEstimatorLibrary> loader { External::timeEstimatorLibPath };
 
     int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, size_t teamSize) {
         if (usePythonWorkEstimator) {
@@ -227,11 +230,22 @@ public:
         if (!usePythonWorkEstimator) {
             this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
         }
+
+        if (info->useExternalWorkEstimator) {
+            cout << "Error pre: " << GetLastError() << endl;
+            loader.DLOpenLib();
+            cout << "Error post: " << GetLastError() << endl;
+//            auto library = loader.DLGetInstance();
+//            this->timeEstimator = library->create(info->timeEstimatorPath);
+        }
     }
 
     // TODO Research why deleting timeEstimator causes Head Corruption crash
 //    ~ChromosomeEvaluator() {
 //        delete timeEstimator;
+//    }
+//    ~ChromosomeEvaluator() {
+//        loader.DLCloseLib();
 //    }
     ~ChromosomeEvaluator() = default;
 

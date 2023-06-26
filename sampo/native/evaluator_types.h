@@ -166,6 +166,7 @@ typedef struct {
     vector<vector<int>> maxReq;
     vector<string> id2work;
     vector<string> id2res;
+    string timeEstimatorPath;
     int totalWorksCount;
     bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;

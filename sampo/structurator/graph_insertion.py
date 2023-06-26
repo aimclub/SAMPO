@@ -7,7 +7,7 @@ from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_star
 
 
 def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
-                             slave_wg: WorkGraph) -> WorkGraph:
+                             slave_wg: WorkGraph, change_id: bool = True) -> WorkGraph:
     """
     Inserts the slave Work Graph into the masterWork Graph,
     while the starting vertex slave_wg becomes the specified master_start,
@@ -18,8 +18,8 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
     :param slave_wg: WorkGraph to be inserted into master_wg
     :return: new union WorkGraph
     """
-    master_nodes, master_old_to_new_ids = prepare_work_graph_copy(master_wg)
-    slave_nodes, slave_old_to_new = prepare_work_graph_copy(slave_wg, [slave_wg.start, slave_wg.finish])
+    master_nodes, master_old_to_new_ids = prepare_work_graph_copy(master_wg, change_id=change_id)
+    slave_nodes, slave_old_to_new = prepare_work_graph_copy(slave_wg, [slave_wg.start, slave_wg.finish], change_id)
 
     # add parent links from slave_wg's nodes to master_start node from slave_wg's nodes
     master_start = master_nodes[master_old_to_new_ids[master_start.id]]
@@ -33,30 +33,3 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
 
     start, finish = new_start_finish(master_wg, master_nodes, master_old_to_new_ids)
     return WorkGraph(start, finish)
-
-# def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
-#                              slave_wg: WorkGraph) -> WorkGraph:
-#     """
-#     Inserts the slave Work Graph into the masterWork Graph,
-#     while the starting vertex slave_wg becomes the specified master_start,
-#     and the finishing vertex is correspondingly master_finish
-#     :param master_wg: The WorkGraph into which the insertion is performed
-#     :param master_start: GraphNode which will become the parent for the entire slave_wg
-#     :param master_finish: GraphNode which will become a child for the whole slave_wg
-#     :param slave_wg: WorkGraph to be inserted into master_wg
-#     :return: new union WorkGraph
-#     """
-#     copied_master_wg, master_old_to_new_ids = prepare_work_graph_copy(master_wg)
-#     copied_slave_wg, slave_old_to_new_ids = prepare_work_graph_copy(slave_wg, [slave_wg.start, slave_wg.finish])
-#
-#     # add parent links from slave_wg's nodes to master_start node from slave_wg's nodes
-#     master_nodes = {node.id: node for node in copied_master_wg.node}
-#     for edge in slave_wg.start.edges_from:
-#         master_nodes[slave_old_to_new_ids[edge.finish.id]].add_parents([copied_master_wg.start])
-#
-#     # add parent links from master_finish to slave_wg's nodes
-#     slave_nodes = {node.id: node for node in copied_slave_wg.node}
-#     copied_master_wg.finish.add_parents([slave_nodes[slave_old_to_new_ids[edge.start.id]]
-#                                          for edge in slave_wg.finish.edges_to])
-#
-#     return copied_master_wg

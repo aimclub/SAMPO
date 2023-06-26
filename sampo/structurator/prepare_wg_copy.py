@@ -5,15 +5,20 @@ from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
 
 
-def copy_graph_node(node: GraphNode, new_id: int | str | None = None) -> tuple[GraphNode, tuple[str, str]]:
+# TODO make param change_id: bool = True
+def copy_graph_node(node: GraphNode, new_id: int | str | None = None, change_id: bool = True) -> tuple[
+    GraphNode, tuple[str, str]]:
     """
     Makes a deep copy of GraphNode without edges, with the id changed to a new randomly generated or specified one
     :param node: original GraphNode
     :param new_id: specified new id
     :return: the copy of GraphNode and pair(old node id, new node id)
     """
-    new_id = new_id or uuid_str()
-    new_id = str(new_id) if isinstance(new_id, int) else new_id
+    if change_id:
+        new_id = new_id or uuid_str()
+        new_id = str(new_id) if isinstance(new_id, int) else new_id
+    else:
+        new_id = node.work_unit.id
     wu = node.work_unit
     new_wu = WorkUnit(id=new_id, name=wu.name, worker_reqs=deepcopy(wu.worker_reqs), group=wu.group,
                       is_service_unit=wu.is_service_unit, volume=wu.volume, volume_type=wu.volume_type)
@@ -39,7 +44,7 @@ def restore_parents(new_nodes: dict[str, GraphNode], original_wg: WorkGraph, old
 
 
 def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [], use_ids_simplification: bool = False,
-                            id_offset: int = 0) -> (dict[str, GraphNode], dict[str, str]):
+                            id_offset: int = 0, change_id: bool = True) -> (dict[str, GraphNode], dict[str, str]):
     """
     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
     ignores all GraphNodes specified in the exception list and GraphEdges associated with them
@@ -55,41 +60,13 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [],
     node_list = [(id_offset + ind, node) for ind, node in enumerate(wg.nodes)] \
         if use_ids_simplification \
         else [(None, node) for node in wg.nodes]
-    nodes, old_to_new_ids = list(zip(*[copy_graph_node(node, ind) for ind, node in node_list
+    nodes, old_to_new_ids = list(zip(*[copy_graph_node(node, ind, change_id) for ind, node in node_list
                                        if node.id not in excluded_nodes]))
     id_old_to_new = dict(old_to_new_ids)
     nodes = {node.id: node for node in nodes}
     restore_parents(nodes, wg, id_old_to_new, excluded_nodes)
     return nodes, id_old_to_new
 
-
-# def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [], use_ids_simplification: bool = False,
-#                             id_offset: int = 0) -> (WorkGraph, dict[str, str]):
-#     """
-#     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
-#     ignores all GraphNodes specified in the exception list and GraphEdges associated with them
-#     :param wg: original WorkGraph for copy
-#     :param excluded_nodes: GraphNodes to be excluded from the graph
-#     :param use_ids_simplification: If true, creates short numeric ids converted to strings,
-#     otherwise uses uuid to generate id
-#     :param id_offset: shift for numeric ids, used only if param use_ids_simplification is True
-#     :return: a dictionary with GraphNodes by their id
-#     and a dictionary linking the ids of GraphNodes of the original graph and the new GraphNode ids
-#     """
-#     excluded_nodes = {node.id for node in excluded_nodes}
-#     node_list = [(id_offset + ind, node) for ind, node in enumerate(wg.nodes)] \
-#         if use_ids_simplification \
-#         else [(None, node) for node in wg.nodes]
-#     nodes, old_to_new_ids = list(zip(*[copy_graph_node(node, ind) for ind, node in node_list
-#                                        if node.id not in excluded_nodes]))
-#     id_old_to_new = dict(old_to_new_ids)
-#     nodes = {node.id: node for node in nodes}
-#     restore_parents(nodes, wg, id_old_to_new, excluded_nodes)
-#
-#     new_start = nodes[id_old_to_new[wg.start.id]]
-#     new_finish = nodes[id_old_to_new[wg.finish.id]]
-#
-#     return WorkGraph(new_start, new_finish), id_old_to_new
 
 def new_start_finish(original_wg: WorkGraph, copied_nodes: dict[str, GraphNode],
                      old_to_new_ids: dict[str, str]) -> (GraphNode, GraphNode):

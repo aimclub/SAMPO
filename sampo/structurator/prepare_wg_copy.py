@@ -5,9 +5,9 @@ from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
 
 
-# TODO make param change_id: bool = True
-def copy_graph_node(node: GraphNode, new_id: int | str | None = None, change_id: bool = True) -> tuple[
-    GraphNode, tuple[str, str]]:
+# TODO docstring documentation
+def copy_graph_node(node: GraphNode, new_id: int | str | None = None,
+                    change_id: bool = True) -> tuple[GraphNode, tuple[str, str]]:
     """
     Makes a deep copy of GraphNode without edges, with the id changed to a new randomly generated or specified one
     :param node: original GraphNode

@@ -4,6 +4,7 @@ from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_star
 
 
 # TODO make function accept list[GraphNode] for parents and children
+# TODO docstring documentation
 def insert_work_unit(original_wg: WorkGraph, inserted_wu: WorkUnit,
                      parents_edges: list[tuple[GraphNode, float, EdgeType]],
                      children_edges: list[tuple[GraphNode, float, EdgeType]],

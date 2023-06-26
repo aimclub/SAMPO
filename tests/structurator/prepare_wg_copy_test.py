@@ -1,5 +1,6 @@
 from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy
 
+# TODO docstring documentation
 
 def test_prepare_wg_copy(setup_wg):
     copied_nodes, old_to_new_ids = prepare_work_graph_copy(setup_wg)

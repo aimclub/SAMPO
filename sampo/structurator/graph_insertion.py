@@ -1,10 +1,8 @@
-from copy import deepcopy
-
 from sampo.schemas.graph import GraphNode, WorkGraph
-from sampo.schemas.utils import uuid_str
-from sampo.schemas.works import WorkUnit
 from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_start_finish
 
+
+# TODO docstring documentation
 
 def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
                              slave_wg: WorkGraph, change_id: bool = True) -> WorkGraph:

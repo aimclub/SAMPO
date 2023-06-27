@@ -1,14 +1,11 @@
 from sampo.structurator.delete_graph_node import delete_graph_node
 
 
-# TODO rewrite test
 # TODO docstring documentation ??
 
 def test_delete_graph_node(setup_wg):
     remove_node_id = setup_wg.nodes[3].id
-    new_wg = delete_graph_node(setup_wg, remove_node_id)
-
-    # assert len(new_wg.nodes) == len(setup_wg.nodes) - 1
+    new_wg = delete_graph_node(setup_wg, remove_node_id, change_id=False)
 
     is_node_in_wg = False
     is_node_someones_parent = False
@@ -23,6 +20,6 @@ def test_delete_graph_node(setup_wg):
             if child.id == remove_node_id:
                 is_node_someones_child = True
 
-    assert not is_node_in_wg
-    assert not is_node_someones_parent
-    assert not is_node_someones_child
+    assert not is_node_in_wg, 'Node is still in wg.nodes'
+    assert not is_node_someones_parent, 'Node is still someones parent'
+    assert not is_node_someones_child, 'Node is still someones child'

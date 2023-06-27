@@ -5,14 +5,14 @@ from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
 
 
-# TODO docstring documentation
 def copy_graph_node(node: GraphNode, new_id: int | str | None = None,
                     change_id: bool = True) -> tuple[GraphNode, tuple[str, str]]:
     """
     Makes a deep copy of GraphNode without edges, with the id changed to a new randomly generated or specified one
-    :param node: original GraphNode
-    :param new_id: specified new id
-    :return: the copy of GraphNode and pair(old node id, new node id)
+    :param node: Original GraphNode
+    :param new_id: Specified new id
+    :param change_id: Do IDs in the new graph need to be changed
+    :return: The copy of GraphNode and pair(old node id, new node id)
     """
     if change_id:
         new_id = new_id or uuid_str()
@@ -52,8 +52,9 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [],
     :param excluded_nodes: GraphNodes to be excluded from the graph
     :param use_ids_simplification: If true, creates short numeric ids converted to strings,
     otherwise uses uuid to generate id
-    :param id_offset: shift for numeric ids, used only if param use_ids_simplification is True
-    :return: a dictionary with GraphNodes by their id
+    :param id_offset: Shift for numeric ids, used only if param use_ids_simplification is True
+    :param change_id: Do IDs in the new graph need to be changed
+    :return: A dictionary with GraphNodes by their id
     and a dictionary linking the ids of GraphNodes of the original graph and the new GraphNode ids
     """
     excluded_nodes = {node.id for node in excluded_nodes}
@@ -70,6 +71,13 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [],
 
 def new_start_finish(original_wg: WorkGraph, copied_nodes: dict[str, GraphNode],
                      old_to_new_ids: dict[str, str]) -> (GraphNode, GraphNode):
+    """
+    Prepares new start and finish to create WorkGraph after copying it
+    :param original_wg: WorkGraph, on which base prepare_work_graph_copy was run
+    :param copied_nodes: New nodes, on which to create new WorkGraph
+    :param old_to_new_ids: Dictionary to translate old nodes to new, using their IDs
+    :return: new start and new finish nodes, on the base of which to create a WorkGraph
+    """
     new_start = copied_nodes[old_to_new_ids[original_wg.start.id]]
     new_finish = copied_nodes[old_to_new_ids[original_wg.finish.id]]
     return new_start, new_finish

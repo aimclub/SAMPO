@@ -2,8 +2,6 @@ from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_start_finish
 
 
-# TODO docstring documentation
-
 def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, master_finish: GraphNode,
                              slave_wg: WorkGraph, change_id: bool = True) -> WorkGraph:
     """
@@ -14,6 +12,7 @@ def graph_in_graph_insertion(master_wg: WorkGraph, master_start: GraphNode, mast
     :param master_start: GraphNode which will become the parent for the entire slave_wg
     :param master_finish: GraphNode which will become a child for the whole slave_wg
     :param slave_wg: WorkGraph to be inserted into master_wg
+    :param change_id: Do IDs in the new graph need to be changed
     :return: new union WorkGraph
     """
     master_nodes, master_old_to_new_ids = prepare_work_graph_copy(master_wg, change_id=change_id)

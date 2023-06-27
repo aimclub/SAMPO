@@ -2,8 +2,16 @@ from sampo.schemas.graph import WorkGraph
 from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_start_finish
 
 
-# TODO docstring documentation
 def delete_graph_node(original_wg: WorkGraph, remove_gn_id: str, change_id: bool = True) -> WorkGraph:
+    """
+    Deletes a task from Work Graph.
+    If the task consists of several inseparable nodes this function deletes all of those nodes
+    :param original_wg: Work Graph from which a task is deleted
+    :param remove_gn_id: ID of the node, corresponding to the deleted task.
+    If the task consists of several inseparable nodes, this is ID of one of them
+    :param change_id: Do IDs in the new graph need to be changed
+    :return: New WorkGraph with deleted task
+    """
     copied_nodes, old_to_new_ids = prepare_work_graph_copy(original_wg, change_id=change_id)
 
     copied_remove_gn = copied_nodes[old_to_new_ids[remove_gn_id]]

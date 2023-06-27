@@ -8,6 +8,7 @@ def work_graph_ids_simplification(wg: WorkGraph, id_offset: int = 0, change_id: 
     Creates a new WorkGraph with simplified numeric ids (numeric ids are converted to a string)
     :param wg: original WorkGraph
     :param id_offset: start for numbering new ids
+    :param change_id: Do IDs in the new graph need to be changed
     :return: new WorkGraph with numeric ids
     """
     nodes, old_to_new_ids = prepare_work_graph_copy(wg, use_ids_simplification=True,

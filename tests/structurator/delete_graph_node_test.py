@@ -2,7 +2,7 @@ from sampo.structurator.delete_graph_node import delete_graph_node
 
 
 # TODO rewrite test
-# TODO docstring documentation
+# TODO docstring documentation ??
 
 def test_delete_graph_node(setup_wg):
     remove_node_id = setup_wg.nodes[3].id

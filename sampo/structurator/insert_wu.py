@@ -4,7 +4,6 @@ from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy, new_star
 
 
 # TODO make function accept list[GraphNode] for parents and children
-# TODO docstring documentation
 def insert_work_unit(original_wg: WorkGraph, inserted_wu: WorkUnit,
                      parents_edges: list[tuple[GraphNode, float, EdgeType]],
                      children_edges: list[tuple[GraphNode, float, EdgeType]],
@@ -15,6 +14,7 @@ def insert_work_unit(original_wg: WorkGraph, inserted_wu: WorkUnit,
     :param inserted_wu: WorkUnit on the basis of which we create new GraphNode
     :param parents_edges: Nodes which are supposed to be the parents of new GraphNode
     :param children_edges: Nodes which are supposed to be the children of new GraphNode
+    :param change_id: Do IDs in the new graph need to be changed
     :return: New WorkGraph with inserted new node
     """
     copied_nodes, original_old_to_new_ids = prepare_work_graph_copy(original_wg, change_id=change_id)

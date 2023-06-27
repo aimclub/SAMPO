@@ -1,7 +1,7 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from random import Random
-from typing import List, Optional, Callable
+from typing import Optional, Callable
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
@@ -65,7 +65,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         return [WorkerReq._deserialize(wr) for wr in value]
 
     # TODO: move this logit to WorkTimeEstimator
-    def estimate_static(self, worker_list: List[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
+    def estimate_static(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
         """
         Calculate summary time of task execution (without stochastic part)
 

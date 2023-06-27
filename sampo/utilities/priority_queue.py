@@ -1,4 +1,4 @@
-from typing import TypeVar, List, Callable, Generic
+from typing import TypeVar, Callable, Generic
 
 from sortedcontainers import SortedKeyList
 
@@ -12,7 +12,7 @@ class PriorityQueue(Generic[T]):
     _h: SortedKeyList
     _key_getter: Callable[[T], float]
 
-    def __init__(self, lst: List[T], descending: bool = False, key_getter: Callable[[T], float] = lambda x: x):
+    def __init__(self, lst: list[T], descending: bool = False, key_getter: Callable[[T], float] = lambda x: x):
         comparator = (lambda x: -key_getter(x[1])) if descending else (lambda x: key_getter(x[1]))
         self._h = SortedKeyList([(key_getter(v), v) for v in lst], comparator)
         self._key_getter = key_getter

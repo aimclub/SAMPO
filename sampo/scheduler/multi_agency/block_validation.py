@@ -40,7 +40,7 @@ def _check_block_dependencies(bg: BlockGraph, schedule: dict[str, ScheduledBlock
 
 def _check_blocks_separately(sblocks: Iterable[ScheduledBlock]):
     """
-    Validate each block separately, i.e. check each 'Schedule' in each block
+    Validate each block separately, i.e., check each 'Schedule' in each block
 
     :param sblocks: scheduled blocks of works
     """

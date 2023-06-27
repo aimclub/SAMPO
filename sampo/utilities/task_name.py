@@ -1,5 +1,4 @@
 from abc import ABC
-from typing import Dict
 
 import pandas as pd
 
@@ -8,7 +7,7 @@ def get_task_name_unique_mapping(path: str) -> 'NameMapper':
     """
     Gets mapping of our task names to the unique names
     :param path: path to the csv file
-    :return: Dict {our_name: unique_name}
+    :return: dict {our_name: unique_name}
     """
     df = read_tasks_df(path)
     return DictNameMapper({r[0]: r[1] for r in df.loc[:, ['task_name', 'unique_task_name']].to_numpy()})
@@ -18,7 +17,7 @@ def get_inverse_task_name_mapping(path: str) -> 'NameMapper':
     """
     Gets mapping of the unique names to our task names
     :param path: path to the csv file
-    :return: Dict {unique_name: our_name}
+    :return: dict {unique_name: our_name}
     """
     df = read_tasks_df(path)
     return DictNameMapper({r[1]: r[0] for r in df.loc[:, ['task_name', 'unique_task_name']].to_numpy()})
@@ -51,7 +50,7 @@ class DummyNameMapper(NameMapper):
 
 
 class DictNameMapper(NameMapper):
-    def __init__(self, source: Dict[str, str]):
+    def __init__(self, source: dict[str, str]):
         self._source = source
 
     def __getitem__(self, item):

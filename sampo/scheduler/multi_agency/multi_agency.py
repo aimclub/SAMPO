@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, Callable
+from typing import Callable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
@@ -82,7 +82,7 @@ class Agent:
 @dataclass
 class ScheduledBlock:
     """
-    An object represents scheduled graph block(group of works).
+    An object represents a scheduled graph block(group of works).
 
     Contains all data used in scheduling, the agent and resulting information.
     """
@@ -118,9 +118,9 @@ class Manager:
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> Dict[str, ScheduledBlock]:
+    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
-        Runs multi-agent system based on auction on given BlockGraph.
+        Runs the multi-agent system based on auction on given BlockGraph.
         
         :param bg: 
         :param logger:

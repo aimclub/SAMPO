@@ -6,7 +6,6 @@ from sortedcontainers import SortedKeyList
 
 # TODO: describe the class (description)
 class ExtendedSortedList(SortedKeyList, ABC):
-    # TODO: describe the function (parameters (old), return type)
     def merge(self, old, value, merger):
         """
         Merges `value` and `old` and places the result to the place of `old` in sorted list.

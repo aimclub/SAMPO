@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Dict, List, Tuple, Optional, Union, Iterable
+from typing import Optional, Union, Iterable
 
 from sortedcontainers import SortedList
 
@@ -17,16 +17,12 @@ from sampo.utilities.collections_util import build_index
 
 class MomentumTimeline(Timeline):
     """
-    Timeline that stores the intervals in which resources is occupied
+    Timeline that stores the intervals in which resources is occupied.
     """
 
     def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
         """
-        This should create an empty Timeline from given a list of tasks and contractor list
-
-        :param tasks:
-        :param contractors:
-        :return:
+        This should create an empty Timeline from given a list of tasks and contractor list.
         """
 
         # using  time, seq_id and event_type we can guarantee that
@@ -36,7 +32,7 @@ class MomentumTimeline(Timeline):
         # available_workers processing logic)
         # (b) when events have the same time and their start and end matches
         # (service tasks for instance may have zero length)
-        def event_cmp(x: Union[ScheduleEvent, Time, Tuple[Time, int, int]]) -> Tuple[Time, int, int]:
+        def event_cmp(x: Union[ScheduleEvent, Time, tuple[Time, int, int]]) -> tuple[Time, int, int]:
             if isinstance(x, ScheduleEvent):
                 if x.event_type is EventType.Initial:
                     return Time(-1), -1, x.event_type.priority
@@ -55,7 +51,7 @@ class MomentumTimeline(Timeline):
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
         # and remember how many workers of a certain type is available at this particular moment
-        self._timeline: Dict[str, Dict[str, SortedList[ScheduleEvent]]] = {
+        self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {
             c.id: {
                 w_name: SortedList(
                     iterable=(ScheduleEvent(-1, EventType.Initial, Time(0), None, ws.count),),
@@ -71,12 +67,12 @@ class MomentumTimeline(Timeline):
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
-                                            worker_team: List[Worker],
-                                            node2swork: Dict[GraphNode, ScheduledWork],
+                                            worker_team: list[Worker],
+                                            node2swork: dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
                                             work_estimator: Optional[WorkTimeEstimator] = None) \
-            -> Tuple[Time, Time, Dict[GraphNode, Tuple[Time, Time]]]:
+            -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         """
         Looking for an available time slot for given 'GraphNode'
 
@@ -103,7 +99,7 @@ class MomentumTimeline(Timeline):
             max_neighbor_time = max([node2swork[neighbor].start_time for neighbor in node.neighbors])
             max_parent_time = max(max_parent_time, max_neighbor_time)
 
-        nodes_max_parent_times: Dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].min_child_start_time),
+        nodes_max_parent_times: dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].min_child_start_time),
                                                                      assigned_parent_time)
                                                                  if pnode in node2swork else assigned_parent_time
                                                                  for pnode in n.parents),
@@ -113,7 +109,7 @@ class MomentumTimeline(Timeline):
         # 2. calculating execution time of the task
 
         exec_time: Time = Time(0)
-        exec_times: Dict[GraphNode, Tuple[Time, Time]] = {}  # node: (lag, exec_time)
+        exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for i, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 chain_node.work_unit.estimate_static(worker_team, work_estimator)
@@ -135,11 +131,11 @@ class MomentumTimeline(Timeline):
         return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
-                             resource_timeline: Dict[str, SortedList[ScheduleEvent]],
-                             inseparable_chain: List[GraphNode],
+                             resource_timeline: dict[str, SortedList[ScheduleEvent]],
+                             inseparable_chain: list[GraphNode],
                              parent_time: Time,
                              exec_time: Time,
-                             passed_workers: List[Worker]) -> Time:
+                             passed_workers: list[Worker]) -> Time:
         """
         Find start time for the whole 'GraphNode'
 
@@ -177,9 +173,9 @@ class MomentumTimeline(Timeline):
         queue = deque(inseparable_chain[0].work_unit.worker_reqs)
 
         start = parent_time
-        scheduled_wreqs: List[WorkerReq] = []
+        scheduled_wreqs: list[WorkerReq] = []
 
-        type2count: Dict[str, int] = build_index(passed_workers, lambda w: w.name, lambda w: w.count)
+        type2count: dict[str, int] = build_index(passed_workers, lambda w: w.name, lambda w: w.count)
 
         i = 0
         while len(queue) > 0:
@@ -272,8 +268,8 @@ class MomentumTimeline(Timeline):
     def update_timeline(self,
                         finish_time: Time,
                         node: GraphNode,
-                        node2swork: Dict[GraphNode, ScheduledWork],
-                        worker_team: List[Worker]):
+                        node2swork: dict[GraphNode, ScheduledWork],
+                        worker_team: list[Worker]):
         """
         Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
         """
@@ -316,8 +312,8 @@ class MomentumTimeline(Timeline):
 
     def schedule(self,
                  node: GraphNode,
-                 node2swork: Dict[GraphNode, ScheduledWork],
-                 workers: List[Worker],
+                 node2swork: dict[GraphNode, ScheduledWork],
+                 workers: list[Worker],
                  contractor: Contractor,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
@@ -337,15 +333,15 @@ class MomentumTimeline(Timeline):
 
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
-                                    node2swork: Dict[GraphNode, ScheduledWork],
-                                    inseparable_chain: List[GraphNode],
-                                    worker_team: List[Worker],
+                                    node2swork: dict[GraphNode, ScheduledWork],
+                                    inseparable_chain: list[GraphNode],
+                                    worker_team: list[Worker],
                                     contractor: Contractor,
                                     start_time: Time,
-                                    exec_times: Dict[GraphNode, Tuple[Time, Time]]):
+                                    exec_times: dict[GraphNode, tuple[Time, Time]]):
         # 6. create a schedule entry for the task
 
-        nodes_start_times: Dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
+        nodes_start_times: dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
                                                             if pnode in node2swork else Time(0)
                                                             for pnode in n.parents),
                                                            default=Time(0))

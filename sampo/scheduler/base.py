@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -26,6 +26,9 @@ class SchedulerType(Enum):
 
 
 class Scheduler(ABC):
+    """
+    Base class that implements the logic of the planning process.
+    """
     scheduler_type: SchedulerType
     resource_optimizer: ResourceOptimizer
 
@@ -41,12 +44,17 @@ class Scheduler(ABC):
         return str(self.scheduler_type.name)
 
     def schedule(self, wg: WorkGraph,
-                 contractors: List[Contractor],
+                 contractors: list[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),
                  timeline: Timeline | None = None) \
             -> Schedule:
+        """
+        Realization of a scheduling process. 'schedule' version returns only Schedule.
+
+        :return: Schedule
+        """
         if wg is None or len(wg.nodes) == 0:
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
@@ -57,7 +65,7 @@ class Scheduler(ABC):
 
     @abstractmethod
     def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -65,7 +73,7 @@ class Scheduler(ABC):
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         """
         Extended version of 'schedule' method. Returns much inner info
-        about scheduling process, not only Schedule.
+        about a scheduling process, not only Schedule.
 
         :return: resulting schedule, finish time,
                  resulting timeline used for scheduling
@@ -74,10 +82,10 @@ class Scheduler(ABC):
         ...
 
     @staticmethod
-    def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: List[Worker], work_spec: WorkSpec,
+    def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: list[Worker], work_spec: WorkSpec,
                                       optimize_lambda: Callable[[np.ndarray], None] = lambda _: None):
         """
-        Applies worker team spec to optimization process.
+        Applies worker team spec to an optimization process.
         Can use arbitrary heuristics to increase spec handling efficiency.
 
         :param work_unit: current work unit

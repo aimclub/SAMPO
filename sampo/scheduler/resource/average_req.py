@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -10,7 +10,7 @@ from sampo.schemas.time import Time
 
 class AverageReqResourceOptimizer(ResourceOptimizer):
     """
-    Class that optimize number of resources by counting average resource requirements
+    Class that implements optimization the number of resources by counting average resource requirements.
     """
 
     def __init__(self, k: float = 2):
@@ -28,7 +28,7 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
                            get_finish_time: Callable[[list[Worker]], Time]):
         # TODO why get_finish_time here?
         """
-        The resource optimization module, that counts average resource requirements
+        The resource optimization module, that counts average resource requirements.
 
         :param worker_pool: global resources pool
         :param worker_team: worker team to optimize

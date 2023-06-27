@@ -1,4 +1,4 @@
-from typing import List, Callable
+from typing import Callable
 
 import numpy as np
 
@@ -9,11 +9,11 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 
 
-def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, work_reqs: List[WorkerReq]) \
-        -> (np.ndarray, np.ndarray, List[Worker]):
+def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, work_reqs: list[WorkerReq]) \
+        -> (np.ndarray, np.ndarray, list[Worker]):
     """
-    Define for each job each type of workers the min and max possible number of workers
-    For max number of workers max is define as minimum from max possible numbers at all and max possible for current job
+    Define for each job each type of workers the min and max possible number of workers.
+    For max number of workers, max is defined as a minimum from max possible numbers at all and max possible for a current job.
     
     :param agents: from all projects
     :param contractor:
@@ -39,11 +39,11 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
     return min_worker_team, max_worker_team, workers
 
 
-def run_contractor_search(contractors: List[Contractor],
-                          runner: Callable[[Contractor], tuple[Time, Time, List[Worker]]]) \
-        -> tuple[Time, Time, Contractor, List[Worker]]:
+def run_contractor_search(contractors: list[Contractor],
+                          runner: Callable[[Contractor], tuple[Time, Time, list[Worker]]]) \
+        -> tuple[Time, Time, Contractor, list[Worker]]:
     """
-    Performs the best contractor search
+    Performs the best contractor search.
     
     :param contractors: contractors' list
     :param runner: a runner function, should be inner of the calling code.

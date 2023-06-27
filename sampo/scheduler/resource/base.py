@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Callable, Optional
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -9,15 +9,19 @@ from sampo.schemas.time import Time
 
 
 class ResourceOptimizer(ABC):
+    """
+    Base class to build different methods of resource optimization.
+    Constructed methods minimize the quantity of resources.
+    """
 
     @abstractmethod
     def optimize_resources(self,
                            worker_pool: WorkerContractorPool,
-                           worker_team: List[Worker],
+                           worker_team: list[Worker],
                            optimize_array: Optional[np.ndarray],
                            down_border: np.ndarray,
                            up_border: np.ndarray,
-                           get_finish_time: Callable[[List[Worker]], Time]):
+                           get_finish_time: Callable[[list[Worker]], Time]):
         """
         The resource optimization module. Optimizes `worker_team` using `get_finish_time` metric. Should optimize `worker_team` in-place.
 

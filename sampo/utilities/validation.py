@@ -1,6 +1,5 @@
 from copy import deepcopy
 from operator import attrgetter, itemgetter
-from typing import Dict, List
 
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
@@ -11,7 +10,7 @@ from sampo.utilities.collections_util import build_index
 
 def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contractor]) -> None:
     """
-    Checks if schedule is correct and can be executed.
+    Checks if the schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
     If it finishes without any exception, it means successful passing of the verification
 
@@ -44,7 +43,7 @@ def _check_all_tasks_scheduled(schedule: Schedule, wg: WorkGraph) -> None:
 
 
 def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
-    scheduled_works: Dict[str, ScheduledWork] = {work.work_unit.id: work for work in schedule.works}
+    scheduled_works: dict[str, ScheduledWork] = {work.work_unit.id: work for work in schedule.works}
 
     for node in wg.nodes:
         start, end = scheduled_works[node.work_unit.id].start_end_time
@@ -77,8 +76,8 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
 
 def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: Schedule,
                                                                        contractors: List[Contractor]) -> None:
-    # Dict[contractor_id, Dict[worker_name, worker_count]]
-    initial_contractors_state: Dict[str, Dict[str, int]] = {}
+    # dict[contractor_id, dict[worker_name, worker_count]]
+    initial_contractors_state: dict[str, dict[str, int]] = {}
     for contractor in contractors:
         initial_contractors_state[contractor.id] = {}
         for w in contractor.workers.values():

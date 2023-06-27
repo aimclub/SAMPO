@@ -41,6 +41,7 @@ class DefaultInputPipeline(InputPipeline):
     def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
         """
         Mandatory argument.
+
         :param contractors: the contractors list for scheduling task
         :return: the pipeline object
         """

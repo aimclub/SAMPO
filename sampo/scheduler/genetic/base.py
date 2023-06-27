@@ -1,6 +1,6 @@
 import math
 import random
-from typing import List, Tuple, Optional, Callable
+from typing import Optional, Callable
 
 from deap.base import Toolbox
 
@@ -67,7 +67,7 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
         """
         Return base parameters for model to make new population
 
@@ -177,7 +177,7 @@ class GeneticScheduler(Scheduler):
             }
 
     def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),

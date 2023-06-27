@@ -3,7 +3,7 @@ import os
 import pydoc
 from abc import ABC, abstractmethod
 from itertools import chain
-from typing import Generic, TypeVar, Dict, Union
+from typing import Generic, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ TYPE_HINTS = '_serializable_type_hints'
 
 class Serializable(ABC, Generic[T, S]):
     """
-    Parent class for (de-)serialization different data structures
+    Parent class for (de-)serialization different data structures.
 
     :param ABC: helper class to create custom abstract classes
     :param Generic[T, S]: base class to make Serializable as universal class, using user's types T, S
@@ -49,7 +49,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _serialize(self) -> T:
         """
-        Converts all the meaningful information from this instance to a generic representation
+        Converts all the meaningful information from this instance to a generic representation.
 
         :return: A generic representation
         """
@@ -59,7 +59,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _deserialize(cls, representation: T) -> S:
         """
-        Creates class instance from a representation
+        Creates class instance from a representation.
         :param representation: Representation produced by _serialize method
         :return: New class instance
         """
@@ -69,7 +69,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def load(cls, folder_path: str, file_name: str) -> S:
         """
-        Factory method that produces a python object from the serialized version of it
+        Factory method that produces a python object from the serialized version of it.
         :param folder_path: Path to the folder, where the serialized file is saved
         :param file_name: File name without extension
         (the file extension should match with the one returned by serializer_extension method)
@@ -79,7 +79,7 @@ class Serializable(ABC, Generic[T, S]):
 
     def dump(self, folder_path: str, file_name: str):
         """
-        Serializes object and saves it to file
+        Serializes the object and saves it to file.
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
@@ -157,7 +157,7 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
             write_file.write(serialized_str)
 
 
-class JSONSerializable(Serializable[Dict[str,
+class JSONSerializable(Serializable[dict[str,
                                          Union[
                                              dict,
                                              Union[list, tuple],
@@ -278,7 +278,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
         """
         return []
 
-    def _serialize(self) -> Dict[str,
+    def _serialize(self) -> dict[str,
                                  Union[
                                      dict,
                                      Union[list, tuple],

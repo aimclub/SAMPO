@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Equipment, ConstructionObject, Worker
@@ -15,18 +15,18 @@ from sampo.utilities.serializers import custom_serializer
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     """
-    Representation of work as item of schedule
+    Representation of work as item of schedule.
     """
 
     ignored_fields = ['equipments', 'materials', 'object']
 
     def __init__(self,
                  work_unit: WorkUnit,
-                 start_end_time: Tuple[Time, Time],
-                 workers: List[Worker],
+                 start_end_time: tuple[Time, Time],
+                 workers: list[Worker],
                  contractor: Contractor | str,
-                 equipments: Optional[List[Equipment]] = None,
-                 materials: Optional[List[Equipment]] = None,
+                 equipments: Optional[list[Equipment]] = None,
+                 materials: Optional[list[Equipment]] = None,
                  object: Optional[ConstructionObject] = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
@@ -118,7 +118,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         return start <= time < end
 
     # TODO: describe the function (description, return type)
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.work_unit.id,
             "task_name": self.work_unit.name,

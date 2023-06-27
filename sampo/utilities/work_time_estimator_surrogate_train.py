@@ -92,10 +92,8 @@ def train_surrogate(teams: np.ndarray):
     a1 = a2 = a3 = a4 = 1
 
 
-
-
 if __name__ == '__main__':
     worker_labels = ['1', '2', '3', '4', '5']
-    worker_counts = [ 1 ,  1 ,  1 ,  1 ,  1 ]
+    worker_counts = [1, 1, 1, 1, 1]
 
     calculate_arg_results(worker_labels, worker_counts, TestWorkTimeEstimator())

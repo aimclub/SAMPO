@@ -48,7 +48,7 @@ class BlockGraph:
 
     def to_work_graph(self) -> WorkGraph:
         """
-        Creates `WorkGraph` that is equal to this `BlockGraph`.
+        Construct 'WorkGraph' that is equal to the `BlockGraph`.
         """
         copied_nodes = deepcopy(self.nodes)
         for node in copied_nodes:
@@ -82,7 +82,7 @@ class BlockGraph:
 
     def toposort(self) -> list[BlockNode]:
         """
-        Sort current 'BlockGraph' in topologically order
+        Sort current 'BlockGraph' in topologic order
 
         :return: ordered list of BlockNode
         """

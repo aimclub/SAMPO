@@ -1,4 +1,4 @@
-from typing import List, Dict, Set, Optional
+from typing import Optional
 
 import numpy as np
 from toposort import toposort_flatten, toposort
@@ -14,7 +14,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 class TopologicalScheduler(GenericScheduler):
     """
-    Scheduler, that represent 'WorkGraph' in topological order
+    Scheduler, that represent 'WorkGraph' in topological order.
     """
 
     def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
@@ -29,7 +29,7 @@ class TopologicalScheduler(GenericScheduler):
     # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
         """
-        Sort 'WorkGraph' in topological order
+        Sort 'WorkGraph' in topological order.
 
         :param wg: WorkGraph
         :param work_estimator: function that calculates execution time of the work
@@ -42,14 +42,14 @@ class TopologicalScheduler(GenericScheduler):
             for v in wg.nodes
         }
 
-        tsorted_nodes_indices: List[int] = toposort_flatten(dependents, sort=True)
+        tsorted_nodes_indices: list[int] = toposort_flatten(dependents, sort=True)
         tsorted_nodes = [wg.nodes[i] for i in tsorted_nodes_indices]
         return list(reversed(tsorted_nodes))
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):
     """
-    Scheduler, that represent 'WorkGraph' in topological order with random
+    Scheduler, that represent 'WorkGraph' in topological order with random.
     """
     def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
@@ -59,7 +59,7 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
         def shuffle(nodes: set[GraphNode]) -> list[GraphNode]:
             """
-            Shuffle nodes that are on the same level
+            Shuffle nodes that are on the same level.
 
             :param nodes: list of nodes
             :return: list of shuffled indices

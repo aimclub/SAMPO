@@ -1,7 +1,7 @@
 import math
 import random
 import time
-from typing import Dict, List, Tuple, Callable
+from typing import Callable
 
 import numpy as np
 import seaborn as sns
@@ -32,7 +32,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
@@ -45,32 +45,17 @@ def build_schedule(wg: WorkGraph,
                    time_border: int = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
-    Genetic algorithm
+    Genetic algorithm.
     Structure of chromosome:
     [[order of job], [numbers of workers types 1 for each job], [numbers of workers types 2], ... ]
-    Different mate and mutation for order and for workers
-    Generate order of job by prioritization from HEFTs and from Topological
-    Generate resources from min to max
-    Overall initial population is valid
+    Different mate and mutation for order and for workers.
+    Generate order of job by prioritization from HEFTs and from Topological.
+    Generate resources from min to max.
+    Overall initial population is valid.
 
-    :param fitness_constructor:
-    :param show_fitness_graph:
-    :param worker_pool:
-    :param contractors:
-    :param wg:
-    :param population_size:
-    :param generation_number:
-    :param selection_size:
-    :param mutate_order:
-    :param mutate_resources:
-    :param rand:
     :param spec: spec for current scheduling
-    :param init_schedules:
-    :param timeline:
     :param n_cpu: number or parallel workers to use in computational process
     :param assigned_parent_time: start time of the whole schedule(time shift)
-    :param work_estimator:
-    :param time_border:
     :return: scheduler
     """
 
@@ -371,10 +356,7 @@ def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
 
 def wrap(chromosome: ChromosomeType) -> Individual:
     """
-    Created an individual from chromosome
-
-    :param chromosome:
-    :return:
+    Created an individual from chromosome.
     """
 
     def ind_getter():

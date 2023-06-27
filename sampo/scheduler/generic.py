@@ -1,4 +1,4 @@
-from typing import Type, List, Callable, Iterable
+from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
@@ -23,6 +23,11 @@ def get_finish_time_default(node, worker_team, node2swork, assigned_parent_time,
 
 
 class GenericScheduler(Scheduler):
+    """
+    Implementation of a universal scheme of scheduler.
+    It's parametrized by prioritization function and optimization resource function.
+    It constructs the end schedulers.
+    """
 
     def __init__(self,
                  scheduler_type: SchedulerType,
@@ -46,7 +51,7 @@ class GenericScheduler(Scheduler):
         def optimize_resources_def(node: GraphNode, contractors: list[Contractor], work_spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator):
-            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, List[Worker]]:
+            def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, list[Worker]]:
                 min_count_worker_team, max_count_worker_team, workers \
                     = get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
 
@@ -75,7 +80,7 @@ class GenericScheduler(Scheduler):
         return optimize_resources_def
 
     def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+                            contractors: list[Contractor],
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -96,8 +101,8 @@ class GenericScheduler(Scheduler):
         return schedule, schedule_start_time, timeline, ordered_nodes
 
     def build_scheduler(self,
-                        ordered_nodes: List[GraphNode],
-                        contractors: List[Contractor],
+                        ordered_nodes: list[GraphNode],
+                        contractors: list[Contractor],
                         spec: ScheduleSpec,
                         work_estimator: WorkTimeEstimator = None,
                         assigned_parent_time: Time = Time(0),

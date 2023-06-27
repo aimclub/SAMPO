@@ -1,5 +1,3 @@
-from typing import List
-
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
@@ -13,8 +11,8 @@ from sampo.schemas.time import Time
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
-    The scheduler optimizes resources to deadline
-    Scheduler uses binary search to optimize resources
+    The scheduler optimizes resources to deadline.
+    Scheduler uses binary search to optimize resources.
     """
 
     def __init__(self, base_scheduler: Scheduler):

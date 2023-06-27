@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Tuple, Optional
+from typing import Optional
 
 from sampo.schemas.time import Time
 
 ContractorName = str
 WorkerName = str
-AgentId = Tuple[ContractorName, WorkerName]
+AgentId = tuple[ContractorName, WorkerName]
 
 
 # TODO check for the possibility of translation to IntEnum with the removal of priority

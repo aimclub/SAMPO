@@ -28,7 +28,7 @@ class SimpleSynthetic:
         """
         return get_small_graph(cluster_name, self._rand)
 
-    def work_graph(self, mode: SyntheticGraphType | None = SyntheticGraphType.General,
+    def work_graph(self, mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
                    cluster_counts: int | None = 0,
                    bottom_border: int | None = 0,
                    top_border: int | None = 0) -> WorkGraph:

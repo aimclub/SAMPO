@@ -9,9 +9,9 @@ from sampo.schemas.requirements import WorkerReq
 
 
 class ContractorGenerationMethod(Enum):
-    Min = 'min'
-    Max = 'max'
-    Avg = 'avg'
+    MIN = 'min'
+    MAX = 'max'
+    AVG = 'avg'
 
 
 def _value_by_req(method: ContractorGenerationMethod, req: WorkerReq) -> int:
@@ -25,14 +25,14 @@ def _value_by_req(method: ContractorGenerationMethod, req: WorkerReq) -> int:
     """
     val = 0
     match method:
-        case ContractorGenerationMethod.Min: val = req.min_count
-        case ContractorGenerationMethod.Avg: val = (req.min_count + req.max_count) / 2
-        case ContractorGenerationMethod.Max: val = req.max_count
+        case ContractorGenerationMethod.MIN: val = req.min_count
+        case ContractorGenerationMethod.AVG: val = (req.min_count + req.max_count) / 2
+        case ContractorGenerationMethod.MAX: val = req.max_count
     return int(val)
 
 
 def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1,
-                         method: ContractorGenerationMethod = ContractorGenerationMethod.Min) -> Contractor:
+                         method: ContractorGenerationMethod = ContractorGenerationMethod.MIN) -> Contractor:
     """
     Creates a pool of contractor resources based on job requirements, selecting the maximum specified parameter
 
@@ -42,10 +42,9 @@ def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1,
     :return: Contractor capable of completing the work schedule
     """
     if scaler < 1:
-        assert "scaler should be greater than 1"
+        raise ValueError("scaler should be greater than 1")
     wg_reqs = list(chain(*[n.work_unit.worker_reqs for n in wg.nodes]))
     min_wg_reqs = [(req.kind, _value_by_req(method, req)) for req in wg_reqs]
     maximal_min_req: dict[str, int] = \
         dict(list(group[1])[-1] for group in groupby(sorted(min_wg_reqs), itemgetter(0)))
-    c = get_contractor(scaler, sigma_scaler=0, worker_proportions=maximal_min_req)
-    return c
+    return get_contractor(scaler, sigma_scaler=0, worker_proportions=maximal_min_req)

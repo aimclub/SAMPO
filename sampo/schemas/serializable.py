@@ -10,8 +10,8 @@ import pandas as pd
 
 from sampo.utilities.serializers import CUSTOM_FIELD_SERIALIZER, CUSTOM_FIELD_DESERIALIZER, CUSTOM_TYPE_SERIALIZER, \
     CUSTOM_TYPE_DESERIALIZER, default_ndarray_serializer, default_dataframe_serializer, default_ndarray_deserializer, \
-    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, default_np_long_serializer, \
-    default_np_long_deserializer
+    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, \
+    default_np_long_serializer, default_np_long_deserializer
 
 # define type of result serialization
 T = TypeVar('T', str, dict, list, tuple, str, bool, None)
@@ -347,6 +347,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
     def _deserialize(cls, dict_representation: dict) -> AJS:
         """
         Creates class instance from a dict representation
+
         :param dict_representation: Representation produced by _serialize method
         :return: New class instance
         """

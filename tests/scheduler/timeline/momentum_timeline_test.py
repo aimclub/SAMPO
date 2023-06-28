@@ -31,7 +31,7 @@ def test_init_resource_structure(setup_timeline_context):
 
             first_event: ScheduleEvent = worker_timeline[0]
             assert first_event.seq_id == -1
-            assert first_event.event_type == EventType.Initial
+            assert first_event.event_type == EventType.INITIAL
             assert first_event.time == Time(0)
 
 

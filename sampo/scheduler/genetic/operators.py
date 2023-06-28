@@ -179,12 +179,13 @@ def init_toolbox(wg: WorkGraph, contractors: list[Contractor],
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
-                     work_estimator=work_estimator, worker_name2index=worker_name2index, contractor2index=contractor2index)
+                     work_estimator=work_estimator, worker_name2index=worker_name2index,
+                     contractor2index=contractor2index)
     return toolbox
 
 
-def copy_chromosome(c: ChromosomeType) -> ChromosomeType:
-    return c[0].copy(), c[1].copy(), c[2].copy()
+def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
+    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy()
 
 
 def generate_chromosome(wg: WorkGraph, contractors: list[Contractor], index2node_list: list[tuple[int, GraphNode]],

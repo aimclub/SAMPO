@@ -22,7 +22,8 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
 
 def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (list[tuple[float, float, bool]]):
     """
-    Searches for the maximum lag among the given edges and type of edge for the maximum lag saves the amount of parental work
+    Searches for the maximum lag among the given edges and type of edge for the
+    maximum lag saves the amount of parental work
 
     :param is_reversed: bool - Used to specify from which node lag is used
     :param edges: list[GraphEdge] - the given edges
@@ -73,8 +74,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
             continue
         proportions.append((accum - accum_pred, lag, is_reversed))
 
-    for ind in range(len(proportions)):
-        piece_div_main, lag, is_reversed = proportions[ind]
+    for ind, value in enumerate(proportions):
+        piece_div_main, lag, is_reversed = value
         reqs = [WorkerReq(wr.kind, wr.volume * piece_div_main, wr.min_count, wr.max_count)
                 for wr in wu.worker_reqs]
 

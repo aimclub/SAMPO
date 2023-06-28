@@ -75,7 +75,7 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
 
 
 def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: Schedule,
-                                                                       contractors: List[Contractor]) -> None:
+                                                                       contractors: list[Contractor]) -> None:
     # dict[contractor_id, dict[worker_name, worker_count]]
     initial_contractors_state: dict[str, dict[str, int]] = {}
     for contractor in contractors:
@@ -165,7 +165,7 @@ def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[
     # 1. all workers of the same category belonging to the same contractor should have the same characteristics
     for c in contractors:
         assert all(ws.count >= 1 for _, ws in c.workers.items()), \
-            f"There should be only one worker for the same worker category"
+            "There should be only one worker for the same worker category"
 
     # добавляем агентов в словарь
     agents = {}

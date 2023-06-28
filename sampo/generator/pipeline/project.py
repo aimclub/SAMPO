@@ -21,17 +21,17 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     :return: work_graph: WorkGraph - work graph where count of vertex between 30 and 50
     """
 
-    s = get_start_stage()
+    start = get_start_stage()
     pipe_nodes_count = MIN_GRAPH_COUNTS['pipe_nodes'].rand_int(rand)
     pipe_net_count = MIN_GRAPH_COUNTS['pipe_net'].rand_int(rand)
     light_masts_count = MIN_GRAPH_COUNTS['light_masts'].rand_int(rand)
     borehole_count = MIN_GRAPH_COUNTS['borehole'].rand_int(rand)
 
-    c1, _ = get_cluster_works(root_node=s, cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
+    c1, _ = get_cluster_works(root_node=start, cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
                               pipe_net_count=pipe_net_count, light_masts_count=light_masts_count,
                               borehole_counts=[borehole_count], rand=rand)
-    f = get_finish_stage([c1])
-    graph = WorkGraph(s, f)
+    finish = get_finish_stage([c1])
+    graph = WorkGraph(start, finish)
     return graph
 
 
@@ -64,7 +64,7 @@ def _get_cluster_graph(root_node: GraphNode, cluster_name: str, pipe_nodes_count
     return checkpoints, roads
 
 
-def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
+def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
               cluster_name_prefix: str | None = 'C',
               cluster_counts: int | None = 0,
               branching_probability: float | None = BRANCHING_PROBABILITY,
@@ -73,7 +73,8 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
               top_border: int | None = 0,
               rand: Random | None = None) -> WorkGraph:
     """
-    Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability, bottom_border is given
+    Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability,
+    bottom_border is given
 
     :param mode: str - 'general' or 'sequence' or 'parallel - the type of the returned graph
     :param cluster_name_prefix: str -  cluster name prefix, if the prefix is 'C',
@@ -99,15 +100,15 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
         top_border = 0
     masters_clusters_ind = 1
     works_generated = 0
-    s = get_start_stage()
-    stages: list[StageType] = [(s, {'min': s})]
+    start = get_start_stage()
+    stages: list[StageType] = [(start, {'min': start})]
 
     while True:
         if cluster_counts > 0 and (cluster_counts == len(stages) - 1):
             addition_cluster_probability = 0
 
         root_stage = get_root_stage(stages, branching_probability, rand)
-        checkpoints, r = _get_cluster_graph(root_stage, f'{cluster_name_prefix}{masters_clusters_ind}',
+        checkpoints, roads = _get_cluster_graph(root_stage, f'{cluster_name_prefix}{masters_clusters_ind}',
                                             addition_cluster_probability=addition_cluster_probability, rand=rand)
         tmp_finish = get_finish_stage(checkpoints)
         count_works = count_node_ancestors(tmp_finish, root_stage)
@@ -115,7 +116,7 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
         if 0 < top_border < (count_works + works_generated):
             break
 
-        stages += [(c, r) for c in checkpoints]
+        stages += [(c, roads) for c in checkpoints]
         masters_clusters_ind += 1
         works_generated += count_works
 
@@ -124,16 +125,16 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.General,
 
     if len(stages) == 1:
         return get_small_graph(cluster_name=f'{cluster_name_prefix}1')
-    f = get_finish_stage([c for c, _ in stages[1:]])
-    graph = WorkGraph(s, f)
+    finish = get_finish_stage([c for c, _ in stages[1:]])
+    graph = WorkGraph(start, finish)
     return graph
 
 
 def _graph_mode_to_callable(mode: SyntheticGraphType) -> \
         Callable[[list[tuple[GraphNode, dict[str, GraphNode]]], float, Random], GraphNode]:
-    if mode is SyntheticGraphType.General:
+    if mode is SyntheticGraphType.GENERAL:
         return _general_graph_mode
-    if mode is SyntheticGraphType.Parallel:
+    if mode is SyntheticGraphType.PARALLEL:
         return _parallel_graph_mode_get_root
     return _sequence_graph_mode_get_root
 
@@ -166,7 +167,7 @@ def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> Gra
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(work_id, f"start of project", wr.START_PROJECT, group="service_works", is_service_unit=True)
+    work = WorkUnit(work_id, "start of project", wr.START_PROJECT, group="service_works", is_service_unit=True)
     node = GraphNode(work, [])
     return node
 
@@ -182,6 +183,6 @@ def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(str(work_id), f"finish of project", wr.END_PROJECT, group="service_works", is_service_unit=True)
+    work = WorkUnit(str(work_id), "finish of project", wr.END_PROJECT, group="service_works", is_service_unit=True)
     node = GraphNode(work, parents)
     return node

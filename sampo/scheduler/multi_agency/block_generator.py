@@ -19,10 +19,10 @@ class SyntheticBlockGraphType(Enum):
     - Random - random structure of block graph,
     - Queue - queue structure typical of real processes capital construction.
     """
-    Sequential = 0,
-    Parallel = 1,
-    Random = 2,
-    Queues = 3
+    SEQUENTIAL = 0
+    PARALLEL = 1
+    RANDOM = 2
+    QUEUES = 3
 
 
 EMPTY_GRAPH_VERTEX_COUNT = 2
@@ -61,14 +61,14 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     global_start, global_end = bg.nodes[-2:]
 
     match graph_type:
-        case SyntheticBlockGraphType.Sequential:
+        case SyntheticBlockGraphType.SEQUENTIAL:
             for idx, start in enumerate(bg.nodes[:-2]):
                 if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
                         and bg.nodes[idx + 1].wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
                     bg.add_edge(start, bg.nodes[idx + 1])
-        case SyntheticBlockGraphType.Parallel:
+        case SyntheticBlockGraphType.PARALLEL:
             pass
-        case SyntheticBlockGraphType.Random:
+        case SyntheticBlockGraphType.RANDOM:
             rev_edge_prob = int(1 / edge_prob)
             for idx, start in enumerate(bg.nodes):
                 for end in bg.nodes[idx:]:
@@ -111,7 +111,7 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
     :param logger: for logging
     :return: generated block graph
     """
-    if graph_type == SyntheticBlockGraphType.Queues:
+    if graph_type == SyntheticBlockGraphType.QUEUES:
         return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
                                queues_edges, logger)
     else:
@@ -176,5 +176,3 @@ def generate_queues(type_prop: list[int],
     logger('Queues')
 
     return BlockGraph(nodes_all)
-
-

@@ -75,21 +75,17 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
-    # TODO: describe the function (description, parameters, return type)
     def get_actual_duration(self, work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         return self.work_unit.estimate_static(self.workers, work_estimator)
 
-    # TODO: describe the function (description return type)
     @property
     def start_time(self) -> Time:
         return self.start_end_time[0]
 
-    # TODO: describe the function (description, parameters, return type)
     @start_time.setter
     def start_time(self, val: Time):
         self.start_end_time = (val, self.start_end_time[1])
 
-    # TODO: describe the function (description, return type)
     @property
     def finish_time(self) -> Time:
         return self.start_end_time[1]
@@ -98,33 +94,27 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def min_child_start_time(self) -> Time:
         return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
 
-    # TODO: describe the function (description, parameters, return type)
     @finish_time.setter
     def finish_time(self, val: Time):
         self.start_end_time = (self.start_end_time[0], val)
 
-    # TODO: describe the function (description, return type)
     @staticmethod
     def start_time_getter():
         return lambda x: x.start_end_time[0]
 
-    # TODO: describe the function (description, return type)
     @staticmethod
     def finish_time_getter():
         return lambda x: x.start_end_time[1]
 
-    # TODO: describe the function (description, return type)
     @property
     def duration(self) -> Time:
         start, end = self.start_end_time
         return end - start
     
-    # TODO: describe the function (description, parameters, return type)
     def is_overlapped(self, time: int) -> bool:
         start, end = self.start_end_time
         return start <= time < end
 
-    # TODO: describe the function (description, return type)
     def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.work_unit.id,

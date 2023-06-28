@@ -61,4 +61,3 @@ class OneInsertObstruction(Obstruction):
             insert_node_child: GraphNode = self._rand.sample(insert_node.children, 1)[0]
             # insert
             insert_node_child.add_parents([insert_wg.start])
-

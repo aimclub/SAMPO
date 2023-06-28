@@ -13,7 +13,7 @@ from sampo.schemas.works import WorkUnit
 
 class EdgeType(Enum):
     """
-    Class to define certain type of edge in graph
+    Class to define a certain type of edge in graph
     """
     InseparableFinishStart = 'IFS'
     LagFinishStart = 'FFS'
@@ -28,7 +28,7 @@ class EdgeType(Enum):
             return True
         if isinstance(edge, EdgeType):
             edge = edge.value
-        return edge == 'FS' or edge == 'IFS' or edge == 'FFS'
+        return edge in ('FS', 'IFS', 'FFS')
 
 
 @dataclass
@@ -38,9 +38,8 @@ class GraphEdge:
     """
     start: 'GraphNode'
     finish: 'GraphNode'
-    # TODO Remove Optional
-    lag: Optional[float] = 0
-    type: Optional[EdgeType] = None
+    lag: float | None = 0
+    type: EdgeType | None = None
 
 
 class GraphNode(JSONSerializable['GraphNode']):
@@ -106,9 +105,9 @@ class GraphNode(JSONSerializable['GraphNode']):
         elif len(parent_works) > 0 and isinstance(parent_works[0], tuple):
             edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
-        for i, p in enumerate(parent_works):
-            p: GraphNode = p[0] if isinstance(p, tuple) else p
-            p._add_child_edge(edges[i])
+        for i, parent in enumerate(parent_works):
+            parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
+            parent._add_child_edge(edges[i])
         self._parent_edges += edges
 
     def is_inseparable_parent(self) -> bool:
@@ -342,7 +341,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
         return WorkGraph(nodes_dict[start_id], nodes_dict[finish_id])
 
-    # TODO: describe the function (return type)
     # TODO: Check that adj matrix is really need
     def _to_adj_matrix(self) -> tuple[list[GraphNode], dok_matrix, dict[str, GraphNode]]:
         """
@@ -357,10 +355,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         for v, i in node2ind.items():
             for child in v.children:
                 c_i = node2ind[child]
-                try:
-                    weight = max((w_req.volume for w_req in v.work_unit.worker_reqs), default=0.000001)
-                except:
-                    print('ln')
+                weight = max((w_req.volume for w_req in v.work_unit.worker_reqs), default=0.000001)
                 adj_mx[i, c_i] = weight
 
         return ordered_nodes, adj_mx, id2node

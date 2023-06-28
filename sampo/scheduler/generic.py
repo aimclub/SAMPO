@@ -16,10 +16,11 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.validation import validate_schedule
 
 
+# TODO Кажется, это не работает - лаги не учитываются
 def get_finish_time_default(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator):
     return timeline.find_min_start_time(node, worker_team, node2swork,
                                         assigned_parent_time, work_estimator) \
-        + calculate_working_time_cascade(node, worker_team, work_estimator)  # TODO Кажется, это не работает - лаги не учитываются
+        + calculate_working_time_cascade(node, worker_team, work_estimator)
 
 
 class GenericScheduler(Scheduler):
@@ -61,7 +62,8 @@ class GenericScheduler(Scheduler):
                 workers = [worker.copy() for worker in workers]
 
                 def ft_getter(worker_team):
-                    return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator)
+                    return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline,
+                                           work_estimator)
 
                 # apply worker team spec
                 self.optimize_resources_using_spec(node.work_unit, workers, work_spec,
@@ -132,19 +134,23 @@ class GenericScheduler(Scheduler):
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
 
-            st, ft, contractor, best_worker_team = self.optimize_resources(node, contractors, work_spec, worker_pool,
-                                                                           node2swork, assigned_parent_time,
-                                                                           timeline, work_estimator)
+            start_time, finish_time, contractor, best_worker_team = self.optimize_resources(node, contractors,
+                                                                                            work_spec, worker_pool,
+                                                                                            node2swork,
+                                                                                            assigned_parent_time,
+                                                                                            timeline, work_estimator)
 
-            if index == 0:  # we are scheduling the work `start of the project`
-                st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
-                ft += st
+            # we are scheduling the work `start of the project`
+            if index == 0:
+                # this work should always have start_time = 0, so we just re-assign it
+                start_time = assigned_parent_time
+                finish_time += start_time
 
             # apply work to scheduling
             timeline.schedule(node, node2swork, best_worker_team, contractor,
-                              st, work_spec.assigned_time, assigned_parent_time, work_estimator)
+                              start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
-        schedule_start_time = min([swork.start_time for swork in node2swork.values() if
-                                   len(swork.work_unit.worker_reqs) != 0], default=assigned_parent_time)
+        schedule_start_time = min((swork.start_time for swork in node2swork.values() if
+                                   len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)
 
         return node2swork.values(), schedule_start_time, timeline

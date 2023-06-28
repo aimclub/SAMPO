@@ -26,7 +26,6 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
                            down_border: np.ndarray,
                            up_border: np.ndarray,
                            get_finish_time: Callable[[list[Worker]], Time]):
-        # TODO why get_finish_time here?
         """
         The resource optimization module, that counts average resource requirements.
 
@@ -39,10 +38,10 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
         """
 
         if optimize_array:
-            for i in range(len(worker_team)):
+            for i, worker in enumerate(worker_team):
                 if optimize_array[i]:
-                    worker_team[i].count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
+                    worker.count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
         else:
             # TODO Remove max()
-            for i in range(len(worker_team)):
-                worker_team[i].count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
+            for i, worker in enumerate(worker_team):
+                worker.count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)

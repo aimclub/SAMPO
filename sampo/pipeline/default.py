@@ -63,9 +63,7 @@ class DefaultInputPipeline(InputPipeline):
         If the schedule should start at a certain time
 
         :param time:
-        :type time:
         :return:
-        :rtype:
         """
         self._assigned_parent_time = time
         return self

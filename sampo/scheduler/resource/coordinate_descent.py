@@ -42,8 +42,8 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
             :param worker_count:
             :return:
             """
-            for worker_ind in range(len(worker_team)):
-                worker_team[worker_ind].count = worker_count[worker_ind]
+            for ind, worker in enumerate(worker_team):
+                worker.count = worker_count[ind]
             return get_finish_time(worker_team)
 
         count_worker_team = coordinate_descent(down_border, up_border,
@@ -51,9 +51,9 @@ class CoordinateDescentResourceOptimizer(ResourceOptimizer):
                                                fitness,
                                                optimize_array)
         if optimize_array:
-            for i in range(len(worker_team)):
+            for i, worker in enumerate(worker_team):
                 if optimize_array[i]:
-                    worker_team[i].count = count_worker_team[i]
+                    worker.count = count_worker_team[i]
         else:
-            for i in range(len(worker_team)):
-                worker_team[i].count = count_worker_team[i]
+            for i, worker in enumerate(worker_team):
+                worker.count = count_worker_team[i]

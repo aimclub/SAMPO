@@ -51,4 +51,3 @@ class ScheduleSpec:
 
     def get_work_spec(self, work_id: str) -> WorkSpec:
         return self._work2spec[work_id]
-

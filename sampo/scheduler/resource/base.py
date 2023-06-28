@@ -23,7 +23,8 @@ class ResourceOptimizer(ABC):
                            up_border: np.ndarray,
                            get_finish_time: Callable[[list[Worker]], Time]):
         """
-        The resource optimization module. Optimizes `worker_team` using `get_finish_time` metric. Should optimize `worker_team` in-place.
+        The resource optimization module. Optimizes `worker_team` using `get_finish_time` metric.
+        Should optimize `worker_team` in-place.
 
         :param worker_pool: global resources pool
         :param worker_team: worker team to optimize

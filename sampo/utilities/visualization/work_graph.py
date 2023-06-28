@@ -46,8 +46,8 @@ def work_graph_fig(graph: WorkGraph or GraphNode, fig_size: tuple[int, int],
                    black_list_edges: set[tuple[str, str]] = None,
                    jobs2text_function: Optional[Callable[[pd.Series], str]] = None,
                    text_size: Optional[int] = 1) -> Figure:
-    start = graph.start if type(graph) == WorkGraph else graph
-    jobs, id_to_job, colors = collect_jobs(start, max_deep)
+    start = graph.start if isinstance(graph, WorkGraph) else graph
+    jobs, id_to_job, _ = collect_jobs(start, max_deep)
     jobs = setup_jobs(start, jobs, id_to_job)
     dotted_edges = dotted_edges or set()
     black_list_edges = black_list_edges or set()
@@ -77,8 +77,7 @@ def extract_cluster_name(work_name: str) -> str:
 
 
 def calculate_work_volume(work_unit: WorkUnit) -> float:
-    volume = sum([req.volume for req in work_unit.worker_reqs])
-    return volume
+    return sum((req.volume for req in work_unit.worker_reqs))
 
 
 def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (list[dict], dict[str, int], dict[str, str]):
@@ -105,11 +104,11 @@ def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (list[dict
                  group=unit.group, color=color_from_str(unit.group), volume=volume,
                  cluster=extract_cluster_name(unit.name)))
         colors[unit.group] = color_from_str(unit.group)
-        for c in node.children:
-            work_id = c.id
+        for child in node.children:
+            work_id = child.id
             if work_id in used:
                 continue
-            q.put((deep + 1, c))
+            q.put((deep + 1, child))
             used.add(work_id)
     return jobs, id_to_job, colors
 

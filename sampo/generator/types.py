@@ -12,6 +12,6 @@ class SyntheticGraphType(Enum):
     - Sequential - work graph in which the work is sequential to each other
     - General - work graph that closely resemble real work graphs in structure.
     """
-    General = auto()
-    Parallel = auto()
-    Sequential = auto()
+    GENERAL = auto()
+    PARALLEL = auto()
+    SEQUENTIAL = auto()

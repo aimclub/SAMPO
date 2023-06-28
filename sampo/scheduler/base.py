@@ -97,18 +97,18 @@ class Scheduler(ABC):
         """
         if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
             # all resources passed in spec, skipping optimize_resources step
-            for w in worker_team:
-                w.count = work_spec.assigned_workers[w.name]
+            for worker in worker_team:
+                worker.count = work_spec.assigned_workers[worker.name]
         else:
             # create optimize array to save optimizing time
             # this array should contain True if position should be optimized or False if shouldn't
             optimize_array = None
             if work_spec.assigned_workers:
                 optimize_array = []
-                for w in worker_team:
-                    spec_count = work_spec.assigned_workers.get(w.name, 0)
+                for worker in worker_team:
+                    spec_count = work_spec.assigned_workers.get(worker.name, 0)
                     if spec_count > 0:
-                        w.count = spec_count
+                        worker.count = spec_count
                         optimize_array.append(False)
                     else:
                         optimize_array.append(True)

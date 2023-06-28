@@ -13,7 +13,8 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
         -> (np.ndarray, np.ndarray, list[Worker]):
     """
     Define for each job each type of workers the min and max possible number of workers.
-    For max number of workers, max is defined as a minimum from max possible numbers at all and max possible for a current job.
+    For max number of workers, max is defined as a minimum from max possible numbers
+    at all and max possible for a current job.
     
     :param agents: from all projects
     :param contractor:
@@ -62,7 +63,7 @@ def run_contractor_search(contractors: list[Contractor],
 
     for contractor in contractors:
         start_time, finish_time, worker_team = runner(contractor)
-        contractor_size = sum([w.count for w in contractor.workers.values()])
+        contractor_size = sum(w.count for w in contractor.workers.values())
 
         if not finish_time.is_inf() and (finish_time < best_finish_time or
                                          (finish_time == best_finish_time and contractor_size < best_contractor_size)):
@@ -73,6 +74,7 @@ def run_contractor_search(contractors: list[Contractor],
             best_contractor_size = contractor_size
 
     if best_contractor is None:
-        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: {contractors}')
+        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
+                                          f'{contractors}')
 
     return best_start_time, best_finish_time, best_contractor, best_worker_team

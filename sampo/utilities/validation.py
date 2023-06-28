@@ -8,7 +8,7 @@ from sampo.schemas.time import Time
 from sampo.utilities.collections_util import build_index
 
 
-def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: List[Contractor]) -> None:
+def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contractor]) -> None:
     """
     Checks if the schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
@@ -104,7 +104,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
         key=itemgetter(1)
     )
 
-    moment_pool: Dict[str, Dict[str, int]] = {}
+    moment_pool: dict[str, dict[str, int]] = {}
     moment = Time(0)
     for index, (event_type, time, work) in enumerate(ordered_start_end_events):
         if len(work.workers) == 0:
@@ -161,7 +161,7 @@ def _check_all_workers_correspond_to_worker_reqs(schedule: Schedule):
             assert req.min_count <= worker.count <= req.max_count
 
 
-def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: List[Contractor]):
+def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[Contractor]):
     # 1. all workers of the same category belonging to the same contractor should have the same characteristics
     for c in contractors:
         assert all(ws.count >= 1 for _, ws in c.workers.items()), \

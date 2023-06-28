@@ -6,9 +6,7 @@ T = TypeVar('T')
 
 
 class PriorityQueue(Generic[T]):
-    """
-    Representation structure 'Priority Queue'
-    """
+
     _h: SortedKeyList
     _key_getter: Callable[[T], float]
 

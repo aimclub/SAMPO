@@ -5,7 +5,7 @@ import numpy as np
 from sampo.schemas.time import Time
 
 """
-This file contains base optimization methods
+Contains base optimization methods
 """
 
 

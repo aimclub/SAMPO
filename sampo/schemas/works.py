@@ -144,11 +144,11 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
 
 def get_static_by_worker(w: Worker, _: Optional[Random] = None):
     """
-    Receive productivity of certain worker
+    Calculate productivity of the Worker
 
-    :param w: certain worker
+    :param w: the worker
     :param _: parameter for stochastic part
-    :return: result of method get_static_productivity()
+    :return: productivity of received worker
     """
     return w.get_static_productivity()
 
@@ -162,7 +162,6 @@ def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
 # increases, after the maximum number of commands begins to decrease in efficiency, and its growth rate depends on
 # the maximum number of commands.
 # sum(1 - ((x-1)^2 / max_groups^2), where x from 1 to groups_count
-# TODO: describe the function (description, parameters, return type)
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups

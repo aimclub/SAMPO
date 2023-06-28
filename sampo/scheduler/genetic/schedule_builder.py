@@ -25,7 +25,7 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 def build_schedule(wg: WorkGraph,
-                   contractors: List[Contractor],
+                   contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
                    population_size: int,
                    generation_number: int,
@@ -68,8 +68,8 @@ def build_schedule(wg: WorkGraph,
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
-    index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
-    work_id2index: Dict[str, int] = {node.id: index for index, node in index2node.items()}
+    index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
+    work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
@@ -121,7 +121,7 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     # initial chromosomes construction
-    init_chromosomes: Dict[str, ChromosomeType] = \
+    init_chromosomes: dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, order)
             if schedule is not None else None
@@ -350,7 +350,7 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(a: Tuple[ChromosomeType], b: Tuple[ChromosomeType]):
+def compare_individuals(a: tuple[ChromosomeType], b: tuple[ChromosomeType]):
     return (a[0][0] == b[0][0]).all() and (a[0][1] == b[0][1]).all()
 
 

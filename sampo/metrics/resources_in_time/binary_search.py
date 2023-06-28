@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class BinarySearchOptimizer(ResourceOptimizer):
                  wg: WorkGraph,
                  deadline: Time,
                  agents: WorkerContractorPool | None = None,
-                 dry_resources: bool | None = True) -> Union[Tuple[Contractor, Time], Tuple[None, None]]:
+                 dry_resources: bool | None = True) -> Union[tuple[Contractor, Time], tuple[None, None]]:
         if self.method is BinarySearchOptimizationType.Fast:
             optimize_func = union_search
         elif self.method is BinarySearchOptimizationType.ItemByItem:

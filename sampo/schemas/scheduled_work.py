@@ -11,11 +11,18 @@ from sampo.schemas.works import WorkUnit
 from sampo.utilities.serializers import custom_serializer
 
 
-# TODO: describe the class (description, parameters)
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     """
-    Representation of work as item of schedule.
+    Contains all neccessary info to represent WorkUnit in Scheduler:
+
+    * WorkUnit
+    * list of workers, that are required to complete task
+    * start and end time
+    * contractor, that complete task
+    * list of equipment, that is needed to complete the task
+    * list of materials - set of non-renewable resources
+    * object - variable, that is used in landscape
     """
 
     ignored_fields = ['equipments', 'materials', 'object']
@@ -25,9 +32,9 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  start_end_time: tuple[Time, Time],
                  workers: list[Worker],
                  contractor: Contractor | str,
-                 equipments: Optional[list[Equipment]] = None,
-                 materials: Optional[list[Equipment]] = None,
-                 object: Optional[ConstructionObject] = None):
+                 equipments: list[Equipment] | None = None,
+                 materials: list[Equipment] | None = None,
+                 object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
         self.workers = workers

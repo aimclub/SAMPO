@@ -22,12 +22,12 @@ class Time(AutoJSONSerializable['Time']):
     @staticmethod
     def inf():
         """
-        Return very big time (tending to infinity)
-
-        :return: object Time with infinity as value
+        Return time, that is obviously longer
         """
         return Time(TIME_INF)
 
+    # Copy-paste body between left- and right-associative functions
+    # is here to avoid functional call overhead
     def __add__(self, other: 'Time' or int) -> 'Time':
         return Time(self.value + (other.value if isinstance(other, Time) else other))
 

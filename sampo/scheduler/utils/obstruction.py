@@ -62,3 +62,5 @@ class OneInsertObstruction(Obstruction):
             # insert
             insert_node_child.add_parents([insert_wg.start])
 
+        wg.reinit()
+

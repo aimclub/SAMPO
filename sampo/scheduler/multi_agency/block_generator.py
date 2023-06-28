@@ -47,7 +47,17 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     ss = SimpleSynthetic(rand)
 
     modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
-    nodes = [ss.work_graph(mode, *count_supplier(i)) for i, mode in enumerate(modes)]
+
+    def generate_wg(mode, i):
+        bottom_border, top_border = count_supplier(i)
+        if bottom_border is not None:
+            return ss.work_graph(mode, bottom_border=bottom_border)
+        elif top_border is not None:
+            return ss.work_graph(mode, top_border=top_border)
+        else:
+            return ss.work_graph(mode)
+
+    nodes = [generate_wg(mode, i) for i, mode in enumerate(modes)]
     nodes += [generate_empty_graph(), generate_empty_graph()]
     bg = BlockGraph.pure(nodes, obstruction_getter)
 
@@ -81,7 +91,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
 
 
 def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, type_prop: list[int],
-                         count_supplier: Callable[[int], tuple[int, int]],
+                         count_supplier: Callable[[int], tuple[int | None, int | None]],
                          edge_prob: float, rand: Random | None = Random(),
                          obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
                          queues_num: int | None = None,
@@ -125,7 +135,16 @@ def generate_queues(type_prop: list[int],
         # generate vertices
         n_blocks = queues_blocks[queue]
         modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
-        nodes = [BlockNode(ss.work_graph(mode, *count_supplier(i)), obstruction_getter(i))
+
+        def generate_wg(mode, i):
+            bottom_border, top_border = count_supplier(i)
+            if bottom_border is not None:
+                return ss.work_graph(mode, bottom_border=bottom_border)
+            elif top_border is not None:
+                return ss.work_graph(mode, top_border=top_border)
+            else:
+                return ss.work_graph(mode)
+        nodes = [BlockNode(generate_wg(mode, i), obstruction_getter(i))
                  for i, mode in enumerate(modes)]
         nodes_all.append(parent)
         nodes_all.extend(nodes)

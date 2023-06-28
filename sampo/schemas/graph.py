@@ -315,6 +315,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     # TODO: describe the function (description, parameters, return type)
     def __post_init__(self) -> None:
+        self.reinit()
+
+    def reinit(self):
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
         # To avoid field set of frozen instance errors
         object.__setattr__(self, 'nodes', ordered_nodes)

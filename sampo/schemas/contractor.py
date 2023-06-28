@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 from uuid import uuid4
 
@@ -25,8 +25,8 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     :param equipments: dictionary, where the key is the type of technique, and the value is the pool of techniques of
     that type
     """
-    workers: dict[str, Worker]
-    equipments: dict[str, Equipment]
+    workers: dict[str, Worker] = field(default_factory=dict)
+    equipments: dict[str, Equipment] = field(default_factory=dict)
 
     def __post_init__(self):
         for w in self.workers.values():

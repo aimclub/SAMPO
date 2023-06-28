@@ -6,9 +6,11 @@ from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
 from sampo.schemas.time import Time
 
-r_seed = 231
+r_seed = 231 + Random(0).randint(0, 1000000)
 p_rand = SimpleSynthetic(rand=r_seed)
 rand = Random(r_seed)
+
+print(f'Seed: {r_seed}')
 
 
 def obstruction_getter(i: int):
@@ -28,13 +30,13 @@ if __name__ == '__main__':
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    bg = generate_block_graph(SyntheticBlockGraphType.Queues, 2, [1, 1, 1], lambda x: (30, 50), 1.0,
-                              rand, obstruction_getter, 20, [3, 4] * 10, [3, 4] * 10, logger=print)
+    bg = generate_block_graph(SyntheticBlockGraphType.Sequential, 100, [1, 0, 0], lambda x: (30, 50), 0.2,
+                              rand, obstruction_getter, 2, [3, 4] * 1, [3, 4] * 1, logger=print)
 
     conjuncted = bg.to_work_graph()
     print(f'Conjunction finished: {conjuncted.vertex_count} works')
 
-    schedule = agents[0].scheduler.schedule(conjuncted, contractors)
+    # schedule = agents[0].scheduler.schedule(conjuncted, contractors)
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 

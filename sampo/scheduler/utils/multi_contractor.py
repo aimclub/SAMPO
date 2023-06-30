@@ -44,7 +44,7 @@ def run_contractor_search(contractors: list[Contractor],
                           runner: Callable[[Contractor], tuple[Time, Time, list[Worker]]]) \
         -> tuple[Time, Time, Contractor, list[Worker]]:
     """
-    Performs the best contractor search.
+    Performs the best contractor search
     
     :param contractors: contractors' list
     :param runner: a runner function, should be inner of the calling code.

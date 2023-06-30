@@ -133,10 +133,10 @@ class MomentumTimeline(Timeline):
         )
 
         max_material_time = self._material_timeline.find_min_material_time(node.id,
-                                                                           st,
+                                                                           start_time,
                                                                            node.work_unit.need_materials(),
                                                                            node.work_unit.workground_size)
-        st = max(max_material_time, st)
+        st = max(max_material_time, start_time)
         assert st >= assigned_parent_time
 
         return start_time, start_time + exec_time, exec_times

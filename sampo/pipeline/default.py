@@ -94,7 +94,8 @@ class DefaultInputPipeline(InputPipeline):
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
-            s_self = self  # cache upper-layer self to another variable to get it from inner class
+            # cache upper-layer self to another variable to get it from inner class
+            s_self = self
 
             class LocalOptimizedScheduler(DelegatingScheduler):
 

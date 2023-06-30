@@ -17,6 +17,7 @@ from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -124,10 +125,12 @@ class GeneticScheduler(Scheduler):
         """
         self._deadline = deadline
 
-    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
         """
         Heuristic algorithm, that generate first population
 
+        :param landscape:
         :param wg: graph of works
         :param contractors:
         :return:
@@ -136,7 +139,8 @@ class GeneticScheduler(Scheduler):
         def init_k_schedule(scheduler_class, k):
             try:
                 return (scheduler_class(work_estimator=self.work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
+                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
+                                                                                                    landscape=landscape),
                         list(reversed(prioritization(wg, self.work_estimator))))
             except NoSufficientContractorError:
                 return None, None
@@ -144,7 +148,8 @@ class GeneticScheduler(Scheduler):
         if self._deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
+                                                                                         landscape=landscape),
                             list(reversed(prioritization(wg, self.work_estimator))))
                 except NoSufficientContractorError:
                     return None, None
@@ -162,7 +167,7 @@ class GeneticScheduler(Scheduler):
                 try:
                     schedule = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline)[0]
+                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)[0]
                     return schedule, list(reversed(prioritization(wg, self.work_estimator)))
                 except NoSufficientContractorError:
                     return None, None
@@ -176,8 +181,10 @@ class GeneticScheduler(Scheduler):
                 "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
             }
 
-    def schedule_with_cache(self, wg: WorkGraph,
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
                             contractors: list[Contractor],
+                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -187,6 +194,7 @@ class GeneticScheduler(Scheduler):
         Build schedule for received graph of workers and return the current state of schedule
         It's needed to use this method in multy agents model
 
+        :param landscape:
         :param wg:
         :param contractors:
         :param spec:
@@ -195,7 +203,7 @@ class GeneticScheduler(Scheduler):
         :param timeline:
         :return:
         """
-        init_schedules = self.generate_first_population(wg, contractors)
+        init_schedules = self.generate_first_population(wg, contractors, landscape)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
@@ -211,6 +219,7 @@ class GeneticScheduler(Scheduler):
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
+                                                                                     landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      n_cpu=self._n_cpu,

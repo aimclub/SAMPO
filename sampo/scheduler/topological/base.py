@@ -17,7 +17,8 @@ class TopologicalScheduler(GenericScheduler):
     Scheduler, that represent 'WorkGraph' in topological order.
     """
 
-    def __init__(self, scheduler_type: SchedulerType = SchedulerType.Topological,
+    def __init__(self,
+                 scheduler_type: SchedulerType = SchedulerType.Topological,
                  work_estimator: Optional[WorkTimeEstimator or None] = None):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=AverageReqResourceOptimizer(),
@@ -51,7 +52,8 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
     """
     Scheduler, that represent 'WorkGraph' in topological order with random.
     """
-    def __init__(self, work_estimator: Optional[WorkTimeEstimator or None] = None,
+    def __init__(self,
+                 work_estimator: Optional[WorkTimeEstimator or None] = None,
                  random_seed: Optional[int] = None):
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)

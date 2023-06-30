@@ -9,6 +9,7 @@ from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourc
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
@@ -19,10 +20,10 @@ from sampo.utilities.base_opt import dichotomy_int
 
 
 class SchedulerType(Enum):
+    Genetic = 'genetic'
     Topological = 'topological'
     HEFTAddEnd = 'heft_add_end'
     HEFTAddBetween = 'heft_add_between'
-    Genetic = 'genetic'
 
 
 class Scheduler(ABC):
@@ -43,12 +44,14 @@ class Scheduler(ABC):
     def __str__(self):
         return str(self.scheduler_type.name)
 
-    def schedule(self, wg: WorkGraph,
+    def schedule(self,
+                 wg: WorkGraph,
                  contractors: list[Contractor],
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),
-                 timeline: Timeline | None = None) \
+                 timeline: Timeline | None = None,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> Schedule:
         """
         Realization of a scheduling process. 'schedule' version returns only Schedule.
@@ -59,13 +62,15 @@ class Scheduler(ABC):
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedule = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline)[0]
+        schedule = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)[0]
         # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedule
 
     @abstractmethod
-    def schedule_with_cache(self, wg: WorkGraph,
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
                             contractors: list[Contractor],
+                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),

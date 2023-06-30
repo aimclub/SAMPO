@@ -4,8 +4,10 @@ from typing import Optional, Union, Iterable
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
+from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
@@ -21,7 +23,7 @@ class MomentumTimeline(Timeline):
     """
 
     def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
-                 worker_pool: WorkerContractorPool):
+                 worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """
@@ -64,6 +66,7 @@ class MomentumTimeline(Timeline):
 
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
+        self._material_timeline = SupplyTimeline(landscape)
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
@@ -121,13 +124,20 @@ class MomentumTimeline(Timeline):
             exec_time += lag + node_exec_time
 
         if len(worker_team) == 0:
+            max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time, node.work_unit.need_materials(), node.work_unit.workground_size)
+            max_parent_time = max(max_parent_time, max_material_time)
             return max_parent_time, max_parent_time, exec_times
 
         start_time = assigned_start_time if assigned_start_time is not None else self._find_min_start_time(
             self._timeline[contractor_id], inseparable_chain, max_parent_time, exec_time, worker_team
         )
 
-        assert start_time >= assigned_parent_time
+        max_material_time = self._material_timeline.find_min_material_time(node.id,
+                                                                           st,
+                                                                           node.work_unit.need_materials(),
+                                                                           node.work_unit.workground_size)
+        st = max(max_material_time, st)
+        assert st >= assigned_parent_time
 
         return start_time, start_time + exec_time, exec_times
 

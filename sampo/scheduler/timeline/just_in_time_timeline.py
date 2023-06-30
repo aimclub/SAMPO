@@ -2,8 +2,10 @@ from typing import Optional, Iterable
 
 from sampo.scheduler.heft.time_computaion import calculate_working_time, calculate_working_time_cascade
 from sampo.scheduler.timeline.base import Timeline
+from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
@@ -18,12 +20,15 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor], worker_pool: WorkerContractorPool):
+    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
+                 worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         self._timeline = {}
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
+
+        self._material_timeline = SupplyTimeline(landscape)
 
     def find_min_start_time_with_additional(self, node: GraphNode,
                                             worker_team: list[Worker],
@@ -74,6 +79,10 @@ class JustInTimeTimeline(Timeline):
                 ind -= 1
 
         c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
+
+        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st, node.work_unit.need_materials(), node.work_unit.workground_size)
+
+        c_st = max(c_st, max_material_time)
 
         c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
         return c_st, c_ft, None
@@ -126,10 +135,12 @@ class JustInTimeTimeline(Timeline):
                  assigned_parent_time: Time = Time(0),
                  work_estimator: Optional[WorkTimeEstimator] = None):
         inseparable_chain = node.get_inseparable_chain_with_self()
+        
         start_time = assigned_start_time if assigned_start_time is not None else self.find_min_start_time(node, workers,
                                                                                                   node2swork,
                                                                                                   assigned_parent_time,
                                                                                                   work_estimator)
+        
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
@@ -164,6 +175,7 @@ class JustInTimeTimeline(Timeline):
         :param work_estimator:
         :return:
         """
+
         c_ft = start_time
         for dep_node in inseparable_chain:
             # set start time as finish time of original work
@@ -183,10 +195,16 @@ class JustInTimeTimeline(Timeline):
                 working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
             new_finish_time = start_time + working_time
 
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, start_time,
+                                                                                       new_finish_time,
+                                                                                       node.work_unit.need_materials(),
+                                                                                       node.work_unit.workground_size)
+
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(start_time, new_finish_time),
                                                  workers=workers,
-                                                 contractor=contractor)
+                                                 contractor=contractor,
+                                                 materials=deliveries)
             # change finish time for using workers
             c_ft = new_finish_time
 

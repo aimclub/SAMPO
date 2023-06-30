@@ -83,7 +83,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
 
         new_id = make_start_id(wu.id, ind) if ind < len(proportions) - 1 else wu.id
         new_wu = WorkUnit(new_id, f'{wu.name}{STAGE_SEP}{ind}', reqs, group=wu.group,
-                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name)
+                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name,
+                          workground_size=wu.workground_size)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)
         old_id_lag2new_id[(wu.id, lag, is_reversed)] = new_id

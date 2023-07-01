@@ -7,7 +7,6 @@
 #include "pycodec.h"
 #include "genetic.h"
 #include "python_deserializer.h"
-#include "utils/use_numpy.h"
 
 
 #include <chrono>
@@ -121,7 +120,7 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(maxReq, decodeIntList),
         PyCodec::fromList(id2work, decodeString),
         PyCodec::fromList(id2res, decodeString),
-        "", // TODO Propagate workEstimatorPath from Python
+        "aaaa", // TODO Propagate workEstimatorPath from Python
         totalWorksCount,
         usePythonWorkEstimator,
         useExternalWorkEstimator
@@ -196,7 +195,26 @@ int main() {
             { 0,  0,  0,  0,  0,  0, 0}
     };
 
-//    ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);
+    string v = "aaaa";
+
+    auto* info = new EvaluateInfo {
+            nullptr,
+            parents,
+            vector<vector<int>>(),
+            inseparables,
+            workers,
+            vector<float>(),
+            vector<vector<int>>(),
+            vector<vector<int>>(),
+            vector<string>(),
+            vector<string>(),
+            v, // TODO Propagate workEstimatorPath from Python
+            0,
+            false,
+            true
+    };
+//
+    ChromosomeEvaluator evaluator(info);
 //    int res = evaluator.testEvaluate(chromosomeOrder, chromosomeResources);
 //
 //    cout << "Result: " << res << endl;

@@ -1,3 +1,6 @@
+import os
+from ctypes import *
+
 from deap.base import Toolbox
 
 from sampo.schemas.time import Time
@@ -88,6 +91,16 @@ class NativeWrapper:
         self._current_chromosomes = None
 
         self.evaluator = evaluator
+
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo')
+        # os.chdir('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+
+        import ctypes.util
+
+        name = ctypes.util.find_library('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests\\native.dll')
+        lib = ctypes.WinDLL(name)
+        # lib = CDLL(r'C:\Users\Quarter\PycharmProjects\sampo\tests\native.dll')
 
         # preparing C++ cache
         self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,

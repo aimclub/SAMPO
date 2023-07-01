@@ -227,16 +227,12 @@ public:
         this->numThreads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
         printf("Genetic running threads: %i\n", this->numThreads);
 
-        if (!usePythonWorkEstimator) {
-            this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
-        }
-
         if (info->useExternalWorkEstimator) {
-            cout << "Error pre: " << GetLastError() << endl;
             loader.DLOpenLib();
-            cout << "Error post: " << GetLastError() << endl;
-//            auto library = loader.DLGetInstance();
-//            this->timeEstimator = library->create(info->timeEstimatorPath);
+            auto library = loader.DLGetInstance();
+            this->timeEstimator = library->create(info->timeEstimatorPath);
+        } else if (!usePythonWorkEstimator) {
+            this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
         }
     }
 

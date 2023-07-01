@@ -8,6 +8,7 @@
 #include <iostream>
 #include "IDLLoader.h"
 #include "Windows.h"
+#include <tchar.h>
 
 namespace dlloader
 {
@@ -33,7 +34,7 @@ namespace dlloader
 
         void DLOpenLib() override
         {
-            if (!(_handle = LoadLibraryA(_pathToLib.c_str()))) {
+            if (!(_handle = LoadLibrary(_T(_pathToLib.c_str())))) {
                 std::cerr << "Can't open and load " << _pathToLib << std::endl;
             }
         }

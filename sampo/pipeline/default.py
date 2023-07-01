@@ -6,6 +6,7 @@ from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, Schedu
 from sampo.schemas.apply_queue import ApplyQueue
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -27,6 +28,7 @@ class DefaultInputPipeline(InputPipeline):
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
+        self._landscape_config = LandscapeConfiguration()
 
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
         """
@@ -45,6 +47,16 @@ class DefaultInputPipeline(InputPipeline):
         :return: the pipeline object
         """
         self._contractors = contractors
+        return self
+
+    def landscape(self, landscape_config: LandscapeConfiguration) -> 'InputPipeline':
+        """
+        Set landscape configuration
+
+        :param landscape_config:
+        :return:
+        """
+        self._landscape_config = landscape_config
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -115,23 +127,28 @@ class DefaultInputPipeline(InputPipeline):
 
         if self._lag_optimize is None:
             # Searching the best
-            wg = graph_restructuring(self._wg, False)
-            schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+            wg1 = graph_restructuring(self._wg, False)
+            schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors, self._landscape_config,
+                                                                         self._spec,
                                                                          assigned_parent_time=self._assigned_parent_time)
-            wg = graph_restructuring(self._wg, True)
-            schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+            wg2 = graph_restructuring(self._wg, True)
+            schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors, self._landscape_config,
+                                                                         self._spec,
                                                                          assigned_parent_time=self._assigned_parent_time)
 
             if schedule1.execution_time < schedule2.execution_time:
                 self._node_order = node_order1
+                wg = wg1
                 schedule = schedule1
             else:
                 self._node_order = node_order2
+                wg = wg2
                 schedule = schedule2
 
         else:
             wg = graph_restructuring(self._wg, self._lag_optimize)
-            schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._spec,
+            schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                                                                       self._spec,
                                                                        assigned_parent_time=self._assigned_parent_time)
             self._node_order = node_order
 
@@ -152,8 +169,8 @@ class DefaultSchedulePipeline(SchedulePipeline):
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,
-                                       (self._input._node_order, self._input._contractors, self._input._spec,
-                                        self._worker_pool, self._input._work_estimator,
+                                       (self._input._node_order, self._input._contractors, self._input._landscape_config,
+                                        self._input._spec, self._worker_pool, self._input._work_estimator,
                                         self._input._assigned_parent_time, area))
         return self
 

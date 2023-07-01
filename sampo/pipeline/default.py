@@ -1,5 +1,6 @@
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
+from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
@@ -24,7 +25,7 @@ class DefaultInputPipeline(InputPipeline):
         self._contractors: list[Contractor] | None = None
         self._work_estimator: WorkTimeEstimator | None = None
         self._node_order: list[GraphNode] | None = None
-        self._lag_optimize: bool | None = None
+        self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
@@ -81,7 +82,7 @@ class DefaultInputPipeline(InputPipeline):
         self._assigned_parent_time = time
         return self
 
-    def lag_optimize(self, lag_optimize: bool) -> 'InputPipeline':
+    def lag_optimize(self, lag_optimize: LagOptimizationStrategy) -> 'InputPipeline':
         """
         Mandatory argument. Shows should graph be lag-optimized or not.
         If not defined, pipeline should search the best variant of this argument in result.
@@ -125,32 +126,40 @@ class DefaultInputPipeline(InputPipeline):
         elif not self._local_optimize_stack.empty():
             print('Trying to apply local optimizations to non-generic scheduler, ignoring it')
 
-        if self._lag_optimize is None:
-            # Searching the best
-            wg1 = graph_restructuring(self._wg, False)
-            schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors, self._landscape_config,
-                                                                         self._spec,
-                                                                         assigned_parent_time=self._assigned_parent_time)
-            wg2 = graph_restructuring(self._wg, True)
-            schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors, self._landscape_config,
-                                                                         self._spec,
-                                                                         assigned_parent_time=self._assigned_parent_time)
+        match self._lag_optimize:
+            case LagOptimizationStrategy.NONE:
+                wg = self._wg
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                                                                           self._spec,
+                                                                           assigned_parent_time=self._assigned_parent_time)
+                self._node_order = node_order
 
-            if schedule1.execution_time < schedule2.execution_time:
-                self._node_order = node_order1
-                wg = wg1
-                schedule = schedule1
-            else:
-                self._node_order = node_order2
-                wg = wg2
-                schedule = schedule2
+            case LagOptimizationStrategy.AUTO:
+                # Searching the best
+                wg1 = graph_restructuring(self._wg, False)
+                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors, self._landscape_config,
+                                                                             self._spec,
+                                                                             assigned_parent_time=self._assigned_parent_time)
+                wg2 = graph_restructuring(self._wg, True)
+                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors, self._landscape_config,
+                                                                             self._spec,
+                                                                             assigned_parent_time=self._assigned_parent_time)
 
-        else:
-            wg = graph_restructuring(self._wg, self._lag_optimize)
-            schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
-                                                                       self._spec,
-                                                                       assigned_parent_time=self._assigned_parent_time)
-            self._node_order = node_order
+                if schedule1.execution_time < schedule2.execution_time:
+                    self._node_order = node_order1
+                    wg = wg1
+                    schedule = schedule1
+                else:
+                    self._node_order = node_order2
+                    wg = wg2
+                    schedule = schedule2
+
+            case _:
+                wg = graph_restructuring(self._wg, self._lag_optimize.value)
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                                                                           self._spec,
+                                                                           assigned_parent_time=self._assigned_parent_time)
+                self._node_order = node_order
 
         return DefaultSchedulePipeline(self, wg, schedule)
 

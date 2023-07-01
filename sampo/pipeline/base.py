@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
+from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -24,6 +26,10 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
+    def landscape(self, landscape_config: LandscapeConfiguration) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
         ...
 
@@ -32,7 +38,7 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
-    def lag_optimize(self, lag_optimize: bool) -> 'InputPipeline':
+    def lag_optimize(self, lag_optimize: LagOptimizationStrategy) -> 'InputPipeline':
         """
         Mandatory argument. Shows should graph be lag-optimized or not.
         If not defined, pipeline should search the best variant of this argument in result.

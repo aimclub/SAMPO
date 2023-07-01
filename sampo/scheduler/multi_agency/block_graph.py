@@ -65,14 +65,29 @@ class BlockGraph:
 
         for node in copied_nodes:
             node.wg = WorkGraph._deserialize(node.wg._serialize())
-            for wg_node in node.wg.nodes:
-                wg_node.__dict__.pop('parents', None)
-                wg_node.__dict__.pop('parents_set', None)
-                wg_node.__dict__.pop('children', None)
-                wg_node.__dict__.pop('children_set', None)
-                wg_node.__dict__.pop('inseparable_parent', None)
-                wg_node.__dict__.pop('inseparable_son', None)
-                wg_node.__dict__.pop('get_inseparable_chain', None)
+            # for wg_node in node.wg.nodes:
+            #     pass
+            #     # wg_node.__dict__.pop('parents', None)
+            #     # wg_node.__dict__.pop('parents_set', None)
+            #     # wg_node.__dict__.pop('children', None)
+            #     # wg_node.__dict__.pop('children_set', None)
+            #     # wg_node.__dict__.pop('inseparable_parent', None)
+            #     # wg_node.__dict__.pop('inseparable_son', None)
+            #     # wg_node.__dict__.pop('get_inseparable_chain', None)
+            #     if 'parents' in wg_node.__dict__:
+            #         del wg_node.parents
+            #     if 'parents_set' in wg_node.__dict__:
+            #         del wg_node.parents_set
+            #     if 'children' in wg_node.__dict__:
+            #         del wg_node.children
+            #     if 'children_set' in wg_node.__dict__:
+            #         del wg_node.children_set
+            #     if 'inseparable_parent' in wg_node.__dict__:
+            #         del wg_node.inseparable_parent
+            #     if 'inseparable_son' in wg_node.__dict__:
+            #         del wg_node.inseparable_son
+            #     if 'get_inseparable_chain' in wg_node.__dict__:
+            #         del wg_node.get_inseparable_chain
 
         nodes_without_children = []
 

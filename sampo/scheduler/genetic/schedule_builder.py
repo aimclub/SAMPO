@@ -353,7 +353,8 @@ def build_schedule(wg: WorkGraph,
                                         mutate_resources, mutate_resources, selection_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome,
+                                                                                                 timeline=timeline)
 
     if show_fitness_graph:
         sns.lineplot(

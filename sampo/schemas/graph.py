@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cached_property, cache
+from functools import cache, cached_property
 from typing import List, Union, Tuple, Optional, Dict
 
 import numpy as np
@@ -109,7 +109,39 @@ class GraphNode(JSONSerializable['GraphNode']):
         for i, p in enumerate(parent_works):
             p: GraphNode = p[0] if isinstance(p, tuple) else p
             p._add_child_edge(edges[i])
+            p.invalidate_children_cache()
         self._parent_edges += edges
+        self.invalidate_parents_cache()
+
+    def invalidate_parents_cache(self):
+        self.__dict__.pop('parents', None)
+        self.__dict__.pop('parents_set', None)
+        self.__dict__.pop('inseparable_parent', None)
+        self.__dict__.pop('inseparable_son', None)
+        self.__dict__.pop('get_inseparable_chain', None)
+        # if 'parents' in self.__dict__:
+        #     del self.parents
+        # if 'parents_set' in self.__dict__:
+        #     del self.parents_set
+        # if 'inseparable_parent' in self.__dict__:
+        #     del self.inseparable_parent
+        # if 'get_inseparable_chain' in self.__dict__:
+        #     del self.get_inseparable_chain
+
+    def invalidate_children_cache(self):
+        self.__dict__.pop('children', None)
+        self.__dict__.pop('children_set', None)
+        self.__dict__.pop('inseparable_parent', None)
+        self.__dict__.pop('inseparable_son', None)
+        self.__dict__.pop('get_inseparable_chain', None)
+        # if 'children' in self.__dict__:
+        #     del self.children
+        # if 'children_set' in self.__dict__:
+        #     del self.children_set
+        # if 'get_inseparable_chain' in self.__dict__:
+        #     del self.get_inseparable_chain
+        # if 'inseparable_son' in self.__dict__:
+        #     del self.inseparable_son
 
     def is_inseparable_parent(self) -> bool:
         return self.inseparable_son is not None
@@ -127,16 +159,16 @@ class GraphNode(JSONSerializable['GraphNode']):
         vertexes_to_visit = deque([self])
         while len(vertexes_to_visit) > 0:
             v = vertexes_to_visit.popleft()
-            if topologically and any(p not in visited_vertexes for p in v.parents):
+            if topologically and any(p.start not in visited_vertexes for p in v._parent_edges):
                 vertexes_to_visit.append(v)
                 continue
             if v not in visited_vertexes:
                 visited_vertexes.add(v)
-                vertexes_to_visit.extend(v.children)
+                vertexes_to_visit.extend([p.finish for p in v._children_edges])
                 yield v
 
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def inseparable_son(self) -> Optional['GraphNode']:
         """
         Return inseparable son (amount of inseparable sons at most 1)
@@ -146,8 +178,8 @@ class GraphNode(JSONSerializable['GraphNode']):
                                      if x.type == EdgeType.InseparableFinishStart])
         return inseparable_children[0] if inseparable_children else None
 
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def inseparable_parent(self) -> Optional['GraphNode']:
         """
         Return predecessor of current vertex in inseparable chain
@@ -156,8 +188,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         inseparable_parents = list([x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart])
         return inseparable_parents[0] if inseparable_parents else None
 
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def parents(self) -> list['GraphNode']:
         """
         Return list of predecessors of current vertex
@@ -165,8 +197,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return list([edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)])
 
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def parents_set(self) -> set['GraphNode']:
         """
         Return unique predecessors of current vertex
@@ -174,8 +206,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return set(self.parents)
 
-    # @cached_property
-    @property
+    @cached_property
+    # @property
     def children(self) -> list['GraphNode']:
         """
         Return list of successors of current vertex
@@ -271,7 +303,7 @@ GraphNodeDict = Dict[str, GraphNode]
 
 # TODO: describe the class (description, parameters)
 # TODO Make property for list of GraphEdges??
-@dataclass(frozen=True)
+@dataclass #(frozen=True)
 class WorkGraph(JSONSerializable['WorkGraph']):
     start: GraphNode
     finish: GraphNode
@@ -283,6 +315,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     # TODO: describe the function (description, parameters, return type)
     def __post_init__(self) -> None:
+        self.reinit()
+
+    def reinit(self):
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
         # To avoid field set of frozen instance errors
         object.__setattr__(self, 'nodes', ordered_nodes)

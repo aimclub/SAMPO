@@ -15,7 +15,6 @@ class ExtendedSortedList(SortedKeyList, ABC):
         """
         self.merge(self[idx], value, lambda x, y: y)
 
-    # TODO: describe the function (parameters (old), return type)
     def merge(self, old, value, merger):
         """
         Merges `value` and `old` and places the result to the place of `old` in sorted list.

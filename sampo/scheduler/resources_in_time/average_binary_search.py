@@ -12,8 +12,8 @@ from sampo.schemas.landscape import LandscapeConfiguration
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
-    The scheduler optimizes resources to deadline
-    Scheduler uses binary search to optimize resources
+    The scheduler optimizes resources to deadline.
+    Scheduler uses binary search to optimize resources.
     """
 
     def __init__(self, base_scheduler: Scheduler):

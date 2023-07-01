@@ -47,38 +47,23 @@ def build_schedule(wg: WorkGraph,
                    time_border: int = None) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
-    Genetic algorithm
+    Genetic algorithm.
     Structure of chromosome:
     [[order of job], [numbers of workers types 1 for each job], [numbers of workers types 2], ... ]
-    Different mate and mutation for order and for workers
-    Generate order of job by prioritization from HEFTs and from Topological
-    Generate resources from min to max
-    Overall initial population is valid
+    
+    Different mate and mutation for order and for workers.
+    Generate order of job by prioritization from HEFTs and from Topological.
+    Generate resources from min to max.
+    Overall initial population is valid.
 
-    :param landscape:
-    :param fitness_constructor:
-    :param show_fitness_graph:
-    :param worker_pool:
-    :param contractors:
-    :param wg:
-    :param population_size:
-    :param generation_number:
-    :param selection_size:
-    :param mutate_order:
-    :param mutate_resources:
-    :param rand:
     :param spec: spec for current scheduling
-    :param init_schedules:
-    :param timeline:
     :param n_cpu: number or parallel workers to use in computational process
     :param assigned_parent_time: start time of the whole schedule(time shift)
-    :param work_estimator:
-    :param time_border:
     :return: scheduler
     """
 
     if show_fitness_graph:
-        fitness_history = list()
+        fitness_history = []
 
     global_start = time.time()
 
@@ -86,13 +71,13 @@ def build_schedule(wg: WorkGraph,
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
-    index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
+    index2node: dict[int, GraphNode] = dict(enumerate(nodes))
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
-    index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
+    index2contractor_obj = dict(enumerate(contractors))
     contractor2index = reverse_dictionary(index2contractor)
-    index2node_list = [(index, node) for index, node in enumerate(nodes)]
+    index2node_list = list(enumerate(nodes))
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}
@@ -124,9 +109,9 @@ def build_schedule(wg: WorkGraph,
             inseparable_parents[child] = node
 
     # here we aggregate information about relationships from the whole inseparable chain
-    children = {work_id2index[node.id]: list(set([work_id2index[inseparable_parents[child].id]
+    children = {work_id2index[node.id]: list({work_id2index[inseparable_parents[child].id]
                                                   for inseparable in node.get_inseparable_chain_with_self()
-                                                  for child in inseparable.children]))
+                                                  for child in inseparable.children})
                 for node in nodes}
 
     parents = {work_id2index[node.id]: [] for node in nodes}
@@ -193,7 +178,7 @@ def build_schedule(wg: WorkGraph,
         if show_fitness_graph:
             fitness_history.append(sum(fitness) / len(fitness))
 
-        g = 0
+        generation = 0
         # the best fitness, track to increase performance by stopping evaluation when not decreasing
         prev_best_fitness = Time.inf()
 
@@ -203,9 +188,9 @@ def build_schedule(wg: WorkGraph,
         plateau_steps = 0
         max_plateau_steps = generation_number  # 8
 
-        while g < generation_number and plateau_steps < max_plateau_steps \
+        while generation < generation_number and plateau_steps < max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
-            print(f"-- Generation {g}, population={len(pop)}, best time={best_fitness} --")
+            print(f"-- Generation {generation}, population={len(pop)}, best time={best_fitness} --")
             if best_fitness == prev_best_fitness:
                 plateau_steps += 1
             else:
@@ -272,7 +257,8 @@ def build_schedule(wg: WorkGraph,
                         # add to population
                         cur_generation.append(wrap(ind))
 
-            # for the crossover, we use those types that did not participate in the mutation(+1 means contractor 'resource')
+            # for the crossover, we use those types that did not participate
+            # in the mutation(+1 means contractor 'resource')
             # workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
             # crossover
             # take 2 individuals as input 1 modified individuals
@@ -335,7 +321,7 @@ def build_schedule(wg: WorkGraph,
             #                                   parent2inseparable_son, agents)
             # print("fits: ", fits)
             # print(evaluation)
-            g += 1
+            generation += 1
 
         native.close()
 
@@ -358,7 +344,7 @@ def build_schedule(wg: WorkGraph,
 
     if show_fitness_graph:
         sns.lineplot(
-            data=DataFrame.from_records([(g * 4, v) for g, v in enumerate(fitness_history)],
+            data=DataFrame.from_records([(generation * 4, v) for generation, v in enumerate(fitness_history)],
                                         columns=["Поколение", "Функция качества"]),
             x="Поколение",
             y="Функция качества",
@@ -368,16 +354,13 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(a: tuple[ChromosomeType], b: tuple[ChromosomeType]):
-    return (a[0][0] == b[0][0]).all() and (a[0][1] == b[0][1]).all()
+def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
+    return (first[0][0] == second[0][0]).all() and (first[0][1] == second[0][1]).all()
 
 
 def wrap(chromosome: ChromosomeType) -> Individual:
     """
-    Created an individual from chromosome
-
-    :param chromosome:
-    :return:
+    Created an individual from chromosome.
     """
 
     def ind_getter():

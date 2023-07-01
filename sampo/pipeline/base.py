@@ -60,6 +60,9 @@ class InputPipeline(ABC):
 
 
 class SchedulePipeline(ABC):
+    """
+    The part of pipeline, that manipulates with the whole entire schedule.
+    """
 
     @abstractmethod
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':

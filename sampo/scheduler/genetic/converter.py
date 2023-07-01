@@ -22,15 +22,9 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
                                    contractor2index: dict[str, int], contractor_borders: np.ndarray,
                                    schedule: Schedule, order: list[GraphNode] | None = None) -> ChromosomeType:
     """
-    Receive result of scheduling algorithm and transform it to chromosome
+    Receive a result of scheduling algorithm and transform it to chromosome
 
-    :param wg:
-    :param work_id2index:
-    :param worker_name2index:
-    :param contractor2index:
-    :param contractor_borders:
-    :param schedule:
-    :param order: if passed, specifies the node order that should appear in the chromosome
+    :param order: if passed, specify the node order that should appear in the chromosome
     :return:
     """
 
@@ -78,17 +72,6 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     """
     Build schedule from received chromosome
     It can be used in visualization of final solving of genetic algorithm
-
-    :param chromosome:
-    :param worker_pool:
-    :param index2node:
-    :param index2contractor:
-    :param worker_pool_indices:
-    :param spec:
-    :param timeline:
-    :param assigned_parent_time:
-    :param work_estimator:
-    :return:
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -135,7 +118,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         timeline.schedule(node, node2swork, worker_team, contractor,
                           st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
-    schedule_start_time = min([swork.start_time for swork in node2swork.values() if
-                               len(swork.work_unit.worker_reqs) != 0], default=assigned_parent_time)
+    schedule_start_time = min((swork.start_time for swork in node2swork.values() if
+                               len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)
 
     return node2swork, schedule_start_time, timeline, order_nodes

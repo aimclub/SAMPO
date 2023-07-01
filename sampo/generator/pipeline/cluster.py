@@ -14,7 +14,6 @@ def _add_addition_work(probability: float, rand: Random | None = None) -> bool:
     return IntervalUniform(0, 1).rand_float(rand) <= probability
 
 
-# TODO: describe
 def _get_roads(parents: list[GraphNode], cluster_name: str, dist: float,
                rand: Random | None = None) -> dict[str, GraphNode]:
     road_nodes = dict()
@@ -30,17 +29,17 @@ def _get_roads(parents: list[GraphNode], cluster_name: str, dist: float,
     road_nodes['final'] = GraphNode(final_r, [(road_nodes['temp'], wr.ATOMIC_ROAD_LEN, EdgeType.LagFinishStart)])
     return road_nodes
 
-# TODO: describe
+
 def _get_engineering_preparation(parents: list[GraphNode], cluster_name: str, boreholes_count: int,
                                  rand: Random | None = None) -> GraphNode:
     worker_req = wr.mul_borehole_volume(wr.ENGINEERING_PREPARATION, boreholes_count, wr.ENGINEERING_PREPARATION_BASE)
-    work = WorkUnit(uuid_str(rand), "engineering preparation", worker_req, 
+    work = WorkUnit(uuid_str(rand), "engineering preparation", worker_req,
                     group=f"{cluster_name}:engineering",
                     volume=wr.get_borehole_volume(boreholes_count, wr.ENGINEERING_PREPARATION_BASE))
     node = GraphNode(work, parents)
     return node
 
-# TODO: describe
+
 def _get_power_lines(parents: list[GraphNode], cluster_name: str, dist_line: float,
                      dist_high_line: float | None = None, rand: Random | None = None) -> list[GraphNode]:
     worker_req = wr.scale_reqs(wr.POWER_LINE, dist_line)
@@ -63,7 +62,7 @@ def _get_power_lines(parents: list[GraphNode], cluster_name: str, dist_line: flo
 
     return power_lines
 
-# TODO: describe
+
 def _get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: list[float],
                     rand: Random | None = None) -> list[GraphNode]:
     worker_req_pipe = wr.scale_reqs(wr.PIPE_LINE, pipe_dists[0])
@@ -87,7 +86,7 @@ def _get_pipe_lines(parents: list[GraphNode], cluster_name: str, pipe_dists: lis
     graph_nodes.append(GraphNode(looping, graph_nodes[0:1]))
     return graph_nodes
 
-# TODO: describe
+
 def _get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, group_ind: int, borehole_count: int,
                                    rand: Random | None = None) -> list[GraphNode]:
     metering_install = WorkUnit(uuid_str(rand), "metering installation",
@@ -107,7 +106,7 @@ def _get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, 
     ]
     return nodes
 
-# TODO: describe
+
 def _get_boreholes_equipment_shared(parents: list[GraphNode], cluster_name: str,
                                     rand: Random | None = None) -> list[GraphNode]:
     water_block = WorkUnit(uuid_str(rand), "block water distribution", wr.WATER_BLOCK,
@@ -128,7 +127,7 @@ def _get_boreholes_equipment_shared(parents: list[GraphNode], cluster_name: str,
     ]
     return nodes
 
-# TODO: describe
+
 def _get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, borehole_count: int,
                    rand: Random | None = None) -> list[GraphNode]:
     nodes = []
@@ -138,7 +137,7 @@ def _get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, 
         nodes.append(GraphNode(borehole_work, parents))
     return nodes
 
-# TODO: describe
+
 def _get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str, pipes_count: int, masts_count: int,
                                      rand: Random | None = None) -> list[GraphNode]:
     nodes = []
@@ -162,7 +161,7 @@ def _get_boreholes_equipment_general(parents: list[GraphNode], cluster_name: str
         nodes.append(GraphNode(light_mast_work, parents))
     return nodes
 
-# TODO: describe
+
 def _get_handing_stage(parents: list[GraphNode], cluster_name: str, borehole_count: int,
                        rand: Random | None = None) -> GraphNode:
     worker_req = wr.mul_borehole_volume(wr.HANDING_STAGE, borehole_count, wr.HANDING_STAGE_BASE)
@@ -178,6 +177,7 @@ def get_cluster_works(root_node: GraphNode, cluster_name: str, pipe_nodes_count:
                       rand: Random | None = None) -> (GraphNode, dict[str, GraphNode]):
     """
     Creates works on the development of the field on one object, i.e. a group of boreholes
+
     :param root_node: The parent node of the work graph for this object
     :param cluster_name: object name
     :param pipe_nodes_count: Number of pipeline segments from this field to other fields
@@ -207,11 +207,11 @@ def get_cluster_works(root_node: GraphNode, cluster_name: str, pipe_nodes_count:
                                                             pipes_count=pipe_net_count, masts_count=light_masts_count,
                                                             rand=rand)
     boreholes_all = []
-    for i in range(len(borehole_counts)):
+    for i, borehole_count in enumerate(borehole_counts):
         boreholes_eq = _get_boreholes_equipment_group(preparation_stage, cluster_name,
-                                                      group_ind=i, borehole_count=borehole_counts[i], rand=rand)
+                                                      group_ind=i, borehole_count=borehole_count, rand=rand)
         boreholes = _get_boreholes(boreholes_eq + boreholes_eq_shared, cluster_name,
-                                   group_ind=i, borehole_count=borehole_counts[i], rand=rand)
+                                   group_ind=i, borehole_count=borehole_count, rand=rand)
         boreholes_all += boreholes
 
     all_stages = [roads['final']] + power_lines + pipe_lines_and_nodes + boreholes_all + boreholes_eq_general

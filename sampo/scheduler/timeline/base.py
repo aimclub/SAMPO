@@ -11,8 +11,8 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 class Timeline(ABC):
     """
-    Entity that saves info on the use of resources over time
-    Timeline provides opportunities to work with GraphNodes and resources over time
+    Entity that saves info on the use of resources over time.
+    Timeline provides opportunities to work with GraphNodes and resources over time.
     """
 
     @abstractmethod
@@ -34,7 +34,7 @@ class Timeline(ABC):
                             parent_time: Time = Time(0),
                             work_estimator: WorkTimeEstimator | None = None) -> Time:
         """
-        Computes start time, max parent time, contractor and exec times for given node
+        Computes start time, max parent time, contractor and exec times for given node.
 
         :param worker_team: list of passed workers. It Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node: the GraphNode whose minimum time we are trying to find

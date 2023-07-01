@@ -12,10 +12,17 @@ from sampo.schemas.works import WorkUnit
 
 
 class SyntheticBlockGraphType(Enum):
-    Sequential = 0,
-    Parallel = 1,
-    Random = 2,
-    Queues = 3
+    """
+    Describe types of synthetic block graph:
+    - Parallel - works can be performed mostly in parallel,
+    - Sequential - works can be performed mostly in sequential,
+    - Random - random structure of block graph,
+    - Queue - queue structure typical of real processes capital construction.
+    """
+    SEQUENTIAL = 0
+    PARALLEL = 1
+    RANDOM = 2
+    QUEUES = 3
 
 
 EMPTY_GRAPH_VERTEX_COUNT = 2
@@ -54,14 +61,14 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     global_start, global_end = bg.nodes[-2:]
 
     match graph_type:
-        case SyntheticBlockGraphType.Sequential:
+        case SyntheticBlockGraphType.SEQUENTIAL:
             for idx, start in enumerate(bg.nodes[:-2]):
                 if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
                         and bg.nodes[idx + 1].wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
                     bg.add_edge(start, bg.nodes[idx + 1])
-        case SyntheticBlockGraphType.Parallel:
+        case SyntheticBlockGraphType.PARALLEL:
             pass
-        case SyntheticBlockGraphType.Random:
+        case SyntheticBlockGraphType.RANDOM:
             rev_edge_prob = int(1 / edge_prob)
             for idx, start in enumerate(bg.nodes):
                 for end in bg.nodes[idx:]:
@@ -89,7 +96,7 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
                          queues_edges: list[int] | None = None,
                          logger: Callable[[str], None] = print) -> BlockGraph:
     """
-    Generate synthetic block graph of received type
+    Generate synthetic block graph of the received type.
 
     :param graph_type: type of Block Graph
     :param n_blocks: number of blocks
@@ -98,13 +105,13 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
     :param edge_prob: edge existence probability
     :param rand: a random reference
     :param obstruction_getter:
-    :param queues_num: number of queues in block graph
-    :param queues_blocks: list of queues. It contains number of blocks in each queue
+    :param queues_num: number of queues in a block graph
+    :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
     :param logger: for logging
     :return: generated block graph
     """
-    if graph_type == SyntheticBlockGraphType.Queues:
+    if graph_type == SyntheticBlockGraphType.QUEUES:
         return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
                                queues_edges, logger)
     else:
@@ -127,8 +134,8 @@ def generate_queues(type_prop: list[int],
     :param count_supplier: function that computes the borders of block size from it's index
     :param rand: a random reference
     :param obstruction_getter:
-    :param queues_num: number of queues in block graph
-    :param queues_blocks: list of queues. It contains number of blocks in each queue
+    :param queues_num: number of queues in a block graph
+    :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
     :return: generated block graph
     """
@@ -169,5 +176,3 @@ def generate_queues(type_prop: list[int],
     logger('Queues')
 
     return BlockGraph(nodes_all)
-
-

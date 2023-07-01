@@ -41,6 +41,7 @@ class DefaultInputPipeline(InputPipeline):
     def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
         """
         Mandatory argument.
+
         :param contractors: the contractors list for scheduling task
         :return: the pipeline object
         """
@@ -62,9 +63,7 @@ class DefaultInputPipeline(InputPipeline):
         If the schedule should start at a certain time
 
         :param time:
-        :type time:
         :return:
-        :rtype:
         """
         self._assigned_parent_time = time
         return self
@@ -95,7 +94,8 @@ class DefaultInputPipeline(InputPipeline):
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
-            s_self = self  # cache upper-layer self to another variable to get it from inner class
+            # cache upper-layer self to another variable to get it from inner class
+            s_self = self
 
             class LocalOptimizedScheduler(DelegatingScheduler):
 

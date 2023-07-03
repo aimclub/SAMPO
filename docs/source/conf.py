@@ -71,7 +71,7 @@ code_example_dir = "examples"
 
 # -- autoapi configuration ---------------------------------------------------
 
-autoapi_dirs = ['../../sampo']
+autoapi_dirs = ['../../sampo/']
 autoapi_type = "python"
 autoapi_template_dir = "_templates/autoapi"
 
@@ -101,7 +101,7 @@ html_css_files = [
 # noinspection PyUnusedLocal
 def autoapi_skip_members(app, what, name, obj, skip, options):
     # skip submodules
-    if name in ('average_binary_search', 'setup'):
+    if name in ('average_binary_search', 'setup', 'SAMPO'):
         skip = True
     return skip
 

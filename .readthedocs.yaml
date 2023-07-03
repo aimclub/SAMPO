@@ -13,13 +13,13 @@ build:
     # nodejs: "19"
     # rust: "1.64"
     # golang: "1.19"
-  commands:
-    - pip install sampo
+#  commands:
+#    - pip install sampo
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
    configuration: docs/source/conf.py
-   builder: html
+#   builder: html
 
 
 # Optionally build your docs in additional formats such as PDF and ePub

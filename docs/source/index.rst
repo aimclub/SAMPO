@@ -11,8 +11,6 @@ Welcome to SAMPO's documentation!
    :maxdepth: 1
    :caption: Contents:
 
-   generated/sampo
-
    autoapi/index
 
 

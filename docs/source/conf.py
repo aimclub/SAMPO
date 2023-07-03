@@ -74,3 +74,26 @@ code_example_dir = "examples"
 autoapi_dirs = ['../../sampo']
 autoapi_type = "python"
 autoapi_template_dir = "_templates/autoapi"
+
+# -- custom auto_summary() macro ---------------------------------------------
+
+def contains(seq, item):
+    """Jinja2 custom test to check existence in a container.
+
+    Example of use:
+    {% set class_methods = methods|selectattr("properties", "contains", "classmethod") %}
+
+    Related doc: https://jinja.palletsprojects.com/en/3.1.x/api/#custom-tests
+    """
+    return item in seq
+
+
+# Custom role for labels used in auto_summary() tables.
+rst_prolog = """
+.. role:: summarylabel
+"""
+
+# Related custom CSS
+html_css_files = [
+    "css/label.css",
+]

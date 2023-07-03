@@ -31,7 +31,7 @@ def _value_by_req(method: ContractorGenerationMethod, req: WorkerReq) -> int:
 
 
 def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1,
-                         method: ContractorGenerationMethod = ContractorGenerationMethod.Min) -> Contractor:
+                         method: ContractorGenerationMethod = ContractorGenerationMethod.Avg) -> Contractor:
     """
     Creates a pool of contractor resources based on job requirements, selecting the maximum specified parameter
     :param wg: The graph of works for which it is necessary to find a set of resources

@@ -46,7 +46,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     @classmethod
     @custom_serializer('workers', deserializer=True)
     def deserialize_workers(cls, value):
-        return {tuple(i['key']): Worker._deserialize(i['val']) for i in value}
+        return {i['key']: Worker._deserialize(i['val']) for i in value}
 
     @classmethod
     @custom_serializer('equipments', deserializer=True)

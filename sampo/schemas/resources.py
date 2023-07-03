@@ -70,7 +70,7 @@ class Worker(Resource):
 
     def get_agent_id(self) -> AgentId:
         """
-        Return contractor of current worker
+        Return the agent unique identifier in schedule
 
         :return: contractor's id and name
         """

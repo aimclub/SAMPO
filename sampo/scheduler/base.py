@@ -27,6 +27,9 @@ class SchedulerType(Enum):
 
 
 class Scheduler(ABC):
+    """
+    Base class that implements the logic of the planning process.
+    """
     scheduler_type: SchedulerType
     resource_optimizer: ResourceOptimizer
 
@@ -50,6 +53,11 @@ class Scheduler(ABC):
                  timeline: Timeline | None = None,
                  landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> Schedule:
+        """
+        Realization of a scheduling process. 'schedule' version returns only Schedule.
+
+        :return: Schedule
+        """
         if wg is None or len(wg.nodes) == 0:
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
@@ -70,7 +78,7 @@ class Scheduler(ABC):
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         """
         Extended version of 'schedule' method. Returns much inner info
-        about scheduling process, not only Schedule.
+        about a scheduling process, not only Schedule.
 
         :return: resulting schedule, finish time,
                  resulting timeline used for scheduling
@@ -82,7 +90,7 @@ class Scheduler(ABC):
     def optimize_resources_using_spec(work_unit: WorkUnit, worker_team: list[Worker], work_spec: WorkSpec,
                                       optimize_lambda: Callable[[np.ndarray], None] = lambda _: None):
         """
-        Applies worker team spec to optimization process.
+        Applies worker team spec to an optimization process.
         Can use arbitrary heuristics to increase spec handling efficiency.
 
         :param work_unit: current work unit
@@ -94,18 +102,18 @@ class Scheduler(ABC):
         """
         if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
             # all resources passed in spec, skipping optimize_resources step
-            for w in worker_team:
-                w.count = work_spec.assigned_workers[w.name]
+            for worker in worker_team:
+                worker.count = work_spec.assigned_workers[worker.name]
         else:
             # create optimize array to save optimizing time
             # this array should contain True if position should be optimized or False if shouldn't
             optimize_array = None
             if work_spec.assigned_workers:
                 optimize_array = []
-                for w in worker_team:
-                    spec_count = work_spec.assigned_workers.get(w.name, 0)
+                for worker in worker_team:
+                    spec_count = work_spec.assigned_workers.get(worker.name, 0)
                     if spec_count > 0:
-                        w.count = spec_count
+                        worker.count = spec_count
                         optimize_array.append(False)
                     else:
                         optimize_array.append(True)

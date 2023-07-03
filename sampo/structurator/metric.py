@@ -11,7 +11,8 @@ def is_sequence_correct(adj_matrix: dict[str, dict[str, list[str]]], sequence: l
     :param sequence: vertex sequence from the chromosome
     :return:
         is_correct (bool): True if the sequence is correct, otherwise False
-        correct_adj_matrix (dict[str, set[str]]): if is_correct is True, then the matrix is from the description, otherwise None
+        correct_adj_matrix (dict[str, set[str]]): if is_correct is True, then the matrix is
+        from the description, otherwise None
     """
     # Check that all ids are present in the sequence and exactly once
     if len(set(adj_matrix.keys())) != len(set(sequence)):

@@ -22,16 +22,26 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class FitnessFunction(ABC):
+    """
+    Base class for description of different fitness functions.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         self._evaluator = evaluator
 
     @abstractmethod
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        """
+        Calculate the value of fitness function of the all chromosomes.
+        It is better when value is less.
+        """
         ...
 
 
 class TimeFitness(FitnessFunction):
+    """
+    Fitness function that relies on finish time.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -41,6 +51,9 @@ class TimeFitness(FitnessFunction):
 
 
 class TimeAndResourcesFitness(FitnessFunction):
+    """
+    Fitness function that relies on finish time and the set of resources.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -51,6 +64,9 @@ class TimeAndResourcesFitness(FitnessFunction):
 
 
 class DeadlineResourcesFitness(FitnessFunction):
+    """
+    The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
+    """
 
     def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -70,6 +86,9 @@ class DeadlineResourcesFitness(FitnessFunction):
 
 
 class DeadlineCostFitness(FitnessFunction):
+    """
+    The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
+    """
 
     def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -122,7 +141,7 @@ def init_toolbox(wg: WorkGraph,
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
-    list of parameters, that received this function, is sufficient and complete to manipulate with genetic
+    list of parameters that received this function is sufficient and complete to manipulate with genetic
 
     :return: Object, included tools for genetic
     """
@@ -169,8 +188,8 @@ def init_toolbox(wg: WorkGraph,
     return toolbox
 
 
-def copy_chromosome(c: ChromosomeType) -> ChromosomeType:
-    return c[0].copy(), c[1].copy(), c[2].copy()
+def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
+    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy()
 
 
 def generate_chromosome(wg: WorkGraph,
@@ -191,19 +210,6 @@ def generate_chromosome(wg: WorkGraph,
     HEFT is always the same(now not)
     HEFT we will choose in 30% of attempts
     Topological in others
-
-    :param landscape:
-    :param work_estimator:
-    :param contractors:
-    :param wg:
-    :param work_id2index:
-    :param index2node_list:
-    :param worker_name2index:
-    :param contractor2index:
-    :param contractor_borders:
-    :param rand:
-    :param init_chromosomes:
-    :return: chromosome
     """
 
     def randomized_init() -> ChromosomeType:
@@ -239,12 +245,7 @@ def is_chromosome_correct(chromosome: ChromosomeType,
                           node_indices: list[int],
                           parents: dict[int, list[int]]) -> bool:
     """
-    Check order of works and contractors
-
-    :param chromosome:
-    :param node_indices:
-    :param parents:
-    :return:
+    Check order of works and contractors.
     """
     return is_chromosome_order_correct(chromosome, parents) and \
            is_chromosome_contractors_correct(chromosome, node_indices)
@@ -252,11 +253,7 @@ def is_chromosome_correct(chromosome: ChromosomeType,
 
 def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, list[int]]) -> bool:
     """
-    Checks that assigned order of works is topologically correct
-
-    :param chromosome:
-    :param parents:
-    :return:
+    Checks that assigned order of works are topologically correct.
     """
     work_order = chromosome[0]
     used = set()
@@ -272,11 +269,7 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, l
 def is_chromosome_contractors_correct(chromosome: ChromosomeType,
                                       work_indices: Iterable[int]) -> bool:
     """
-    Checks that assigned contractors can supply assigned workers
-
-    :param chromosome:
-    :param work_indices:
-    :return:
+    Checks that assigned contractors can supply assigned workers.
     """
     for work_ind in work_indices:
         resources_count = chromosome[1][work_ind, :-1]
@@ -291,12 +284,8 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
 
 def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
     """
-    Get new tail in topologically order for chromosome
-    This function is needed to make crossover for order
-
-    :param head_set:
-    :param other:
-    :return:
+    Get a new tail in topologic order for chromosome.
+    This function is needed to make crossover for order.
     """
     head_set = set(head_set)
     return np.array([node for node in other if node not in head_set])
@@ -305,13 +294,10 @@ def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
 def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random) \
         -> (ChromosomeType, ChromosomeType):
     """
-    Crossover for order
-    Basis crossover is cxOnePoint
-    But we checked not repeated works in individual order
+    Crossover for order.
+    Basis crossover is cxOnePoint.
+    But we checked not repeated works in individual order.
 
-    :param ind1:
-    :param ind2:
-    :param rand:
     :return: two cross individuals
     """
     ind1 = copy_chromosome(ind1)
@@ -335,16 +321,11 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,
                     probability_mutate_resources: float, contractor_count: int, rand: random.Random) -> ChromosomeType:
     """
-    Mutation function for resources
-    It changes selected numbers of workers in random work in certain interval for this work
+    Mutation function for resources.
+    It changes selected numbers of workers in random work in a certain interval for this work.
 
-    :param contractor_count:
-    :param ind:
     :param low: lower bound specified by `WorkUnit`
     :param up: upper bound specified by `WorkUnit`
-    :param type_of_worker:
-    :param probability_mutate_resources:
-    :param rand:
     :return: mutate individual
     """
     ind = copy_chromosome(ind)
@@ -377,14 +358,6 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
         -> ChromosomeType:
     """
     Mutation for contractors' resource borders.
-
-    :param ind:
-    :param contractors_capacity:
-    :param resources_min_border:
-    :param type_of_worker:
-    :param probability_mutate_contractors:
-    :param rand:
-    :return:
     """
     ind = copy_chromosome(ind)
 
@@ -410,7 +383,7 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
 def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_positions: np.ndarray,
                        rand: random.Random) -> (ChromosomeType, ChromosomeType):
     """
-    CxOnePoint for resources
+    CxOnePoint for resources.
 
     :param ind1: first individual
     :param ind2: second individual
@@ -436,12 +409,6 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
                               mate_positions: np.ndarray, rand: random.Random) -> (ChromosomeType, ChromosomeType):
     """
     Crossover for contractors' resource borders.
-
-    :param ind1:
-    :param ind2:
-    :param mate_positions:
-    :param rand:
-    :return:
     """
     ind1 = copy_chromosome(ind1)
     ind2 = copy_chromosome(ind2)

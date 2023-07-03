@@ -13,7 +13,7 @@ from sampo.schemas.types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
 WorkerContractorPool = dict[WorkerName, dict[ContractorName, Worker]]
-DefaultContractorCapacity = 25
+DEFAULT_CONTRACTOR_CAPACITY = 25
 
 
 @dataclass
@@ -72,7 +72,7 @@ def get_worker_contractor_pool(contractors: Union[list['Contractor'], 'Contracto
 
 # TODO move from schemas
 def get_contractor_for_resources_schedule(resources: Union[DataFrame, list[dict[str, int]]],
-                                          contractor_capacity: int = DefaultContractorCapacity,
+                                          contractor_capacity: int = DEFAULT_CONTRACTOR_CAPACITY,
                                           contractor_id: str = None,
                                           contractor_name: str = "") \
         -> 'Contractor':

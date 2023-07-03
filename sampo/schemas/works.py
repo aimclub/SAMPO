@@ -147,20 +147,20 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.workground_size = new_work_unit.workground_size
 
 
-def get_static_by_worker(w: Worker, _: Optional[Random] = None):
+def get_static_by_worker(worker: Worker, _: Optional[Random] = None):
     """
     Calculate productivity of the Worker
 
-    :param w: the worker
+    :param worker: the worker
     :param _: parameter for stochastic part
     :return: productivity of received worker
     """
-    return w.get_static_productivity()
+    return worker.get_static_productivity()
 
 
-def get_stochastic_by_worker(w: Worker, rand: Optional[Random] = None):
+def get_stochastic_by_worker(worker: Worker, rand: Optional[Random] = None):
     """Return the stochastic productivity of worker team"""
-    return w.get_stochastic_productivity(rand)
+    return worker.get_stochastic_productivity(rand)
 
 
 # Function is chosen because it has a quadratic decrease in efficiency as the number of commands on the object

@@ -96,26 +96,22 @@ class Worker(Resource):
         return self.__repr__()
 
 
-# TODO: describe the class (description)
 @dataclass
 class ConstructionObject(Resource):
     pass
 
 
-# TODO: describe the class (description, parameters)
 @dataclass(init=False)
 class EmptySpaceConstructionObject(ConstructionObject):
     id: str = "00000000000000000"
     name: str = "empty space construction object"
 
 
-# TODO: describe the class (description)
 @dataclass
 class Equipment(Resource):
     pass
 
-
-# TODO: describe the class (description)
+  
 @dataclass
 class Material(Resource):
 

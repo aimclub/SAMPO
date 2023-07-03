@@ -3,7 +3,7 @@ from sampo.schemas.schedule import Schedule
 
 def schedule_cost(schedule: Schedule) -> float:
     """
-    Counts summary cost of received schedule
+    Count the summary cost of received schedule
 
     :param schedule:
     :return:

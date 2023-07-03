@@ -10,42 +10,42 @@ Contains base optimization methods
 
 
 # float version
-def dichotomy_float(lo: float, hi: float, func, eps: float = 0.000001):
+def dichotomy_float(down: float, up: float, func, eps: float = 0.000001):
     delta = eps / 5
-    while hi - lo > eps:
-        x1 = (lo + hi - delta) / 2
-        x2 = (lo + hi + delta) / 2
+    while up - down > eps:
+        x1 = (down + up - delta) / 2
+        x2 = (down + up + delta) / 2
         if func(x1) < func(x2):
-            hi = x2
+            up = x2
         else:
-            lo = x1
+            down = x1
 
-    return lo
+    return down
 
 
 # int version
-def dichotomy_int(lo: int, hi: int, func: Callable[[int], Time]):
-    while hi - lo > 2:
-        x1 = (lo + hi - 1) >> 1
-        x2 = (lo + hi + 1) >> 1
+def dichotomy_int(down: int, up: int, func: Callable[[int], Time]):
+    while up - down > 2:
+        x1 = (down + up - 1) >> 1
+        x2 = (down + up + 1) >> 1
         if x1 == x2:
             return x1
         if func(x1) < func(x2):
-            hi = x2
+            up = x2
         else:
-            lo = x1
+            down = x1
 
-        # print(str(x1) + " " + str(x2) + " " + str(lo) + " " + str(hi))
+        # print(str(x1) + " " + str(x2) + " " + str(down) + " " + str(up))
 
-    return (hi + lo) >> 1
+    return (up + down) >> 1
 
 
-def coordinate_descent(lo: np.ndarray, hi: np.ndarray,
+def coordinate_descent(down: np.ndarray, up: np.ndarray,
                        method: Callable[[int, int, Callable[[int], Time]], Time],
                        fitness: Callable[[np.ndarray], Time],
                        optimize_array: Optional[np.ndarray]) -> np.ndarray:
-    cur = lo.copy()
-    for i in range(lo.size):
+    cur = down.copy()
+    for i in range(down.size):
         if optimize_array and not optimize_array[i]:
             continue
 
@@ -53,5 +53,5 @@ def coordinate_descent(lo: np.ndarray, hi: np.ndarray,
             cur[i] = x
             return fitness(cur)
 
-        cur[i] = method(lo[i], hi[i], part)
+        cur[i] = method(down[i], up[i], part)
     return cur

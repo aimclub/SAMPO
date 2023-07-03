@@ -13,8 +13,8 @@ from sampo.utilities.base_opt import dichotomy_int
 
 class HEFTScheduler(GenericScheduler):
     """
-    Scheduler that use method of critical path
-    The scheduler give opportunity to add work only to end
+    Scheduler that uses method of a critical path.
+    The scheduler gives opportunity to add work only to end.
     """
 
     def __init__(self,
@@ -33,8 +33,8 @@ class HEFTScheduler(GenericScheduler):
 
 class HEFTBetweenScheduler(HEFTScheduler):
     """
-    Type of scheduler that use method of critical path
-    The scheduler give opportunity to add work between existing works
+    Type of scheduler that use method of critical path.
+    The scheduler give opportunity to add work between existing works.
     """
 
     def __init__(self,

@@ -3,7 +3,6 @@ from random import Random
 from typing import IO
 
 from sampo.generator import SimpleSynthetic
-from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
@@ -39,7 +38,7 @@ if __name__ == '__main__':
     with open(f'algorithms_2_multi_agency_comparison.txt', 'w') as logfile:
         logger = partial(log, logfile=logfile)
 
-        bg = generate_block_graph(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
+        bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
                                   rand, obstruction_getter, 2, [3, 4], [3, 4], logger=logger)
         conjuncted = bg.to_work_graph()
 

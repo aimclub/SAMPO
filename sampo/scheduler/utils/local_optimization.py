@@ -25,6 +25,9 @@ class OrderLocalOptimizer(ABC):
 
 
 class ScheduleLocalOptimizer(ABC):
+    """
+    Base class for building local optimization methods applicable to the schedule.
+    """
 
     def __init__(self, timeline_type: type[Timeline]):
         """
@@ -90,12 +93,12 @@ def get_swap_candidates(node: GraphNode,
 
 class SwapOrderLocalOptimizer(OrderLocalOptimizer):
     """
-    This performs just small shuffle that not breaks topological order
+    This performs just small shuffle that not breaks topological order.
     """
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
         """
-        Change order of nodes (not breaks topological order) by swapping several nodes
+        Change order of nodes (not breaks topological order) by swapping several nodes.
         """
         if node_order is None:
             return
@@ -141,8 +144,8 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     """
-    This method finds near placed works and turns it to run in parallel
-    It will take effect only if it's launched after scheduling
+    This method finds near placed works and turns it to run in parallel.
+    It will take effect only if it's launched after scheduling.
     """
 
     def __init__(self, timeline_type: type[Timeline]):
@@ -196,7 +199,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
         """
-        Finds near placed works and turns it to run in parallel
+        Finds near placed works and turns it to run in parallel.
 
         :param scheduled_works:
         :param node_order:

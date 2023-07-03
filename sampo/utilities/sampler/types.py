@@ -8,7 +8,3 @@ T = TypeVar('T')
 class MinMax(Generic[T]):
     min: T
     max: T
-
-    def __post_init__(self):
-        assert type(self.min) != T
-        assert type(self.max) != T

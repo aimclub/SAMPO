@@ -28,7 +28,7 @@ if __name__ == '__main__':
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    bg = generate_block_graph(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
+    bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, 10, [1, 1, 1], lambda x: (50, 100), 0.5,
                               rand, obstruction_getter, 2, [3, 4], [3, 4], logger=print)
     conjuncted = bg.to_work_graph()
 

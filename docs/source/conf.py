@@ -12,13 +12,13 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..\..'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'SAMPO'
-copyright = '2023, Research Center Strong Artificial Intelligence in Industry'
+copyright = '2023, Research Center Strong Artificial Intelligence in Industry, ITMO University'
 author = 'Research Center Strong Artificial Intelligence in Industry'
 
 # The full version, including alpha/beta/rc tags
@@ -97,3 +97,14 @@ rst_prolog = """
 html_css_files = [
     "css/label.css",
 ]
+
+# noinspection PyUnusedLocal
+def autoapi_skip_members(app, what, name, obj, skip, options):
+    # skip submodules
+    if name in ('average_binary_search', 'setup'):
+        skip = True
+    return skip
+
+
+def setup(app):
+    app.connect("autoapi-skip-member", autoapi_skip_members)

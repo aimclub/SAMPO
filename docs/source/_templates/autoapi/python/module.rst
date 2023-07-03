@@ -1,9 +1,11 @@
+{% import 'macros.rst' as macros %}
+
 {% if not obj.display %}
 :orphan:
 
 {% endif %}
-:py:mod:`{{ obj.name }}`
-=========={{ "=" * obj.name|length }}
+{{ obj.name }}
+{{ "=" * obj.name|length }}
 
 .. py:module:: {{ obj.name }}
 
@@ -48,15 +50,15 @@ Submodules
 {% endblock %}
 {% block content %}
 {% if obj.all is not none %}
-{% set visible_children = obj.children|selectattr("short_name", "in", obj.all)|list %}
+{% set visible_children = obj.children|selectattr("display")|selectattr("short_name", "in", obj.all)|list %}
 {% elif obj.type is equalto("package") %}
 {% set visible_children = obj.children|selectattr("display")|list %}
 {% else %}
 {% set visible_children = obj.children|selectattr("display")|rejectattr("imported")|list %}
 {% endif %}
 {% if visible_children %}
-{{ obj.type|title }} Contents
-{{ "-" * obj.type|length }}---------
+Overview
+--------
 
 {% set visible_classes = visible_children|selectattr("type", "equalto", "class")|list %}
 {% set visible_functions = visible_children|selectattr("type", "equalto", "function")|list %}
@@ -64,51 +66,47 @@ Submodules
 {% if "show-module-summary" in autoapi_options and (visible_classes or visible_functions) %}
 {% block classes scoped %}
 {% if visible_classes %}
-Classes
-~~~~~~~
-
-.. autoapisummary::
-
-{% for klass in visible_classes %}
-   {{ klass.id }}
-{% endfor %}
-
-
+{{ macros.auto_summary(visible_classes, title="Classes") }}
 {% endif %}
 {% endblock %}
 
 {% block functions scoped %}
 {% if visible_functions %}
-Functions
-~~~~~~~~~
-
-.. autoapisummary::
-
-{% for function in visible_functions %}
-   {{ function.id }}
-{% endfor %}
-
-
+{{ macros.auto_summary(visible_functions, title="Function") }}
 {% endif %}
 {% endblock %}
 
 {% block attributes scoped %}
 {% if visible_attributes %}
-Attributes
-~~~~~~~~~~
-
-.. autoapisummary::
-
-{% for attribute in visible_attributes %}
-   {{ attribute.id }}
-{% endfor %}
-
-
+{{ macros.auto_summary(visible_attributes, title="Attributes") }}
 {% endif %}
 {% endblock %}
 {% endif %}
-{% for obj_item in visible_children %}
+
+{% if visible_classes %}
+Classes
+-------
+{% for obj_item in visible_classes %}
 {{ obj_item.render()|indent(0) }}
 {% endfor %}
+{% endif %}
+
+{% if visible_functions %}
+Functions
+---------
+{% for obj_item in visible_functions %}
+{{ obj_item.render()|indent(0) }}
+{% endfor %}
+{% endif %}
+
+{% if visible_attributes %}
+Attributes
+----------
+{% for obj_item in visible_attributes %}
+{{ obj_item.render()|indent(0) }}
+{% endfor %}
+{% endif %}
+
+
 {% endif %}
 {% endblock %}

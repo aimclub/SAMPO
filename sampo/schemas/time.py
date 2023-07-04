@@ -11,7 +11,6 @@ class Time(AutoJSONSerializable['Time']):
     :param value: initial time value
     """
     value: int
-    
     def __init__(self, value: int = 0):
         """
         :param value: value of time

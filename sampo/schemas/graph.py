@@ -13,7 +13,7 @@ from sampo.schemas.works import WorkUnit
 
 class EdgeType(Enum):
     """
-    Class to define certain type of edge in graph
+    Class to define a certain type of edge in graph
     """
     InseparableFinishStart = 'IFS'
     LagFinishStart = 'FFS'
@@ -28,7 +28,7 @@ class EdgeType(Enum):
             return True
         if isinstance(edge, EdgeType):
             edge = edge.value
-        return edge == 'FS' or edge == 'IFS' or edge == 'FFS'
+        return edge in ('FS', 'IFS', 'FFS')
 
 
 @dataclass
@@ -38,9 +38,8 @@ class GraphEdge:
     """
     start: 'GraphNode'
     finish: 'GraphNode'
-    # TODO Remove Optional
-    lag: Optional[float] = 0
-    type: Optional[EdgeType] = None
+    lag: float | None = 0
+    type: EdgeType | None = None
 
 
 class GraphNode(JSONSerializable['GraphNode']):
@@ -106,9 +105,9 @@ class GraphNode(JSONSerializable['GraphNode']):
         elif len(parent_works) > 0 and isinstance(parent_works[0], tuple):
             edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
-        for i, p in enumerate(parent_works):
-            p: GraphNode = p[0] if isinstance(p, tuple) else p
-            p._add_child_edge(edges[i])
+        for i, parent in enumerate(parent_works):
+            parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
+            parent._add_child_edge(edges[i])
         self._parent_edges += edges
 
     def is_inseparable_parent(self) -> bool:
@@ -269,7 +268,7 @@ GraphNodeDict = dict[str, GraphNode]
 
 
 # TODO Make property for list of GraphEdges??
-@dataclass(frozen=True)
+@dataclass
 class WorkGraph(JSONSerializable['WorkGraph']):
     """
     Class to describe graph of works in future schedule
@@ -283,6 +282,16 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     adj_matrix: dok_matrix = field(init=False)
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
+    #
+    # def __init__(self, start: GraphNode, finish: GraphNode) -> None:
+    #     self.start = start
+    #     self.finish = finish
+    #     self.nodes: list[GraphNode] = []
+    #     self.adj_matrix: dok_matrix = dok_matrix((0, 0), dtype=float)
+    #     self.dict_nodes: GraphNodeDict = GraphNodeDict()
+    #     self.vertex_count: int = 0
+
+
 
     def __post_init__(self) -> None:
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
@@ -291,6 +300,10 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
+        # self.nodes = ordered_nodes
+        # self.adj_matrix = adj_matrix
+        # self.dict_nodes = dict_nodes
+        # self.vertex_count = len(ordered_nodes)
 
     def __hash__(self):
         return hash(self.start) + 17 * hash(self.finish)
@@ -342,7 +355,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
         return WorkGraph(nodes_dict[start_id], nodes_dict[finish_id])
 
-    # TODO: describe the function (return type)
     # TODO: Check that adj matrix is really need
     def _to_adj_matrix(self) -> tuple[list[GraphNode], dok_matrix, dict[str, GraphNode]]:
         """
@@ -354,13 +366,11 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         }
         id2node: dict[str, GraphNode] = {node.id: node for node in node2ind.keys()}
         adj_mx = dok_matrix((len(node2ind), len(node2ind)), dtype=np.short)
+        weight = 0
         for v, i in node2ind.items():
             for child in v.children:
                 c_i = node2ind[child]
-                try:
-                    weight = max((w_req.volume for w_req in v.work_unit.worker_reqs), default=0.000001)
-                except:
-                    print('ln')
+                weight = max((w_req.volume for w_req in v.work_unit.worker_reqs), default=0.000001)
                 adj_mx[i, c_i] = weight
 
         return ordered_nodes, adj_mx, id2node

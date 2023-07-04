@@ -7,12 +7,13 @@ from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
+from sampo.schemas.landscape import LandscapeConfiguration
 
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
-    The scheduler optimizes resources to deadline
-    Scheduler uses binary search to optimize resources
+    The scheduler optimizes resources to deadline.
+    Scheduler uses binary search to optimize resources.
     """
 
     def __init__(self, base_scheduler: Scheduler):
@@ -25,12 +26,13 @@ class AverageBinarySearchResourceOptimizingScheduler:
                             deadline: Time,
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            assigned_parent_time: Time = Time(0)) \
+                            assigned_parent_time: Time = Time(0),
+                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def call_scheduler(k) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
             self._resource_optimizer.k = k
             try:
-                return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+                return self._base_scheduler.schedule_with_cache(wg, contractors, landscape, spec, validate, assigned_parent_time)
             except NoSufficientContractorError:
                 return None, Time.inf(), None, None
 

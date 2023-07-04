@@ -24,7 +24,7 @@ class WorkSpec:
 
 class ScheduleSpec:
     """
-    Here are the container for externally given terms, that Schedule should satisfy.
+    Here is the container for externally given terms, that Schedule should satisfy.
     Must be used in schedulers.
 
     :param work2spec: work specs
@@ -51,4 +51,3 @@ class ScheduleSpec:
 
     def get_work_spec(self, work_id: str) -> WorkSpec:
         return self._work2spec[work_id]
-

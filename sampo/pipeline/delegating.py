@@ -2,6 +2,10 @@ from sampo.scheduler.generic import GenericScheduler
 
 
 class DelegatingScheduler(GenericScheduler):
+    """
+    The layer between Generic Scheduler and end Scheduler.
+    It's needed to change parametrization functions received from end Scheduler in a simple way.
+    """
 
     def __init__(self, delegate: GenericScheduler):
         super().__init__(delegate.scheduler_type,

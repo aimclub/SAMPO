@@ -11,8 +11,6 @@ def get_worker_req(rand: random.Random,
                    volume: Optional[MinMax[int]] = MinMax[int](1, 50),
                    worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)
                    ) -> WorkerReq:
-    assert type(rand) == random.Random
-    assert type(name) == str
     count = rand.randint(volume.min, volume.max)
     return WorkerReq(name, count, worker_count.min, worker_count.max)
 
@@ -21,7 +19,6 @@ def get_worker_reqs_list(rand: random.Random,
                          volume: Optional[MinMax[int]] = MinMax[int](1, 50),
                          worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)
                          ) -> list[WorkerReq]:
-    assert type(rand) == random.Random
     names: list[WorkerSpecialization] = list(WORKER_TYPES)
     rand.shuffle(names)
     req_count = rand.randint(1, len(names))
@@ -34,6 +31,4 @@ def get_worker_specific_reqs_list(rand: random.Random,
                                   volume: Optional[MinMax[int]] = MinMax[int](1, 50),
                                   worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)
                                   ) -> list[WorkerReq]:
-    assert type(rand) == random.Random
-    reqs = [get_worker_req(rand, name, volume, worker_count) for name in worker_names]
-    return reqs
+    return [get_worker_req(rand, name, volume, worker_count) for name in worker_names]

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 from uuid import uuid4
 
@@ -13,7 +13,7 @@ from sampo.schemas.types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
 WorkerContractorPool = dict[WorkerName, dict[ContractorName, Worker]]
-DefaultContractorCapacity = 25
+DEFAULT_CONTRACTOR_CAPACITY = 25
 
 
 @dataclass
@@ -25,8 +25,8 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     :param equipments: dictionary, where the key is the type of technique, and the value is the pool of techniques of
     that type
     """
-    workers: dict[str, Worker]
-    equipments: dict[str, Equipment]
+    workers: dict[str, Worker] = field(default_factory=dict)
+    equipments: dict[str, Equipment] = field(default_factory=dict)
 
     def __post_init__(self):
         for w in self.workers.values():
@@ -46,7 +46,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     @classmethod
     @custom_serializer('workers', deserializer=True)
     def deserialize_workers(cls, value):
-        return {tuple(i['key']): Worker._deserialize(i['val']) for i in value}
+        return {i['key']: Worker._deserialize(i['val']) for i in value}
 
     @classmethod
     @custom_serializer('equipments', deserializer=True)
@@ -72,7 +72,7 @@ def get_worker_contractor_pool(contractors: Union[list['Contractor'], 'Contracto
 
 # TODO move from schemas
 def get_contractor_for_resources_schedule(resources: Union[DataFrame, list[dict[str, int]]],
-                                          contractor_capacity: int = DefaultContractorCapacity,
+                                          contractor_capacity: int = DEFAULT_CONTRACTOR_CAPACITY,
                                           contractor_id: str = None,
                                           contractor_name: str = "") \
         -> 'Contractor':

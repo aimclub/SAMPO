@@ -12,10 +12,10 @@ from sampo.schemas.works import WorkUnit
 
 @fixture
 def setup_timeline_context(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
     worker_kinds = set([w_kind for contractor in setup_contractors for w_kind in contractor.workers.keys()])
-    return MomentumTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool), \
+    return MomentumTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool, landscape=landscape), \
         setup_wg, setup_contractors, setup_worker_pool, worker_kinds
 
 
@@ -31,7 +31,7 @@ def test_init_resource_structure(setup_timeline_context):
 
             first_event: ScheduleEvent = worker_timeline[0]
             assert first_event.seq_id == -1
-            assert first_event.event_type == EventType.Initial
+            assert first_event.event_type == EventType.INITIAL
             assert first_event.time == Time(0)
 
 

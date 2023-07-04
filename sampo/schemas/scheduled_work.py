@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from sampo.schemas.contractor import Contractor
+from sampo.schemas.landscape import MaterialDelivery
 from sampo.schemas.resources import Equipment, ConstructionObject, Worker
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
@@ -33,7 +34,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  workers: list[Worker],
                  contractor: Contractor | str,
                  equipments: list[Equipment] | None = None,
-                 materials: list[Equipment] | None = None,
+                 materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
@@ -41,6 +42,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.equipments = equipments
         self.materials = materials
         self.object = object
+
         if contractor is not None:
             if isinstance(contractor, str):
                 self.contractor = contractor
@@ -75,21 +77,17 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
-    # TODO: describe the function (description, parameters, return type)
     def get_actual_duration(self, work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
         return self.work_unit.estimate_static(self.workers, work_estimator)
 
-    # TODO: describe the function (description return type)
     @property
     def start_time(self) -> Time:
         return self.start_end_time[0]
 
-    # TODO: describe the function (description, parameters, return type)
     @start_time.setter
     def start_time(self, val: Time):
         self.start_end_time = (val, self.start_end_time[1])
 
-    # TODO: describe the function (description, return type)
     @property
     def finish_time(self) -> Time:
         return self.start_end_time[1]
@@ -98,33 +96,27 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def min_child_start_time(self) -> Time:
         return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
 
-    # TODO: describe the function (description, parameters, return type)
     @finish_time.setter
     def finish_time(self, val: Time):
         self.start_end_time = (self.start_end_time[0], val)
 
-    # TODO: describe the function (description, return type)
     @staticmethod
     def start_time_getter():
         return lambda x: x.start_end_time[0]
 
-    # TODO: describe the function (description, return type)
     @staticmethod
     def finish_time_getter():
         return lambda x: x.start_end_time[1]
 
-    # TODO: describe the function (description, return type)
     @property
     def duration(self) -> Time:
         start, end = self.start_end_time
         return end - start
     
-    # TODO: describe the function (description, parameters, return type)
     def is_overlapped(self, time: int) -> bool:
         start, end = self.start_end_time
         return start <= time < end
 
-    # TODO: describe the function (description, return type)
     def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.work_unit.id,

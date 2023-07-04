@@ -26,8 +26,13 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:
-    def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
-                 worker_pool_indices: dict[int, dict[int, Worker]], parents: dict[int, list[int]],
+    def __init__(self,
+                 toolbox: Toolbox,
+                 wg: WorkGraph,
+                 contractors: list[Contractor],
+                 worker_name2index: dict[str, int],
+                 worker_pool_indices: dict[int, dict[int, Worker]],
+                 parents: dict[int, list[int]],
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:
@@ -86,7 +91,8 @@ class NativeWrapper:
         self.evaluator = evaluator
 
         # preparing C++ cache
-        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers, self.totalWorksCount,
+        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
+                                           self.totalWorksCount,
                                            False, volume, min_req, max_req)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:

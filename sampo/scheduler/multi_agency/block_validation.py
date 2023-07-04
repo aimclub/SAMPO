@@ -40,7 +40,7 @@ def _check_block_dependencies(bg: BlockGraph, schedule: dict[str, ScheduledBlock
 
 def _check_blocks_separately(sblocks: Iterable[ScheduledBlock]):
     """
-    Validate each block separately, i.e. check each 'Schedule' in each block
+    Validate each block separately, i.e., check each 'Schedule' in each block
 
     :param sblocks: scheduled blocks of works
     """
@@ -48,7 +48,7 @@ def _check_blocks_separately(sblocks: Iterable[ScheduledBlock]):
         try:
             validate_schedule(sblock.schedule, sblock.wg, sblock.agent.contractors)
         except AssertionError as e:
-            raise AssertionError(f'Agent {sblock.agent} supplied an invalid schedule', e)
+            raise AssertionError(f'Agent {sblock.agent} supplied an invalid schedule') from e
 
 
 def _check_blocks_with_global_timelines(sblocks: Iterable[ScheduledBlock], contractors: Iterable[Contractor]):

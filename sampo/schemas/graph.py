@@ -325,6 +325,11 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'finish', deserialized.finish)
         self.__post_init__()
 
+    @staticmethod
+    def from_csv(filepath: str | None) -> None:
+        ...
+
+
     def _serialize(self) -> T:
         """
         Converts all the meaningful information from WorkGraph to a generic representation

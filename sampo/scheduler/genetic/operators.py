@@ -135,7 +135,6 @@ def init_toolbox(wg: WorkGraph,
                  contractor2index: dict[str, int],
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
-                 index2node_list: list[tuple[int, GraphNode]],
                  parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
@@ -148,7 +147,7 @@ def init_toolbox(wg: WorkGraph,
     toolbox = base.Toolbox()
     # generate initial population
     toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
-                     index2node_list=index2node_list, work_id2index=work_id2index, worker_name2index=worker_name2index,
+                     work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
@@ -194,7 +193,6 @@ def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
 
 def generate_chromosome(wg: WorkGraph,
                         contractors: list[Contractor],
-                        index2node_list: list[tuple[int, GraphNode]],
                         work_id2index: dict[str, int],
                         worker_name2index: dict[str, int],
                         contractor2index: dict[str, int],

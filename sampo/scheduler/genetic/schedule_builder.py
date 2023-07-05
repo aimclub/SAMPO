@@ -78,7 +78,6 @@ def build_schedule(wg: WorkGraph,
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = dict(enumerate(contractors))
     contractor2index = reverse_dictionary(index2contractor)
-    index2node_list = list(enumerate(nodes))
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}
@@ -135,7 +134,7 @@ def build_schedule(wg: WorkGraph,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, index2node_list, parents,
+                           contractor2index, contractor_borders, node_indices, parents,
                            assigned_parent_time, work_estimator)
 
     for name, chromosome in init_chromosomes.items():

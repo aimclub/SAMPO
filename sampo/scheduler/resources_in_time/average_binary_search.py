@@ -1,5 +1,3 @@
-from typing import List
-
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
@@ -9,23 +7,32 @@ from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
+from sampo.schemas.landscape import LandscapeConfiguration
 
 
 class AverageBinarySearchResourceOptimizingScheduler:
+    """
+    The scheduler optimizes resources to deadline.
+    Scheduler uses binary search to optimize resources.
+    """
 
     def __init__(self, base_scheduler: Scheduler):
         self._base_scheduler = base_scheduler
         self._resource_optimizer = AverageReqResourceOptimizer()
         base_scheduler.resource_optimizer = self._resource_optimizer
 
-    def schedule_with_cache(self, wg: WorkGraph, contractors: List[Contractor], deadline: Time,
+    def schedule_with_cache(self, wg: WorkGraph,
+                            contractors: list[Contractor],
+                            deadline: Time,
                             spec: ScheduleSpec = ScheduleSpec(),
-                            validate: bool = False, assigned_parent_time: Time = Time(0)) \
+                            validate: bool = False,
+                            assigned_parent_time: Time = Time(0),
+                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         def call_scheduler(k) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
             self._resource_optimizer.k = k
             try:
-                return self._base_scheduler.schedule_with_cache(wg, contractors, spec, validate, assigned_parent_time)
+                return self._base_scheduler.schedule_with_cache(wg, contractors, landscape, spec, validate, assigned_parent_time)
             except NoSufficientContractorError:
                 return None, Time.inf(), None, None
 

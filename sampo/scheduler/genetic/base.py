@@ -1,6 +1,6 @@
 import math
 import random
-from typing import List, Tuple, Optional, Callable
+from typing import Optional, Callable
 
 from deap.base import Toolbox
 
@@ -17,6 +17,7 @@ from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -25,6 +26,10 @@ from sampo.utilities.validation import validate_schedule
 
 
 class GeneticScheduler(Scheduler):
+    """
+    Class for hybrid scheduling algorithm, that uses heuristic algorithm to generate
+    first population and genetic algorithm to search the best solving
+    """
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
@@ -63,9 +68,9 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
         """
-        Return params for model to make new population
+        Return base parameters for model to make new population
 
         :param works_count:
         :return:
@@ -110,11 +115,6 @@ class GeneticScheduler(Scheduler):
         self._n_cpu = n_cpu
 
     def set_time_border(self, time_border: int):
-        """
-        Set the borders of time
-
-        :param time_border:
-        """
         self._time_border = time_border
 
     def set_deadline(self, deadline: Time):
@@ -125,11 +125,22 @@ class GeneticScheduler(Scheduler):
         """
         self._deadline = deadline
 
-    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
+        """
+        Heuristic algorithm, that generate first population
+
+        :param landscape:
+        :param wg: graph of works
+        :param contractors:
+        :return:
+        """
+
         def init_k_schedule(scheduler_class, k):
             try:
                 return (scheduler_class(work_estimator=self.work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors),
+                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
+                                                                                                    landscape=landscape),
                         list(reversed(prioritization(wg, self.work_estimator))))
             except NoSufficientContractorError:
                 return None, None
@@ -137,7 +148,8 @@ class GeneticScheduler(Scheduler):
         if self._deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
+                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
+                                                                                         landscape=landscape),
                             list(reversed(prioritization(wg, self.work_estimator))))
                 except NoSufficientContractorError:
                     return None, None
@@ -155,7 +167,7 @@ class GeneticScheduler(Scheduler):
                 try:
                     schedule = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline)[0]
+                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)[0]
                     return schedule, list(reversed(prioritization(wg, self.work_estimator)))
                 except NoSufficientContractorError:
                     return None, None
@@ -169,15 +181,29 @@ class GeneticScheduler(Scheduler):
                 "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
             }
 
-    def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
+                            contractors: list[Contractor],
+                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+        """
+        Build schedule for received graph of workers and return the current state of schedule
+        It's needed to use this method in multy agents model
 
-        init_schedules = self.generate_first_population(wg, contractors)
+        :param landscape:
+        :param wg:
+        :param contractors:
+        :param spec:
+        :param validate:
+        :param assigned_parent_time:
+        :param timeline:
+        :return:
+        """
+        init_schedules = self.generate_first_population(wg, contractors, landscape)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
@@ -193,6 +219,7 @@ class GeneticScheduler(Scheduler):
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
+                                                                                     landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      n_cpu=self._n_cpu,

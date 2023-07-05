@@ -8,9 +8,8 @@ from sampo.schemas.serializable import AutoJSONSerializable
 
 # to work with float and avoid errors due to inaccuracy
 EPS = 1e5
- # TODO: describe the constant 
+# to work with distributions when certain start and finish value is undefined
 INF = float("inf")
- # TODO: describe the constant 
 MINUS_INF = float("-inf")
 
 
@@ -92,6 +91,7 @@ class IntervalGaussian(Interval):
     :param max_val: right  border for the interval
     :param rand: object for generating random numbers with, if you want to use a randomizer with a determined seed
     """
+
     mean: float
     sigma: float
     min_val: Optional[float] = MINUS_INF

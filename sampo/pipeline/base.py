@@ -11,6 +11,9 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class InputPipeline(ABC):
+    """
+    Base class to build different pipeline, that help to use the framework
+    """
 
     @abstractmethod
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
@@ -57,6 +60,9 @@ class InputPipeline(ABC):
 
 
 class SchedulePipeline(ABC):
+    """
+    The part of pipeline, that manipulates with the whole entire schedule.
+    """
 
     @abstractmethod
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':

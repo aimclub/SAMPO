@@ -29,8 +29,13 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:
-    def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
-                 worker_pool_indices: dict[int, dict[int, Worker]], parents: dict[int, list[int]],
+    def __init__(self,
+                 toolbox: Toolbox,
+                 wg: WorkGraph,
+                 contractors: list[Contractor],
+                 worker_name2index: dict[str, int],
+                 worker_pool_indices: dict[int, dict[int, Worker]],
+                 parents: dict[int, list[int]],
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:

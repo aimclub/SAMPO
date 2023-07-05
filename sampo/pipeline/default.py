@@ -14,16 +14,19 @@ from sampo.structurator import graph_restructuring
 
 
 class DefaultInputPipeline(InputPipeline):
+    """
+    Default pipeline, that help to use framework
+    """
 
     def __init__(self):
-        self._wg = None
-        self._contractors = None
-        self._work_estimator = None
-        self._node_order = None
-        self._lag_optimize = None
-        self._spec = ScheduleSpec()
-        self._assigned_parent_time = Time(0)
-        self._local_optimize_stack = ApplyQueue()
+        self._wg: WorkGraph | None = None
+        self._contractors: list[Contractor] | None = None
+        self._work_estimator: WorkTimeEstimator | None = None
+        self._node_order: list[GraphNode] | None = None
+        self._lag_optimize: bool | None = None
+        self._spec: ScheduleSpec | None = ScheduleSpec()
+        self._assigned_parent_time: Time | None = Time(0)
+        self._local_optimize_stack: ApplyQueue = ApplyQueue()
 
     def wg(self, wg: WorkGraph) -> 'InputPipeline':
         """
@@ -38,6 +41,7 @@ class DefaultInputPipeline(InputPipeline):
     def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
         """
         Mandatory argument.
+
         :param contractors: the contractors list for scheduling task
         :return: the pipeline object
         """
@@ -45,10 +49,22 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
+        """
+        Set specification of schedule
+
+        :param spec:
+        :return:
+        """
         self._spec = spec
         return self
 
     def time_shift(self, time: Time) -> 'InputPipeline':
+        """
+        If the schedule should start at a certain time
+
+        :param time:
+        :return:
+        """
         self._assigned_parent_time = time
         return self
 
@@ -78,7 +94,8 @@ class DefaultInputPipeline(InputPipeline):
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
-            s_self = self  # cache upper-layer self to another variable to get it from inner class
+            # cache upper-layer self to another variable to get it from inner class
+            s_self = self
 
             class LocalOptimizedScheduler(DelegatingScheduler):
 

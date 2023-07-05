@@ -17,7 +17,7 @@ rand = Random(r_seed)
 
 
 def obstruction_getter(i: int):
-    # return OneInsertObstruction.from_static_graph(0.5, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
+    # return OneInsertObstruction.from_static_graph(0.5, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
     return None
 
 

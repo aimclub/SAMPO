@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import List, Dict, Tuple, Optional, Set
+from typing import Optional
 
 from sampo.schemas.graph import GraphNode, GraphNodeDict, GraphEdge, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -11,6 +11,7 @@ STAGE_SEP = '_stage_'
 def make_start_id(work_unit_id: str, ind: int) -> str:
     """
     Creates an auxiliary id for restructuring the graph
+
     :param work_unit_id: str - work unit id
     :param ind: int - sequence number of work_unit stage
     :return:
@@ -19,12 +20,13 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
     return f"{work_unit_id}{STAGE_SEP}{ind}"
 
 
-def find_lags(edges: List[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (List[Tuple[float, float, bool]]):
+def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (list[tuple[float, float, bool]]):
     """
-    Searches for the maximum lag among the given edges and type of edge,
-        for the maximum lag saves the amount of parental work
+    Searches for the maximum lag among the given edges and type of edge for the
+    maximum lag saves the amount of parental work
+
     :param is_reversed: bool - Used to specify from which node lag is used
-    :param edges: List[GraphEdge] - the given edges
+    :param edges: list[GraphEdge] - the given edges
     :param edge_type: str - the given type of edge
     :return:
         max_lag: float - the maximum lag
@@ -36,19 +38,20 @@ def find_lags(edges: List[GraphEdge], edge_type: EdgeType, is_reversed: bool) ->
 
 
 def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
-                       lags_volumes_list: List[Tuple[float, float, bool]],
-                       old_id_lag2new_id: Dict[Tuple[str, float, bool], str]):
+                       lags_volumes_list: list[tuple[float, float, bool]],
+                       old_id_lag2new_id: dict[tuple[str, float, bool], str]):
     """
     Splits the node into two parts: into "piece" and "mian" whose sizes are proportional to max_lag and
     parent_volume-max_lag, respectively. The order of "piece" and "mian" is set. For the first vertex the id is changed,
     for the second one it remains the same, so that it is more convenient to restore the edges. The resulting nodes are
     created without edges. It connects two obtained nodes with an unbreakable edge,
     which does not allow to perform tasks in any way
-    :param lags_volumes_list: List[Tuple[float, float, bool]] -
+
+    :param lags_volumes_list: list[tuple[float, float, bool]] -
     :param origin_node: GraphNode - Node to be divided into two parts
     :param id2new_nodes: GraphNodeDict - Dictionary with restructured new nodes where the restructured nodes will
         be written
-    :param old_id_lag2new_id: Dict[Tuple[str, float], str]
+    :param old_id_lag2new_id: dict[tuple[str, float], str]
     :return: Nothing
     """
     wu = origin_node.work_unit
@@ -63,7 +66,7 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
          if volume > 0 and lag < volume] + [(1, -1, False)])
 
     proportions_accum.sort()
-    proportions: List[Tuple[float, float, bool]] = [proportions_accum[0]]
+    proportions: list[tuple[float, float, bool]] = [proportions_accum[0]]
     for ind in range(1, len(proportions_accum)):
         accum, lag, is_reversed = proportions_accum[ind]
         accum_pred, _, _ = proportions_accum[ind - 1]
@@ -71,8 +74,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
             continue
         proportions.append((accum - accum_pred, lag, is_reversed))
 
-    for ind in range(len(proportions)):
-        piece_div_main, lag, is_reversed = proportions[ind]
+    for ind, value in enumerate(proportions):
+        piece_div_main, lag, is_reversed = value
         reqs = [WorkerReq(wr.kind, wr.volume * piece_div_main, wr.min_count, wr.max_count)
                 for wr in wu.worker_reqs]
 
@@ -80,7 +83,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
 
         new_id = make_start_id(wu.id, ind) if ind < len(proportions) - 1 else wu.id
         new_wu = WorkUnit(new_id, f'{wu.name}{STAGE_SEP}{ind}', reqs, group=wu.group,
-                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name)
+                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name,
+                          workground_size=wu.workground_size)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)
         old_id_lag2new_id[(wu.id, lag, is_reversed)] = new_id
@@ -88,7 +92,7 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
 
 
 def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
-                 old_id_lag2new_id: Dict[Tuple[str, float, bool], str],
+                 old_id_lag2new_id: dict[tuple[str, float, bool], str],
                  use_ffs_separately: bool = False):
     """
     Restores edges in the transformed graph
@@ -97,7 +101,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
     :param id2new_nodes: GraphNodeDict -dictionary with transformed vertices,
         if some vertices from the original graph are missing,
         the function converts their copy and writes it into the dictionary
-    :param old_id_lag2new_id: Dict[Tuple[str, float, bool], str]
+    :param old_id_lag2new_id: dict[tuple[str, float, bool], str]
     :param use_ffs_separately:
         If false, then FFS edges are considered equivalent to FS,
         otherwise they are converted as a separate type of edges
@@ -109,8 +113,8 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
         zero_stage_id = make_start_id(node.id, 0) if make_start_id(node.id, 0) in id2new_nodes else node.id
         last_stage_id = node.id
 
-        parents_zero_stage: List[Tuple[GraphNode, float, EdgeType]] = []
-        parents_last_stage: List[Tuple[GraphNode, float, EdgeType]] = []
+        parents_zero_stage: list[tuple[GraphNode, float, EdgeType]] = []
+        parents_last_stage: list[tuple[GraphNode, float, EdgeType]] = []
         for edge in node.edges_to:
             if edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart] or \
                     not use_ffs_separately and edge.type is EdgeType.LagFinishStart:
@@ -137,8 +141,8 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
 
     start_id = origin_work_graph.start.id
     finish_id = origin_work_graph.finish.id
-    has_child: Set[str] = {start_id, finish_id}
-    has_parent: Set[str] = {start_id, finish_id}
+    has_child: set[str] = {start_id, finish_id}
+    has_parent: set[str] = {start_id, finish_id}
     for node in id2new_nodes.values():
         for edge in node.edges_to:
             has_child.add(edge.start.id)
@@ -164,7 +168,7 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
         new_work_graph: WorkGraph - restructured graph
     """
     id2new_nodes: GraphNodeDict = dict()
-    old_id_lag2new_od: Dict[Tuple[str, float, bool], str] = dict()
+    old_id_lag2new_od: dict[tuple[str, float, bool], str] = dict()
     for node in wg.nodes:
         lags_volumes = []
         lags_volumes += find_lags(node.edges_from, EdgeType.StartStart, False)

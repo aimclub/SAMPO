@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
+from uuid import uuid4
 
+from sampo.schemas.resources import Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 
@@ -82,7 +84,12 @@ class MaterialReq(BaseReq):
     :param name: the name of this requirement
     """
     kind: str
+    count: int
+    # need_start: int TODO Implement handling this
     name: Optional[str] = None
+
+    def material(self):
+        return Material(str(uuid4()), self.kind, self.count)
 
 
 @dataclass(frozen=True)

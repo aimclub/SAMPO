@@ -81,12 +81,14 @@ class Worker(Resource):
         """
         return self.contractor_id, self.name
 
-    def get_static_productivity(self) -> float:
-        """Return the average productivity of worker team"""
-        return self.productivity.mean * self.count
+    def get_productivity(self, rand: Optional[Random] = None) -> float:
+        """Return the productivity of the worker team
+        It has 2 mods: stochastic and non-stochastic
 
-    def get_stochastic_productivity(self, rand: Optional[Random] = None) -> float:
-        """Return the stochastic productivity of worker team"""
+        :param rand: parameter for stochastic part
+        """
+        if rand is None:
+            return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
 
     def __repr__(self):

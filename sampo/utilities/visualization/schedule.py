@@ -13,6 +13,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                             fig_file_name: Optional[str] = None):
     """
     Creates and saves a gant chart of the scheduled tasks to the specified path.
+
     :param fig_file_name:
     :param visualization:
     :param remove_service_tasks:

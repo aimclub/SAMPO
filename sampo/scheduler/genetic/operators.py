@@ -1,7 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 from functools import partial
-from typing import List, Dict, Iterable, Callable
+from typing import Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
@@ -11,6 +11,7 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, Ch
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -21,16 +22,26 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
 class FitnessFunction(ABC):
+    """
+    Base class for description of different fitness functions.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         self._evaluator = evaluator
 
     @abstractmethod
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        """
+        Calculate the value of fitness function of the all chromosomes.
+        It is better when value is less.
+        """
         ...
 
 
 class TimeFitness(FitnessFunction):
+    """
+    Fitness function that relies on finish time.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -40,6 +51,9 @@ class TimeFitness(FitnessFunction):
 
 
 class TimeAndResourcesFitness(FitnessFunction):
+    """
+    Fitness function that relies on finish time and the set of resources.
+    """
 
     def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -50,6 +64,9 @@ class TimeAndResourcesFitness(FitnessFunction):
 
 
 class DeadlineResourcesFitness(FitnessFunction):
+    """
+    The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
+    """
 
     def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -64,10 +81,14 @@ class DeadlineResourcesFitness(FitnessFunction):
 
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
-        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
+        return [int(int(np.sum(chromosome[2])) * max(1.0, finish_time / self._deadline.value))
+                for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
 class DeadlineCostFitness(FitnessFunction):
+    """
+    The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
+    """
 
     def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
         super().__init__(evaluator)
@@ -84,7 +105,7 @@ class DeadlineCostFitness(FitnessFunction):
         evaluated = self._evaluator(chromosomes)
         # TODO Integrate cost calculation to native module
         # here we know that all resources costs `10` coins
-        return [Time.inf() if finish_time > self._deadline else int(np.sum(chromosome[2] * 10))
+        return [int(int(np.sum(chromosome[2]) * 10) * max(1.0, finish_time / self._deadline.value))
                 for finish_time, chromosome in zip(evaluated, chromosomes)]
 
 
@@ -95,13 +116,19 @@ creator.create("Individual", list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
 
-def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: WorkerContractorPool,
-                 index2node: Dict[int, GraphNode],
-                 work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                 index2contractor: Dict[int, str],
-                 index2contractor_obj: Dict[int, Contractor],
-                 init_chromosomes: Dict[str, ChromosomeType],
-                 mutate_order: float, mutate_resources: float, selection_size: int,
+def init_toolbox(wg: WorkGraph,
+                 contractors: list[Contractor],
+                 worker_pool: WorkerContractorPool,
+                 landscape: LandscapeConfiguration,
+                 index2node: dict[int, GraphNode],
+                 work_id2index: dict[str, int],
+                 worker_name2index: dict[str, int],
+                 index2contractor: dict[int, str],
+                 index2contractor_obj: dict[int, Contractor],
+                 init_chromosomes: dict[str, ChromosomeType],
+                 mutate_order: float,
+                 mutate_resources: float,
+                 selection_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
                  worker_pool_indices: dict[int, dict[int, Worker]],
@@ -109,15 +136,21 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
                  index2node_list: list[tuple[int, GraphNode]],
-                 parents: Dict[int, list[int]],
+                 parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
+    """
+    Object, that include set of functions (tools) for genetic model and other functions related to it.
+    list of parameters that received this function is sufficient and complete to manipulate with genetic
+
+    :return: Object, included tools for genetic
+    """
     toolbox = base.Toolbox()
     # generate initial population
     toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
                      index2node_list=index2node_list, work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders,
-                     init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator)
+                     init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create from generate_chromosome function one individual
     toolbox.register("individual", tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
@@ -149,19 +182,27 @@ def init_toolbox(wg: WorkGraph, contractors: List[Contractor], worker_pool: Work
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
-                     work_estimator=work_estimator)
+                     work_estimator=work_estimator, worker_name2index=worker_name2index,
+                     contractor2index=contractor2index,
+                     landscape=landscape)
     return toolbox
 
 
-def copy_chromosome(c: ChromosomeType) -> ChromosomeType:
-    return c[0].copy(), c[1].copy(), c[2].copy()
+def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
+    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy()
 
 
-def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node_list: list[tuple[int, GraphNode]],
-                        work_id2index: Dict[str, int], worker_name2index: Dict[str, int],
-                        contractor2index: Dict[str, int], contractor_borders: np.ndarray,
-                        init_chromosomes: Dict[str, ChromosomeType], rand: random.Random,
-                        work_estimator: WorkTimeEstimator = None) -> ChromosomeType:
+def generate_chromosome(wg: WorkGraph,
+                        contractors: list[Contractor],
+                        index2node_list: list[tuple[int, GraphNode]],
+                        work_id2index: dict[str, int],
+                        worker_name2index: dict[str, int],
+                        contractor2index: dict[str, int],
+                        contractor_borders: np.ndarray,
+                        init_chromosomes: dict[str, ChromosomeType],
+                        rand: random.Random,
+                        work_estimator: WorkTimeEstimator = None,
+                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)
@@ -169,41 +210,51 @@ def generate_chromosome(wg: WorkGraph, contractors: List[Contractor], index2node
     HEFT is always the same(now not)
     HEFT we will choose in 30% of attempts
     Topological in others
-
-    :param work_estimator:
-    :param contractors:
-    :param wg:
-    :param work_id2index:
-    :param index2node_list:
-    :param worker_name2index:
-    :param contractor2index:
-    :param contractor_borders:
-    :param rand:
-    :param init_chromosomes:
-    :return: chromosome
     """
+
+    def randomized_init() -> ChromosomeType:
+        schedule = RandomizedTopologicalScheduler(work_estimator,
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors, landscape=landscape)
+        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                              contractor2index, contractor_borders, schedule)
+
     chance = rand.random()
     if chance < 0.2:
         chromosome = init_chromosomes["heft_end"]
     elif chance < 0.4:
         chromosome = init_chromosomes["heft_between"]
+    elif chance < 0.5:
+        chromosome = init_chromosomes["12.5%"]
+    elif chance < 0.6:
+        chromosome = init_chromosomes["25%"]
+    elif chance < 0.7:
+        chromosome = init_chromosomes["75%"]
+    elif chance < 0.8:
+        chromosome = init_chromosomes["87.5%"]
     else:
-        schedule = RandomizedTopologicalScheduler(work_estimator,
-                                                  int(rand.random() * 1000000)) \
-            .schedule(wg, contractors)
-        chromosome = convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                                    contractor2index, contractor_borders, schedule)
+        chromosome = randomized_init()
+
+    if chromosome is None:
+        chromosome = randomized_init()
+
     return chromosome
 
 
 def is_chromosome_correct(chromosome: ChromosomeType,
                           node_indices: list[int],
-                          parents: Dict[int, list[int]]) -> bool:
+                          parents: dict[int, list[int]]) -> bool:
+    """
+    Check order of works and contractors.
+    """
     return is_chromosome_order_correct(chromosome, parents) and \
            is_chromosome_contractors_correct(chromosome, node_indices)
 
 
-def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, list[int]]) -> bool:
+def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, list[int]]) -> bool:
+    """
+    Checks that assigned order of works are topologically correct.
+    """
     work_order = chromosome[0]
     used = set()
     for work_index in work_order:
@@ -218,12 +269,7 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: Dict[int, l
 def is_chromosome_contractors_correct(chromosome: ChromosomeType,
                                       work_indices: Iterable[int]) -> bool:
     """
-    Checks that assigned contractors can supply assigned workers
-
-    :param chromosome:
-    :param contractors_borders:
-    :param work_indices:
-    :return:
+    Checks that assigned contractors can supply assigned workers.
     """
     for work_ind in work_indices:
         resources_count = chromosome[1][work_ind, :-1]
@@ -237,6 +283,10 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType,
 
 
 def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
+    """
+    Get a new tail in topologic order for chromosome.
+    This function is needed to make crossover for order.
+    """
     head_set = set(head_set)
     return np.array([node for node in other if node not in head_set])
 
@@ -244,13 +294,10 @@ def get_order_tail(head_set: np.ndarray, other: np.ndarray) -> np.ndarray:
 def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random) \
         -> (ChromosomeType, ChromosomeType):
     """
-    Crossover for order
-    Basis crossover is cxOnePoint
-    But we checked not repeated works in individual order
+    Crossover for order.
+    Basis crossover is cxOnePoint.
+    But we checked not repeated works in individual order.
 
-    :param ind1:
-    :param ind2:
-    :param rand:
     :return: two cross individuals
     """
     ind1 = copy_chromosome(ind1)
@@ -274,16 +321,11 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,
                     probability_mutate_resources: float, contractor_count: int, rand: random.Random) -> ChromosomeType:
     """
-    Mutation function for resources
-    It changes selected numbers of workers in random work in certain interval for this work
+    Mutation function for resources.
+    It changes selected numbers of workers in random work in a certain interval for this work.
 
-    :param contractor_count:
-    :param ind:
     :param low: lower bound specified by `WorkUnit`
     :param up: upper bound specified by `WorkUnit`
-    :param type_of_worker:
-    :param probability_mutate_resources:
-    :param rand:
     :return: mutate individual
     """
     ind = copy_chromosome(ind)
@@ -316,25 +358,24 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
         -> ChromosomeType:
     """
     Mutation for contractors' resource borders.
-
-    :param ind:
-    :param contractors_capacity:
-    :param resources_min_border:
-    :param type_of_worker:
-    :param probability_mutate_contractors:
-    :param rand:
-    :return:
     """
     ind = copy_chromosome(ind)
 
+    num_resources = len(resources_min_border)
     num_contractors = len(ind[2])
-    for i in range(num_contractors):
+    for contractor in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
-            ind[2][i][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
-                                                      max(resources_min_border[type_of_worker] + 1,
-                                                          ind[2][i][type_of_worker] // 10))
-            if ind[2][i][type_of_worker] <= 0:
-                ind[2][i][type_of_worker] = 1
+            ind[2][contractor][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
+                                                               max(resources_min_border[type_of_worker] + 1,
+                                                                   ind[2][contractor][type_of_worker] // 10))
+            if ind[2][contractor][type_of_worker] <= 0:
+                ind[2][contractor][type_of_worker] = 1
+
+            # find and correct all invalidated resource assignments
+            for work in range(len(ind[0])):
+                if ind[1][work][num_resources] == contractor:
+                    ind[1][work][type_of_worker] = min(ind[1][work][type_of_worker],
+                                                       ind[2][contractor][type_of_worker])
 
     return ind
 
@@ -342,7 +383,7 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
 def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_positions: np.ndarray,
                        rand: random.Random) -> (ChromosomeType, ChromosomeType):
     """
-    CxOnePoint for resources
+    CxOnePoint for resources.
 
     :param ind1: first individual
     :param ind2: second individual
@@ -366,6 +407,9 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
 
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
                               mate_positions: np.ndarray, rand: random.Random) -> (ChromosomeType, ChromosomeType):
+    """
+    Crossover for contractors' resource borders.
+    """
     ind1 = copy_chromosome(ind1)
     ind2 = copy_chromosome(ind2)
 

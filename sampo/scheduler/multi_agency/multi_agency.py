@@ -1,9 +1,10 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, Callable
+from typing import Callable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.exception import NoSufficientAgents
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
@@ -13,6 +14,10 @@ from sampo.schemas.time import Time
 
 
 class Agent:
+    """
+    Agent entity representation in the multi-agent model
+    Agent have 2 actions: give offer and accept offer
+    """
 
     def __init__(self, name: str, scheduler: Scheduler, contractors: list[Contractor]):
         self.name = name
@@ -70,11 +75,15 @@ class Agent:
     def contractors(self):
         return self._contractors
 
+    @property
+    def scheduler(self):
+        return self._scheduler
+
 
 @dataclass
 class ScheduledBlock:
     """
-    An object represents scheduled graph block(group of works).
+    An object represents a scheduled graph block(group of works).
 
     Contains all data used in scheduling, the agent and resulting information.
     """
@@ -100,15 +109,19 @@ class ScheduledBlock:
 
 
 class Manager:
+    """
+    Manager entity representation in the multi-agent model
+    Manager interact with agents
+    """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
-            raise Exception("Manager can't work with empty list of agents")
+            raise NoSufficientAgents("Manager can't work with empty list of agents")
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> Dict[str, ScheduledBlock]:
+    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
-        Runs multi-agent system based on auction on given BlockGraph.
+        Runs the multi-agent system based on auction on given BlockGraph.
         
         :param bg: 
         :param logger:
@@ -116,7 +129,7 @@ class Manager:
         """
         id2sblock = {}
         for i, block in enumerate(bg.toposort()):
-            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0))
+            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0)) + 1
             start_time, end_time, agent_schedule, agent \
                 = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
 

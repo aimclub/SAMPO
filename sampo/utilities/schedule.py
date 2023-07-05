@@ -42,6 +42,8 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         df['successors'] = [[tuple([x[0].split(STAGE_SEP)[0], x[1]]) for x in df.loc[0, 'successors']]]
         return df.loc[0, :]
     else:
+        task_df = task_df.sort_values(by='task_name_mapped')
+        task_df = task_df.reset_index(drop=True)
         df = task_df.copy()
         df = df.iloc[-1:].reset_index(drop=True)
         for column in ['task_id', 'task_name']:

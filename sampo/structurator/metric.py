@@ -1,10 +1,9 @@
 from collections import namedtuple
 from math import inf
-from typing import Dict, List, Set
 
 
-def is_sequence_correct(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: List[str]) -> (
-        bool, Dict[str, Set[str]]):
+def is_sequence_correct(adj_matrix: dict[str, dict[str, list[str]]], sequence: list[str]) -> (
+        bool, dict[str, set[str]]):
     """
     Checks the sequence for correctness and builds an adjacency matrix containing
     all hard links and soft links performed
@@ -12,15 +11,16 @@ def is_sequence_correct(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: L
     :param sequence: vertex sequence from the chromosome
     :return:
         is_correct (bool): True if the sequence is correct, otherwise False
-        correct_adj_matrix (Dict[str, Set[str]]): if is_correct is True, then the matrix is from the description, otherwise None
+        correct_adj_matrix (dict[str, set[str]]): if is_correct is True, then the matrix is
+        from the description, otherwise None
     """
     # Check that all ids are present in the sequence and exactly once
     if len(set(adj_matrix.keys())) != len(set(sequence)):
         return False, None
 
     # searching for uncompleted hard ties
-    used: Set[str] = set()
-    correct_adj_matrix: Dict[str, Set[str]] = dict()
+    used: set[str] = set()
+    correct_adj_matrix: dict[str, set[str]] = dict()
     for s in sequence:
         used.add(s)
         hard_children = set(adj_matrix[s]['hard'])
@@ -32,7 +32,7 @@ def is_sequence_correct(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: L
     return True, correct_adj_matrix
 
 
-def soft_metric_score(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: List[str]) -> float:
+def soft_metric_score(adj_matrix: dict[str, dict[str, list[str]]], sequence: list[str]) -> float:
     """
         counts the metric of the number of soft ties
         :param adj_matrix: adjacency matrix, where for each key the value is a dictionary {'hard': [], 'soft': []}
@@ -49,7 +49,7 @@ def soft_metric_score(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: Lis
     return score
 
 
-def mean_path_score(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: List[str]) -> float:
+def mean_path_score(adj_matrix: dict[str, dict[str, list[str]]], sequence: list[str]) -> float:
     """
         counts the metric of the mean length path
         :param adj_matrix: adjacency matrix, where for each key the value is a dictionary {'hard': [], 'soft': []}
@@ -63,7 +63,7 @@ def mean_path_score(adj_matrix: Dict[str, Dict[str, List[str]]], sequence: List[
         return inf
 
     PathCounter = namedtuple('PathCounter', 'sum count')
-    counter: Dict[str, PathCounter] = dict()
+    counter: dict[str, PathCounter] = dict()
 
     def dfs(v_id: str):
         if v_id in counter:

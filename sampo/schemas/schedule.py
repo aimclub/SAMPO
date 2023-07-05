@@ -1,6 +1,6 @@
 from datetime import datetime
 from functools import partial, lru_cache
-from typing import Tuple, List, Dict, Iterable, Union, Set
+from typing import Iterable, Union
 
 from pandas import DataFrame
 
@@ -12,8 +12,8 @@ from sampo.schemas.works import WorkUnit
 from sampo.utilities.datetime_util import add_time_delta
 from sampo.utilities.schedule import fix_split_tasks
 
-ResourceSchedule = Dict[str, List[Tuple[Time, Time]]]
-ScheduleWorkDict = Dict[str, ScheduledWork]
+ResourceSchedule = dict[str, list[tuple[Time, Time]]]
+ScheduleWorkDict = dict[str, ScheduledWork]
 
 
 # TODO: Rebase object onto ScheduleWorkDict and ordered ScheduledWork list
@@ -23,12 +23,12 @@ class Schedule(JSONSerializable['Schedule']):
     """
     _schedule: DataFrame
 
-    _data_columns: List[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
+    _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
                                 'volume', 'measurement', 'successors', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
 
-    _columns: List[str] = _data_columns + [_scheduled_work_column]
+    _columns: list[str] = _data_columns + [_scheduled_work_column]
 
     @property
     def full_schedule_df(self) -> DataFrame:
@@ -137,24 +137,24 @@ class Schedule(JSONSerializable['Schedule']):
         """
         ordered_task_ids = order_nodes_by_start_time(works, wg) if wg else None
 
-        def info(work_unit: WorkUnit) -> Tuple[float, str, List[Tuple[str, str]]]:
+        def info(work_unit: WorkUnit) -> tuple[float, str, list[tuple[str, str]]]:
             if wg is None:
                 return 0, "", []
             # noinspection PyTypeChecker
             return work_unit.volume, work_unit.volume_type, \
                    [(edge.finish.id, edge.type.value) for edge in wg[work_unit.id].edges_from]
 
-        def sed(t1, t2) -> tuple:
+        def sed(time1, time2) -> tuple:
             """
             Sorts times and calculates difference.
-            :param t1: time 1.
-            :param t2: time 2.
-            :return: Tuple: start, end, duration.
+            :param time1: time 1.
+            :param time2: time 2.
+            :return: tuple: start, end, duration.
             """
-            s, e = tuple(sorted((t1, t2)))
-            return s, e, e - s
+            start, end = tuple(sorted((time1, time2)))
+            return start, end, end - start
 
-        df = [(i,                                                 # idx
+        data_frame = [(i,                                                 # idx
                w.work_unit.id,                                    # task_id
                w.work_unit.display_name,                          # task_name
                w.work_unit.name,                                  # task_name_mapped
@@ -165,23 +165,23 @@ class Schedule(JSONSerializable['Schedule']):
                repr(dict((i.name, i.count) for i in w.workers)),  # workers
                w  # full ScheduledWork info
                ) for i, w in enumerate(works)]
-        df = DataFrame.from_records(df, columns=Schedule._columns)
+        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
-        df = df.set_index('idx')
+        data_frame = data_frame.set_index('idx')
 
         if ordered_task_ids:
-            df.task_id = df.task_id.astype('category')
-            df.task_id = df.task_id.cat.set_categories(ordered_task_ids)
-            df = df.sort_values(['task_id'])
-            df.task_id = df.task_id.astype(str)
+            data_frame.task_id = data_frame.task_id.astype('category')
+            data_frame.task_id = data_frame.task_id.cat.set_categories(ordered_task_ids)
+            data_frame = data_frame.sort_values(['task_id'])
+            data_frame.task_id = data_frame.task_id.astype(str)
 
-        df = df.reindex(columns=Schedule._columns)
-        df = df.reset_index(drop=True)
+        data_frame = data_frame.reindex(columns=Schedule._columns)
+        data_frame = data_frame.reset_index(drop=True)
 
-        return Schedule(df)
+        return Schedule(data_frame)
 
 
-def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> List[str]:
+def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> list[str]:
     """
     Makes ScheduledWorks' ordering that satisfies:
     1. Ascending order by start time
@@ -196,7 +196,7 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
                            sorted(works, key=lambda item: item.start_time)]
 
     cur_time = 0
-    cur_class: Set[GraphNode] = set()
+    cur_class: set[GraphNode] = set()
     for start_time, work in order_by_start_time:
         node = wg[work]
         if len(cur_class) == 0:
@@ -205,10 +205,10 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
             cur_class.add(node)
             continue
         # TODO Perform real toposort
-        cur_not_added: Set[GraphNode] = set(cur_class)
+        cur_not_added: set[GraphNode] = set(cur_class)
         while len(cur_not_added) > 0:
             for cur_node in cur_class:
-                if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+                if any(parent_node in cur_not_added for parent_node in cur_node.parents):
                     continue  # we add this node later
                 res.append(cur_node.id)
                 cur_not_added.remove(cur_node)
@@ -216,10 +216,10 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
         cur_time = start_time
         cur_class = {node}
 
-    cur_not_added: Set[GraphNode] = set(cur_class)
+    cur_not_added: set[GraphNode] = set(cur_class)
     while len(cur_not_added) > 0:
         for cur_node in cur_class:
-            if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+            if any(parent_node in cur_not_added for parent_node in cur_node.parents):
                 continue  # we add this node later
             res.append(cur_node.id)
             cur_not_added.remove(cur_node)

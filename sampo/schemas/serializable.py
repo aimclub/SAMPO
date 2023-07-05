@@ -3,21 +3,29 @@ import os
 import pydoc
 from abc import ABC, abstractmethod
 from itertools import chain
-from typing import Generic, TypeVar, Dict, Union
+from typing import Generic, TypeVar, Union
 
 import numpy as np
 import pandas as pd
 
 from sampo.utilities.serializers import CUSTOM_FIELD_SERIALIZER, CUSTOM_FIELD_DESERIALIZER, CUSTOM_TYPE_SERIALIZER, \
     CUSTOM_TYPE_DESERIALIZER, default_ndarray_serializer, default_dataframe_serializer, default_ndarray_deserializer, \
-    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, default_np_long_serializer, \
-    default_np_long_deserializer
+    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, \
+    default_np_long_serializer, default_np_long_deserializer
 
-# TODO: describe constants
+# define type of result serialization
 T = TypeVar('T', str, dict, list, tuple, str, bool, None)
+
+# define type of data structure (result of deserialization)
 S = TypeVar('S', bound='Serializable')
+
+# define type of deserialized data structure as string
 SS = TypeVar('SS', bound='StrSerializable')
+
+# define type of deserialized data structure as JSON
 JS = TypeVar('JS', bound='JSONSerializable')
+
+# define type of deserialized data structure as class
 AJS = TypeVar('AJS', bound='AutoJSONSerializable')
 
 TYPE_HINTS = '_serializable_type_hints'
@@ -25,8 +33,14 @@ TYPE_HINTS = '_serializable_type_hints'
 
 # TODO: Implement PartialSerializable, which can't completely deserialize itself, and just returns rich info to parent
 
-# TODO: describe the class (description, parameters)
 class Serializable(ABC, Generic[T, S]):
+    """
+    Parent class for (de-)serialization different data structures.
+
+    :param ABC: helper class to create custom abstract classes
+    :param Generic[T, S]: base class to make Serializable as universal class, using user's types T, S
+    """
+
     @property
     @abstractmethod
     def serializer_extension(self) -> str:
@@ -35,7 +49,8 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _serialize(self) -> T:
         """
-        Converts all the meaningful information from this instance to a generic representation
+        Converts all the meaningful information from this instance to a generic representation.
+
         :return: A generic representation
         """
         ...
@@ -44,7 +59,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _deserialize(cls, representation: T) -> S:
         """
-        Creates class instance from a representation
+        Creates class instance from a representation.
         :param representation: Representation produced by _serialize method
         :return: New class instance
         """
@@ -54,7 +69,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def load(cls, folder_path: str, file_name: str) -> S:
         """
-        Factory method that produces a python object from the serialized version of it
+        Factory method that produces a python object from the serialized version of it.
         :param folder_path: Path to the folder, where the serialized file is saved
         :param file_name: File name without extension
         (the file extension should match with the one returned by serializer_extension method)
@@ -62,13 +77,13 @@ class Serializable(ABC, Generic[T, S]):
         """
         ...
 
-    # TODO: describe the function (return type)
     def dump(self, folder_path: str, file_name: str):
         """
-        Serializes object and saves it to file
+        Serializes the object and saves it to file.
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
+        :return None
         """
         ...
 
@@ -83,8 +98,17 @@ class Serializable(ABC, Generic[T, S]):
         return os.path.join(folder_path, f'{file_name}.{cls.serializer_extension}')
 
 
-# TODO: describe the class (description, parameters)
 class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
+    """
+    Parent class for serialization of classes, which can be converted to String representation or given from String
+    representation
+
+    :param Serializable[str, SS]:
+    :param ABC: helper class to create custom abstract classes
+    :param Generic[SS]: base class to make StrSerializable as universal class,
+    using user's types SS and it's descendants
+    """
+
     serializer_extension: str = 'dat'
 
     @abstractmethod
@@ -119,13 +143,13 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
             str_representation = read_file.read()
         return cls._deserialize(str_representation)
 
-    # TODO: describe the function (return type)
     def dump(self, folder_path: str, file_name: str) -> None:
         """
         Serializes object and saves it to file
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
+        :return None
         """
         full_file_name = self.get_full_file_name(folder_path, file_name)
         serialized_str = self._serialize()
@@ -133,8 +157,7 @@ class StrSerializable(Serializable[str, SS], ABC, Generic[SS]):
             write_file.write(serialized_str)
 
 
-# TODO: describe the class (description, parameters)
-class JSONSerializable(Serializable[Dict[str,
+class JSONSerializable(Serializable[dict[str,
                                          Union[
                                              dict,
                                              Union[list, tuple],
@@ -144,6 +167,14 @@ class JSONSerializable(Serializable[Dict[str,
                                              None]],
                                     JS], ABC, Generic[JS]):
     serializer_extension: str = 'json'
+    """
+    Parent class for serialization of classes, which can convert object to JSON format (as serialization result) and get
+    object from JSON format
+    :param Serialize: structure of JSON input variable for descendants of the class
+    :param ABC: helper class to create custom abstract classes
+    :param Generic[JS]: base class to make JSONSerializable as universal class, 
+    using user's types JS and it's descendants
+    """
 
     @abstractmethod
     def _serialize(self) -> T:
@@ -177,13 +208,13 @@ class JSONSerializable(Serializable[Dict[str,
             dict_representation = json.load(read_file)
         return cls._deserialize(dict_representation)
 
-    # TODO: describe the function (return type)
     def dump(self, folder_path: str, file_name: str) -> None:
         """
         Serializes object and saves it to file
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
+        :return None
         """
         full_file_name = self.get_full_file_name(folder_path, file_name)
         serialized_dict = self._serialize()
@@ -193,11 +224,12 @@ class JSONSerializable(Serializable[Dict[str,
 
 # TODO: Implement automotive Enum serialization/deserialization
 # TODO: Implement auto serialization of typed collection
-# TODO: describe the class (parameters)
 class AutoJSONSerializable(JSONSerializable[AJS], ABC):
     """
     Parent class for serialization of classes, which can be automatically converted to dict with Serializable properties
     and custom (de-)serializers, marked with custom_serializer and custom_deserializer decorators.
+    :param JSONSerializable[AJS]:
+    :param ABC: helper class to create custom abstract classes
     """
     serializer_extension: str = 'json'
 
@@ -218,25 +250,35 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
             }
     }
 
-    # TODO: describe the function (description, return type)
     @classmethod
     @property
     def _default_serializers(cls):
+        """
+        :param cls: current class (predecessors of parent class AutoJSONSerializable)
+        :return: dict: dictionary of serialization methods
+        """
         return cls._default_serializers_deserializers['serializers']
 
-    # TODO: describe the function (description, return type)
     @classmethod
     @property
     def _default_deserializers(cls):
+        """
+        :param cls: current class (predecessors of parent class AutoJSONSerializable)
+        :return: dictionary of deserialization methods
+        """
         return cls._default_serializers_deserializers['deserializer']
 
-    # TODO: describe the function (description, return type)
     @classmethod
     @property
     def ignored_fields(cls):
+        """
+        Return list of fields, which not be included to JSON representation (needed for client interface
+        and Draw Schedule system)
+        :return: list of fields
+        """
         return []
 
-    def _serialize(self) -> Dict[str,
+    def _serialize(self) -> dict[str,
                                  Union[
                                      dict,
                                      Union[list, tuple],
@@ -264,8 +306,13 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
                                                if hasattr(attr, CUSTOM_TYPE_SERIALIZER)]))
         type_hints = {}
 
-        # TODO: describe the function (description, parameters, return type)
         def serialize_field(name, value):
+            """
+            Try to serialize value to and put it into resulting dict with key "name"
+            :param name: key of value in resulting dict (JSON)
+            :param value:
+            :return: serialized value
+            """
             if name in custom_field_serializers:
                 return custom_field_serializers[name](value)
 
@@ -300,6 +347,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
     def _deserialize(cls, dict_representation: dict) -> AJS:
         """
         Creates class instance from a dict representation
+
         :param dict_representation: Representation produced by _serialize method
         :return: New class instance
         """
@@ -315,8 +363,13 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
             type_hints = dict_representation[TYPE_HINTS]
             del dict_representation[TYPE_HINTS]
 
-        # TODO: describe the function (description, parameters, return type)
         def deserialize_field(name, value):
+            """
+            Transform current value from JSON to element of resulting dict, having "name" as key
+            :param name: key in dict
+            :param value:
+            :return: deserialize value
+            """
             if name in custom_field_deserializers:
                 return custom_field_deserializers[name](value)
             if name in type_hints:

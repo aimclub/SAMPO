@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable
 from uuid import uuid4
 
 from sampo.schemas.graph import GraphNode
@@ -8,15 +8,13 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 
 
-def calculate_working_time_cascade(node: GraphNode, appointed_worker: List[Worker],
+def calculate_working_time_cascade(node: GraphNode, appointed_worker: list[Worker],
                                    work_estimator: WorkTimeEstimator = None) -> Time:
     """
-    Calculate working time of the appointed workers at current job for prioritization
+    Calculate the working time of the appointed workers at a current job for prioritization.
     O(1) - at worst case |inseparable_edges|
 
     :param node: the target node
-    :param work_estimator:
-    :param appointed_worker:
     :return: working time
     """
     if node.is_inseparable_son():
@@ -32,14 +30,11 @@ def calculate_working_time_cascade(node: GraphNode, appointed_worker: List[Worke
     return common_time
 
 
-def calculate_working_time(work_unit: WorkUnit, appointed_worker: List[Worker],
+def calculate_working_time(work_unit: WorkUnit, appointed_worker: list[Worker],
                            work_estimator: WorkTimeEstimator = None) -> Time:
     """
-    Calculate working time of the appointed workers at current job for final schedule
+    Calculate the working time of the appointed workers at a current job for final schedule
 
-    :param work_estimator:
-    :param appointed_worker:
-    :param work_unit:
     :return: working time
     """
     return work_unit.estimate_static(appointed_worker, work_estimator)  # working time
@@ -49,11 +44,11 @@ PRIORITY_DELTA = 1
 
 
 def work_priority(node: GraphNode,
-                  comp_cost: Callable[[GraphNode, List[Worker], WorkTimeEstimator], Time],
+                  comp_cost: Callable[[GraphNode, list[Worker], WorkTimeEstimator], Time],
                   work_estimator: WorkTimeEstimator = None) -> float:
     """
     Calculate the average time to complete the work when assigning the minimum and maximum number of employees
-    for the correctly calculations of rank in prioritization
+    for the correct calculations of rank in prioritization
     O(sum_of_max_counts_of_workers) of current work
 
     :param node: the target node

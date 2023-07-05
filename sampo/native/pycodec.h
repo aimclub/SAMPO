@@ -3,6 +3,10 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "numpy/arrayobject.h"
+#include "evaluator_types.h"
+
+#include <iostream>
 #include <vector>
 #include <stdexcept>
 
@@ -36,11 +40,11 @@ namespace PyCodec {
     }
 
     template<typename T>
-    PyObject *toPyList(const vector<T> &data) {
+    PyObject *toList(const vector<T> &data, PyObject* (*encodeValue)(T)) {
         PyObject *listObj = PyList_New(data.size());
         if (!listObj) throw logic_error("Unable to allocate memory for Python list");
         for (size_t i = 0; i < data.size(); i++) {
-            PyObject *num = toPrimitive(data[i]);
+            PyObject *num = encodeValue(data[i]);
             if (!num) {
                 Py_DECREF(listObj);
                 throw logic_error("Unable to allocate memory for Python list");
@@ -48,6 +52,11 @@ namespace PyCodec {
             PyList_SET_ITEM(listObj, i, num);
         }
         return listObj;
+    }
+
+    template<typename T>
+    PyObject *toPrimitiveList(const vector<T> &data) {
+        return toList(data, toPrimitive);
     }
 
     // =============================
@@ -98,6 +107,14 @@ namespace PyCodec {
     template<typename T>
     inline vector<T> fromList(PyObject *incoming, T typeref) {  // typeref used for T recognition
         return fromList(incoming, [typeref](PyObject* value) { return fromPrimitive(value, typeref); });
+    }
+
+    inline static int& Py_GET1D(const PyObject* list, size_t ind) {
+        return * (int*) PyArray_GETPTR1(list, ind);
+    }
+
+    inline static int& Py_GET2D(const PyObject* resources, size_t work, size_t worker) {
+        return * (int*) PyArray_GETPTR2(resources, work, worker);
     }
 
     // ============================

@@ -5,6 +5,7 @@ from sampo.schemas.time import Time
 def scale_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
     """
     Multiplies each of the requirements of their list, scaling the maximum number of resources and volume
+
     :param req_list: list of resource requirements
     :param scalar: scalar to which the requirements are applied
     :param new_name: A new name for the requirements
@@ -16,6 +17,7 @@ def scale_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = 
 def mul_volume_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
     """
     Multiplies each of the requirements of their list, scaling only the volume
+
     :param req_list: list of resource requirements
     :param scalar: scalar to which the requirements are applied
     :param new_name: A new name for the requirements
@@ -27,6 +29,7 @@ def mul_volume_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | No
 def get_borehole_volume(borehole_count: int, base: (float, float)) -> float:
     """
     Function to calculate the scalar for objects depending on the number of boreholes
+
     :param borehole_count: number of boreholes on the site
     :param base:
         base[0] part of the volume independent of the number of boreholes,
@@ -39,6 +42,7 @@ def get_borehole_volume(borehole_count: int, base: (float, float)) -> float:
 def mul_borehole_volume(req_list: list[WorkerReq], borehole_count: int, base: (float, float)) -> list[WorkerReq]:
     """
     Function for scaling resource requirements for works dependent on the number of boreholes
+
     :param req_list: list of resource requirements
     :param borehole_count: number of boreholes on the site
     :param base:

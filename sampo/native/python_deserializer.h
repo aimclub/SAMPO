@@ -10,6 +10,12 @@ namespace PythonDeserializer {
     WorkGraph* workGraph(PyObject* pyWorkGraph);
 
     vector<Contractor*> contractors(PyObject* pyContractors);
+
+    vector<Chromosome*> decodeChromosomes(PyObject* incoming);
+
+    PyObject* encodeChromosome(Chromosome* incoming);
+
+    PyObject* encodeChromosomes(vector<Chromosome*>& incoming);
 }
 
 #endif //PYTHON_DESERIALIZER_H

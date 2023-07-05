@@ -16,6 +16,9 @@ class WorkEstimationMode(Enum):
 
 
 class WorkTimeEstimator(ABC):
+    """
+    Implementation of time estimator of work with a given set of resources.
+    """
     @abstractmethod
     def set_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         ...

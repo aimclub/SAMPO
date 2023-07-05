@@ -13,12 +13,13 @@
 #include "Python.h"
 #include "numpy/arrayobject.h"
 #include "pycodec.h"
+#include "evaluator_types.h"
 
 #include <vector>
 #include <iostream>
 #include <unordered_map>
-
-using namespace std;
+#include <omp.h>
+#include <set>
 
 // worker -> contractor -> vector<time, count> in descending order
 typedef vector<vector<vector<pair<int, int>>>> Timeline;
@@ -28,22 +29,76 @@ typedef vector<vector<vector<pair<int, int>>>> Timeline;
 class ChromosomeEvaluator {
 private:
     const vector<vector<int>>& parents;      // vertices' parents
+    const vector<vector<int>>& headParents;  // vertices' parents without inseparables
     const vector<vector<int>>& inseparables; // inseparable chains with self
     const vector<vector<int>>& workers;      // contractor -> worker -> count
+    vector<double> volume;                   // work -> worker -> WorkUnit.min_req
+    vector<vector<int>> minReqs;             // work -> worker -> WorkUnit.max_req
+    vector<vector<int>> maxReqs;             // work -> WorkUnit.volume
+
     int totalWorksCount;
     PyObject* pythonWrapper;
+    bool useExternalWorkEstimator;
 
-    int calculate_working_time(int chromosome_ind, int work, int team_target) {
-        auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)", chromosome_ind, team_target, work);
-        if (res == nullptr) {
-            cerr << "Result is NULL" << endl << flush;
-            return 0;
-        }
-        Py_DECREF(res);
-        return (int) PyLong_AsLong(res);
+    inline static float get_productivity(size_t workerType, int worker_count) {
+        // TODO
+        return 1.0F * (float) worker_count;
     }
 
-    int findMinStartTime(int nodeIndex, int contractor, const int* team, size_t teamSize,
+    inline static float communication_coefficient(int workerCount, int maxWorkerCount) {
+        int n = workerCount;
+        int m = maxWorkerCount;
+        return 1 / (float) (6 * m * m) * (float) (-2 * n * n * n + 3 * n * n + (6 * m * m - 1) * n);
+    }
+
+    int calculate_working_time(int chromosome_ind, int work, int team_target, const int* resources, size_t teamSize) {
+        if (useExternalWorkEstimator) {
+            auto res = PyObject_CallMethod(pythonWrapper, "calculate_working_time", "(iii)",
+                                           chromosome_ind, team_target, work);
+            if (res == nullptr) {
+                cerr << "Result is NULL" << endl << flush;
+                return 0;
+            }
+            Py_DECREF(res);
+            return (int) PyLong_AsLong(res);
+        } else {
+            // the _abstract_estimate from WorkUnit
+            int time = 0;
+
+            for (size_t i = 0; i < teamSize; i++) {
+                int minReq = this->minReqs[work][i];
+                if (minReq == 0)
+                    continue;
+                if (resources[i] < minReq) {
+//                    cout << "Not conforms to min_req: " << get_worker(resources, team_target, i) << " < " << minReq << " on work " << work
+//                         << " and worker " << i << ", chromosome " << chromosome_ind << ", teamSize=" << teamSize << endl;
+//                    cout << "Team: ";
+//                    for (size_t j = 0; j < teamSize; j++) {
+//                        cout << get_worker(resources, team_target, i) << " ";
+//                    }
+//                    cout << endl;
+                    return TIME_INF;
+                }
+                int maxReq = this->maxReqs[work][i];
+
+                float productivity = get_productivity(i, resources[i]);
+                productivity *= communication_coefficient(resources[i], maxReq);
+
+//                if (productivity < 0.000001) {
+//                    return TIME_INF;
+//                }
+//                productivity = 0.1;
+                int newTime = ceil((float) volume[work] / productivity);
+                if (newTime > time) {
+                    time = newTime;
+                }
+            }
+
+            return time;
+        }
+    }
+
+    int findMinStartTime(int nodeIndex, int contractor, const int* resources, size_t teamSize,
                          vector<int>& completed, Timeline& timeline) {
         int maxParentTime = 0;
         // find min start time
@@ -53,9 +108,8 @@ private:
 
         int maxAgentTime = 0;
 
-        const int* worker_team = team;
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = worker_team[worker];
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -72,7 +126,7 @@ private:
                 }
                 need_count -= offer_count;
                 if (ind == 0 && need_count > 0) {
-                    cerr << "Not enough workers" << endl;
+//                    cerr << "Not enough workers" << endl;
                     return TIME_INF;
                 }
                 ind--;
@@ -82,9 +136,9 @@ private:
         return max(maxParentTime, maxAgentTime);
     }
 
-    static void updateTimeline(int finishTime, int contractor, const int* team, size_t teamSize, Timeline& timeline) {
+    static void updateTimeline(int finishTime, int contractor, const int* resources, size_t teamSize, Timeline& timeline) {
         for (int worker = 0; worker < teamSize; worker++) {
-            int worker_count = team[worker];
+            int worker_count = resources[worker];
             int need_count = worker_count;
             if (need_count == 0) continue;
 
@@ -116,7 +170,7 @@ private:
         }
     }
 
-    int schedule(int chromosome_ind, int nodeIndex, int startTime, int contractor, const int* team,
+    int schedule(int chromosome_ind, int nodeIndex, int startTime, int contractor, const int* resources,
                  size_t teamSize, vector<int>& completed, Timeline& timeline) {
         int finishTime = startTime;
 
@@ -128,14 +182,14 @@ private:
             }
             startTime = max(startTime, maxParentTime);
 
-            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex);
+            int workingTime = calculate_working_time(chromosome_ind, dep_node, nodeIndex, resources, teamSize);
             finishTime = startTime + workingTime;
 
             // cache finish time of scheduled work
             completed[dep_node] = finishTime;
         }
 
-        updateTimeline(finishTime, contractor, team, teamSize, timeline);
+        updateTimeline(finishTime, contractor, resources, teamSize, timeline);
 
         return finishTime;
     }
@@ -155,90 +209,99 @@ private:
     }
 
 public:
-    explicit ChromosomeEvaluator(const vector<vector<int>>& parents,
-                                 const vector<vector<int>>& inseparables,
-                                 const vector<vector<int>>& workers,
-                                 int totalWorksCount,
-                                 PyObject* pythonWrapper) : parents(parents), inseparables(inseparables), workers(workers) {
-        this->totalWorksCount = totalWorksCount;
-        this->pythonWrapper = pythonWrapper;
+    int numThreads;
+
+    explicit ChromosomeEvaluator(EvaluateInfo* info)
+        : parents(info->parents), headParents(info->headParents), inseparables(info->inseparables), workers(info->workers) {
+        this->totalWorksCount = info->totalWorksCount;
+        this->pythonWrapper = info->pythonWrapper;
+        this->useExternalWorkEstimator = info->useExternalWorkEstimator;
+        this->numThreads = this->useExternalWorkEstimator ? 1 : omp_get_num_procs();
+        this->volume = info->volume;
+        this->minReqs = info->minReq;
+        this->maxReqs = info->maxReq;
+
+//        for (int i = 0; i < headParents.size(); i++) {
+//            cout << i << " | ";
+//            for (int p : headParents[i]) {
+//                cout << p << " ";
+//            }
+//            cout << endl;
+//        }
+
+         printf("Genetic running threads: %i\n", this->numThreads);
     }
 
     ~ChromosomeEvaluator() = default;
 
-    vector<int> evaluate(vector<PyObject*>& chromosomes) {
-        auto results = vector<int>();
-        int i = 0;
-        for (auto* chromosome : chromosomes) {
-            results.push_back(evaluate(i++, chromosome));
+    bool isValid(Chromosome* chromosome) {
+        bool* visited = new bool[chromosome->numWorks()] { false };
+
+        // check edges
+        for (int i = 0; i < chromosome->numWorks(); i++) {
+            int node = *chromosome->getOrder()[i];
+            visited[node] = true;
+            for (int parent : headParents[node]) {
+                if (!visited[parent]) {
+                    return false;
+                }
+            }
         }
-        return results;
+
+        delete[] visited;
+        // check resources
+        for (int node = 0; node < chromosome->numWorks(); node++) {
+            int contractor = chromosome->getContractor(node);
+            for (int res = 0; res < chromosome->numResources(); res++) {
+                int count = chromosome->getResources()[node][res];
+                if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
-    int evaluate(int chromosome_ind, PyObject* chromosome) {
-        PyObject* pyOrder; //= PyList_GetItem(chromosome, 0);
-        PyObject* pyResources; //= PyList_GetItem(chromosome, 1);
-        PyObject* pyContractors; //= PyList_GetItem(chromosome, 1);
-
-        if (!PyArg_ParseTuple(chromosome, "OOO", &pyOrder, &pyResources, &pyContractors)) {
-            cerr << "Can't parse chromosome!!!!" << endl;
-            return -1;
+    void evaluate(vector<Chromosome*>& chromosomes) {
+        #pragma omp parallel for shared(chromosomes) default (none) num_threads(this->numThreads)
+        for (int i = 0; i < chromosomes.size(); i++) {
+            if (isValid(chromosomes[i])) {
+                chromosomes[i]->fitness = evaluate(i, chromosomes[i]);
+            } else {
+                chromosomes[i]->fitness = INT_MAX;
+            }
         }
+    }
 
-        int* order = (int*) PyArray_DATA((PyArrayObject*) pyOrder);
-        int* resources = (int*) PyArray_DATA((PyArrayObject*) pyResources);
-
-        int worksCount = PyArray_DIM(pyOrder, 0);  // without inseparables
-        int resourcesCount = PyArray_DIM(pyResources, 1) - 1;
-
+    int evaluate(int chromosome_ind, Chromosome* chromosome) {
         Timeline timeline = createTimeline();
 
         auto completed = vector<int>();
         completed.resize(totalWorksCount);
 
+//        cout << "Evaluated" << endl;
+
         int finishTime = 0;
 
+//        for (int w = 0; w < chromosome->numWorks(); w++) {
+//            cout << *chromosome->getOrder()[w] << " ";
+//        }
+//        cout << endl;
+
         // scheduling works one-by-one
-        for (int i = 0; i < worksCount; i++) {
-            int workIndex = order[i];
-            auto* team = resources + i * (resourcesCount + 1); // go to the start of 'i' row in 2D array
-            int contractor = team[resourcesCount];
+        for (int i = 0; i < chromosome->numWorks(); i++) {
+            int workIndex = *chromosome->getOrder()[i];
+            int* team = chromosome->getResources()[workIndex];
+            int contractor = chromosome->getContractor(workIndex);
 
             int st = findMinStartTime(workIndex, contractor, team,
-                                      resourcesCount, completed, timeline);
+                                      chromosome->numResources(), completed, timeline);
             if (st == TIME_INF) {
                 return TIME_INF;
             }
             int c_ft = schedule(chromosome_ind, workIndex, st, contractor, team,
-                                resourcesCount, completed, timeline);
-            finishTime = max(finishTime, c_ft);
-        }
-
-        return finishTime;
-    }
-
-    int testEvaluate(vector<int>& order, vector<vector<int>>& resources) {
-        size_t worksCount = order.size();
-        size_t resourcesCount = resources[0].size() - 1;
-
-        Timeline timeline = createTimeline();
-
-        auto completed = vector<int>();
-        completed.resize(totalWorksCount);
-
-        int finishTime = 0;
-
-        // scheduling works one-by-one
-        for (int i = 0; i < worksCount; i++) {
-            int workIndex = order[i];
-            int contractor = resources[i][resourcesCount];
-            auto* team = resources[i].begin().operator->();
-
-            int st = findMinStartTime(workIndex, contractor, team,
-                                      resourcesCount, completed, timeline);
-            int c_ft = schedule(0, workIndex, st, contractor, team,
-                                resourcesCount, completed, timeline);
-//            int c_ft = 0 + 5;
+                                chromosome->numResources(), completed, timeline);
             finishTime = max(finishTime, c_ft);
         }
 

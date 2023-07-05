@@ -1,6 +1,6 @@
 from collections import defaultdict
-from dataclasses import dataclass
-from typing import List, Dict, Union
+from dataclasses import dataclass, field
+from typing import Union
 from uuid import uuid4
 
 import numpy as np
@@ -12,8 +12,8 @@ from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
-WorkerContractorPool = Dict[WorkerName, Dict[ContractorName, Worker]]
-DefaultContractorCapacity = 25
+WorkerContractorPool = dict[WorkerName, dict[ContractorName, Worker]]
+DEFAULT_CONTRACTOR_CAPACITY = 25
 
 
 @dataclass
@@ -25,8 +25,8 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     :param equipments: dictionary, where the key is the type of technique, and the value is the pool of techniques of
     that type
     """
-    workers: Dict[str, Worker]
-    equipments: Dict[str, Equipment]
+    workers: dict[str, Worker] = field(default_factory=dict)
+    equipments: dict[str, Equipment] = field(default_factory=dict)
 
     def __post_init__(self):
         for w in self.workers.values():
@@ -46,7 +46,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
     @classmethod
     @custom_serializer('workers', deserializer=True)
     def deserialize_workers(cls, value):
-        return {tuple(i['key']): Worker._deserialize(i['val']) for i in value}
+        return {i['key']: Worker._deserialize(i['val']) for i in value}
 
     @classmethod
     @custom_serializer('equipments', deserializer=True)
@@ -55,11 +55,12 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
 
 
 # TODO move from schemas
-def get_worker_contractor_pool(contractors: Union[List['Contractor'], 'Contractor']) -> WorkerContractorPool:
+def get_worker_contractor_pool(contractors: Union[list['Contractor'], 'Contractor']) -> WorkerContractorPool:
     """
     Gets agent dictionary from contractors list.
     Alias for frequently used functionality.
-    :param contractors: List of all the considered contractors
+
+    :param contractors: list of all the considered contractors
     :return: Dictionary of workers by worker name, next by contractor id
     """
     agents = defaultdict(dict)
@@ -70,14 +71,14 @@ def get_worker_contractor_pool(contractors: Union[List['Contractor'], 'Contracto
 
 
 # TODO move from schemas
-def get_contractor_for_resources_schedule(resources: Union[DataFrame, List[Dict[str, int]]],
-                                          contractor_capacity: int = DefaultContractorCapacity,
+def get_contractor_for_resources_schedule(resources: Union[DataFrame, list[dict[str, int]]],
+                                          contractor_capacity: int = DEFAULT_CONTRACTOR_CAPACITY,
                                           contractor_id: str = None,
                                           contractor_name: str = "") \
         -> 'Contractor':
     """
     Generates a contractor, which satisfies the provided resources
-    :param resources: List of resource requirements for each task
+    :param resources: list of resource requirements for each task
     :param contractor_id: ID of the new contractor. If None, a new UUID4 is generated
     :param contractor_name: Name of the new contractor. If None, an empty string should be passed
     :param contractor_capacity: Capacity of the generated contractor. It influences scale of resource capacities

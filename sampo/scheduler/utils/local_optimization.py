@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from operator import attrgetter
-from typing import List, Dict, Set, Iterable
+from typing import Iterable
 
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
@@ -24,6 +25,9 @@ class OrderLocalOptimizer(ABC):
 
 
 class ScheduleLocalOptimizer(ABC):
+    """
+    Base class for building local optimization methods applicable to the schedule.
+    """
 
     def __init__(self, timeline_type: type[Timeline]):
         """
@@ -33,7 +37,8 @@ class ScheduleLocalOptimizer(ABC):
 
     @abstractmethod
     def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
-                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 contractors: list[Contractor], landscape_config: LandscapeConfiguration,
+                 spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
         """
@@ -42,6 +47,7 @@ class ScheduleLocalOptimizer(ABC):
         Result writes to `scheduled_works` in-place.
         :param node_order:
         :param contractors:
+        :param landscape_config:
         :param spec:
         :param worker_pool:
         :param work_estimator:
@@ -55,8 +61,8 @@ class ScheduleLocalOptimizer(ABC):
 def get_swap_candidates(node: GraphNode,
                         node_index: int,
                         candidates: Iterable[GraphNode],
-                        node2ind: Dict[GraphNode, int],
-                        processed: Set[GraphNode]) -> list[GraphNode]:
+                        node2ind: dict[GraphNode, int],
+                        processed: set[GraphNode]) -> list[GraphNode]:
     """
     Abstract function to find nodes that can be swapped
     with given node without breaking topological order
@@ -64,10 +70,10 @@ def get_swap_candidates(node: GraphNode,
     :param node: target node
     :param node_index: index of target node in global sequence
     :param candidates: list of candidates to swapping
-    :param node2ind: a dict from node to it's index
+    :param node2ind: a dict from node to its index
     :param processed: a set of nodes that should not be swapped yet
     """
-    cur_children: Set[GraphNode] = node.children_set
+    cur_children: set[GraphNode] = node.children_set
 
     def is_candidate_accepted(candidate: GraphNode) -> bool:
         if candidate in cur_children or candidate in processed:
@@ -87,10 +93,13 @@ def get_swap_candidates(node: GraphNode,
 
 class SwapOrderLocalOptimizer(OrderLocalOptimizer):
     """
-    This performs just small shuffle that not break topological order
+    This performs just small shuffle that not breaks topological order.
     """
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
+        """
+        Change order of nodes (not breaks topological order) by swapping several nodes.
+        """
         if node_order is None:
             return
 
@@ -101,19 +110,19 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
         # node2cost = {node: work_priority(node, calculate_working_time_cascade, work_estimator) for node in sub_seq}
 
         # preprocessing
-        node2ind: Dict[GraphNode, int] = {node: start_index + ind for ind, node in
+        node2ind: dict[GraphNode, int] = {node: start_index + ind for ind, node in
                                           enumerate(node_order[start_index:end_index])}
 
         # temporary for usability measurement
         swapped = 0
 
-        processed: Set[GraphNode] = set()
+        processed: set[GraphNode] = set()
         for i in reversed(area):
             node = node_order[i]
             if node in processed:
                 continue
             # cur_cost = node2cost[node]
-            chain_candidates: List[GraphNode] = node_order[start_index:i]
+            chain_candidates: list[GraphNode] = node_order[start_index:i]
 
             accepted_candidates = get_swap_candidates(node, i, chain_candidates, node2ind, processed)
 
@@ -136,7 +145,7 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     """
     This method finds near placed works and turns it to run in parallel.
-    It will take effect only if it's launched after scheduling
+    It will take effect only if it's launched after scheduling.
     """
 
     def __init__(self, timeline_type: type[Timeline]):
@@ -145,8 +154,9 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     def recalc_schedule(self,
                         node_order: Iterable[GraphNode],
                         contractors: list[Contractor],
+                        landscape_config: LandscapeConfiguration,
                         spec: ScheduleSpec,
-                        node2swork: Dict[GraphNode, ScheduledWork],
+                        node2swork: dict[GraphNode, ScheduledWork],
                         worker_pool: WorkerContractorPool,
                         assigned_parent_time: Time,
                         work_estimator: WorkTimeEstimator = None) -> dict[GraphNode, ScheduledWork]:
@@ -154,8 +164,10 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         Recalculates duration and start-finish times in the whole given `seq`.
         This will be useful to call after `parallelize_local_sequence` method
         or other methods that can change the appointed set of workers.
+
         :param node_order: scheduled works to process
         :param contractors:
+        :param landscape_config:
         :param spec:
         :param node2swork:
         :param worker_pool:
@@ -163,8 +175,8 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
         """
 
-        timeline = self._timeline_type(node_order, contractors, worker_pool)
-        node2swork_new: Dict[GraphNode, ScheduledWork] = {}
+        timeline = self._timeline_type(node_order, contractors, worker_pool, landscape_config)
+        node2swork_new: dict[GraphNode, ScheduledWork] = {}
 
         id2contractor = build_index(contractors, attrgetter('name'))
 
@@ -173,7 +185,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             work_spec = spec.get_work_spec(node.id)
             # st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
             # ft = st + node_schedule.get_actual_duration(work_estimator)
-            timeline.schedule(index, node, node2swork_new, node_schedule.workers,
+            timeline.schedule(node, node2swork_new, node_schedule.workers,
                               id2contractor[node_schedule.contractor], None, work_spec.assigned_time,
                               assigned_parent_time, work_estimator)
             # node_schedule.start_end_time = (st, ft)
@@ -182,28 +194,43 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         return node2swork_new
 
     def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
-                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 contractors: list[Contractor], landscape_config: LandscapeConfiguration,
+                 spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
+        """
+        Finds near placed works and turns it to run in parallel.
+
+        :param scheduled_works:
+        :param node_order:
+        :param contractors:
+        :param landscape_config:
+        :param spec:
+        :param worker_pool:
+        :param work_estimator:
+        :param assigned_parent_time:
+        :param area:
+        :return:
+        """
         start_index = area.start
         end_index = area.stop
         
         # preprocessing
-        node2ind: Dict[GraphNode, int] = {node: start_index + ind for ind, node in
+        node2ind: dict[GraphNode, int] = {node: start_index + ind for ind, node in
                                           enumerate(node_order[start_index:end_index])}
 
-        processed: Set[GraphNode] = set()
+        processed: set[GraphNode] = set()
 
         for i in reversed(area):
             node = node_order[i]
             if node in processed:
                 continue
-            chain_candidates: List[GraphNode] = node_order[0:i]
+            chain_candidates: list[GraphNode] = node_order[start_index:i]
             accepted_candidates = get_swap_candidates(node, i, chain_candidates, node2ind, processed)
 
             my_schedule: ScheduledWork = scheduled_works[node]
-            my_workers: Dict[str, Worker] = build_index(my_schedule.workers, attrgetter('name'))
-            my_schedule_reqs: Dict[str, WorkerReq] = build_index(my_schedule.work_unit.worker_reqs, attrgetter('kind'))
+            my_workers: dict[str, Worker] = build_index(my_schedule.workers, attrgetter('name'))
+            my_schedule_reqs: dict[str, WorkerReq] = build_index(my_schedule.work_unit.worker_reqs, attrgetter('kind'))
 
             new_my_workers = {}
 
@@ -211,10 +238,10 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             for candidate in accepted_candidates:
                 candidate_schedule = scheduled_works[candidate]
 
-                candidate_schedule_reqs: Dict[str, WorkerReq] = build_index(candidate_schedule.work_unit.worker_reqs,
+                candidate_schedule_reqs: dict[str, WorkerReq] = build_index(candidate_schedule.work_unit.worker_reqs,
                                                                             attrgetter('kind'))
 
-                new_candidate_workers: Dict[str, int] = {}
+                new_candidate_workers: dict[str, int] = {}
 
                 satisfy = True
 
@@ -261,11 +288,11 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                     # candidate_schedule.start_time = my_schedule.start_time
                     break
 
-        return self.recalc_schedule(reversed(node_order), contractors, spec, scheduled_works,
+        return self.recalc_schedule(reversed(node_order), contractors, landscape_config, spec, scheduled_works,
                                     worker_pool, assigned_parent_time, work_estimator)
 
 
-def optimize_local_sequence(seq: List[GraphNode],
+def optimize_local_sequence(seq: list[GraphNode],
                             start_ind: int,
                             end_ind: int,
                             work_estimator: WorkTimeEstimator = None):

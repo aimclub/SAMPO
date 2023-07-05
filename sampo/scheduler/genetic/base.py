@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import Optional, Callable
 
 from deap.base import Toolbox
 
@@ -9,11 +9,15 @@ from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
+from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -22,6 +26,10 @@ from sampo.utilities.validation import validate_schedule
 
 
 class GeneticScheduler(Scheduler):
+    """
+    Class for hybrid scheduling algorithm, that uses heuristic algorithm to generate
+    first population and genetic algorithm to search the best solving
+    """
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
@@ -50,6 +58,7 @@ class GeneticScheduler(Scheduler):
         self._n_cpu = n_cpu
 
         self._time_border = None
+        self._deadline = None
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -59,7 +68,13 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> Tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
+        """
+        Return base parameters for model to make new population
+
+        :param works_count:
+        :return:
+        """
         size_selection = self.size_selection
         if size_selection is None:
             if works_count < 300:
@@ -92,33 +107,110 @@ class GeneticScheduler(Scheduler):
         return size_selection, mutate_order, mutate_resources, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
+        """
+        Set the number of CPU cores
+
+        :param n_cpu:
+        """
         self._n_cpu = n_cpu
 
     def set_time_border(self, time_border: int):
         self._time_border = time_border
 
-    def schedule_with_cache(self, wg: WorkGraph,
-                            contractors: List[Contractor],
+    def set_deadline(self, deadline: Time):
+        """
+        Set the deadline of tasks
+
+        :param deadline:
+        """
+        self._deadline = deadline
+
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
+        """
+        Heuristic algorithm, that generate first population
+
+        :param landscape:
+        :param wg: graph of works
+        :param contractors:
+        :return:
+        """
+
+        def init_k_schedule(scheduler_class, k):
+            try:
+                return (scheduler_class(work_estimator=self.work_estimator,
+                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
+                                                                                                    landscape=landscape),
+                        list(reversed(prioritization(wg, self.work_estimator))))
+            except NoSufficientContractorError:
+                return None, None
+
+        if self._deadline is None:
+            def init_schedule(scheduler_class):
+                try:
+                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
+                                                                                         landscape=landscape),
+                            list(reversed(prioritization(wg, self.work_estimator))))
+                except NoSufficientContractorError:
+                    return None, None
+
+            return {
+                "heft_end": init_schedule(HEFTScheduler),
+                "heft_between": init_schedule(HEFTBetweenScheduler),
+                "12.5%": init_k_schedule(HEFTScheduler, 8),
+                "25%": init_k_schedule(HEFTScheduler, 4),
+                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+            }
+        else:
+            def init_schedule(scheduler_class):
+                try:
+                    schedule = AverageBinarySearchResourceOptimizingScheduler(
+                        scheduler_class(work_estimator=self.work_estimator)
+                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)[0]
+                    return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                except NoSufficientContractorError:
+                    return None, None
+
+            return {
+                "heft_end": init_schedule(HEFTScheduler),
+                "heft_between": init_schedule(HEFTBetweenScheduler),
+                "12.5%": init_k_schedule(HEFTScheduler, 8),
+                "25%": init_k_schedule(HEFTScheduler, 4),
+                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+            }
+
+    def schedule_with_cache(self,
+                            wg: WorkGraph,
+                            contractors: list[Contractor],
+                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
-        def init_schedule(scheduler_class):
-            return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors),
-                    list(reversed(prioritization(wg, self.work_estimator))))
+        """
+        Build schedule for received graph of workers and return the current state of schedule
+        It's needed to use this method in multy agents model
 
-        init_schedules: Dict[str, tuple[Schedule, list[GraphNode] | None]] = {
-            "heft_end": init_schedule(HEFTScheduler),
-            "heft_between": init_schedule(HEFTBetweenScheduler)
-        }
+        :param landscape:
+        :param wg:
+        :param contractors:
+        :param spec:
+        :param validate:
+        :param assigned_parent_time:
+        :param timeline:
+        :return:
+        """
+        init_schedules = self.generate_first_population(wg, contractors, landscape)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
-        agents = get_worker_contractor_pool(contractors)
+        worker_pool = get_worker_contractor_pool(contractors)
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
-                                                                                     agents,
+                                                                                     worker_pool,
                                                                                      size_of_population,
                                                                                      self.number_of_generation,
                                                                                      size_selection,
@@ -127,6 +219,7 @@ class GeneticScheduler(Scheduler):
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
+                                                                                     landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      n_cpu=self._n_cpu,

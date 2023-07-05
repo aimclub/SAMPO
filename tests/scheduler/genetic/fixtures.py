@@ -7,8 +7,9 @@ from pytest import fixture
 
 from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -50,7 +51,8 @@ def create_toolbox(wg: WorkGraph,
                    init_schedules: Dict[str, Schedule],
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
-                   work_estimator: WorkTimeEstimator = None) -> Tuple[Toolbox, np.ndarray]:
+                   work_estimator: WorkTimeEstimator = None,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Tuple[Toolbox, np.ndarray]:
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
@@ -109,6 +111,7 @@ def create_toolbox(wg: WorkGraph,
     return init_toolbox(wg,
                         contractors,
                         worker_pool,
+                        landscape,
                         index2node,
                         work_id2index,
                         worker_name2index,
@@ -130,9 +133,11 @@ def create_toolbox(wg: WorkGraph,
                         work_estimator), resources_border
 
 
-@fixture(scope='function')
-def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
-                  setup_default_schedules) -> Tuple[Toolbox, np.ndarray]:
+@fixture
+def setup_toolbox(setup_default_schedules) -> tuple:
+    (setup_wg, setup_contractors, setup_landscape_many_holders), setup_default_schedules = setup_default_schedules
+    setup_worker_pool = get_worker_contractor_pool(setup_contractors)
+
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
     work_estimator: Optional[WorkTimeEstimator] = None
@@ -145,4 +150,6 @@ def setup_toolbox(setup_wg, setup_contractors, setup_worker_pool,
                           mutate_resources,
                           setup_default_schedules,
                           rand,
-                          work_estimator=work_estimator)
+                          work_estimator=work_estimator,
+                          landscape=setup_landscape_many_holders), setup_wg, setup_contractors, setup_default_schedules, \
+           setup_landscape_many_holders

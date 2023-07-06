@@ -12,7 +12,7 @@ from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
 from sampo.utilities.collections_util import build_index
 
@@ -74,7 +74,7 @@ class MomentumTimeline(Timeline):
                                             node2swork: dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: Optional[WorkTimeEstimator] = None) \
+                                            work_estimator: WorkTimeEstimator = AbstractWorkEstimator()) \
             -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         """
         Looking for an available time slot for given 'GraphNode'
@@ -116,7 +116,7 @@ class MomentumTimeline(Timeline):
         exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for _, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                chain_node.work_unit.estimate_static(worker_team, work_estimator)
+                work_estimator.estimate_time(chain_node.work_unit, worker_team)
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 
@@ -333,7 +333,7 @@ class MomentumTimeline(Timeline):
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: Optional[WorkTimeEstimator] = None):
+                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         start_time, _, exec_times = \
             self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,

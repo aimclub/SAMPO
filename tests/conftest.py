@@ -1,11 +1,11 @@
 from random import Random
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 from uuid import uuid4
 
 import pytest
 from pytest import fixture
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
@@ -21,7 +21,7 @@ from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
@@ -169,7 +169,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 
 @fixture
 def setup_default_schedules(setup_scheduler_parameters):
-    work_estimator: Optional[WorkTimeEstimator] = None
+    work_estimator: WorkTimeEstimator = AbstractWorkEstimator()
 
     setup_wg, setup_contractors, setup_landscape_many_holders = setup_scheduler_parameters
 
@@ -206,7 +206,7 @@ def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_lands
 
     try:
         return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
-                                 work_time_estimator=None,
+                                 work_time_estimator=AbstractWorkEstimator(),
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
                                  validate_schedule=False,

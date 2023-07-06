@@ -1,19 +1,18 @@
 from datetime import time
 from time import time
-from typing import Optional
 
 import pytest
 
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.exceptions import NoSufficientContractorError
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
 
 
 def test_comparing_to_heft(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
-    work_estimator: Optional[WorkTimeEstimator] = None
+    work_estimator: WorkTimeEstimator = AbstractWorkEstimator()
 
     def init_schedule(scheduler_class):
         return scheduler_class(work_estimator=work_estimator).schedule(setup_wg, setup_contractors, landscape=landscape)

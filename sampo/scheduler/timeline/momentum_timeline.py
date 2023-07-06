@@ -250,7 +250,7 @@ class MomentumTimeline(Timeline):
             #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
             #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
             i += 1
-            end_idx = state.bisect_right(current_start_time + exec_time + 1)
+            end_idx = state.bisect_right(current_start_time + exec_time)
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start
@@ -259,7 +259,7 @@ class MomentumTimeline(Timeline):
             # that influence amount of available for us workers
             not_enough_workers_found = False
             for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if state[idx].available_workers_count < required_worker_count or state[idx].time <= parent_time:
+                if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
@@ -301,7 +301,7 @@ class MomentumTimeline(Timeline):
 
         swork = node2swork[node]  # masking the whole chain ScheduleEvent with the first node
         start = swork.start_time
-        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time + 1
+        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)
@@ -356,18 +356,18 @@ class MomentumTimeline(Timeline):
                                     exec_times: dict[GraphNode, tuple[Time, Time]]):
         # 6. create a schedule entry for the task
 
-        nodes_start_times: dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
-                                                            if pnode in node2swork else Time(0)
-                                                            for pnode in n.parents),
-                                                           default=Time(0))
-                                                    for n in inseparable_chain}
+        # nodes_start_times: dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
+        #                                                     if pnode in node2swork else Time(0)
+        #                                                     for pnode in n.parents),
+        #                                                    default=Time(0))
+        #                                             for n in inseparable_chain}
 
         curr_time = start_time
         for i, chain_node in enumerate(inseparable_chain):
-            _, node_time = exec_times[chain_node]
+            node_lag, node_time = exec_times[chain_node]
 
-            lag_req = nodes_start_times[chain_node] - curr_time
-            node_lag = lag_req if lag_req > 0 else 0
+            # lag_req = nodes_start_times[chain_node] - curr_time
+            # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
             swork = ScheduledWork(

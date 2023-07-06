@@ -15,7 +15,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
 
 
 # logger = mp.log_to_stderr(logging.DEBUG)
@@ -138,7 +138,7 @@ def init_toolbox(wg: WorkGraph,
                  index2node_list: list[tuple[int, GraphNode]],
                  parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
+                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
     list of parameters that received this function is sufficient and complete to manipulate with genetic
@@ -201,7 +201,7 @@ def generate_chromosome(wg: WorkGraph,
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, ChromosomeType],
                         rand: random.Random,
-                        work_estimator: WorkTimeEstimator = None,
+                        work_estimator: WorkTimeEstimator = AbstractWorkEstimator(),
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies

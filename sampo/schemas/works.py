@@ -2,10 +2,8 @@ from dataclasses import dataclass
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
-from sampo.schemas.resources import Worker, Material
+from sampo.schemas.resources import Material
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.serializers import custom_serializer
 
 
@@ -64,35 +62,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :return: list of worker requirements
         """
         return [WorkerReq._deserialize(wr) for wr in value]
-
-    # TODO: move this logit to WorkTimeEstimator
-    def estimate_static(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
-        """
-        Calculate summary time of task execution (without stochastic part)
-
-        :param worker_list:
-        :param work_estimator: available
-        :return: time of task execution
-        """
-        if work_estimator:
-            # TODO Is it should be here, not in preprocessing???
-            workers = {w.name.replace("_res_fact", ""): w.count for w in worker_list}
-            work_time = work_estimator.estimate_time(self.name.split("_stage_")[0], self.volume, workers)
-            if work_time > 0:
-                return work_time
-
-        return work_estimator.estimate_time(self, worker_list)
-
-    def estimate_stochastic(self, worker_list: list[Worker], work_estimator: WorkTimeEstimator = None) -> Time:
-        """
-        Calculate summary time of task execution (considering stochastic part)
-
-        :param work_estimator:
-        :param worker_list:
-        :param rand: random number
-        :return: time of task execution
-        """
-        return work_estimator.estimate_time(self, worker_list)
 
     def __getstate__(self):
         # custom method to avoid calling __hash__() on GraphNode objects

@@ -9,7 +9,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
 from sampo.schemas.types import AgentId
 
 
@@ -35,7 +35,7 @@ class JustInTimeTimeline(Timeline):
                                             node2swork: dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: WorkTimeEstimator | None = None) \
+                                            work_estimator: WorkTimeEstimator = AbstractWorkEstimator()) \
             -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         """
         Define the nearest possible start time for the current job. It is equal the max value from:
@@ -133,7 +133,7 @@ class JustInTimeTimeline(Timeline):
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: Optional[WorkTimeEstimator] = None):
+                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         
         start_time = assigned_start_time if assigned_start_time is not None else self.find_min_start_time(node, workers,
@@ -161,7 +161,7 @@ class JustInTimeTimeline(Timeline):
                                     inseparable_chain: list[GraphNode],
                                     start_time: Time,
                                     exec_times: dict[GraphNode, tuple[Time, Time]],
-                                    work_estimator: Optional[WorkTimeEstimator] = None):
+                                    work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
         """
         Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
         and adds it to given `id2swork`. Also does the same for all inseparable nodes starts from this one

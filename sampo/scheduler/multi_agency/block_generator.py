@@ -173,6 +173,6 @@ def generate_queues(type_prop: list[int],
         nodes_prev = nodes
 
         # logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
-    logger('Queues')
+    logger('QUEUES')
 
     return BlockGraph(nodes_all)

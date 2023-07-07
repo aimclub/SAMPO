@@ -22,7 +22,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.collections_util import reverse_dictionary
 
 
@@ -40,7 +40,7 @@ def build_schedule(wg: WorkGraph,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
                                                  FitnessFunction] = TimeFitness,
-                   work_estimator: WorkTimeEstimator = None,
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),

@@ -117,7 +117,7 @@ class NativeWrapper:
                    .copy().with_count(team[worker_index])
                    for worker_index in range(len(self.workers[0]))
                    if team[worker_index] > 0]
-        return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
+        return self.time_estimator.estimate_time(self.numeration[work].work_unit, workers).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes

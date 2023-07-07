@@ -2,7 +2,7 @@ from typing import Set
 
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.time_estimator import AbstractWorkEstimator
+from schemas.time_estimator import AbstractWorkEstimator
 
 
 def test_correct_order(setup_wg):

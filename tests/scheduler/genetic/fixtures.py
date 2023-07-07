@@ -51,7 +51,7 @@ def create_toolbox(wg: WorkGraph,
                    init_schedules: Dict[str, Schedule],
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
-                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator,
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Tuple[Toolbox, np.ndarray]:
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 

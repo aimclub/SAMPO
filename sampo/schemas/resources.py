@@ -83,8 +83,9 @@ class Worker(Resource):
         return self.contractor_id, self.name
 
     def get_productivity(self, rand: Random, productivity_mode: WorkerProductivityMode) -> float:
-        """Return the productivity of the worker team
-        It has 2 mods: stochastic and non-stochastic
+        """
+        Return the productivity of the worker team.
+        It has 2 mods: stochastic and non-stochastic.
 
         :param productivity_mode:
         :param rand: parameter for stochastic part

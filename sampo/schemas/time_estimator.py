@@ -35,7 +35,7 @@ class WorkTimeEstimator(ABC):
 
 
 # TODO add simple work_time_estimator based on WorkUnit.estimate_static
-class AbstractWorkEstimator(WorkTimeEstimator):
+class DefaultWorkEstimator(WorkTimeEstimator):
 
     def __init__(self,
                  rand: Random | None = None):
@@ -82,7 +82,7 @@ class AbstractWorkEstimator(WorkTimeEstimator):
             worker_count = 0 if worker is None else worker.count
             if worker_count < req.min_count:
                 return Time.inf()
-            productivity = AbstractWorkEstimator.get_productivity_of_worker(worker, self.rand, req.max_count) / worker_count
+            productivity = DefaultWorkEstimator.get_productivity_of_worker(worker, self.rand, req.max_count) / worker_count
             if productivity == 0:
                 return Time.inf()
             times.append(req.volume // productivity)

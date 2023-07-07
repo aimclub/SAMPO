@@ -12,7 +12,7 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray]
 
@@ -67,7 +67,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
-                                   work_estimator: WorkTimeEstimator = AbstractWorkEstimator()) \
+                                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
     """
     Build schedule from received chromosome

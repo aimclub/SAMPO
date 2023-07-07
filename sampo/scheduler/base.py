@@ -14,7 +14,7 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.base_opt import dichotomy_int
 
@@ -36,7 +36,7 @@ class Scheduler(ABC):
     def __init__(self,
                  scheduler_type: SchedulerType,
                  resource_optimizer: ResourceOptimizer = CoordinateDescentResourceOptimizer(dichotomy_int),
-                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         self.scheduler_type = scheduler_type
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator

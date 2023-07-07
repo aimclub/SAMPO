@@ -21,7 +21,7 @@ from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
@@ -169,7 +169,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 
 @fixture
 def setup_default_schedules(setup_scheduler_parameters):
-    work_estimator: WorkTimeEstimator = AbstractWorkEstimator()
+    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     setup_wg, setup_contractors, setup_landscape_many_holders = setup_scheduler_parameters
 
@@ -206,7 +206,7 @@ def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_lands
 
     try:
         return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
-                                 work_time_estimator=AbstractWorkEstimator(),
+                                 work_time_estimator=DefaultWorkEstimator(),
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
                                  validate_schedule=False,

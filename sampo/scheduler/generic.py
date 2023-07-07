@@ -13,7 +13,7 @@ from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.validation import validate_schedule
 
 
@@ -40,7 +40,7 @@ class GenericScheduler(Scheduler):
                  optimize_resources_f: Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                                                  dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
                                                  tuple[Time, Time, Contractor, list[Worker]]],
-                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
         self._timeline_type = timeline_type
         self.prioritization = prioritization_f
@@ -112,7 +112,7 @@ class GenericScheduler(Scheduler):
                         contractors: list[Contractor],
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
                         spec: ScheduleSpec = ScheduleSpec(),
-                        work_estimator: WorkTimeEstimator = AbstractWorkEstimator(),
+                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
             -> tuple[Iterable[ScheduledWork], Time, Timeline]:

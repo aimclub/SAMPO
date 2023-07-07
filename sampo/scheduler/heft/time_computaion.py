@@ -4,7 +4,7 @@ from uuid import uuid4
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.works import WorkUnit
 
 
@@ -34,7 +34,7 @@ def calculate_working_time_cascade(node: GraphNode, appointed_worker: list[Worke
 
 
 def calculate_working_time(work_unit: WorkUnit, appointed_worker: list[Worker],
-                           work_estimator: WorkTimeEstimator = AbstractWorkEstimator) -> Time:
+                           work_estimator: WorkTimeEstimator = DefaultWorkEstimator) -> Time:
     """
     Calculate the working time of the appointed workers at a current job for final schedule
 

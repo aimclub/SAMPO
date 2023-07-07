@@ -12,7 +12,7 @@ from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, AbstractWorkEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
 from sampo.utilities.collections_util import build_index
 
@@ -74,7 +74,7 @@ class MomentumTimeline(Timeline):
                                             node2swork: dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: WorkTimeEstimator = AbstractWorkEstimator()) \
+                                            work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         """
         Looking for an available time slot for given 'GraphNode'
@@ -333,7 +333,7 @@ class MomentumTimeline(Timeline):
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: WorkTimeEstimator = AbstractWorkEstimator()):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         start_time, _, exec_times = \
             self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,

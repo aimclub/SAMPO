@@ -2,11 +2,11 @@ from typing import Set
 
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.time_estimator import AbstractWorkEstimator
+from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 
 def test_correct_order(setup_wg):
-    order = prioritization(setup_wg, AbstractWorkEstimator())
+    order = prioritization(setup_wg, DefaultWorkEstimator())
     seen: Set[GraphNode] = set()
 
     for node in reversed(order):

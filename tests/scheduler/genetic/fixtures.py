@@ -127,7 +127,6 @@ def create_toolbox(wg: WorkGraph,
                         contractor2index,
                         contractor_borders,
                         node_indices,
-                        index2node_list,
                         parents,
                         Time(0),
                         work_estimator), resources_border

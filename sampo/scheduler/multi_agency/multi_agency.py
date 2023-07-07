@@ -37,6 +37,7 @@ class Agent:
 
         To apply returned offer, use `Agent#confirm`.
         """
+
         schedule, start_time, timeline, _ = \
             self._scheduler.schedule_with_cache(wg, self._contractors,
                                                 assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))
@@ -136,7 +137,7 @@ class Manager:
             assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
 
             if logger:
-                logger(f'{agent._scheduler}')
+                logger(f'Scheduled {i} block: {agent._scheduler}')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
                                     start_time=start_time,
                                     end_time=end_time)

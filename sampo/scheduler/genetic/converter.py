@@ -24,6 +24,11 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     """
     Receive a result of scheduling algorithm and transform it to chromosome
 
+    :param work_id2index:
+    :param worker_name2index:
+    :param contractor2index:
+    :param contractor_borders:
+    :param schedule:
     :param order: if passed, specify the node order that should appear in the chromosome
     :return:
     """
@@ -31,7 +36,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     order: list[GraphNode] = order if order is not None else [work for work in schedule.works
                                                               if not wg[work.work_unit.id].is_inseparable_son()]
 
-    # order works part of chromosom
+    # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])
 
     # convert to convenient form
@@ -39,7 +44,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
 
     # resources for works part of chromosome
     # +1 stores contractors line
-    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=np.int32)
+    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
     for node in order:
         node_id = node.work_unit.id

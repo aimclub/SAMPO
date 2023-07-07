@@ -7,7 +7,6 @@
 #include "pycodec.h"
 #include "genetic.h"
 #include "python_deserializer.h"
-#include "utils/use_numpy.h"
 
 
 #include <chrono>
@@ -25,6 +24,14 @@ static inline int PyLong_AsInt(PyObject* object) {
 
 static vector<int> decodeIntList(PyObject* object) {
     return PyCodec::fromList(object, PyLong_AsInt);
+}
+
+static string decodeString(PyObject* object) {
+    return string {PyUnicode_AsUTF8(object) };
+}
+
+static float decodeFloat(PyObject* object) {
+    return (float) PyFloat_AsDouble(object);
 }
 
 static PyObject* evaluate(PyObject *self, PyObject *args) {
@@ -87,15 +94,18 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject* pyInseparables;
     PyObject* pyWorkers;
     int totalWorksCount;
+    bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;
     PyObject* volume;
     PyObject* minReq;
     PyObject* maxReq;
+    PyObject* id2work;
+    PyObject* id2res;
 
-    if (!PyArg_ParseTuple(args, "OOOOOipOOO",
+    if (!PyArg_ParseTuple(args, "OOOOOippOOOOO",
                           &pythonWrapper, &pyParents, &pyHeadParents, &pyInseparables,
-                          &pyWorkers, &totalWorksCount, &useExternalWorkEstimator,
-                          &volume, &minReq, &maxReq)) {
+                          &pyWorkers, &totalWorksCount, &usePythonWorkEstimator, &useExternalWorkEstimator,
+                          &volume, &minReq, &maxReq, &id2work, &id2res)) {
         cout << "Can't parse arguments" << endl;
     }
 
@@ -105,10 +115,14 @@ static PyObject* decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(pyHeadParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
         PyCodec::fromList(pyWorkers, decodeIntList),
-        PyCodec::fromList(volume, PyFloat_AsDouble),
+        PyCodec::fromList(volume, decodeFloat),
         PyCodec::fromList(minReq, decodeIntList),
         PyCodec::fromList(maxReq, decodeIntList),
+        PyCodec::fromList(id2work, decodeString),
+        PyCodec::fromList(id2res, decodeString),
+        "aaaa", // TODO Propagate workEstimatorPath from Python
         totalWorksCount,
+        usePythonWorkEstimator,
         useExternalWorkEstimator
     };
 
@@ -181,7 +195,26 @@ int main() {
             { 0,  0,  0,  0,  0,  0, 0}
     };
 
-//    ChromosomeEvaluator evaluator(parents, inseparables, workers, parents.size(), nullptr);
+    string v = "aaaa";
+
+    auto* info = new EvaluateInfo {
+            nullptr,
+            parents,
+            vector<vector<int>>(),
+            inseparables,
+            workers,
+            vector<float>(),
+            vector<vector<int>>(),
+            vector<vector<int>>(),
+            vector<string>(),
+            vector<string>(),
+            v, // TODO Propagate workEstimatorPath from Python
+            0,
+            false,
+            true
+    };
+//
+    ChromosomeEvaluator evaluator(info);
 //    int res = evaluator.testEvaluate(chromosomeOrder, chromosomeResources);
 //
 //    cout << "Result: " << res << endl;

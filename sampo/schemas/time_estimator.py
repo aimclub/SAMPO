@@ -7,6 +7,7 @@ from typing import Optional
 import numpy.random
 
 from sampo.schemas.resources import Worker
+from sampo.schemas.resources import WorkerProductivityMode
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.collections_util import build_index
@@ -16,11 +17,6 @@ class WorkEstimationMode(Enum):
     Pessimistic = -1,
     Realistic = 0,
     Optimistic = 1
-
-
-class WorkerProductivityMode(Enum):
-    Static = 'static',
-    Stochastic = 'stochastic'
 
 
 class WorkTimeEstimator(ABC):
@@ -45,7 +41,6 @@ class WorkTimeEstimator(ABC):
         ...
 
 
-# TODO add simple work_time_estimator based on WorkUnit.estimate_static
 class DefaultWorkEstimator(WorkTimeEstimator):
 
     def __init__(self,

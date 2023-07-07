@@ -1,12 +1,17 @@
 from dataclasses import dataclass
+from enum import Enum
 from random import Random
 from typing import Optional
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.schemas.time_estimator import WorkerProductivityMode
 from sampo.schemas.types import AgentId
+
+
+class WorkerProductivityMode(Enum):
+    Static = 'static',
+    Stochastic = 'stochastic'
 
 
 @dataclass
@@ -116,7 +121,7 @@ class EmptySpaceConstructionObject(ConstructionObject):
 class Equipment(Resource):
     pass
 
-  
+
 @dataclass
 class Material(Resource):
 

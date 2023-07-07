@@ -82,18 +82,18 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
             rev_edge_prob = int(1 / edge_prob)
             for idx, start in enumerate(bg.nodes):
                 for end in bg.nodes[idx:]:
-                    if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
-                            and end.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
+                    if not start.is_service() and not end.is_service():
                         if start == end or rand.randint(0, rev_edge_prob) != 0:
                             continue
                         bg.add_edge(start, end)
 
     for node in bg.nodes:
-        if node.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
+        if not node.is_service():
             bg.add_edge(global_start, node)
             bg.add_edge(node, global_end)
 
-    logger(f'{graph_type.name} ' + ' '.join([str(mode.name) for mode in modes]))
+    logger(f'{graph_type.name} ' + ' '.join([str(mode.name) for i, mode in enumerate(modes)
+                                             if nodes[i].vertex_count != EMPTY_GRAPH_VERTEX_COUNT]))
     return bg
 
 

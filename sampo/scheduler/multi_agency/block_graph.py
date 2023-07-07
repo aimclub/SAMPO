@@ -22,6 +22,9 @@ class BlockNode:
     def id(self):
         return self.wg.start.id
 
+    def is_service(self):
+        return self.wg.vertex_count == 2
+
     def __hash__(self):
         return hash(self.id)
 

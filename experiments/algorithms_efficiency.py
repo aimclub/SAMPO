@@ -27,14 +27,13 @@ def log(message: str, logfile: IO):
 
 
 def run_iteration(args):
-    i = args[0]
-    with open(f'algorithms_efficiency_iteration_{i}.txt', 'w') as logfile:
-        schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler()]
+    iteration = args[0]
+    schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler()]
 
-        blocks_received = {str(scheduler): 0 for scheduler in schedulers}
-
-        logger = partial(log, logfile=logfile)
-        for i in range(1, 2):
+    blocks_received = {str(scheduler): 0 for scheduler in schedulers}
+    for i in range(1, 5):
+        with open(f'algorithms_efficiency_block_size_{50 * i}_iteration_{iteration}.txt', 'w') as logfile:
+            logger = partial(log, logfile=logfile)
             logger(f'block_size ~ {50 * i}')
 
             for graph_type in SyntheticBlockGraphType:
@@ -44,7 +43,7 @@ def run_iteration(args):
                           for i, contractor in enumerate(contractors)]
                 manager = Manager(agents)
 
-                bg = generate_block_graph(graph_type, 10, [1, 1, 1], lambda x: (50 * i, 50 * (i + 1)), 0.5,
+                bg = generate_block_graph(graph_type, 10, [1, 1, 1], lambda x: (None, 50 * i), 0.5,
                                           rand, obstruction_getter, 2, [3, 4], [3, 4], logger=logger)
 
                 scheduled_blocks = manager.manage_blocks(bg, logger=logger)

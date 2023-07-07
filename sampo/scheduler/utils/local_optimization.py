@@ -159,7 +159,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                         node2swork: dict[GraphNode, ScheduledWork],
                         worker_pool: WorkerContractorPool,
                         assigned_parent_time: Time,
-                        work_estimator: WorkTimeEstimator = None) -> dict[GraphNode, ScheduledWork]:
+                        work_estimator: WorkTimeEstimator) -> dict[GraphNode, ScheduledWork]:
         """
         Recalculates duration and start-finish times in the whole given `seq`.
         This will be useful to call after `parallelize_local_sequence` method
@@ -295,6 +295,6 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
 def optimize_local_sequence(seq: list[GraphNode],
                             start_ind: int,
                             end_ind: int,
-                            work_estimator: WorkTimeEstimator = None):
+                            work_estimator: WorkTimeEstimator):
     # TODO Try to find sets of works with nearly same resources and turn in to run in parallel or vice-versa
     pass

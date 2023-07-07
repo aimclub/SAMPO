@@ -1,5 +1,5 @@
 from random import Random
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 
 import numpy as np
 from deap.base import Toolbox
@@ -13,7 +13,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.collections_util import reverse_dictionary
 
 
@@ -51,7 +51,7 @@ def create_toolbox(wg: WorkGraph,
                    init_schedules: Dict[str, Schedule],
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
-                   work_estimator: WorkTimeEstimator = None,
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Tuple[Toolbox, np.ndarray]:
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
@@ -127,7 +127,6 @@ def create_toolbox(wg: WorkGraph,
                         contractor2index,
                         contractor_borders,
                         node_indices,
-                        index2node_list,
                         parents,
                         Time(0),
                         work_estimator), resources_border
@@ -140,7 +139,7 @@ def setup_toolbox(setup_default_schedules) -> tuple:
 
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
-    work_estimator: Optional[WorkTimeEstimator] = None
+    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     return create_toolbox(setup_wg,
                           setup_contractors,

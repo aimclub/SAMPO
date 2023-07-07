@@ -1,3 +1,6 @@
+import os
+from ctypes import *
+
 from deap.base import Toolbox
 
 from sampo.schemas.time import Time
@@ -83,6 +86,10 @@ class NativeWrapper:
 
         volume = [node.work_unit.volume for node in numeration.values()]
 
+        id2work = [numeration[i].work_unit.id for i in range(len(numeration))]
+        id2worker_name = reverse_dictionary(worker_name2index)
+        id2res = [id2worker_name[i] for i in range(len(id2worker_name))]
+
         self.totalWorksCount = wg.vertex_count
         self.time_estimator = time_estimator
         self.worker_pool_indices = worker_pool_indices
@@ -90,10 +97,19 @@ class NativeWrapper:
 
         self.evaluator = evaluator
 
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo')
+        # os.chdir('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+
+        import ctypes.util
+
+        name = ctypes.util.find_library('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests\\native.dll')
+        lib = ctypes.WinDLL(name)
+        # lib = CDLL(r'C:\Users\Quarter\PycharmProjects\sampo\tests\native.dll')
+
         # preparing C++ cache
         self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
-                                           self.totalWorksCount,
-                                           False, volume, min_req, max_req)
+                                           self.totalWorksCount, False, True, volume, min_req, max_req, id2work, id2res)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]
@@ -101,7 +117,7 @@ class NativeWrapper:
                    .copy().with_count(team[worker_index])
                    for worker_index in range(len(self.workers[0]))
                    if team[worker_index] > 0]
-        return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
+        return self.time_estimator.estimate_time(self.numeration[work].work_unit, workers).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes

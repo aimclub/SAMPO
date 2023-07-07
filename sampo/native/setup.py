@@ -8,7 +8,7 @@ from setuptools.command.build_ext import build_ext as build_ext_orig
 
 ext_modules = [
     Extension("native",
-              include_dirs=[numpy.get_include()],
+              include_dirs=[numpy.get_include(), "timeEstimatorLibrary", "timeEstimatorLibrary/Windows"],
               sources=[
                        # "basic_types.h",
                        # "contractor.h",
@@ -20,6 +20,7 @@ ext_modules = [
                        # "python_deserializer.h",
                        "python_deserializer.cpp",
                        "chromosome_evaluator.cpp",
+                       # "timeEstimatorLibrary/Windows/DLLoader.h",
                        # "workgraph.h"
               ],
               extra_compile_args=['-fopenmp', '/openmp'],

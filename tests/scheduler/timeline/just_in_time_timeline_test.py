@@ -11,9 +11,9 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
+from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.schemas.types import WorkerName
 from sampo.utilities.collections_util import build_index
-from schemas.time_estimator import DefaultWorkEstimator
 
 
 @fixture(scope='function')

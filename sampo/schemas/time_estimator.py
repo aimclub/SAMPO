@@ -4,6 +4,8 @@ from operator import attrgetter
 from random import Random
 from typing import Optional
 
+import numpy.random
+
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
@@ -16,13 +18,22 @@ class WorkEstimationMode(Enum):
     Optimistic = 1
 
 
+class WorkerProductivityMode(Enum):
+    Static = 'static',
+    Stochastic = 'stochastic'
+
+
 class WorkTimeEstimator(ABC):
     """
     Implementation of time estimator of work with a given set of resources.
     """
 
     @abstractmethod
-    def set_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
+    def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
+        ...
+
+    @abstractmethod
+    def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
         ...
 
     @abstractmethod
@@ -38,17 +49,27 @@ class WorkTimeEstimator(ABC):
 class DefaultWorkEstimator(WorkTimeEstimator):
 
     def __init__(self,
-                 rand: Random | None = None):
+                 rand: Random = Random()):
         self._use_idle = True
-        self._mode = WorkEstimationMode.Realistic
+        self._estimation_mode = WorkEstimationMode.Realistic
         self.rand = rand
+        self._productivity_mode = WorkerProductivityMode.Static
 
     def find_work_resources(self, work_name: str, work_volume: float) -> dict[str, int]:
-        return {}
+        return {
+            'driver': numpy.random.poisson(work_volume ** 0.5, 1),
+            'fitter': numpy.random.poisson(work_volume ** 0.5, 1),
+            'manager': numpy.random.poisson(work_volume ** 0.5, 1),
+            'handyman': numpy.random.poisson(work_volume ** 0.5, 1),
+            'electrician': numpy.random.poisson(work_volume ** 0.5, 1)
+        }
 
-    def set_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
+    def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle
-        self._mode = mode
+        self._estimation_mode = mode
+
+    def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
+        self._productivity_mode = mode
 
     def estimate_static(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
         """
@@ -82,24 +103,27 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             worker_count = 0 if worker is None else worker.count
             if worker_count < req.min_count:
                 return Time.inf()
-            productivity = DefaultWorkEstimator.get_productivity_of_worker(worker, self.rand, req.max_count) / worker_count
+            productivity = DefaultWorkEstimator.get_productivity_of_worker(worker, self.rand, req.max_count,
+                                                                           self._productivity_mode) / worker_count
             if productivity == 0:
                 return Time.inf()
             times.append(req.volume // productivity)
         return max(max(times), Time(0))
 
     @staticmethod
-    def get_productivity_of_worker(worker: Worker, rand: Optional[Random] = None, max_groups: int = 0):
+    def get_productivity_of_worker(worker: Worker, rand: Optional[Random] = None, max_groups: int = 0,
+                                   productivity_mode: WorkerProductivityMode = WorkerProductivityMode.Static):
         """
         Calculate the productivity of the Worker
         It has 2 mods: stochastic and non-stochastic, depending on the value of rand
 
+        :param productivity_mode:
         :param max_groups:
         :param worker: the worker
         :param rand: parameter for stochastic part
         :return: productivity of received worker
         """
-        return worker.get_productivity(rand) * communication_coefficient(worker.count, max_groups)
+        return worker.get_productivity(rand, productivity_mode) * communication_coefficient(worker.count, max_groups)
 
 
 def communication_coefficient(groups_count: int, max_groups: int) -> float:

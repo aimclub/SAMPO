@@ -6,6 +6,7 @@ from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.types import AgentId
+from schemas.time_estimator import WorkerProductivityMode
 
 
 @dataclass
@@ -81,13 +82,14 @@ class Worker(Resource):
         """
         return self.contractor_id, self.name
 
-    def get_productivity(self, rand: Optional[Random] = None) -> float:
+    def get_productivity(self, rand: Random, productivity_mode: WorkerProductivityMode) -> float:
         """Return the productivity of the worker team
         It has 2 mods: stochastic and non-stochastic
 
+        :param productivity_mode:
         :param rand: parameter for stochastic part
         """
-        if rand is None:
+        if productivity_mode is WorkerProductivityMode.Static:
             return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
 

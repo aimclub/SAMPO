@@ -234,8 +234,7 @@ def generate_population(size_population: int,
                                               contractor2index, contractor_borders, schedule)
 
     # chromosome types' weights
-    # sum of this array should be 10.
-    # these numbers are the probability weights: prob = weights / 10, sum(prob) = 1
+    # these numbers are the probability weights: prob = norm(weights), sum(prob) = 1
     weights = [2, 2, 1, 1, 1, 1, 2]
 
     for i, (_, importance) in enumerate(init_chromosomes.values()):

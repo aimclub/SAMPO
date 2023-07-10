@@ -40,6 +40,7 @@ class GeneticScheduler(Scheduler):
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
+                 weights: list[int] = None,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
@@ -56,6 +57,7 @@ class GeneticScheduler(Scheduler):
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
         self._n_cpu = n_cpu
+        self._weights = None
 
         self._time_border = None
         self._deadline = None
@@ -125,20 +127,17 @@ class GeneticScheduler(Scheduler):
         """
         self._deadline = deadline
 
-    @staticmethod
-    def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
+    def set_weights(self, weights: list[int]):
+        self._weights = weights
+
+    @classmethod
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                   work_estimator: WorkTimeEstimator = None,
                                   deadline: Time = None,
                                   weights = None):
         """
-        Heuristic algorithm, that generate first population
-
-        :param landscape:
-        :param wg: graph of works
-        :param contractors:
-        :param weights:
-        :return:
+        The first population generator
         """
 
         if weights is None:
@@ -204,7 +203,7 @@ class GeneticScheduler(Scheduler):
         :return:
         """
         init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, self.work_estimator,
-                                                                    self._deadline)
+                                                                    self._deadline, self._weights)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)

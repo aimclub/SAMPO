@@ -259,7 +259,9 @@ def build_schedule(wg: WorkGraph,
             prev_best_fitness = best_fitness
 
             # select individuals of next generation
-            offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
+            # offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
+            offspring = toolbox.select(pop, selection_size)
+
             # clone selected individuals
             # offspring = [toolbox.clone(ind) for ind in offspring]
 

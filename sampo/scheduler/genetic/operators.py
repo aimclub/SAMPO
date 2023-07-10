@@ -136,6 +136,7 @@ def init_toolbox(wg: WorkGraph,
                  worker_pool_indices: dict[int, dict[int, Worker]],
                  contractor2index: dict[str, int],
                  contractor_borders: np.ndarray,
+                 resources_min_border: np.ndarray,
                  node_indices: list[int],
                  parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
@@ -173,7 +174,8 @@ def init_toolbox(wg: WorkGraph,
                      contractor_count=len(index2contractor), rand=rand)
     # mutation for resource borders
     toolbox.register("mutate_resource_borders", mutate_resource_borders,
-                     probability_mutate_contractors=mutate_resources, rand=rand)
+                     probability_mutate_contractors=mutate_resources, rand=rand,
+                     contractors_capacity=contractor_borders, resources_min_border=resources_min_border)
     # crossover for resources
     toolbox.register("mate_resources", mate_for_resources, rand=rand)
     # crossover for resource borders
@@ -284,17 +286,17 @@ def generate_chromosome(wg: WorkGraph,
     chromosome = None
     chance = rand.random()
     if chance < 0.2:
-        chromosome = init_chromosomes["heft_end"]
+        chromosome = init_chromosomes["heft_end"][0]
     elif chance < 0.4:
-        chromosome = init_chromosomes["heft_between"]
+        chromosome = init_chromosomes["heft_between"][0]
     elif chance < 0.5:
-        chromosome = init_chromosomes["12.5%"]
+        chromosome = init_chromosomes["12.5%"][0]
     elif chance < 0.6:
-        chromosome = init_chromosomes["25%"]
+        chromosome = init_chromosomes["25%"][0]
     elif chance < 0.7:
-        chromosome = init_chromosomes["75%"]
+        chromosome = init_chromosomes["75%"][0]
     elif chance < 0.8:
-        chromosome = init_chromosomes["87.5%"]
+        chromosome = init_chromosomes["87.5%"][0]
 
     if chromosome is None:
         chromosome = randomized_init()

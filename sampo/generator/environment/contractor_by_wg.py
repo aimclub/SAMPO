@@ -2,7 +2,7 @@ from _operator import itemgetter
 from enum import Enum
 from itertools import chain, groupby
 
-from sampo.generator import get_contractor
+from sampo.generator.environment.contractor import get_contractor
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.requirements import WorkerReq

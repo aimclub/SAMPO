@@ -18,6 +18,24 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     count: int
     contractor_id: Optional[str] = ""
 
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 count: int,
+                 contractor_id: Optional[str] = ""):
+        self.id = id
+        self.name = name
+        self._count = count
+        self.contractor_id = contractor_id
+
+    @property
+    def count(self):
+        return self._count
+
+    @count.setter
+    def count(self, value):
+        self._count = int(value)
+
     # TODO: describe the function (description, return type)
     def get_agent_id(self) -> AgentId:
         return self.contractor_id, self.name
@@ -41,7 +59,7 @@ class Worker(Resource):
                  contractor_id: Optional[str] = "",
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
-        super(Worker, self).__init__(id, name, count, contractor_id)
+        super(Worker, self).__init__(id, name, int(count), contractor_id)
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
@@ -66,7 +84,7 @@ class Worker(Resource):
         :param count: amount of current type of worker
         :return: upgraded current object
         """
-        self.count = count
+        self.count = int(count)
         return self
 
     def get_cost(self) -> float:

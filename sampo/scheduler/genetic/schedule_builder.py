@@ -12,7 +12,7 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, is_chromosome_correct
+    FitnessFunction, TimeFitness, is_chromosome_correct, wrap
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
@@ -34,7 +34,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, int]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
@@ -124,11 +124,11 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     # initial chromosomes construction
-    init_chromosomes: dict[str, ChromosomeType] = \
-        {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, order)
+    init_chromosomes: dict[str, tuple[ChromosomeType, int]] = \
+        {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                              contractor2index, contractor_borders, schedule, order), importance)
             if schedule is not None else None
-         for name, (schedule, order) in init_schedules.items()}
+         for name, (schedule, order, importance) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, landscape, index2node,
                            work_id2index, worker_name2index, index2contractor,
@@ -139,13 +139,13 @@ def build_schedule(wg: WorkGraph,
 
     for name, chromosome in init_chromosomes.items():
         if chromosome is not None:
-            if not is_chromosome_correct(chromosome, node_indices, parents):
+            if not is_chromosome_correct(chromosome[0], node_indices, parents):
                 raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
     # create population of a given size
-    pop = toolbox.population(n=population_size)
+    pop = toolbox.population(size_population=population_size)
 
     print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
@@ -359,16 +359,3 @@ def build_schedule(wg: WorkGraph,
 
 def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
     return (first[0][0] == second[0][0]).all() and (first[0][1] == second[0][1]).all()
-
-
-def wrap(chromosome: ChromosomeType) -> Individual:
-    """
-    Created an individual from chromosome.
-    """
-
-    def ind_getter():
-        return chromosome
-
-    ind = initRepeat(Individual, ind_getter, n=1)
-    ind.fitness.invalid_steps = 0
-    return ind

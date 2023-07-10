@@ -61,7 +61,6 @@ def create_toolbox(wg: WorkGraph,
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
     contractor2index = reverse_dictionary(index2contractor)
-    index2node_list = [(index, node) for index, node in enumerate(nodes)]
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}

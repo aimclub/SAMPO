@@ -126,15 +126,20 @@ class GeneticScheduler(Scheduler):
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
-                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                  weights = None):
         """
         Heuristic algorithm, that generate first population
 
         :param landscape:
         :param wg: graph of works
         :param contractors:
+        :param weights:
         :return:
         """
+
+        if weights is None:
+            weights = [2, 2, 1, 1, 1, 1]
 
         def init_k_schedule(scheduler_class, k):
             try:
@@ -154,14 +159,6 @@ class GeneticScheduler(Scheduler):
                 except NoSufficientContractorError:
                     return None, None
 
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
         else:
             def init_schedule(scheduler_class):
                 try:
@@ -172,14 +169,14 @@ class GeneticScheduler(Scheduler):
                 except NoSufficientContractorError:
                     return None, None
 
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
+        return {
+            "heft_end":     (*init_schedule(HEFTScheduler),          weights[0]),
+            "heft_between": (*init_schedule(HEFTBetweenScheduler),   weights[1]),
+            "12.5%":        (*init_k_schedule(HEFTScheduler, 8),     weights[2]),
+            "25%":          (*init_k_schedule(HEFTScheduler, 4),     weights[3]),
+            "75%":          (*init_k_schedule(HEFTScheduler, 4 / 3), weights[4]),
+            "87.5%":        (*init_k_schedule(HEFTScheduler, 8 / 7), weights[5])
+        }
 
     def schedule_with_cache(self,
                             wg: WorkGraph,

@@ -22,7 +22,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.collections_util import reverse_dictionary
 
 
@@ -40,7 +40,7 @@ def build_schedule(wg: WorkGraph,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
                                                  FitnessFunction] = TimeFitness,
-                   work_estimator: WorkTimeEstimator = None,
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
@@ -51,7 +51,7 @@ def build_schedule(wg: WorkGraph,
     Genetic algorithm.
     Structure of chromosome:
     [[order of job], [numbers of workers types 1 for each job], [numbers of workers types 2], ... ]
-    
+
     Different mate and mutation for order and for workers.
     Generate order of job by prioritization from HEFTs and from Topological.
     Generate resources from min to max.
@@ -78,7 +78,6 @@ def build_schedule(wg: WorkGraph,
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = dict(enumerate(contractors))
     contractor2index = reverse_dictionary(index2contractor)
-    index2node_list = list(enumerate(nodes))
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}
@@ -135,12 +134,13 @@ def build_schedule(wg: WorkGraph,
                            work_id2index, worker_name2index, index2contractor,
                            index2contractor_obj, init_chromosomes, mutate_order,
                            mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, index2node_list, parents,
+                           contractor2index, contractor_borders, node_indices, parents,
                            assigned_parent_time, work_estimator)
 
     for name, chromosome in init_chromosomes.items():
-        if not is_chromosome_correct(chromosome, node_indices, parents):
-            raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+        if chromosome is not None:
+            if not is_chromosome_correct(chromosome, node_indices, parents):
+                raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
@@ -341,7 +341,9 @@ def build_schedule(wg: WorkGraph,
                                         mutate_resources, mutate_resources, selection_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
 
-    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome, landscape=landscape)
+    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(chromosome,
+                                                                                                 landscape=landscape,
+                                                                                                 timeline=timeline)
 
     if show_fitness_graph:
         sns.lineplot(

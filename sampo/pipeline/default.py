@@ -11,7 +11,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
 
 
@@ -23,7 +23,7 @@ class DefaultInputPipeline(InputPipeline):
     def __init__(self):
         self._wg: WorkGraph | None = None
         self._contractors: list[Contractor] | None = None
-        self._work_estimator: WorkTimeEstimator | None = None
+        self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_order: list[GraphNode] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
         self._spec: ScheduleSpec | None = ScheduleSpec()

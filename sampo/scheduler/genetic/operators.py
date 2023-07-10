@@ -15,7 +15,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
 # logger = mp.log_to_stderr(logging.DEBUG)
@@ -135,10 +135,9 @@ def init_toolbox(wg: WorkGraph,
                  contractor2index: dict[str, int],
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
-                 index2node_list: list[tuple[int, GraphNode]],
                  parents: dict[int, list[int]],
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: WorkTimeEstimator = None) -> base.Toolbox:
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
     list of parameters that received this function is sufficient and complete to manipulate with genetic
@@ -148,7 +147,7 @@ def init_toolbox(wg: WorkGraph,
     toolbox = base.Toolbox()
     # generate initial population
     toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
-                     index2node_list=index2node_list, work_id2index=work_id2index, worker_name2index=worker_name2index,
+                     work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
@@ -194,14 +193,13 @@ def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
 
 def generate_chromosome(wg: WorkGraph,
                         contractors: list[Contractor],
-                        index2node_list: list[tuple[int, GraphNode]],
                         work_id2index: dict[str, int],
                         worker_name2index: dict[str, int],
                         contractor2index: dict[str, int],
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, ChromosomeType],
                         rand: random.Random,
-                        work_estimator: WorkTimeEstimator = None,
+                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies

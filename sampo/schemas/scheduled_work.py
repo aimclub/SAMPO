@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.landscape import MaterialDelivery
@@ -77,8 +77,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
-    def get_actual_duration(self, work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
-        return self.work_unit.estimate_static(self.workers, work_estimator)
+    def get_actual_duration(self, work_estimator: WorkTimeEstimator) -> Time:
+        return work_estimator.estimate_time(self.work_unit, self.workers)
 
     @property
     def start_time(self) -> Time:

@@ -108,7 +108,23 @@ class GraphNode(JSONSerializable['GraphNode']):
         for i, parent in enumerate(parent_works):
             parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
             parent._add_child_edge(edges[i])
+            parent.invalidate_children_cache()
         self._parent_edges += edges
+        self.invalidate_parents_cache()
+
+    def invalidate_parents_cache(self):
+        self.__dict__.pop('parents', None)
+        self.__dict__.pop('parents_set', None)
+        self.__dict__.pop('inseparable_parent', None)
+        self.__dict__.pop('inseparable_son', None)
+        self.__dict__.pop('get_inseparable_chain', None)
+
+    def invalidate_children_cache(self):
+        self.__dict__.pop('children', None)
+        self.__dict__.pop('children_set', None)
+        self.__dict__.pop('inseparable_parent', None)
+        self.__dict__.pop('inseparable_son', None)
+        self.__dict__.pop('get_inseparable_chain', None)
 
     def is_inseparable_parent(self) -> bool:
         return self.inseparable_son is not None
@@ -126,12 +142,12 @@ class GraphNode(JSONSerializable['GraphNode']):
         vertexes_to_visit = deque([self])
         while len(vertexes_to_visit) > 0:
             v = vertexes_to_visit.popleft()
-            if topologically and any(p not in visited_vertexes for p in v.parents):
+            if topologically and any(p.start not in visited_vertexes for p in v._parent_edges):
                 vertexes_to_visit.append(v)
                 continue
             if v not in visited_vertexes:
                 visited_vertexes.add(v)
-                vertexes_to_visit.extend(v.children)
+                vertexes_to_visit.extend([p.finish for p in v._children_edges])
                 yield v
 
     @cached_property
@@ -162,7 +178,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return list of predecessors of current vertex
         :return: list of parents
         """
-        return list([edge.start for edge in self._parent_edges if EdgeType.is_dependency(edge.type)])
+        return list([edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)])
 
     @cached_property
     # @property
@@ -180,7 +196,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return list of successors of current vertex
         :return: list of children
         """
-        return list([edge.finish for edge in self._children_edges if EdgeType.is_dependency(edge.type)])
+        return list([edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)])
 
     @cached_property
     # @property
@@ -271,7 +287,7 @@ GraphNodeDict = dict[str, GraphNode]
 @dataclass
 class WorkGraph(JSONSerializable['WorkGraph']):
     """
-    Class to describe graph of works in future schedule
+    Class to describe graph of works
     """
     # service vertexes
     start: GraphNode
@@ -282,28 +298,18 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     adj_matrix: dok_matrix = field(init=False)
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
-    #
-    # def __init__(self, start: GraphNode, finish: GraphNode) -> None:
-    #     self.start = start
-    #     self.finish = finish
-    #     self.nodes: list[GraphNode] = []
-    #     self.adj_matrix: dok_matrix = dok_matrix((0, 0), dtype=float)
-    #     self.dict_nodes: GraphNodeDict = GraphNodeDict()
-    #     self.vertex_count: int = 0
-
 
 
     def __post_init__(self) -> None:
+        self.reinit()
+
+    def reinit(self):
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
         # To avoid field set of frozen instance errors
         object.__setattr__(self, 'nodes', ordered_nodes)
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
-        # self.nodes = ordered_nodes
-        # self.adj_matrix = adj_matrix
-        # self.dict_nodes = dict_nodes
-        # self.vertex_count = len(ordered_nodes)
 
     def __hash__(self):
         return hash(self.start) + 17 * hash(self.finish)
@@ -326,23 +332,12 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def _serialize(self) -> T:
-        """
-        Converts all the meaningful information from WorkGraph to a generic representation
-
-        :return: serialized graph
-        """
         return {
             'nodes': [graph_node._serialize() for graph_node in self.nodes]
         }
 
     @classmethod
     def _deserialize(cls, representation: T) -> JS:
-        """
-        Receive WorkGraph from generic representation
-
-        :param representation: generic representation
-        :return: object of WorkGraph
-        """
         serialized_nodes = [GraphNode._deserialize(node) for node in representation['nodes']]
         assert not serialized_nodes[0]['parent_edges']
         start_id, finish_id = (serialized_nodes[i]['work_unit'].id for i in (0, -1))

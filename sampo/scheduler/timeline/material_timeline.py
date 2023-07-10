@@ -48,15 +48,18 @@ class SupplyTimeline:
         batches = math.ceil(ratio)
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
-        other_batches = [first_batch for _ in range(batches - 1)]
-        other_batches.append([material.copy().with_count(material.count * (ratio - batches)) for material in materials])
 
         deliveries = []
         d, start_time = self.supply_resources(id, start_time, first_batch, False)
         deliveries.append(d)
-        batch_processing = [self.supply_resources(id, finish_time, batch, False) for batch in other_batches]
-        finish_time = max([b[1] for b in batch_processing])
-        deliveries.extend([b[0] for b in batch_processing])
+
+        other_batches = [first_batch for _ in range(batches - 1)]
+        if batches > 1:
+            other_batches.append(
+                [material.copy().with_count(material.count * (ratio - batches)) for material in materials])
+            batch_processing = [self.supply_resources(id, finish_time, batch, False) for batch in other_batches]
+            finish_time = max([b[1] for b in batch_processing])
+            deliveries.extend([b[0] for b in batch_processing])
 
         return deliveries, start_time, finish_time
 

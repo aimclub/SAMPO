@@ -1,6 +1,6 @@
 import math
 import queue
-from typing import Dict, Set, Callable, Any
+from typing import Callable, Any
 from uuid import uuid4
 
 import networkx as nx
@@ -32,15 +32,14 @@ def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
     """
     circuits: list[list[str]] = find_all_circuits(works_info)
 
-    # TODO optimize complete overlap
-    for row in works_info.index[::-1]:
+    for _, row in enumerate(works_info.index[::-1]):
         for cycle in circuits:
-            inter = list(set(works_info.loc[row, 'predecessor_ids']) & set(cycle))
+            inter = list(set(row['predecessor_ids']) & set(cycle))
             if len(inter) != 0:
-                index = works_info.loc[row, 'predecessor_ids'].index(inter[0])
-                works_info.loc[row, 'predecessor_ids'].pop(index)
-                works_info.loc[row, 'connection_types'].pop(index)
-                works_info.loc[row, 'lags'].pop(index)
+                index = row['predecessor_ids'].index(inter[0])
+                row['predecessor_ids'].pop(index)
+                row['connection_types'].pop(index)
+                row['lags'].pop(index)
 
     return works_info
 
@@ -56,12 +55,12 @@ def find_all_circuits(works_info: pd.DataFrame) -> list[list[str]]:
     graph = nx.DiGraph()
     edges = []
 
-    for row in works_info.index[::-1]:
-        v = works_info.loc[row, 'activity_id']
-        for u in works_info.loc[row, 'predecessor_ids']:
+    for _, row in works_info[::-1].iterrows():
+        v = row['activity_id']
+        for u in row['predecessor_ids']:
             edges.append((v, u))
 
-    graph.add_nodes_from(list(works_info.loc[:, 'activity_id']))
+    graph.add_nodes_from(list(works_info['activity_id']))
     graph.add_edges_from(edges)
 
     return list(nx.simple_cycles(graph))
@@ -122,8 +121,8 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame["edges"]]
     frame['predessors_set'] = frame['predecessor_ids'].apply(lambda ps: set(ps))  # & existed_ids)
     id2row = {w_id: ind for w_id, ind in zip(frame['activity_id'], frame.index)}
-    sort_keys: Dict[str, int] = dict()
-    used: Set[str] = {NONE_ELEM}
+    sort_keys: dict[str, int] = dict()
+    used: set[str] = {NONE_ELEM}
     ind: int = 0
     q = queue.Queue()
     for w_id in frame['activity_id']:
@@ -145,7 +144,7 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def build_work_graph(frame: pd.DataFrame, workers_max_count: Dict[str, float]) -> WorkGraph:
+def build_work_graph(frame: pd.DataFrame, workers_max_count: dict[str, float]) -> WorkGraph:
     start = get_start_stage()
     has_succ = set()
     id_to_node = {NONE_ELEM: start}
@@ -157,7 +156,7 @@ def build_work_graph(frame: pd.DataFrame, workers_max_count: Dict[str, float]) -
                           min(row[col + '_max'], workers_max_count[col]),
                           ) for col in resources_columns
                 if 0 < row[col + '_min'] <= row[col + '_max']]
-        work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row.global_task_name,
+        work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'])
         has_succ |= set(row.predecessor_ids)
         parents = [id_to_node[p_id] for p_id in row.predecessor_ids]
@@ -172,7 +171,7 @@ def build_work_graph(frame: pd.DataFrame, workers_max_count: Dict[str, float]) -
 
 
 def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') -> (
-        list[Contractor], Dict[str, float]):
+        list[Contractor], dict[str, float]):
     contractor_id = str(uuid4())
     workers_df = pd.read_csv(path, index_col='name')
     workers = {(name, 0): Worker(str(uuid4()), name, count * 2, contractor_id)

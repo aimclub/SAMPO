@@ -299,7 +299,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
 
-
     def __post_init__(self) -> None:
         self.reinit()
 
@@ -330,11 +329,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'start', deserialized.start)
         object.__setattr__(self, 'finish', deserialized.finish)
         self.__post_init__()
-
-    @staticmethod
-    def from_csv(filepath: str | None) -> None:
-        ...
-
 
     def _serialize(self) -> T:
         return {

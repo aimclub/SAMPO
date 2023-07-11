@@ -1,12 +1,24 @@
-import pytest
-
 from sampo.pipeline import SchedulingPipeline
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
+from sampo.schemas.exceptions import NoSufficientContractorError
 
 
 def test_plain_scheduling(setup_scheduler_parameters):
+    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+
+    schedule = SchedulingPipeline.create() \
+        .wg(setup_wg) \
+        .contractors(setup_contractors) \
+        .landscape(setup_landscape) \
+        .schedule(HEFTScheduler()) \
+        .finish()
+
+    print(f'Scheduled {len(schedule.to_schedule_work_dict)} works')
+
+
+def test_local_optimize_scheduling(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
     schedule = SchedulingPipeline.create() \
@@ -19,3 +31,22 @@ def test_plain_scheduling(setup_scheduler_parameters):
         .finish()
 
     print(f'Scheduled {len(schedule.to_schedule_work_dict)} works')
+
+
+# this test is needed to check validation of input contractors
+
+def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors,
+                                                                   setup_landscape_many_holders):
+
+    thrown = False
+    try:
+        schedule = SchedulingPipeline.create() \
+            .wg(setup_wg) \
+            .contractors(setup_empty_contractors) \
+            .landscape(setup_landscape_many_holders) \
+            .schedule(HEFTScheduler()) \
+            .finish()
+    except NoSufficientContractorError:
+        thrown = True
+
+    assert thrown

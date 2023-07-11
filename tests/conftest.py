@@ -166,6 +166,38 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
                                       equipments={}))
     return setup_wg, contractors, setup_landscape_many_holders
 
+@fixture
+def setup_scheduler_parameters_with_0_contractor_worker(setup_wg, setup_landscape_many_holders) -> tuple[
+    WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
+    resource_req: Dict[str, int] = {}
+    resource_req_count: Dict[str, int] = {}
+
+    num_contractors, contractor_min_resources = 1, 0
+
+    for node in setup_wg.nodes:
+        for req in node.work_unit.worker_reqs:
+            resource_req[req.kind] = max(contractor_min_resources,
+                                         resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
+            resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
+
+    for req in resource_req.keys():
+        resource_req[req] = resource_req[req] // resource_req_count[req] + 1
+
+    for node in setup_wg.nodes:
+        for req in node.work_unit.worker_reqs:
+            assert resource_req[req.kind] >= req.min_count
+
+    # contractors are the same and universal(but multiple)
+    contractors = []
+    for i in range(num_contractors):
+        contractor_id = str(uuid4())
+        contractors.append(Contractor(id=contractor_id,
+                                      name="OOO Berezka",
+                                      workers={name: Worker(str(uuid4()), name, 0, contractor_id=contractor_id)
+                                               for name, count in resource_req.items()},
+                                      equipments={}))
+    return setup_wg, contractors, setup_landscape_many_holders
+
 
 @fixture
 def setup_default_schedules(setup_scheduler_parameters):

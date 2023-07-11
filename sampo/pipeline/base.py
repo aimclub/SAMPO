@@ -61,6 +61,10 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
+    def parse(self, graph_info_file: str):
+        ...
+
+    @abstractmethod
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
         ...
 

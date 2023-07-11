@@ -32,15 +32,14 @@ def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
     """
     circuits: list[list[str]] = find_all_circuits(works_info)
 
-    # TODO optimize complete overlap
-    for row in works_info.index[::-1]:
+    for _, row in enumerate(works_info.index[::-1]):
         for cycle in circuits:
-            inter = list(set(works_info.loc[row, 'predecessor_ids']) & set(cycle))
+            inter = list(set(row['predecessor_ids']) & set(cycle))
             if len(inter) != 0:
-                index = works_info.loc[row, 'predecessor_ids'].index(inter[0])
-                works_info.loc[row, 'predecessor_ids'].pop(index)
-                works_info.loc[row, 'connection_types'].pop(index)
-                works_info.loc[row, 'lags'].pop(index)
+                index = row['predecessor_ids'].index(inter[0])
+                row['predecessor_ids'].pop(index)
+                row['connection_types'].pop(index)
+                row['lags'].pop(index)
 
     return works_info
 
@@ -56,12 +55,12 @@ def find_all_circuits(works_info: pd.DataFrame) -> list[list[str]]:
     graph = nx.DiGraph()
     edges = []
 
-    for row in works_info.index[::-1]:
-        v = works_info.loc[row, 'activity_id']
-        for u in works_info.loc[row, 'predecessor_ids']:
+    for _, row in enumerate(works_info.index[::-1]):
+        v = row['activity_id']
+        for u in row['predecessor_ids']:
             edges.append((v, u))
 
-    graph.add_nodes_from(list(works_info.loc[:, 'activity_id']))
+    graph.add_nodes_from(list(works_info['activity_id']))
     graph.add_edges_from(edges)
 
     return list(nx.simple_cycles(graph))

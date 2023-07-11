@@ -13,6 +13,8 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
+from sampo.schemas.exceptions import NoSufficientContractorError
+from sampo.parser.csv_parser import CSVParser
 
 
 class DefaultInputPipeline(InputPipeline):
@@ -48,6 +50,8 @@ class DefaultInputPipeline(InputPipeline):
         :param contractors: the contractors list for scheduling task
         :return: the pipeline object
         """
+        if not DefaultInputPipeline._check_is_contractors_can_perform_work_graph(contractors, self._wg):
+            raise NoSufficientContractorError(f'Contractors are not able to perform the graph of works')
         self._contractors = contractors
         return self
 
@@ -162,6 +166,32 @@ class DefaultInputPipeline(InputPipeline):
                 self._node_order = node_order
 
         return DefaultSchedulePipeline(self, wg, schedule)
+
+    @staticmethod
+    def _check_is_contractors_can_perform_work_graph(contractors: list[Contractor], wg: WorkGraph) -> bool:
+        is_at_least_one_contractor_can_perform = True
+        num_contractors_can_perform_node = 0
+
+        for node in wg.nodes:
+            reqs = node.work_unit.worker_reqs
+            for contractor in contractors:
+                offers = contractor.workers
+                for req in reqs:
+                    if req.min_count > offers[req.kind].count:
+                        is_at_least_one_contractor_can_perform = False
+                if is_at_least_one_contractor_can_perform:
+                    num_contractors_can_perform_node += 1
+                is_at_least_one_contractor_can_perform = True
+            if num_contractors_can_perform_node == 0:
+                return False
+            num_contractors_can_perform_node = 0
+
+        return True
+
+    def parse(self, graph_info_file: str) -> 'InputPipeline':
+        self._wg, self._contractors = CSVParser.parse(graph_info_file)
+        return self
+
 
 
 # noinspection PyProtectedMember

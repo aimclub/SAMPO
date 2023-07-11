@@ -6,7 +6,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
 class Timeline(ABC):
@@ -24,7 +24,7 @@ class Timeline(ABC):
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: Optional[WorkTimeEstimator] = None) -> Time:
+                 work_estimator: Optional[WorkTimeEstimator] = DefaultWorkEstimator()) -> Time:
         ...
 
     def find_min_start_time(self,
@@ -32,7 +32,7 @@ class Timeline(ABC):
                             worker_team: list[Worker],
                             node2swork: dict[GraphNode, ScheduledWork],
                             parent_time: Time = Time(0),
-                            work_estimator: WorkTimeEstimator | None = None) -> Time:
+                            work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Time:
         """
         Computes start time, max parent time, contractor and exec times for given node.
 
@@ -53,7 +53,7 @@ class Timeline(ABC):
                                             node2swork: dict[GraphNode, ScheduledWork],
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: WorkTimeEstimator | None = None) \
+                                            work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
         ...
 

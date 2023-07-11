@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from random import Random
 from typing import Optional
 
@@ -6,6 +7,11 @@ from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.types import AgentId
+
+
+class WorkerProductivityMode(Enum):
+    Static = 'static',
+    Stochastic = 'stochastic'
 
 
 @dataclass
@@ -99,12 +105,16 @@ class Worker(Resource):
         """
         return self.contractor_id, self.name
 
-    def get_static_productivity(self) -> float:
-        """Return the average productivity of worker team"""
-        return self.productivity.mean * self.count
+    def get_productivity(self, rand: Random, productivity_mode: WorkerProductivityMode) -> float:
+        """
+        Return the productivity of the worker team.
+        It has 2 mods: stochastic and non-stochastic.
 
-    def get_stochastic_productivity(self, rand: Optional[Random] = None) -> float:
-        """Return the stochastic productivity of worker team"""
+        :param productivity_mode:
+        :param rand: parameter for stochastic part
+        """
+        if productivity_mode is WorkerProductivityMode.Static:
+            return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
 
     def __repr__(self):
@@ -129,7 +139,7 @@ class EmptySpaceConstructionObject(ConstructionObject):
 class Equipment(Resource):
     pass
 
-  
+
 @dataclass
 class Material(Resource):
 

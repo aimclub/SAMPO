@@ -18,6 +18,7 @@ def link_works_to_be_independent(wg: WorkGraph, spec: ScheduleSpec) -> Iterable[
         spec.get_work_spec(node.id).is_independent = True
         yield node
 
+
 class AverageBinarySearchResourceOptimizingScheduler:
     """
     The scheduler optimizes resources to deadline.

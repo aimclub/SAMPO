@@ -114,13 +114,13 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
-        st = timeline.find_min_start_time(node, worker_team, node2swork, assigned_parent_time, work_estimator)
+        st = timeline.find_min_start_time(node, worker_team, node2swork, work_spec, assigned_parent_time, work_estimator)
 
         if order_index == 0:  # we are scheduling the work `start of the project`
             st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
-        timeline.schedule(node, node2swork, worker_team, contractor,
+        timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
                           st, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if

@@ -1,5 +1,4 @@
 from copy import copy
-from typing import Iterable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -12,11 +11,6 @@ from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 
-
-def link_works_to_be_independent(wg: WorkGraph, spec: ScheduleSpec) -> Iterable[GraphNode]:
-    for node in wg.nodes:
-        spec.get_work_spec(node.id).is_independent = True
-        yield node
 
 class AverageBinarySearchResourceOptimizingScheduler:
     """
@@ -66,7 +60,8 @@ class AverageBinarySearchResourceOptimizingScheduler:
         if result_min_resources < deadline:
             # we can keep the deadline if pass minimum resources,
             # so let's go preventing the works going in parallel
-            for node in link_works_to_be_independent(wg, copied_spec):
+            for node in wg.nodes:
+                copied_spec.get_work_spec(node.id).is_independent = True
                 new_time = fitness(k_max, copied_spec)
                 if new_time > deadline:
                     # if breaking deadline, revert the mutation

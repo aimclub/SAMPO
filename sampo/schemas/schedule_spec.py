@@ -1,6 +1,5 @@
 from collections import defaultdict
 from copy import copy
-from typing import Optional, Union
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
@@ -16,10 +15,13 @@ class WorkSpec:
     that starts from this work. Now unsupported.
     :param assigned_workers: predefined worker team (scheduler should assign this worker team to this work)
     :param assigned_time: predefined work time (scheduler should schedule this work with this execution time)
+    :param is_independent: should this work be resource-independent, e.g. executing with no parallel users of
+    its types of resources
     """
-    chain: Optional[list[WorkUnit]] = None  # TODO Add support
+    chain: list[WorkUnit] | None = None  # TODO Add support
     assigned_workers: dict[WorkerName, int] = {}
-    assigned_time: Optional[Time] = None
+    assigned_time: Time | None = None
+    is_independent: bool = False
 
 
 class ScheduleSpec:
@@ -31,7 +33,7 @@ class ScheduleSpec:
     """
     _work2spec: dict[str, WorkSpec] = defaultdict(WorkSpec)
 
-    def set_exec_time(self, work: Union[str, WorkUnit], time: Time) -> 'ScheduleSpec':
+    def set_exec_time(self, work: str | WorkUnit, time: Time) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):
             work = work.id
         self._work2spec[work].assigned_time = time

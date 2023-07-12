@@ -12,16 +12,17 @@ from sampo.utilities.task_name import NameMapper
 class CSVParser:
 
     @staticmethod
-    def from_csv(graph_info_file: str,
-                 unique_work_names_mapper: NameMapper | None = None,
-                 work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+    def work_graph(graph_info_file: str,
+                   unique_work_names_mapper: NameMapper | None = None,
+                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> WorkGraph:
         """
-        Gets a WorkGraph either from file or as a synthetic data
+        Gets a WorkGraph from file .csv
+
+        :param unique_work_names_mapper:
         :param work_resource_estimator: work estimator, that find necessary resources, based on history data
-        :param graph_info_file: Path to file, specified if generate_input == False.
-        .pickle, if generate_resources=False, otherwise, works_info.csv or DataFrame
-        :return: WorkGraph, Contractors and Agents
+        :param graph_info_file: Path to .csv file
+        :return: WorkGraph
         """
 
         graph_df = pd.read_csv(graph_info_file, sep=';', header=0) if isinstance(graph_info_file,

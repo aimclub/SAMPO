@@ -191,7 +191,7 @@ def build_schedule(wg: WorkGraph,
 
         while generation < generation_number and plateau_steps < max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
-            print(f"-- Generation {generation}, population={len(pop)}, best time={best_fitness} --")
+            print(f'-- Generation {generation}, population={len(pop)}, best time={best_fitness} --')
             if best_fitness == prev_best_fitness:
                 plateau_steps += 1
             else:
@@ -320,7 +320,7 @@ def build_schedule(wg: WorkGraph,
             # fits = [ind.fitness.values[0] for ind in pop]
             # evaluation = chromosome_evaluation(best, index2node, resources_border, work_id2index, worker_name2index,
             #                                   parent2inseparable_son, agents)
-            # print("fits: ", fits)
+            # print('fits: ', fits)
             # print(evaluation)
             generation += 1
 
@@ -348,9 +348,9 @@ def build_schedule(wg: WorkGraph,
     if show_fitness_graph:
         sns.lineplot(
             data=DataFrame.from_records([(generation * 4, v) for generation, v in enumerate(fitness_history)],
-                                        columns=["Поколение", "Функция качества"]),
-            x="Поколение",
-            y="Функция качества",
+                                        columns=['Поколение', 'Функция качества']),
+            x='Поколение',
+            y='Функция качества',
             palette='r')
         plt.show()
 

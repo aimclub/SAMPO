@@ -17,7 +17,7 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
     :return:
        auxiliary_id: str - an auxiliary id for the work unit
     """
-    return f"{work_unit_id}{STAGE_SEP}{ind}"
+    return f'{work_unit_id}{STAGE_SEP}{ind}'
 
 
 def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (list[tuple[float, float, bool]]):
@@ -41,8 +41,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
                        lags_volumes_list: list[tuple[float, float, bool]],
                        old_id_lag2new_id: dict[tuple[str, float, bool], str]):
     """
-    Splits the node into two parts: into "piece" and "mian" whose sizes are proportional to max_lag and
-    parent_volume-max_lag, respectively. The order of "piece" and "mian" is set. For the first vertex the id is changed,
+    Splits the node into two parts: into 'piece' and 'mian' whose sizes are proportional to max_lag and
+    parent_volume-max_lag, respectively. The order of 'piece' and 'mian' is set. For the first vertex the id is changed,
     for the second one it remains the same, so that it is more convenient to restore the edges. The resulting nodes are
     created without edges. It connects two obtained nodes with an unbreakable edge,
     which does not allow to perform tasks in any way

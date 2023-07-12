@@ -9,12 +9,12 @@ BRANCHING_PROBABILITY = 0.15
 # minimal few pack, optimal for parallel test 20-40
 # can be divided into few collaborators? for example 15:15:10 for 40x pack
 WORKER_PROPORTIONS = {
-    "driver": 6,
-    "fitter": 6,
-    "handyman": 8,
-    "electrician": 2,
-    "manager": 3,
-    "engineer": 2
+    'driver': 6,
+    'fitter': 6,
+    'handyman': 8,
+    'electrician': 2,
+    'manager': 3,
+    'engineer': 2
 }
 
 EQUIPMENTS_PROPORTIONS = {}

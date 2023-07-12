@@ -10,10 +10,10 @@ from sampo.schemas.graph import WorkGraph
 
 # TODO check outer usage
 def graph_from_file(filepath: str, number_of_workers_in_contractors: int) -> tuple[WorkGraph, list[Contractor]]:
-    with open(filepath, "rb") as f:
+    with open(filepath, 'rb') as f:
         data = pickle.load(f)
 
-    wg: WorkGraph = data["work_graph"]
+    wg: WorkGraph = data['work_graph']
     contractors: list[Contractor] = get_contractor_with_equal_proportions(number_of_workers_in_contractors)
 
     return wg, contractors

@@ -116,7 +116,7 @@ class Manager:
     """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
-            raise NoSufficientAgents("Manager can't work with empty list of agents")
+            raise NoSufficientAgents('Manager can't work with empty list of agents')
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism

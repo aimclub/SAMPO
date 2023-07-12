@@ -75,7 +75,7 @@ class GenericScheduler(Scheduler):
                                                        min_count_worker_team, max_count_worker_team,
                                                        ft_getter))
 
-                c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, None,
+                c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, work_spec, None,
                                                                              assigned_parent_time, work_estimator)
                 return c_st, c_ft, workers
 
@@ -154,7 +154,7 @@ class GenericScheduler(Scheduler):
                 finish_time += start_time
 
             # apply work to scheduling
-            timeline.schedule(node, node2swork, best_worker_team, contractor,
+            timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         schedule_start_time = min((swork.start_time for swork in node2swork.values() if

@@ -44,10 +44,10 @@ class AverageBinarySearchResourceOptimizingScheduler:
                 return self._base_scheduler.schedule_with_cache(wg, contractors, landscape, inner_spec, validate,
                                                                 assigned_parent_time), inner_spec
             except NoSufficientContractorError:
-                return None, Time.inf(), None, None, inner_spec
+                return (None, Time.inf(), None, None), inner_spec
 
         def fitness(k: float, inner_spec: ScheduleSpec):
-            result = call_scheduler(k, inner_spec)[1]
+            result = call_scheduler(k, inner_spec)[0][0].execution_time
             if result > deadline:
                 result = Time.inf()
             return result

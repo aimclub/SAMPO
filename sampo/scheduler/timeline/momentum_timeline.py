@@ -10,6 +10,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -72,6 +73,7 @@ class MomentumTimeline(Timeline):
                                             node: GraphNode,
                                             worker_team: list[Worker],
                                             node2swork: dict[GraphNode, ScheduledWork],
+                                            spec: ScheduleSpec,
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
                                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
@@ -82,6 +84,7 @@ class MomentumTimeline(Timeline):
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node: info about given GraphNode
         :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
+        :param spec: schedule specification
         :param assigned_start_time: start time, that can be received from
         another algorithms of calculation the earliest start time
         :param assigned_parent_time: minimum start time
@@ -89,7 +92,7 @@ class MomentumTimeline(Timeline):
         :return: start time, end time, time of execution
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
-        contractor_id = worker_team[0].contractor_id if worker_team else ""
+        contractor_id = worker_team[0].contractor_id if worker_team else ''
         # 1. identify earliest possible start time by max parent's end time
 
         def apply_time_spec(time: Time):
@@ -124,7 +127,9 @@ class MomentumTimeline(Timeline):
             exec_time += lag + node_exec_time
 
         if len(worker_team) == 0:
-            max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time, node.work_unit.need_materials(), node.work_unit.workground_size)
+            max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
+                                                                               node.work_unit.need_materials(),
+                                                                               node.work_unit.workground_size)
             max_parent_time = max(max_parent_time, max_material_time)
             return max_parent_time, max_parent_time, exec_times
 
@@ -330,13 +335,14 @@ class MomentumTimeline(Timeline):
                  node2swork: dict[GraphNode, ScheduledWork],
                  workers: list[Worker],
                  contractor: Contractor,
+                 spec: ScheduleSpec,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         start_time, _, exec_times = \
-            self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,
+            self.find_min_start_time_with_additional(node, workers, node2swork, spec, assigned_start_time,
                                                      assigned_parent_time, work_estimator)
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))

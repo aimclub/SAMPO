@@ -42,10 +42,7 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
     try:
         schedule = SchedulingPipeline.create() \
             .wg(setup_wg) \
-            .contractors(setup_empty_contractors) \
-            .landscape(setup_landscape_many_holders) \
-            .schedule(HEFTScheduler()) \
-            .finish()
+            .contractors(setup_empty_contractors)
     except NoSufficientContractorError:
         thrown = True
 

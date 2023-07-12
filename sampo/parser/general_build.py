@@ -95,7 +95,7 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
-    existed_ids = set(frame["activity_id"])
+    existed_ids = set(frame['activity_id'])
 
     predecessor_ids, connection_types, lags = [], [], []
     for _, row in frame[['predecessor_ids', 'connection_types', 'lags']].iterrows():
@@ -113,12 +113,12 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
             lags[-1].append(float(NONE_ELEM))
     frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
 
-    frame["edges"] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
+    frame['edges'] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
     return frame
 
 
 def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
-    frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame["edges"]]
+    frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame['edges']]
     frame['predessors_set'] = frame['predecessor_ids'].apply(lambda ps: set(ps))  # & existed_ids)
     id2row = {w_id: ind for w_id, ind in zip(frame['activity_id'], frame.index)}
     sort_keys: dict[str, int] = dict()
@@ -138,7 +138,7 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
         else:
             q.put(w_id)
 
-    frame['sort_key'] = [sort_keys[w_id] for w_id in frame["activity_id"]]
+    frame['sort_key'] = [sort_keys[w_id] for w_id in frame['activity_id']]
     frame = frame.sort_values('sort_key')
 
     return frame

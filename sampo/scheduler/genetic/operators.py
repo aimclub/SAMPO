@@ -111,8 +111,8 @@ class DeadlineCostFitness(FitnessFunction):
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
 
-creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-creator.create("Individual", list, fitness=creator.FitnessMin)
+creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
+creator.create('Individual', list, fitness=creator.FitnessMin)
 Individual = creator.Individual
 
 
@@ -146,39 +146,39 @@ def init_toolbox(wg: WorkGraph,
     """
     toolbox = base.Toolbox()
     # generate initial population
-    toolbox.register("generate_chromosome", generate_chromosome, wg=wg, contractors=contractors,
+    toolbox.register('generate_chromosome', generate_chromosome, wg=wg, contractors=contractors,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create from generate_chromosome function one individual
-    toolbox.register("individual", tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
+    toolbox.register('individual', tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
     # create population from individuals
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
     # crossover for order
-    toolbox.register("mate", mate_scheduling_order, rand=rand)
+    toolbox.register('mate', mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
-    toolbox.register("mutate", tools.mutShuffleIndexes, indpb=mutate_order)
+    toolbox.register('mutate', tools.mutShuffleIndexes, indpb=mutate_order)
     # selection. Some random individuals and arranges a battle between them as a result in a continuing genus,
     # this is the best among these it
-    toolbox.register("select", tools.selTournament, tournsize=selection_size)
+    toolbox.register('select', tools.selTournament, tournsize=selection_size)
 
     # mutation for resources
-    toolbox.register("mutate_resources", mut_uniform_int, probability_mutate_resources=mutate_resources,
+    toolbox.register('mutate_resources', mut_uniform_int, probability_mutate_resources=mutate_resources,
                      contractor_count=len(index2contractor), rand=rand)
     # mutation for resource borders
-    toolbox.register("mutate_resource_borders", mutate_resource_borders,
+    toolbox.register('mutate_resource_borders', mutate_resource_borders,
                      probability_mutate_contractors=mutate_resources, rand=rand)
     # crossover for resources
-    toolbox.register("mate_resources", mate_for_resources, rand=rand)
+    toolbox.register('mate_resources', mate_for_resources, rand=rand)
     # crossover for resource borders
-    toolbox.register("mate_resource_borders", mate_for_resource_borders, rand=rand)
+    toolbox.register('mate_resource_borders', mate_for_resource_borders, rand=rand)
 
-    toolbox.register("validate", is_chromosome_correct, node_indices=node_indices, parents=parents)
-    toolbox.register("schedule_to_chromosome", convert_schedule_to_chromosome, wg=wg,
+    toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents)
+    toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome, wg=wg,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders)
-    toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
+    toolbox.register('chromosome_to_schedule', convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
                      work_estimator=work_estimator, worker_name2index=worker_name2index,
@@ -219,17 +219,17 @@ def generate_chromosome(wg: WorkGraph,
 
     chance = rand.random()
     if chance < 0.2:
-        chromosome = init_chromosomes["heft_end"]
+        chromosome = init_chromosomes['heft_end']
     elif chance < 0.4:
-        chromosome = init_chromosomes["heft_between"]
+        chromosome = init_chromosomes['heft_between']
     elif chance < 0.5:
-        chromosome = init_chromosomes["12.5%"]
+        chromosome = init_chromosomes['12.5%']
     elif chance < 0.6:
-        chromosome = init_chromosomes["25%"]
+        chromosome = init_chromosomes['25%']
     elif chance < 0.7:
-        chromosome = init_chromosomes["75%"]
+        chromosome = init_chromosomes['75%']
     elif chance < 0.8:
-        chromosome = init_chromosomes["87.5%"]
+        chromosome = init_chromosomes['87.5%']
     else:
         chromosome = randomized_init()
 

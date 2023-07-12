@@ -25,7 +25,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ("tests.schema", "tests.models",)
+pytest_plugins = ('tests.schema', 'tests.models',)
 
 
 @fixture(scope='session')
@@ -160,7 +160,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
     for i in range(num_contractors):
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
-                                      name="OOO Berezka",
+                                      name='OOO Berezka',
                                       workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
@@ -181,7 +181,7 @@ def setup_empty_contractors(setup_wg) -> list[Contractor]:
     for i in range(num_contractors):
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
-                                      name="OOO Berezka",
+                                      name='OOO Berezka',
                                       workers={name: Worker(str(uuid4()), name, 0, contractor_id=contractor_id)
                                                for name in resource_req},
                                       equipments={}))
@@ -205,12 +205,12 @@ def setup_default_schedules(setup_scheduler_parameters):
                                                                                            landscape=setup_landscape_many_holders)
 
     return setup_scheduler_parameters, {
-        "heft_end": init_schedule(HEFTScheduler),
-        "heft_between": init_schedule(HEFTBetweenScheduler),
-        "12.5%": init_k_schedule(HEFTScheduler, 8),
-        "25%": init_k_schedule(HEFTScheduler, 4),
-        "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-        "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+        'heft_end': init_schedule(HEFTScheduler),
+        'heft_between': init_schedule(HEFTBetweenScheduler),
+        '12.5%': init_k_schedule(HEFTScheduler, 8),
+        '25%': init_k_schedule(HEFTScheduler, 4),
+        '75%': init_k_schedule(HEFTScheduler, 4 / 3),
+        '87.5%': init_k_schedule(HEFTScheduler, 8 / 7)
     }
 
 

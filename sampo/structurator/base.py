@@ -29,8 +29,8 @@ def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) ->
     :param edges: list[GraphEdge] - the given edges
     :param edge_type: str - the given type of edge
     :return:
-        max_lag: float - the maximum lag
-        parent_volume: float - The volume for which the lag is set, i.e. the parent volume
+        lag_volume_list: list[tuple[float, float, bool]] - list of lags, volumes and is_reversed param
+            of param edges where edge type equals param edge_type
     """
     lag_volume_list = [(edge.lag, edge.start.work_unit.volume, is_reversed)
                        for edge in edges if edge_type is edge.type]
@@ -47,7 +47,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
     created without edges. It connects two obtained nodes with an unbreakable edge,
     which does not allow to perform tasks in any way
 
-    :param lags_volumes_list: list[tuple[float, float, bool]] -
+    :param lags_volumes_list: list[tuple[float, float, bool]] - list of representations of edges by tuples of
+        lag, volume and bool flag of reversion
     :param origin_node: GraphNode - Node to be divided into two parts
     :param id2new_nodes: GraphNodeDict - Dictionary with restructured new nodes where the restructured nodes will
         be written
@@ -63,9 +64,9 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
     proportions_accum = sorted(
         [(1 * int(is_reversed) + lag / volume * (1 - 2 * int(is_reversed)), lag, is_reversed)
          for lag, volume, is_reversed in lags_volumes_list
-         if volume > 0 and lag < volume] + [(1, -1, False)])
+         if volume > 0 and lag < volume] + [(1, -1, False)]) # check lag = -1
 
-    proportions_accum.sort()
+    proportions_accum.sort() # why sort again
     proportions: list[tuple[float, float, bool]] = [proportions_accum[0]]
     for ind in range(1, len(proportions_accum)):
         accum, lag, is_reversed = proportions_accum[ind]
@@ -87,7 +88,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
                           workground_size=wu.workground_size)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)
-        old_id_lag2new_id[(wu.id, lag, is_reversed)] = new_id
+        old_id_lag2new_id[(wu.id, lag, is_reversed)] = new_id  # what if lags are equal so (wu.id, lag, is_reversed)
+        # isn't unique + now it is used only in case of is_reversed = False
     return
 
 
@@ -98,11 +100,11 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
     Restores edges in the transformed graph
 
     :param origin_work_graph: WorkGraph - The original unconverted graph
-    :param id2new_nodes: GraphNodeDict -dictionary with transformed vertices,
+    :param id2new_nodes: GraphNodeDict - dictionary with transformed vertices,
         if some vertices from the original graph are missing,
         the function converts their copy and writes it into the dictionary
     :param old_id_lag2new_id: dict[tuple[str, float, bool], str]
-    :param use_ffs_separately:
+    :param use_ffs_separately: bool -
         If false, then FFS edges are considered equivalent to FS,
         otherwise they are converted as a separate type of edges
     :return: Nothing
@@ -120,8 +122,8 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
                     not use_ffs_separately and edge.type is EdgeType.LagFinishStart:
                 parents_zero_stage.append((id2new_nodes[edge.start.id], edge.lag, edge.type))
             elif edge.type is EdgeType.StartStart:
-                work_id = make_start_id(edge.start.id, 0)
-                work_id = work_id if work_id in id2new_nodes else edge.start.id
+                work_id = make_start_id(edge.start.id, 0) # это работает если лаг = 0, иначе надо исп old_id_lag2new_id
+                work_id = work_id if work_id in id2new_nodes else edge.start.id # ????
                 parents_zero_stage.append((id2new_nodes[work_id], edge.lag, EdgeType.FinishStart))
             elif edge.type is EdgeType.FinishFinish:
                 parents_last_stage.append((id2new_nodes[edge.start.id], edge.lag, EdgeType.FinishStart))
@@ -139,6 +141,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
         # parents = parents or [id2new_nodes[origin_work_graph.start.id]]
         id2new_nodes[zero_stage_id].add_parents(parents)
 
+    # код ниже должен быть избыточен
     start_id = origin_work_graph.start.id
     finish_id = origin_work_graph.finish.id
     has_child: set[str] = {start_id, finish_id}
@@ -151,7 +154,7 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
     has_no_child = set(id2new_nodes.keys()) - has_child
     id2new_nodes[origin_work_graph.finish.id].add_parents([id2new_nodes[node_id] for node_id in has_no_child])
 
-    start_id = origin_work_graph.start.id
+    start_id = origin_work_graph.start.id # ??
     has_no_parent = set(id2new_nodes.keys()) - has_parent
     for work_id in has_no_parent:
         id2new_nodes[work_id].add_parents([id2new_nodes[start_id]])

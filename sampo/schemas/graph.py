@@ -10,6 +10,9 @@ from scipy.sparse import dok_matrix
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.works import WorkUnit
 
+from sampo.schemas.time import Time
+from sampo.schemas.scheduled_work import ScheduledWork
+
 
 class EdgeType(Enum):
     """
@@ -105,9 +108,9 @@ class GraphNode(JSONSerializable['GraphNode']):
         elif len(parent_works) > 0 and isinstance(parent_works[0], tuple):
             edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
-        for i, parent in enumerate(parent_works):
+        for edge, parent in zip(edges, parent_works):
             parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
-            parent._add_child_edge(edges[i])
+            parent._add_child_edge(edge)
             parent.invalidate_children_cache()
         self._parent_edges += edges
         self.invalidate_parents_cache()
@@ -279,6 +282,15 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         self._children_edges.append(child)
 
+    def min_start_time(self, node2swork: dict['GraphNode', ScheduledWork]) -> Time:
+        parents = self.parents
+        neighbors = self.neighbors
+        max_parent_time = max((node2swork[parent].min_child_start_time
+                               for parent in parents), default=Time(0))
+        max_neighbor_time = max((node2swork[neighbor].start_time for neighbor in neighbors), default=Time(0))
+
+        return max(max_parent_time, max_neighbor_time)
+
 
 GraphNodeDict = dict[str, GraphNode]
 
@@ -298,7 +310,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     adj_matrix: dok_matrix = field(init=False)
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
-
 
     def __post_init__(self) -> None:
         self.reinit()

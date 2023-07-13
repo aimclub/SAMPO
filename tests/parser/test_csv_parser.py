@@ -7,4 +7,4 @@ def test_work_graph_csv_parser():
         wg = CSVParser.work_graph('parser/test_work_graph.csv')
         print(f'\n\nWork graph has works: {wg.nodes}\n\n')
     except Exception as e:
-        raise WorkGraphBuildingException('There is no way to build work graph')
+        raise WorkGraphBuildingException(f'There is no way to build work graph, {e}')

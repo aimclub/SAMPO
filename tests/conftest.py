@@ -33,7 +33,7 @@ def setup_sampler(request):
     return Sampler(1e-1)
 
 
-@fixture(scope='session')
+@fixture
 def setup_rand() -> Random:
     return Random(231)
 
@@ -53,7 +53,7 @@ def setup_landscape_many_holders():
                                            ])
 
 
-@fixture(scope='session')
+@fixture
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 

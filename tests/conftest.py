@@ -28,7 +28,7 @@ from sampo.utilities.sampler import Sampler
 pytest_plugins = ('tests.schema', 'tests.models',)
 
 
-@fixture(scope='session')
+@fixture
 def setup_sampler(request):
     return Sampler(1e-1)
 
@@ -171,7 +171,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
-    num_contractors, contractor_min_resources = 1, 0
+    num_contractors= 1
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:

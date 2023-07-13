@@ -51,7 +51,6 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
     :param origin_node: GraphNode - Node to be divided into two parts
     :param id2new_nodes: GraphNodeDict - Dictionary with restructured new nodes where the restructured nodes will
         be written
-    :param old_id_lag2new_id: dict[tuple[str, float], str]
     :return: Nothing
     """
     wu = origin_node.work_unit
@@ -126,13 +125,15 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
             elif edge.type is EdgeType.FinishFinish:
                 parents_last_stage.append((id2new_nodes[edge.start.id], edge.lag, EdgeType.FinishStart))
             elif use_ffs_separately and edge.type is EdgeType.LagFinishStart:
-                parents_zero_stage.append(
-                    (id2new_nodes[old_id_lag2new_id[edge.start.id, edge.lag, False]], 0, EdgeType.FinishStart))
-                id2new_nodes[last_stage_id].add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                try:
+                    parents_zero_stage.append((id2new_nodes[old_id_lag2new_id[edge.start.id, edge.lag, False]], 0, EdgeType.FinishStart))
+                    id2new_nodes[last_stage_id].add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                except Exception as e:
+                    raise KeyError("обосрамс...")
         id2new_nodes[zero_stage_id].add_parents(parents_zero_stage)
         id2new_nodes[last_stage_id].add_parents(parents_last_stage)
 
-        # add SF connections from origin graph
+        # add SF connections from origin  graph
         parents = [(id2new_nodes[edge.finish.id], edge.lag, EdgeType.FinishStart)
                    for edge in node.edges_from if edge.type is EdgeType.StartFinish]
         # after reversing the start-finish node could remain without a parent, if so, suspend it in the start node

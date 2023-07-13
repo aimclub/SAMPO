@@ -126,13 +126,15 @@ class GeneticScheduler(Scheduler):
         self._deadline = deadline
 
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
-                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                  spec: ScheduleSpec = ScheduleSpec()):
         """
         Heuristic algorithm, that generate first population
 
         :param landscape:
         :param wg: graph of works
         :param contractors:
+        :param spec:
         :return:
         """
 
@@ -152,34 +154,25 @@ class GeneticScheduler(Scheduler):
                                                                                          landscape=landscape),
                             list(reversed(prioritization(wg, self.work_estimator))))
                 except NoSufficientContractorError:
-                    return None, None
-
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
+                    return None, None, None
         else:
             def init_schedule(scheduler_class):
                 try:
-                    schedule = AverageBinarySearchResourceOptimizingScheduler(
+                    (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)[0]
-                    return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)
+                    return schedule, list(reversed(prioritization(wg, self.work_estimator))), spec
                 except NoSufficientContractorError:
-                    return None, None
+                    return None, None, None
 
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
+        return {
+            "heft_end": init_schedule(HEFTScheduler),
+            "heft_between": init_schedule(HEFTBetweenScheduler),
+            "12.5%": init_k_schedule(HEFTScheduler, 8),
+            "25%": init_k_schedule(HEFTScheduler, 4),
+            "75%": init_k_schedule(HEFTScheduler, 4 / 3),
+            "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+        }
 
     def schedule_with_cache(self,
                             wg: WorkGraph,

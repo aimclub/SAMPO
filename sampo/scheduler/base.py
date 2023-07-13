@@ -54,7 +54,7 @@ class Scheduler(ABC):
                  landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> Schedule:
         """
-        Realization of a scheduling process. 'schedule' version returns only Schedule.
+        Implementation of a scheduling process. 'schedule' version returns only Schedule.
 
         :return: Schedule
         """

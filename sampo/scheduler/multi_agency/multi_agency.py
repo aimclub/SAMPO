@@ -35,7 +35,7 @@ class Agent:
         :param parent_time: max end time of parent blocks
         :return: offered start time, end time, resulting schedule and timeline before offering
 
-        To apply returned offer, use `Agent.confirm`.
+        To apply returned offer, use `Agent#confirm`.
         """
 
         schedule, start_time, timeline, _ = \
@@ -47,7 +47,7 @@ class Agent:
         """
         Applies the given offer.
 
-        :param timeline: timeline returned from corresponding `Agent.offer`
+        :param timeline: timeline returned from corresponding `Agent#offer`
         :param start: global start time of confirmed block
         :param end: global end time of confirmed block
         """

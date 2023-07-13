@@ -42,22 +42,24 @@ class AverageBinarySearchResourceOptimizingScheduler:
 
         def fitness(k: float, inner_spec: ScheduleSpec):
             result = call_scheduler(k, inner_spec)[0][0].execution_time
-            if result > deadline:
-                result = Time.inf()
+            # if result > deadline:
+            #     result = Time.inf()
             return result
 
         copied_spec = copy(spec)
+        copied_spec._work2spec.clear()
 
         k_min = 1
         k_max = 10000
 
-        last_correct = k_max
+        best = k_max
 
         try_count = 0
         max_try_count = 3
 
         result_min_resources = fitness(k_max, copied_spec)
         if result_min_resources < deadline:
+            print('Can keep deadline at minimum resources')
             # we can keep the deadline if pass minimum resources,
             # so let's go preventing the works going in parallel
             for node in wg.nodes:
@@ -72,17 +74,30 @@ class AverageBinarySearchResourceOptimizingScheduler:
                         break
                 else:
                     try_count = 0
+            return call_scheduler(best, copied_spec)
         else:
             # we can't keep the deadline if pass minimum resources,
             # but we can pass more
 
+            best_left_fit = Time.inf()
+            best_right_fit = Time.inf()
+            best_left_m = k_max
+            best_right_m = k_min
+
             while k_max - k_min > 0.05:
                 m = (k_min + k_max) / 2
                 time_m = fitness(m, copied_spec)
-                if time_m.is_inf():
+                if time_m > deadline:
+                    if abs(time_m.value - deadline.value) <= best_right_fit:
+                        best_right_fit = abs(time_m.value - deadline.value)
+                        best_right_m = m
                     k_max = m
                 else:
-                    last_correct = m
+                    if abs(time_m.value - deadline.value) <= best_left_fit:
+                        best_left_fit = abs(time_m.value - deadline.value)
+                        best_left_m = m
                     k_min = m
 
-        return call_scheduler(last_correct, copied_spec)
+            if best_left_fit < Time.inf():
+                return call_scheduler(best_left_m, copied_spec)
+            return call_scheduler(best_right_m, copied_spec)

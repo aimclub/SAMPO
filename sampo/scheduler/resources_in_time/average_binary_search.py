@@ -47,6 +47,7 @@ class AverageBinarySearchResourceOptimizingScheduler:
             return result
 
         copied_spec = copy(spec)
+        # FIXME Investigate why `spec` given to this method can be saved from previous call and remove this
         copied_spec._work2spec.clear()
 
         k_min = 1

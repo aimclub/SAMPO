@@ -14,21 +14,27 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
-ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray]
+ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec]
 
 
 def convert_schedule_to_chromosome(wg: WorkGraph,
-                                   work_id2index: dict[str, int], worker_name2index: dict[str, int],
-                                   contractor2index: dict[str, int], contractor_borders: np.ndarray,
-                                   schedule: Schedule, order: list[GraphNode] | None = None) -> ChromosomeType:
+                                   work_id2index: dict[str, int],
+                                   worker_name2index: dict[str, int],
+                                   contractor2index: dict[str, int],
+                                   contractor_borders: np.ndarray,
+                                   schedule: Schedule,
+                                   spec: ScheduleSpec,
+                                   order: list[GraphNode] | None = None) -> ChromosomeType:
     """
     Receive a result of scheduling algorithm and transform it to chromosome
 
+    :param wg:
     :param work_id2index:
     :param worker_name2index:
     :param contractor2index:
     :param contractor_borders:
     :param schedule:
+    :param spec:
     :param order: if passed, specify the node order that should appear in the chromosome
     :return:
     """
@@ -58,7 +64,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
 
     resource_border_chromosome = np.copy(contractor_borders)
 
-    return order_chromosome, resource_chromosome, resource_border_chromosome
+    return order_chromosome, resource_chromosome, resource_border_chromosome, spec
 
 
 def convert_chromosome_to_schedule(chromosome: ChromosomeType,
@@ -66,7 +72,6 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    index2node: dict[int, GraphNode],
                                    index2contractor: dict[int, Contractor],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
-                                   spec: ScheduleSpec,
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
                                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
@@ -83,12 +88,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     works_order = chromosome[0]
     works_resources = chromosome[1]
     border = chromosome[2]
+    spec = chromosome[3]
     worker_pool = copy.deepcopy(worker_pool)
 
     # use 3rd part of chromosome in schedule generator
     for worker_index in worker_pool:
         for contractor_index in worker_pool[worker_index]:
-            worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index], worker_name2index[worker_index]])
+            worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
+                                                                          worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool, landscape)
@@ -114,7 +121,8 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
-        st = timeline.find_min_start_time(node, worker_team, node2swork, work_spec, assigned_parent_time, work_estimator)
+        st = timeline.find_min_start_time(node, worker_team, node2swork, work_spec,
+                                          assigned_parent_time, work_estimator)
 
         if order_index == 0:  # we are scheduling the work `start of the project`
             st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it

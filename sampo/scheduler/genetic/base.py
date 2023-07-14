@@ -140,19 +140,20 @@ class GeneticScheduler(Scheduler):
 
         def init_k_schedule(scheduler_class, k):
             try:
-                return (scheduler_class(work_estimator=self.work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
-                                                                                                    landscape=landscape),
-                        list(reversed(prioritization(wg, self.work_estimator))))
+                return scheduler_class(work_estimator=self.work_estimator,
+                                       resource_optimizer=AverageReqResourceOptimizer(k)) \
+                    .schedule(wg, contractors,
+                              spec,
+                              landscape=landscape), list(reversed(prioritization(wg, self.work_estimator))), spec
             except NoSufficientContractorError:
-                return None, None
+                return None, None, None
 
         if self._deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
-                                                                                         landscape=landscape),
-                            list(reversed(prioritization(wg, self.work_estimator))))
+                    return scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
+                                                                                        landscape=landscape), \
+                            list(reversed(prioritization(wg, self.work_estimator))), spec
                 except NoSufficientContractorError:
                     return None, None, None
         else:
@@ -160,8 +161,8 @@ class GeneticScheduler(Scheduler):
                 try:
                     (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)
-                    return schedule, list(reversed(prioritization(wg, self.work_estimator))), spec
+                    ).schedule_with_cache(wg, contractors, self._deadline, spec, landscape=landscape)
+                    return schedule, list(reversed(prioritization(wg, self.work_estimator))), modified_spec
                 except NoSufficientContractorError:
                     return None, None, None
 

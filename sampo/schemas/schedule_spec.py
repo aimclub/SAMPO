@@ -23,6 +23,18 @@ class WorkSpec:
     assigned_time: Time | None = None
     is_independent: bool = False
 
+    def __init__(self,
+                 chain: list[WorkUnit] | None = None,
+                 assigned_workers: dict[WorkerName, int] = None,
+                 assigned_time: Time | None = None,
+                 is_independent: bool = False):
+        if assigned_workers is None:
+            assigned_workers = {}
+        self.chain = chain
+        self.assigned_workers = assigned_workers
+        self.assigned_time = assigned_time
+        self.is_independent = is_independent
+
 
 class ScheduleSpec:
     """
@@ -31,7 +43,10 @@ class ScheduleSpec:
 
     :param work2spec: work specs
     """
-    _work2spec: dict[str, WorkSpec] = defaultdict(WorkSpec)
+    _work2spec: dict[str, WorkSpec]
+
+    def __init__(self):
+        self._work2spec = defaultdict(WorkSpec)
 
     def set_exec_time(self, work: str | WorkUnit, time: Time) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):

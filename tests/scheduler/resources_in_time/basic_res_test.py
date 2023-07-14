@@ -17,7 +17,7 @@ def test_deadline_planning(setup_scheduler_parameters):
 
     deadline = Time(30)
 
-    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, deadline, landscape=setup_landscape)
+    schedule = scheduler.schedule_with_cache(setup_wg, setup_contractors, deadline, landscape=setup_landscape)[0][0]
 
     if schedule is None:
         pytest.skip("Given contractors can't satisfy given work graph")
@@ -57,14 +57,14 @@ def test_true_deadline_planning(setup_scheduler_parameters):
 
     if deadlined_schedule is None:
         pytest.skip('1 Given contractors cannot satisfy given work graph')
-    peak_deadlined = get_absolute_peak_resource_usage(deadlined_schedule, setup_contractors)
+    peak_deadlined = get_absolute_peak_resource_usage(deadlined_schedule)
 
     deadline = Time.inf() // 2
     (not_deadlined_schedule, _, _, _), _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, deadline,
                                                                          landscape=setup_landscape)
     if deadlined_schedule is None:
         pytest.skip('2 Given contractors cannot satisfy given work graph')
-    peak_not_deadlined = get_absolute_peak_resource_usage(not_deadlined_schedule, setup_contractors)
+    peak_not_deadlined = get_absolute_peak_resource_usage(not_deadlined_schedule)
 
     print(f'Peak with    deadline: {peak_deadlined}, time: {deadlined_schedule.execution_time}')
     print(f'Peak without deadline: {peak_not_deadlined}, time: {not_deadlined_schedule.execution_time}')

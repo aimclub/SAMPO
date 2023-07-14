@@ -10,7 +10,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
-from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -344,7 +344,7 @@ class MomentumTimeline(Timeline):
                  node2swork: dict[GraphNode, ScheduledWork],
                  workers: list[Worker],
                  contractor: Contractor,
-                 spec: ScheduleSpec,
+                 spec: WorkSpec,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),

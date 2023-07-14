@@ -1,9 +1,6 @@
-import os
-from ctypes import *
-
 from deap.base import Toolbox
 
-from sampo.schemas.time import Time
+from sampo.schemas.schedule import Schedule
 
 native = True
 try:
@@ -39,12 +36,12 @@ class NativeWrapper:
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:
-            def fit(chromosome: ChromosomeType) -> int:
+            def fit(chromosome: ChromosomeType) -> Schedule | None:
                 if toolbox.validate(chromosome):
                     sworks = toolbox.chromosome_to_schedule(chromosome)[0]
-                    return max([swork.finish_time for swork in sworks.values()]).value
+                    return Schedule.from_scheduled_works(sworks.values(), wg)
                 else:
-                    return Time.inf()
+                    return None
             self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
             self._cache = None
             return

@@ -1,4 +1,4 @@
-from copy import copy
+from copy import deepcopy
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -46,7 +46,7 @@ class AverageBinarySearchResourceOptimizingScheduler:
             #     result = Time.inf()
             return result
 
-        copied_spec = copy(spec)
+        copied_spec = deepcopy(spec)
         # FIXME Investigate why `spec` given to this method can be saved from previous call and remove this
         copied_spec._work2spec.clear()
 

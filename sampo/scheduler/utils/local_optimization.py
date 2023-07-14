@@ -186,7 +186,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             # st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
             # ft = st + node_schedule.get_actual_duration(work_estimator)
             timeline.schedule(node, node2swork_new, node_schedule.workers,
-                              id2contractor[node_schedule.contractor], None, work_spec.assigned_time,
+                              id2contractor[node_schedule.contractor], work_spec, None, work_spec.assigned_time,
                               assigned_parent_time, work_estimator)
             # node_schedule.start_end_time = (st, ft)
             node2swork_new[node] = node_schedule

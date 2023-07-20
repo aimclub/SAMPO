@@ -161,10 +161,14 @@ typedef struct {
     vector<vector<int>> headParents;
     vector<vector<int>> inseparables;
     vector<vector<int>> workers;
-    vector<double> volume;
+    vector<float> volume;
     vector<vector<int>> minReq;
     vector<vector<int>> maxReq;
+    vector<string> id2work;
+    vector<string> id2res;
+    string timeEstimatorPath;
     int totalWorksCount;
+    bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;
 } EvaluateInfo;
 

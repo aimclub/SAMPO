@@ -1,5 +1,5 @@
 from random import Random
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 
 import numpy as np
 from deap.base import Toolbox
@@ -9,10 +9,11 @@ from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_t
 from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.graph import WorkGraph, GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.collections_util import reverse_dictionary
 
 
@@ -50,7 +51,8 @@ def create_toolbox(wg: WorkGraph,
                    init_schedules: Dict[str, Schedule],
                    rand: Random,
                    spec: ScheduleSpec = ScheduleSpec(),
-                   work_estimator: WorkTimeEstimator = None) -> Tuple[Toolbox, np.ndarray]:
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                   landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Tuple[Toolbox, np.ndarray]:
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
     index2node: Dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
@@ -109,6 +111,7 @@ def create_toolbox(wg: WorkGraph,
     return init_toolbox(wg,
                         contractors,
                         worker_pool,
+                        landscape,
                         index2node,
                         work_id2index,
                         worker_name2index,
@@ -124,7 +127,6 @@ def create_toolbox(wg: WorkGraph,
                         contractor2index,
                         contractor_borders,
                         node_indices,
-                        index2node_list,
                         parents,
                         Time(0),
                         work_estimator), resources_border
@@ -132,12 +134,12 @@ def create_toolbox(wg: WorkGraph,
 
 @fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
-    (setup_wg, setup_contractors), setup_default_schedules = setup_default_schedules
+    (setup_wg, setup_contractors, setup_landscape_many_holders), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
 
     selection_size, mutate_order, mutate_resources, size_of_population = get_params(setup_wg.vertex_count)
     rand = Random(123)
-    work_estimator: Optional[WorkTimeEstimator] = None
+    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     return create_toolbox(setup_wg,
                           setup_contractors,
@@ -147,4 +149,6 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                           mutate_resources,
                           setup_default_schedules,
                           rand,
-                          work_estimator=work_estimator), setup_wg, setup_contractors, setup_default_schedules
+                          work_estimator=work_estimator,
+                          landscape=setup_landscape_many_holders), setup_wg, setup_contractors, setup_default_schedules, \
+           setup_landscape_many_holders

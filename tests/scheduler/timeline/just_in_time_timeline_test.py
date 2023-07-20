@@ -11,15 +11,16 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
+from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.schemas.types import WorkerName
 from sampo.utilities.collections_util import build_index
 
 
 @fixture(scope='function')
 def setup_timeline(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
-    return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool), \
+    return JustInTimeTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool, landscape=landscape), \
         setup_wg, setup_contractors, setup_worker_pool
 
 
@@ -57,7 +58,7 @@ def test_update_resource_structure(setup_timeline):
 def test_schedule(setup_timeline):
     setup_timeline, setup_wg, setup_contractors, setup_worker_pool = setup_timeline
 
-    ordered_nodes = prioritization(setup_wg)
+    ordered_nodes = prioritization(setup_wg, DefaultWorkEstimator())
     node = ordered_nodes[-1]
 
     reqs = build_index(node.work_unit.worker_reqs, attrgetter('kind'))
@@ -67,7 +68,7 @@ def test_schedule(setup_timeline):
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    setup_timeline.schedule(node, node2swork, worker_team, contractor, work_estimator=None)
+    setup_timeline.schedule(node, node2swork, worker_team, contractor)
 
     assert len(node2swork) == 1
     for swork in node2swork.values():

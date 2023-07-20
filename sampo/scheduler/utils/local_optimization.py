@@ -5,6 +5,7 @@ from typing import Iterable
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork
@@ -24,6 +25,9 @@ class OrderLocalOptimizer(ABC):
 
 
 class ScheduleLocalOptimizer(ABC):
+    """
+    Base class for building local optimization methods applicable to the schedule.
+    """
 
     def __init__(self, timeline_type: type[Timeline]):
         """
@@ -33,7 +37,8 @@ class ScheduleLocalOptimizer(ABC):
 
     @abstractmethod
     def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
-                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 contractors: list[Contractor], landscape_config: LandscapeConfiguration,
+                 spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
         """
@@ -42,6 +47,7 @@ class ScheduleLocalOptimizer(ABC):
         Result writes to `scheduled_works` in-place.
         :param node_order:
         :param contractors:
+        :param landscape_config:
         :param spec:
         :param worker_pool:
         :param work_estimator:
@@ -87,12 +93,12 @@ def get_swap_candidates(node: GraphNode,
 
 class SwapOrderLocalOptimizer(OrderLocalOptimizer):
     """
-    This performs just small shuffle that not breaks topological order
+    This performs just small shuffle that not breaks topological order.
     """
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
         """
-        Change order of nodes (not breaks topological order) by swapping several nodes
+        Change order of nodes (not breaks topological order) by swapping several nodes.
         """
         if node_order is None:
             return
@@ -138,8 +144,8 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     """
-    This method finds near placed works and turns it to run in parallel
-    It will take effect only if it's launched after scheduling
+    This method finds near placed works and turns it to run in parallel.
+    It will take effect only if it's launched after scheduling.
     """
 
     def __init__(self, timeline_type: type[Timeline]):
@@ -148,11 +154,12 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
     def recalc_schedule(self,
                         node_order: Iterable[GraphNode],
                         contractors: list[Contractor],
+                        landscape_config: LandscapeConfiguration,
                         spec: ScheduleSpec,
                         node2swork: dict[GraphNode, ScheduledWork],
                         worker_pool: WorkerContractorPool,
                         assigned_parent_time: Time,
-                        work_estimator: WorkTimeEstimator = None) -> dict[GraphNode, ScheduledWork]:
+                        work_estimator: WorkTimeEstimator) -> dict[GraphNode, ScheduledWork]:
         """
         Recalculates duration and start-finish times in the whole given `seq`.
         This will be useful to call after `parallelize_local_sequence` method
@@ -160,6 +167,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
 
         :param node_order: scheduled works to process
         :param contractors:
+        :param landscape_config:
         :param spec:
         :param node2swork:
         :param worker_pool:
@@ -167,7 +175,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
         """
 
-        timeline = self._timeline_type(node_order, contractors, worker_pool)
+        timeline = self._timeline_type(node_order, contractors, worker_pool, landscape_config)
         node2swork_new: dict[GraphNode, ScheduledWork] = {}
 
         id2contractor = build_index(contractors, attrgetter('name'))
@@ -177,7 +185,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             work_spec = spec.get_work_spec(node.id)
             # st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
             # ft = st + node_schedule.get_actual_duration(work_estimator)
-            timeline.schedule(index, node, node2swork_new, node_schedule.workers,
+            timeline.schedule(node, node2swork_new, node_schedule.workers,
                               id2contractor[node_schedule.contractor], None, work_spec.assigned_time,
                               assigned_parent_time, work_estimator)
             # node_schedule.start_end_time = (st, ft)
@@ -186,15 +194,17 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         return node2swork_new
 
     def optimize(self, scheduled_works: dict[GraphNode, ScheduledWork], node_order: list[GraphNode],
-                 contractors: list[Contractor], spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                 contractors: list[Contractor], landscape_config: LandscapeConfiguration,
+                 spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
         """
-        Finds near placed works and turns it to run in parallel
+        Finds near placed works and turns it to run in parallel.
 
         :param scheduled_works:
         :param node_order:
         :param contractors:
+        :param landscape_config:
         :param spec:
         :param worker_pool:
         :param work_estimator:
@@ -215,7 +225,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             node = node_order[i]
             if node in processed:
                 continue
-            chain_candidates: list[GraphNode] = node_order[0:i]
+            chain_candidates: list[GraphNode] = node_order[start_index:i]
             accepted_candidates = get_swap_candidates(node, i, chain_candidates, node2ind, processed)
 
             my_schedule: ScheduledWork = scheduled_works[node]
@@ -278,13 +288,13 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                     # candidate_schedule.start_time = my_schedule.start_time
                     break
 
-        return self.recalc_schedule(reversed(node_order), contractors, spec, scheduled_works,
+        return self.recalc_schedule(reversed(node_order), contractors, landscape_config, spec, scheduled_works,
                                     worker_pool, assigned_parent_time, work_estimator)
 
 
 def optimize_local_sequence(seq: list[GraphNode],
                             start_ind: int,
                             end_ind: int,
-                            work_estimator: WorkTimeEstimator = None):
+                            work_estimator: WorkTimeEstimator):
     # TODO Try to find sets of works with nearly same resources and turn in to run in parallel or vice-versa
     pass

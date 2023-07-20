@@ -12,10 +12,17 @@ from sampo.schemas.works import WorkUnit
 
 
 class SyntheticBlockGraphType(Enum):
-    Sequential = 0,
-    Parallel = 1,
-    Random = 2,
-    Queues = 3
+    """
+    Describe types of synthetic block graph:
+    - Parallel - works can be performed mostly in parallel,
+    - Sequential - works can be performed mostly in sequential,
+    - Random - random structure of block graph,
+    - Queue - queue structure typical of real processes capital construction.
+    """
+    SEQUENTIAL = 0
+    PARALLEL = 1
+    RANDOM = 2
+    QUEUES = 3
 
 
 EMPTY_GRAPH_VERTEX_COUNT = 2
@@ -47,21 +54,31 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     ss = SimpleSynthetic(rand)
 
     modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
-    nodes = [ss.work_graph(mode, *count_supplier(i)) for i, mode in enumerate(modes)]
+
+    def generate_wg(mode, i):
+        bottom_border, top_border = count_supplier(i)
+        if bottom_border is not None:
+            return ss.work_graph(mode, bottom_border=bottom_border)
+        elif top_border is not None:
+            return ss.work_graph(mode, top_border=top_border)
+        else:
+            return ss.work_graph(mode)
+
+    nodes = [generate_wg(mode, i) for i, mode in enumerate(modes)]
     nodes += [generate_empty_graph(), generate_empty_graph()]
     bg = BlockGraph.pure(nodes, obstruction_getter)
 
     global_start, global_end = bg.nodes[-2:]
 
     match graph_type:
-        case SyntheticBlockGraphType.Sequential:
+        case SyntheticBlockGraphType.SEQUENTIAL:
             for idx, start in enumerate(bg.nodes[:-2]):
                 if start.wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT \
                         and bg.nodes[idx + 1].wg.vertex_count > EMPTY_GRAPH_VERTEX_COUNT:
                     bg.add_edge(start, bg.nodes[idx + 1])
-        case SyntheticBlockGraphType.Parallel:
+        case SyntheticBlockGraphType.PARALLEL:
             pass
-        case SyntheticBlockGraphType.Random:
+        case SyntheticBlockGraphType.RANDOM:
             rev_edge_prob = int(1 / edge_prob)
             for idx, start in enumerate(bg.nodes):
                 for end in bg.nodes[idx:]:
@@ -81,7 +98,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
 
 
 def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, type_prop: list[int],
-                         count_supplier: Callable[[int], tuple[int, int]],
+                         count_supplier: Callable[[int], tuple[int | None, int | None]],
                          edge_prob: float, rand: Random | None = Random(),
                          obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
                          queues_num: int | None = None,
@@ -89,7 +106,7 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
                          queues_edges: list[int] | None = None,
                          logger: Callable[[str], None] = print) -> BlockGraph:
     """
-    Generate synthetic block graph of received type
+    Generate synthetic block graph of the received type.
 
     :param graph_type: type of Block Graph
     :param n_blocks: number of blocks
@@ -98,13 +115,13 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
     :param edge_prob: edge existence probability
     :param rand: a random reference
     :param obstruction_getter:
-    :param queues_num: number of queues in block graph
-    :param queues_blocks: list of queues. It contains number of blocks in each queue
+    :param queues_num: number of queues in a block graph
+    :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
     :param logger: for logging
     :return: generated block graph
     """
-    if graph_type == SyntheticBlockGraphType.Queues:
+    if graph_type == SyntheticBlockGraphType.QUEUES:
         return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
                                queues_edges, logger)
     else:
@@ -127,47 +144,44 @@ def generate_queues(type_prop: list[int],
     :param count_supplier: function that computes the borders of block size from it's index
     :param rand: a random reference
     :param obstruction_getter:
-    :param queues_num: number of queues in block graph
-    :param queues_blocks: list of queues. It contains number of blocks in each queue
+    :param queues_num: number of queues in a block graph
+    :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
     :return: generated block graph
     """
     ss = SimpleSynthetic(rand)
     nodes_all: list[BlockNode] = []
-    nodes_prev: list[BlockNode] = []
+    parent: BlockNode = BlockNode(generate_empty_graph())
 
     for queue in range(queues_num):
+        next_parent = BlockNode(generate_empty_graph())
         # generate vertices
         n_blocks = queues_blocks[queue]
         modes = rand.sample(list(SyntheticGraphType), counts=[p * n_blocks for p in type_prop], k=n_blocks)
-        nodes = [BlockNode(ss.work_graph(mode, *count_supplier(i)), obstruction_getter(i))
+
+        def generate_wg(mode, i):
+            bottom_border, top_border = count_supplier(i)
+            if bottom_border is not None:
+                return ss.work_graph(mode, bottom_border=bottom_border)
+            elif top_border is not None:
+                return ss.work_graph(mode, top_border=top_border)
+            else:
+                return ss.work_graph(mode)
+        nodes = [BlockNode(generate_wg(mode, i), obstruction_getter(i))
                  for i, mode in enumerate(modes)]
+        nodes_all.append(parent)
         nodes_all.extend(nodes)
-        if not nodes_all:
-            nodes_prev = nodes
-            # logger(f'Generated queue 0: blocks={n_blocks}')
-            continue
 
         # generate edges
-        generated_edges = 0
-        for i, node in enumerate(nodes[:-2]):
-            if i >= len(nodes_prev):
-                break
-            BlockGraph.add_edge(node, nodes_prev[i])
-            generated_edges += 1
-
         for i, node in enumerate(nodes):
-            if i >= len(nodes_prev):
-                break
-            # we are going in reverse to fill edges that are not covered by previous cycle
-            BlockGraph.add_edge(node, nodes_prev[-i])
-            generated_edges += 1
+            BlockGraph.add_edge(parent, node)
+            BlockGraph.add_edge(node, next_parent)
 
-        nodes_prev = nodes
+        parent = next_parent
 
-        # logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
+    nodes_all.append(parent)
+
+    # logger(f'Generated queue {queue}: blocks={n_blocks}, edges={generated_edges}')
     logger('Queues')
 
     return BlockGraph(nodes_all)
-
-

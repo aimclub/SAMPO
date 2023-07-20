@@ -9,6 +9,9 @@ from sampo.schemas.time import Time
 
 
 class IdentityResourceOptimizer(ResourceOptimizer):
+    """
+    Empty class of resource optimizer.
+    """
 
     def optimize_resources(self,
                            worker_pool: WorkerContractorPool,

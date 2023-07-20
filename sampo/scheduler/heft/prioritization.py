@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sampo.scheduler.heft.time_computaion import work_priority, calculate_working_time_cascade
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -7,7 +5,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 
 def ford_bellman(wg: WorkGraph, weights: dict[GraphNode, float]) -> dict[GraphNode, float]:
     """
-    Runs heuristic ford-bellman algorithm for given graph and weights
+    Runs heuristic ford-bellman algorithm for given graph and weights.
     """
     path_weights: dict[GraphNode, float] = {node: 0 for node in wg.nodes}
     # cache graph edges
@@ -46,10 +44,10 @@ def ford_bellman(wg: WorkGraph, weights: dict[GraphNode, float]) -> dict[GraphNo
     return path_weights
 
 
-def prioritization(wg: WorkGraph, work_estimator: Optional[WorkTimeEstimator] = None) -> list[GraphNode]:
+def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
     """
-    Return ordered critical nodes
-    Finish time is depend on these ordered nodes
+    Return ordered critical nodes.
+    Finish time is depended on these ordered nodes.
     """
     # inverse weights
     weights = {node: -work_priority(node, calculate_working_time_cascade, work_estimator)

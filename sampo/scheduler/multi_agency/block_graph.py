@@ -1,4 +1,3 @@
-from copy import deepcopy
 from operator import attrgetter
 from typing import Callable
 
@@ -46,21 +45,26 @@ class BlockGraph:
     def __len__(self):
         return len(self.nodes)
 
+    def __copy__(self):
+        parent_ids = [[parent.id for parent in node.blocks_to] for node in self.nodes]
+        nodes = [BlockNode(old_node.wg, old_node.obstruction) for old_node in self.nodes]
+        nodes_index = build_index(nodes, attrgetter('id'))
+
+        for node, parents in zip(nodes, parent_ids):
+            for parent in parents:
+                BlockGraph.add_edge(nodes_index[parent], node)
+
+        return BlockGraph(nodes)
+
     def to_work_graph(self) -> WorkGraph:
         """
-        Creates `WorkGraph` that is equal to this `BlockGraph`.
+        Construct 'WorkGraph' that is equal to the `BlockGraph`.
         """
-        copied_nodes = deepcopy(self.nodes)
+        copied_graph = self.__copy__()
+        copied_nodes = copied_graph.nodes
+
         for node in copied_nodes:
             node.wg = WorkGraph._deserialize(node.wg._serialize())
-            for wg_node in node.wg.nodes:
-                wg_node.__dict__.pop('parents', None)
-                wg_node.__dict__.pop('parents_set', None)
-                wg_node.__dict__.pop('children', None)
-                wg_node.__dict__.pop('children_set', None)
-                wg_node.__dict__.pop('inseparable_parent', None)
-                wg_node.__dict__.pop('inseparable_son', None)
-                wg_node.__dict__.pop('get_inseparable_chain', None)
 
         nodes_without_children = []
 
@@ -82,7 +86,7 @@ class BlockGraph:
 
     def toposort(self) -> list[BlockNode]:
         """
-        Sort current 'BlockGraph' in topologically order
+        Sort current 'BlockGraph' in topologic order
 
         :return: ordered list of BlockNode
         """

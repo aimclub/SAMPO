@@ -10,7 +10,7 @@ from sampo.utilities.collections_util import build_index
 
 def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contractor]) -> None:
     """
-    Checks if schedule is correct and can be executed.
+    Checks if the schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
     If it finishes without any exception, it means successful passing of the verification
 
@@ -165,7 +165,7 @@ def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[
     # 1. all workers of the same category belonging to the same contractor should have the same characteristics
     for c in contractors:
         assert all(ws.count >= 1 for _, ws in c.workers.items()), \
-            f"There should be only one worker for the same worker category"
+            "There should be only one worker for the same worker category"
 
     # добавляем агентов в словарь
     agents = {}

@@ -12,7 +12,7 @@ from sampo.utilities.base_opt import dichotomy_int
 
 class FullScanResourceOptimizer(ResourceOptimizer):
     """
-    Class that optimize number of resources by the smart search method
+    Class that implements optimization the number of resources by the smart search method.
     """
 
     _coordinate_descent_optimizer = CoordinateDescentResourceOptimizer(dichotomy_int)
@@ -25,7 +25,7 @@ class FullScanResourceOptimizer(ResourceOptimizer):
                            up_border: np.ndarray,
                            get_finish_time: Callable[[list[Worker]], Time]):
         """
-        The resource optimization module, that search optimal number of resources by the smart search method
+        The resource optimization module, that search optimal number of resources by the smart search method.
 
         :param worker_pool: global resources pool
         :param worker_team: worker team to optimize
@@ -43,24 +43,24 @@ class FullScanResourceOptimizer(ResourceOptimizer):
             :param worker_count:
             :return: finish time with a current set of resources
             """
-            for worker_ind in range(len(worker_team)):
-                worker_team[worker_ind].count = worker_count[worker_ind]
+            for ind, worker in enumerate(worker_team):
+                worker.count = worker_count[ind]
             return get_finish_time(worker_team)
 
         right_fit = fitness(up_border)
         left_fit = fitness(down_border)
 
-        m = up_border
+        mid = up_border
 
         # Find the optimal point on the search area diagonal
-        while (m > down_border).any():
-            m = (up_border + down_border) // 2
-            next_fit = fitness(m)
+        while (mid > down_border).any():
+            mid = (up_border + down_border) // 2
+            next_fit = fitness(mid)
             if next_fit < right_fit:
-                down_border = m
+                down_border = mid
                 left_fit = next_fit
             elif next_fit > left_fit:
-                up_border = m
+                up_border = mid
                 right_fit = next_fit
             else:
                 break
@@ -69,6 +69,6 @@ class FullScanResourceOptimizer(ResourceOptimizer):
         self._coordinate_descent_optimizer.optimize_resources(worker_pool,
                                                               worker_team,
                                                               optimize_array,
-                                                              m,
+                                                              mid,
                                                               up_border,
                                                               get_finish_time)

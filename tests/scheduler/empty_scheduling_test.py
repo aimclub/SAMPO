@@ -1,4 +1,4 @@
-from _pytest.fixtures import fixture
+from pytest import fixture
 
 from sampo.generator.environment.contractor_by_wg import ContractorGenerationMethod, get_contractor_by_wg
 from sampo.scheduler.generate import generate_schedule
@@ -18,14 +18,14 @@ def setup_empty_req_work_graph(setup_simple_synthetic) -> WorkGraph:
 
 
 @fixture
-def setup_empty_contractors(setup_empty_work_graph) -> list[Contractor]:
-    return [get_contractor_by_wg(setup_empty_work_graph, method=ContractorGenerationMethod.MIN)]
+def setup_empty_contractors(setup_empty_req_work_graph) -> list[Contractor]:
+    return [get_contractor_by_wg(setup_empty_req_work_graph, method=ContractorGenerationMethod.MIN)]
 
 
-def test_empty_graph_empty_contractor(setup_empty_work_graph, setup_empty_contractors, setup_scheduler_type):
+def test_empty_graph_empty_contractor(setup_empty_req_work_graph, setup_empty_contractors, setup_scheduler_type):
     schedule = generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
                                  work_time_estimator=DefaultWorkEstimator(),
-                                 work_graph=setup_empty_work_graph,
+                                 work_graph=setup_empty_req_work_graph,
                                  contractors=setup_empty_contractors,
                                  validate_schedule=False,
                                  landscape=LandscapeConfiguration())

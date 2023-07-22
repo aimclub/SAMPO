@@ -1,4 +1,4 @@
-from pytest import fixture
+from _pytest.fixtures import fixture
 
 from sampo.generator.environment.contractor_by_wg import ContractorGenerationMethod, get_contractor_by_wg
 from sampo.scheduler.generate import generate_schedule

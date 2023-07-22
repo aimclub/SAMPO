@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from sampo.schemas.schedule import Schedule
+from sampo.schemas.time import Time
 
 
 def get_total_resource_usage(schedule: Schedule) -> dict[str, list[int]]:
@@ -18,4 +19,6 @@ def get_peak_resource_usage(schedule: Schedule) -> dict[str, int]:
 
 
 def get_absolute_peak_resource_usage(schedule: Schedule) -> int:
+    if schedule.execution_time.is_inf():
+        return Time.inf().value
     return sum(get_peak_resource_usage(schedule).values())

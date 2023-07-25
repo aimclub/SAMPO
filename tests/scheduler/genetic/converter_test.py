@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fixtures import *
+from tests.scheduler.genetic.fixtures import *
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.resources import Worker
 from sampo.utilities.validation import validate_schedule

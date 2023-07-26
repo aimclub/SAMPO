@@ -283,13 +283,10 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._children_edges.append(child)
 
     def min_start_time(self, node2swork: dict['GraphNode', ScheduledWork]) -> Time:
-        parents = self.parents
-        neighbors = self.neighbors
-        max_parent_time = max((node2swork[parent].min_child_start_time
-                               for parent in parents), default=Time(0))
-        max_neighbor_time = max((node2swork[neighbor].start_time for neighbor in neighbors), default=Time(0))
+        max_parent_time = max((node2swork[edge.start].min_child_start_time + int(edge.lag)
+                               for edge in self.edges_to), default=Time(0))
 
-        return max(max_parent_time, max_neighbor_time)
+        return max_parent_time
 
 
 GraphNodeDict = dict[str, GraphNode]

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from copy import copy
+from dataclasses import dataclass, field
 from typing import Optional, Union
 
 from sampo.schemas.resources import Worker
@@ -8,6 +9,7 @@ from sampo.schemas.types import WorkerName
 from sampo.schemas.works import WorkUnit
 
 
+@dataclass
 class WorkSpec:
     """
     Here are the container for externally given terms, that the resulting `ScheduledWork` should satisfy.
@@ -18,10 +20,11 @@ class WorkSpec:
     :param assigned_time: predefined work time (scheduler should schedule this work with this execution time)
     """
     chain: Optional[list[WorkUnit]] = None  # TODO Add support
-    assigned_workers: dict[WorkerName, int] = {}
+    assigned_workers: dict[WorkerName, int] = field(default_factory=dict)
     assigned_time: Optional[Time] = None
 
 
+@dataclass
 class ScheduleSpec:
     """
     Here is the container for externally given terms, that Schedule should satisfy.
@@ -29,7 +32,7 @@ class ScheduleSpec:
 
     :param work2spec: work specs
     """
-    _work2spec: dict[str, WorkSpec] = defaultdict(WorkSpec)
+    _work2spec: dict[str, WorkSpec] = field(default_factory=lambda: defaultdict(WorkSpec))
 
     def set_exec_time(self, work: Union[str, WorkUnit], time: Time) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):

@@ -35,7 +35,7 @@ def dichotomy_int(down: int, up: int, func: Callable[[int], Time]):
         else:
             down = x1
 
-        # print(str(x1) + " " + str(x2) + " " + str(down) + " " + str(up))
+        # print(str(x1) + ' ' + str(x2) + ' ' + str(down) + ' ' + str(up))
 
     return (up + down) >> 1
 

@@ -4,6 +4,7 @@ from typing import Optional
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -21,16 +22,23 @@ class Timeline(ABC):
                  node2swork: dict[GraphNode, ScheduledWork],
                  passed_agents: list[Worker],
                  contractor: Contractor,
-                 assigned_start_time: Optional[Time] = None,
-                 assigned_time: Optional[Time] = None,
+                 spec: WorkSpec,
+                 assigned_start_time: Time | None = None,
+                 assigned_time: Time | None = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: Optional[WorkTimeEstimator] = DefaultWorkEstimator()) -> Time:
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Time:
+        """
+        Schedules the given `GraphNode` using passed agents, spec and times.
+        If start time not passed, it should be computed as minimum work start time.
+        :return: scheduled finish time of given work
+        """
         ...
 
     def find_min_start_time(self,
                             node: GraphNode,
                             worker_team: list[Worker],
                             node2swork: dict[GraphNode, ScheduledWork],
+                            spec: WorkSpec,
                             parent_time: Time = Time(0),
                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Time:
         """
@@ -39,11 +47,12 @@ class Timeline(ABC):
         :param worker_team: list of passed workers. It Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node: the GraphNode whose minimum time we are trying to find
         :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
+        :param spec: specification for given `GraphNode`
         :param parent_time: the minimum start time
         :param work_estimator: function that calculates execution time of the GraphNode
         :return: minimum time
         """
-        return self.find_min_start_time_with_additional(node, worker_team, node2swork, None,
+        return self.find_min_start_time_with_additional(node, worker_team, node2swork, spec, None,
                                                         parent_time, work_estimator)[0]
 
     @abstractmethod
@@ -51,6 +60,7 @@ class Timeline(ABC):
                                             node: GraphNode,
                                             worker_team: list[Worker],
                                             node2swork: dict[GraphNode, ScheduledWork],
+                                            spec: WorkSpec,
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
                                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
@@ -62,7 +72,8 @@ class Timeline(ABC):
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: dict[GraphNode, ScheduledWork],
-                        worker_team: list[Worker]):
+                        worker_team: list[Worker],
+                        spec: WorkSpec):
         ...
 
     @abstractmethod

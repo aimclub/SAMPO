@@ -34,7 +34,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
@@ -110,8 +110,8 @@ def build_schedule(wg: WorkGraph,
 
     # here we aggregate information about relationships from the whole inseparable chain
     children = {work_id2index[node.id]: list({work_id2index[inseparable_parents[child].id]
-                                                  for inseparable in node.get_inseparable_chain_with_self()
-                                                  for child in inseparable.children})
+                                              for inseparable in node.get_inseparable_chain_with_self()
+                                              for child in inseparable.children})
                 for node in nodes}
 
     parents = {work_id2index[node.id]: [] for node in nodes}
@@ -126,9 +126,9 @@ def build_schedule(wg: WorkGraph,
     # initial chromosomes construction
     init_chromosomes: dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, order)
+                                              contractor2index, contractor_borders, schedule, spec, order)
             if schedule is not None else None
-         for name, (schedule, order) in init_schedules.items()}
+         for name, (schedule, order, spec) in init_schedules.items()}
 
     toolbox = init_toolbox(wg, contractors, worker_pool, landscape, index2node,
                            work_id2index, worker_name2index, index2contractor,
@@ -223,7 +223,7 @@ def build_schedule(wg: WorkGraph,
                 if rand.random() < mutpb:
                     ind_order = toolbox.mutate(mutant[0][0])
                     ind = copy_chromosome(mutant[0])
-                    ind = (ind_order[0], ind[1], ind[2])
+                    ind = (ind_order[0], ind[1], ind[2], ind[3])
                     # add to population
                     cur_generation.append(wrap(ind))
 

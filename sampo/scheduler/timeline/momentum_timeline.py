@@ -49,7 +49,7 @@ class MomentumTimeline(Timeline):
             if isinstance(event, tuple):
                 return event
 
-            raise ValueError(f"Incorrect type of value: {type(event)}")
+            raise ValueError(f'Incorrect type of value: {type(event)}')
 
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
@@ -199,7 +199,7 @@ class MomentumTimeline(Timeline):
         i = 0
         while len(queue) > 0:
             # if i > 0 and i % 50 == 0:
-            #     print(f"Warning! Probably cycle in looking for diff workers: {i} iteration")
+            #     print(f'Warning! Probably cycle in looking for diff workers: {i} iteration')
             i += 1
 
             wreq = queue.popleft()
@@ -254,8 +254,8 @@ class MomentumTimeline(Timeline):
         i = 0
         while len(state[current_start_idx:]) > 0:
             # if i > 0 and i % 50 == 0:
-            #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
-            #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
+            #     print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
+            #     print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
             i += 1
             end_idx = state.bisect_right(current_start_time + exec_time + 1)
 

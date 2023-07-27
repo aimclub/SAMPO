@@ -17,7 +17,7 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
     :return:
        auxiliary_id: str - an auxiliary id for the work unit
     """
-    return f"{work_unit_id}{STAGE_SEP}{ind}"
+    return f'{work_unit_id}{STAGE_SEP}{ind}'
 
 
 def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (list[tuple[float, float, bool]]):
@@ -41,8 +41,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
                        lags_volumes_list: list[tuple[float, float, bool]],
                        old_id_lag2new_id: dict[tuple[str, float, bool], str]):
     """
-    Splits the node into two parts: into "piece" and "mian" whose sizes are proportional to max_lag and
-    parent_volume-max_lag, respectively. The order of "piece" and "mian" is set. For the first vertex the id is changed,
+    Splits the node into two parts: into 'piece' and 'mian' whose sizes are proportional to max_lag and
+    parent_volume-max_lag, respectively. The order of 'piece' and 'mian' is set. For the first vertex the id is changed,
     for the second one it remains the same, so that it is more convenient to restore the edges. The resulting nodes are
     created without edges. It connects two obtained nodes with an unbreakable edge,
     which does not allow to perform tasks in any way
@@ -51,7 +51,6 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
     :param origin_node: GraphNode - Node to be divided into two parts
     :param id2new_nodes: GraphNodeDict - Dictionary with restructured new nodes where the restructured nodes will
         be written
-    :param old_id_lag2new_id: dict[tuple[str, float], str]
     :return: Nothing
     """
     wu = origin_node.work_unit
@@ -126,13 +125,15 @@ def fill_parents(origin_work_graph: WorkGraph, id2new_nodes: GraphNodeDict,
             elif edge.type is EdgeType.FinishFinish:
                 parents_last_stage.append((id2new_nodes[edge.start.id], edge.lag, EdgeType.FinishStart))
             elif use_ffs_separately and edge.type is EdgeType.LagFinishStart:
-                parents_zero_stage.append(
-                    (id2new_nodes[old_id_lag2new_id[edge.start.id, edge.lag, False]], 0, EdgeType.FinishStart))
-                id2new_nodes[last_stage_id].add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                try:
+                    parents_zero_stage.append((id2new_nodes[old_id_lag2new_id[edge.start.id, edge.lag, False]], 0, EdgeType.FinishStart))
+                    id2new_nodes[last_stage_id].add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                except Exception as e:
+                    raise KeyError("обосрамс...")
         id2new_nodes[zero_stage_id].add_parents(parents_zero_stage)
         id2new_nodes[last_stage_id].add_parents(parents_last_stage)
 
-        # add SF connections from origin graph
+        # add SF connections from origin  graph
         parents = [(id2new_nodes[edge.finish.id], edge.lag, EdgeType.FinishStart)
                    for edge in node.edges_from if edge.type is EdgeType.StartFinish]
         # after reversing the start-finish node could remain without a parent, if so, suspend it in the start node

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from copy import copy
+from dataclasses import dataclass, field
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
@@ -7,6 +8,7 @@ from sampo.schemas.types import WorkerName
 from sampo.schemas.works import WorkUnit
 
 
+@dataclass
 class WorkSpec:
     """
     Here are the container for externally given terms, that the resulting `ScheduledWork` should satisfy.
@@ -19,23 +21,12 @@ class WorkSpec:
     its types of resources
     """
     chain: list[WorkUnit] | None = None  # TODO Add support
-    assigned_workers: dict[WorkerName, int] = {}
+    assigned_workers: dict[WorkerName, int] = field(default_factory=dict)
     assigned_time: Time | None = None
     is_independent: bool = False
 
-    def __init__(self,
-                 chain: list[WorkUnit] | None = None,
-                 assigned_workers: dict[WorkerName, int] = None,
-                 assigned_time: Time | None = None,
-                 is_independent: bool = False):
-        if assigned_workers is None:
-            assigned_workers = {}
-        self.chain = chain
-        self.assigned_workers = assigned_workers
-        self.assigned_time = assigned_time
-        self.is_independent = is_independent
 
-
+@dataclass
 class ScheduleSpec:
     """
     Here is the container for externally given terms, that Schedule should satisfy.
@@ -43,10 +34,8 @@ class ScheduleSpec:
 
     :param work2spec: work specs
     """
-    _work2spec: dict[str, WorkSpec]
-
-    def __init__(self):
-        self._work2spec = defaultdict(WorkSpec)
+    
+    _work2spec: dict[str, WorkSpec] = field(default_factory=lambda: defaultdict(WorkSpec))
 
     def set_exec_time(self, work: str | WorkUnit, time: Time) -> 'ScheduleSpec':
         if isinstance(work, WorkUnit):

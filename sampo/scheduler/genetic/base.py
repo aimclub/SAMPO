@@ -175,6 +175,7 @@ class GeneticScheduler(Scheduler):
             "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
         }
 
+      
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],

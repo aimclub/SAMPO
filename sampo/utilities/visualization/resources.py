@@ -57,7 +57,7 @@ def create_employment_fig(resources: Union[DataFrame, ResourceSchedule],
 
         if fig_type == EmploymentFigType.WorkLabeled:
             fig = px.timeline(data_frame=resources,
-                              title=f"{'Resource load by tasks - chart'}",
+                              title=f'{'Resource load by tasks - chart'}',
                               x_start='time_start', x_end='time_end',
                               y='resource',
                               color='count',
@@ -80,7 +80,7 @@ def create_employment_fig(resources: Union[DataFrame, ResourceSchedule],
         else:
             fig = px.timeline(data_frame=resources,
                               x_start='time_start', x_end='time_end',
-                              title=f"{'Resource load by days - chart'}",
+                              title=f'{'Resource load by days - chart'}',
                               y='resource',
                               color='count',
                               hover_data=['count'],

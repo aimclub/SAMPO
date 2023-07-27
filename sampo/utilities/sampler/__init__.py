@@ -25,7 +25,7 @@ class Sampler:
                   name: str,
                   work_id: Optional[str] = '',
                   volume_type: Optional[str] = 'unit',
-                  group: Optional[str] = "default",
+                  group: Optional[str] = 'default',
                   work_volume: Optional[MinMax[float]] = MinMax[float](0.1, 100.0),
                   req_volume: Optional[MinMax[int]] = MinMax[int](1, 50),
                   req_worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)
@@ -45,7 +45,7 @@ class Sampler:
                    edges: List[Tuple[GraphNode, float, EdgeType]],
                    work_id: Optional[str] = '',
                    volume_type: Optional[str] = 'unit',
-                   group: Optional[str] = "default",
+                   group: Optional[str] = 'default',
                    work_volume: Optional[MinMax[float]] = MinMax[float](0.1, 100.0),
                    req_volume: Optional[MinMax[int]] = MinMax[int](1, 50),
                    req_worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)

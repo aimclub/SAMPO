@@ -54,7 +54,7 @@ def work_graph_fig(graph: WorkGraph or GraphNode, fig_size: tuple[int, int],
     hide_node_ids = set(hide_node_ids or [])
 
     df = pd.DataFrame(jobs)
-    df = df.sort_values(by=["cluster", "group"])
+    df = df.sort_values(by=['cluster', 'group'])
 
     fig, ax = plt.subplots(1, figsize=fig_size, dpi=fig_dpi)
     ax_add_works(ax, df, show_names, hide_node_ids, jobs2text_function, text_size)
@@ -71,7 +71,7 @@ def work_graph_fig(graph: WorkGraph or GraphNode, fig_size: tuple[int, int],
 
 
 def extract_cluster_name(work_name: str) -> str:
-    cluster_name = work_name.split("`")
+    cluster_name = work_name.split('`')
     cluster_name = "" if len(cluster_name) < 2 else cluster_name[1]
     return cluster_name
 
@@ -116,7 +116,7 @@ def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (list[dict
 def setup_jobs(start: GraphNode, jobs: list[dict], id_to_job: dict[str, int]) -> list[dict]:
     cluster_deep_counts: dict[str, dict[int, int]] = defaultdict(lambda: defaultdict(int))
 
-    not_used_parents = {job["job_id"]: len(job["parents"]) for job in jobs}
+    not_used_parents = {job['job_id']: len(job['parents']) for job in jobs}
 
     q = queue.Queue()
     start_ind = id_to_job[start.id]
@@ -124,11 +124,11 @@ def setup_jobs(start: GraphNode, jobs: list[dict], id_to_job: dict[str, int]) ->
 
     while not q.empty():
         deep, ind = q.get()
-        jobs[ind]["start"] = deep * X_PERIOD
-        jobs[ind]["finish"] = jobs[ind]["start"] + X_STEP
-        cluster_deep_counts[jobs[ind]["cluster"]][jobs[ind]["start"]] += 1
+        jobs[ind]['start'] = deep * X_PERIOD
+        jobs[ind]['finish'] = jobs[ind]['start'] + X_STEP
+        cluster_deep_counts[jobs[ind]['cluster']][jobs[ind]['start']] += 1
 
-        for node in jobs[ind]["children"]:
+        for node in jobs[ind]['children']:
             if node.id not in id_to_job:
                 continue
             child_ind = id_to_job[node.id]
@@ -139,7 +139,7 @@ def setup_jobs(start: GraphNode, jobs: list[dict], id_to_job: dict[str, int]) ->
     max_y_pos: dict[int, int] = dict()
 
     def dfs(v_ind: int, y_pos: int) -> int:
-        jobs[v_ind]["y_position"] = y_pos
+        jobs[v_ind]['y_position'] = y_pos
 
         used = [id_to_job[child.id] for child in jobs[v_ind]['children'] if id_to_job[child.id] in max_y_pos]
         y_pos = max([y_pos] + [max_y_pos[c_ind] for c_ind in used] or [y_pos])
@@ -149,7 +149,7 @@ def setup_jobs(start: GraphNode, jobs: list[dict], id_to_job: dict[str, int]) ->
             if c_ind not in max_y_pos:
                 y_pos = dfs(c_ind, y_pos) + 1
 
-        max_y_pos[v_ind] = max(jobs[v_ind]["y_position"], y_pos - 1)
+        max_y_pos[v_ind] = max(jobs[v_ind]['y_position'], y_pos - 1)
         return max_y_pos[v_ind]
 
     _ = dfs(start_ind, 0)
@@ -169,7 +169,7 @@ def ax_add_works(ax: axes.Axes, df: pd.DataFrame, show_names: bool, hide_nodes_i
         x: float = float(row.start)
         y: float = float(row.y_position)
         length: float = row.finish - row.start
-        rect = patches.Rectangle((x, y), length, Y_STEP, linewidth=BORDER_LINE_WIDTH, edgecolor="k",
+        rect = patches.Rectangle((x, y), length, Y_STEP, linewidth=BORDER_LINE_WIDTH, edgecolor='k',
                                  facecolor=row.color)
         ax.add_patch(rect)
         ax.text(x + TEXT_X_DELTA, y + TEXT_Y_DELTA, jobs2text_function(row), fontsize=text_size)
@@ -197,10 +197,10 @@ def draw_arrow_between_jobs(ax, first_job_dict, second_job_dict, linestyle: Opti
 
     x_sj = second_job_dict.start
     y_sj = second_job_dict.y_position + Y_STEP / 2
-    line_color = middle_color(first_job_dict["color"], second_job_dict['color'])
+    line_color = middle_color(first_job_dict['color'], second_job_dict['color'])
 
     ax.plot([x_fj, x_mid, x_mid], [y_fj, y_fj, y_sj], color=line_color, linewidth=LINE_WIDTH, linestyle=linestyle)
-    ax.arrow(x_mid, y_sj, x_sj - x_mid - ARROW_HEAD_LENGTH, 0, color=line_color, linewidth=LINE_WIDTH, shape="full",
+    ax.arrow(x_mid, y_sj, x_sj - x_mid - ARROW_HEAD_LENGTH, 0, color=line_color, linewidth=LINE_WIDTH, shape='full',
              head_width=ARROW_HEAD_WIDTH,
              head_length=ARROW_HEAD_LENGTH, linestyle=linestyle)
     return
@@ -210,21 +210,21 @@ def color_from_str(name: str) -> str:
     name = name or ''
     hashed_string = hashlib.sha256(name.encode())
     rgb_code = hashed_string.hexdigest()[len(hashed_string.hexdigest()) - 6:]
-    return f"#{rgb_code}"
+    return f'#{rgb_code}'
 
 
 def middle_color(color_a: str, color_b: str) -> str:
-    mid = "#"
+    mid = '#'
     for i in range(1, 7, 2):
         a = int(color_a[i:i + 2], 16)
         b = int(color_b[i:i + 2], 16)
         c = int((a + b) / 2 * 0.7)
-        mid += "%0.2X" % c
+        mid += '%0.2X' % c
     return mid
 
 
 def default_job2text(row: pd.Series) -> str:
-    return row.work_id + " " + row.task
+    return row.work_id + ' ' + row.task
 
 
 def empty_job2text(row: pd.Series) -> str:

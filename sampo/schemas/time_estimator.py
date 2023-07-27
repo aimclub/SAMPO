@@ -76,8 +76,8 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         """
         # TODO Is it should be here, not in preprocessing???
         # TODO Move it to ksg_scheduling
-        # workers = {w.name.replace("_res_fact", ""): w.count for w in worker_list}
-        # work_time = self.estimate_time(work_unit.name.split("_stage_")[0], work_unit.volume, workers)
+        # workers = {w.name.replace('_res_fact', ""): w.count for w in worker_list}
+        # work_time = self.estimate_time(work_unit.name.split('_stage_')[0], work_unit.volume, workers)
         # if work_time > 0:
         #     return work_time
 

@@ -1,6 +1,3 @@
-import os
-from ctypes import *
-
 from deap.base import Toolbox
 
 from sampo.schemas.time import Time
@@ -12,7 +9,7 @@ try:
     from native import freeEvaluationInfo
     from native import runGenetic
 except ImportError:
-    print("Can't find native module; switching to default")
+    print('Can not find native module; switching to default')
     decodeEvaluationInfo = lambda *args: args
     freeEvaluationInfo = lambda *args: args
     runGenetic = lambda *args: args

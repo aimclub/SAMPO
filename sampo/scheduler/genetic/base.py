@@ -155,12 +155,12 @@ class GeneticScheduler(Scheduler):
                     return None, None
 
             return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+                'heft_end': init_schedule(HEFTScheduler),
+                'heft_between': init_schedule(HEFTBetweenScheduler),
+                '12.5%': init_k_schedule(HEFTScheduler, 8),
+                '25%': init_k_schedule(HEFTScheduler, 4),
+                '75%': init_k_schedule(HEFTScheduler, 4 / 3),
+                '87.5%': init_k_schedule(HEFTScheduler, 8 / 7)
             }
         else:
             def init_schedule(scheduler_class):
@@ -173,12 +173,12 @@ class GeneticScheduler(Scheduler):
                     return None, None
 
             return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+                'heft_end': init_schedule(HEFTScheduler),
+                'heft_between': init_schedule(HEFTBetweenScheduler),
+                '12.5%': init_k_schedule(HEFTScheduler, 8),
+                '25%': init_k_schedule(HEFTScheduler, 4),
+                '75%': init_k_schedule(HEFTScheduler, 4 / 3),
+                '87.5%': init_k_schedule(HEFTScheduler, 8 / 7)
             }
 
     def schedule_with_cache(self,

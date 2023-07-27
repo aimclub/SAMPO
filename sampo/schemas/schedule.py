@@ -21,7 +21,6 @@ class Schedule(JSONSerializable['Schedule']):
     """
     Represents work schedule. Is a wrapper around DataFrame with specific structure.
     """
-    _schedule: DataFrame
 
     _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
                                 'volume', 'measurement', 'successors', 'start',

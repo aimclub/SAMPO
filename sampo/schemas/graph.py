@@ -46,9 +46,6 @@ class GraphNode(JSONSerializable['GraphNode']):
     """
     Class to describe Node in graph
     """
-    _work_unit: WorkUnit
-    _parent_edges: list[GraphEdge]
-    _children_edges: list[GraphEdge]
 
     def __init__(self, work_unit: WorkUnit,
                  parent_works: Union[list['GraphNode'], list[tuple['GraphNode', float, EdgeType]]]):
@@ -298,7 +295,6 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     adj_matrix: dok_matrix = field(init=False)
     dict_nodes: GraphNodeDict = field(init=False)
     vertex_count: int = field(init=False)
-
 
     def __post_init__(self) -> None:
         self.reinit()

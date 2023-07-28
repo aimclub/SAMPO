@@ -96,15 +96,11 @@ class MomentumTimeline(Timeline):
         def apply_time_spec(time: Time):
             return max(time, assigned_start_time) if assigned_start_time is not None else time
 
-        max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)),
-                                    assigned_parent_time
-                                    )
+        max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)), assigned_parent_time)
 
         nodes_max_parent_times = {ins_node: max(apply_time_spec(ins_node.min_start_time(node2swork)),
-                                                assigned_parent_time
-                                                )
-                                  for ins_node in inseparable_chain
-                                  }
+                                                assigned_parent_time)
+                                  for ins_node in inseparable_chain}
 
         # 2. calculating execution time of the task
 
@@ -353,9 +349,7 @@ class MomentumTimeline(Timeline):
                                     start_time: Time,
                                     exec_times: dict[GraphNode, tuple[Time, Time]]):
         # 6. create a schedule entry for the task
-        nodes_start_times = {ins_node: ins_node.min_start_time(node2swork)
-                             for ins_node in inseparable_chain
-                             }
+        nodes_start_times = {ins_node: ins_node.min_start_time(node2swork) for ins_node in inseparable_chain}
 
         curr_time = start_time
         for i, chain_node in enumerate(inseparable_chain):

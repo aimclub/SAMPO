@@ -8,16 +8,10 @@ from sampo.structurator import graph_restructuring
 pytest_plugins = ("tests.schema", "tests.models",)
 
 
-@fixture(params=[graph_type for graph_type in ['manual',
-                                               'manual with negative lag', 'manual with negative volume',
-                                               'manual with lag > volume'
-                                               ]
-                 ],
-         ids=[f'Graph: {graph_type}' for graph_type in ['manual',
-                                                        'manual with negative lag', 'manual with negative volume',
-                                                        'manual with lag > volume'
-                                                        ]
-              ]
+@fixture(params=[graph_type for graph_type in ['manual', 'manual with negative lag',
+                                               'manual with negative volume', 'manual with lag > volume']],
+         ids=[f'Graph: {graph_type}' for graph_type in ['manual', 'manual with negative lag',
+                                                        'manual with negative volume', 'manual with lag > volume']]
          )
 def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -> tuple[WorkGraph, int]:
     sr = setup_sampler
@@ -84,8 +78,7 @@ def test_restructuring(setup_wg_for_restructuring):
     assert len(wg_restructured.nodes) == n_nodes, "Nodes are divided incorrect"
     assert all([edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]
                 for node in wg_restructured.nodes
-                for edge in node.edges_to
-                ]), \
+                for edge in node.edges_to]), \
         "Edges in restructured work graph have not only FS and IFS types"
     wg_nodes_id = [node.id for node in wg_original.nodes]
     wg_restructured_nodes_id = [node.id for node in wg_restructured.nodes]
@@ -93,6 +86,5 @@ def test_restructuring(setup_wg_for_restructuring):
         "Not all nodes from original work graph are in restructured work graph"
     assert all([edge.lag == 0 if edge.start.work_unit.is_service_unit else edge.lag == 1
                 for node in wg_restructured.nodes
-                for edge in node.edges_to
-                ]), \
+                for edge in node.edges_to]), \
         "Not all lags in restructured work graph have correct lag amount"

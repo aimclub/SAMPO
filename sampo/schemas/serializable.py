@@ -308,7 +308,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
         def serialize_field(name, value):
             """
-            Try to serialize value to and put it into resulting dict with key "name"
+            Try to serialize value to and put it into resulting dict with key 'name'
             :param name: key of value in resulting dict (JSON)
             :param value:
             :return: serialized value
@@ -365,7 +365,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
         def deserialize_field(name, value):
             """
-            Transform current value from JSON to element of resulting dict, having "name" as key
+            Transform current value from JSON to element of resulting dict, having 'name' as key
             :param name: key in dict
             :param value:
             :return: deserialize value

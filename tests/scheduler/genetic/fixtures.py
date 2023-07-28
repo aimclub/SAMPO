@@ -105,7 +105,7 @@ def create_toolbox(wg: WorkGraph,
 
     init_chromosomes: Dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule)
+                                              contractor2index, contractor_borders, schedule, spec)
          for name, schedule in init_schedules.items()}
 
     return init_toolbox(wg,

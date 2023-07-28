@@ -9,6 +9,7 @@ from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import ContractorName, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import DefaultWorkEstimator
@@ -42,7 +43,7 @@ def test_update_resource_structure(setup_timeline):
 
     # mutate
     worker = Worker(str(uuid4()), mut_name, 1, contractor_id=mut_contractor)
-    setup_timeline.update_timeline(Time(1), None, {}, [worker])
+    setup_timeline.update_timeline(Time(1), None, {}, [worker], WorkSpec())
 
     worker_timeline = setup_timeline[worker.get_agent_id()]
 
@@ -68,7 +69,7 @@ def test_schedule(setup_timeline):
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
     node2swork: Dict[GraphNode, ScheduledWork] = {}
-    setup_timeline.schedule(node, node2swork, worker_team, contractor)
+    setup_timeline.schedule(node, node2swork, worker_team, contractor, WorkSpec())
 
     assert len(node2swork) == 1
     for swork in node2swork.values():

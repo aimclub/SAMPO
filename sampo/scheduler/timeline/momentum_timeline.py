@@ -10,6 +10,7 @@ from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -48,7 +49,7 @@ class MomentumTimeline(Timeline):
             if isinstance(event, tuple):
                 return event
 
-            raise ValueError(f"Incorrect type of value: {type(event)}")
+            raise ValueError(f'Incorrect type of value: {type(event)}')
 
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
@@ -72,6 +73,7 @@ class MomentumTimeline(Timeline):
                                             node: GraphNode,
                                             worker_team: list[Worker],
                                             node2swork: dict[GraphNode, ScheduledWork],
+                                            spec: WorkSpec,
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
                                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
@@ -82,6 +84,7 @@ class MomentumTimeline(Timeline):
         :param worker_team: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :param node: info about given GraphNode
         :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
+        :param spec: schedule specification
         :param assigned_start_time: start time, that can be received from
         another algorithms of calculation the earliest start time
         :param assigned_parent_time: minimum start time
@@ -89,8 +92,8 @@ class MomentumTimeline(Timeline):
         :return: start time, end time, time of execution
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
-        contractor_id = worker_team[0].contractor_id if worker_team else ""
-
+        
+        contractor_id = worker_team[0].contractor_id if worker_team else ''
         # 1. identify earliest possible start time by max parent's end time
 
         def apply_time_spec(time: Time):
@@ -123,7 +126,7 @@ class MomentumTimeline(Timeline):
             return max_parent_time, max_parent_time, exec_times
 
         start_time = assigned_start_time if assigned_start_time is not None else self._find_min_start_time(
-            self._timeline[contractor_id], inseparable_chain, max_parent_time, exec_time, worker_team
+            self._timeline[contractor_id], inseparable_chain, spec, max_parent_time, exec_time, worker_team
         )
 
         max_material_time = self._material_timeline.find_min_material_time(node.id,
@@ -138,6 +141,7 @@ class MomentumTimeline(Timeline):
     def _find_min_start_time(self,
                              resource_timeline: dict[str, SortedList[ScheduleEvent]],
                              inseparable_chain: list[GraphNode],
+                             spec: WorkSpec,
                              parent_time: Time,
                              exec_time: Time,
                              passed_workers: list[Worker]) -> Time:
@@ -187,7 +191,7 @@ class MomentumTimeline(Timeline):
         i = 0
         while len(queue) > 0:
             # if i > 0 and i % 50 == 0:
-            #     print(f"Warning! Probably cycle in looking for diff workers: {i} iteration")
+            #     print(f'Warning! Probably cycle in looking for diff workers: {i} iteration')
             i += 1
 
             wreq = queue.popleft()
@@ -195,7 +199,7 @@ class MomentumTimeline(Timeline):
             # we look for the earliest time slot starting from 'start' time moment
             # if we have found a time slot for the previous task,
             # we should start to find for the earliest time slot of other task since this new time
-            found_start = self._find_earliest_time_slot(state, start, exec_time, type2count[wreq.kind])
+            found_start = self._find_earliest_time_slot(state, start, exec_time, type2count[wreq.kind], spec)
 
             assert found_start >= start
 
@@ -221,7 +225,8 @@ class MomentumTimeline(Timeline):
     def _find_earliest_time_slot(state: SortedList[ScheduleEvent],
                                  parent_time: Time,
                                  exec_time: Time,
-                                 required_worker_count: int) -> Time:
+                                 required_worker_count: int,
+                                 spec: WorkSpec) -> Time:
         """
         Searches for the earliest time starting from start_time, when a time slot
         of exec_time is available, when required_worker_count of resources is available
@@ -241,10 +246,17 @@ class MomentumTimeline(Timeline):
         i = 0
         while len(state[current_start_idx:]) > 0:
             # if i > 0 and i % 50 == 0:
-            #     print(f"Warning! Probably cycle in looking for earliest time slot: {i} iteration")
-            #     print(f"Current start time: {current_start_time}, current start idx: {current_start_idx}")
+            #     print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
+            #     print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
             i += 1
             end_idx = state.bisect_right(current_start_time + exec_time + 1)
+
+            if spec.is_independent:
+                if end_idx - current_start_idx > 1:
+                    # here we know that there are milestones within our time slot
+                    # so let's go to the end
+                    return state[len(state) - 1].time + 1
+
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start
@@ -324,13 +336,14 @@ class MomentumTimeline(Timeline):
                  node2swork: dict[GraphNode, ScheduledWork],
                  workers: list[Worker],
                  contractor: Contractor,
+                 spec: WorkSpec,
                  assigned_start_time: Optional[Time] = None,
                  assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         start_time, _, exec_times = \
-            self.find_min_start_time_with_additional(node, workers, node2swork, assigned_start_time,
+            self.find_min_start_time_with_additional(node, workers, node2swork, spec, assigned_start_time,
                                                      assigned_parent_time, work_estimator)
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))

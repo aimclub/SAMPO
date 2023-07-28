@@ -18,8 +18,8 @@ from sampo.utilities.validation import validate_schedule
 
 
 # TODO Кажется, это не работает - лаги не учитываются
-def get_finish_time_default(node, worker_team, node2swork, assigned_parent_time, timeline, work_estimator):
-    return timeline.find_min_start_time(node, worker_team, node2swork,
+def get_finish_time_default(node, worker_team, node2swork, spec, assigned_parent_time, timeline, work_estimator):
+    return timeline.find_min_start_time(node, worker_team, node2swork, spec,
                                         assigned_parent_time, work_estimator) \
         + calculate_working_time_cascade(node, worker_team,
                                          work_estimator)  # TODO Кажется, это не работает - лаги не учитываются
@@ -51,7 +51,7 @@ class GenericScheduler(Scheduler):
                          dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
                          tuple[Time, Time, Contractor, list[Worker]]]:
 
-        def optimize_resources_def(node: GraphNode, contractors: list[Contractor], work_spec: WorkSpec,
+        def optimize_resources_def(node: GraphNode, contractors: list[Contractor], spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator):
             def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, list[Worker]]:
@@ -64,18 +64,18 @@ class GenericScheduler(Scheduler):
                 workers = [worker.copy() for worker in workers]
 
                 def ft_getter(worker_team):
-                    return get_finish_time(node, worker_team, node2swork, assigned_parent_time, timeline,
-                                           work_estimator)
+                    return get_finish_time(node, worker_team, node2swork, spec,
+                                           assigned_parent_time, timeline, work_estimator)
 
                 # apply worker team spec
-                self.optimize_resources_using_spec(node.work_unit, workers, work_spec,
+                self.optimize_resources_using_spec(node.work_unit, workers, spec,
                                                    lambda optimize_array: self.resource_optimizer.optimize_resources(
                                                        worker_pool, workers,
                                                        optimize_array,
                                                        min_count_worker_team, max_count_worker_team,
                                                        ft_getter))
 
-                c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, None,
+                c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, spec, None,
                                                                              assigned_parent_time, work_estimator)
                 return c_st, c_ft, workers
 
@@ -154,7 +154,7 @@ class GenericScheduler(Scheduler):
                 finish_time += start_time
 
             # apply work to scheduling
-            timeline.schedule(node, node2swork, best_worker_team, contractor,
+            timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
         schedule_start_time = min((swork.start_time for swork in node2swork.values() if

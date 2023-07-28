@@ -84,13 +84,15 @@ def test_restructuring(setup_wg_for_restructuring):
     assert len(wg_restructured.nodes) == n_nodes, "Nodes are divided incorrect"
     assert all([edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]
                 for node in wg_restructured.nodes
-                for edge in node.edges_to]), \
+                for edge in node.edges_to
+                ]), \
         "Edges in restructured work graph have not only FS and IFS types"
     wg_nodes_id = [node.id for node in wg_original.nodes]
     wg_restructured_nodes_id = [node.id for node in wg_restructured.nodes]
     assert all([node_id in wg_restructured_nodes_id for node_id in wg_nodes_id]), \
         "Not all nodes from original work graph are in restructured work graph"
-    assert all([edge.lag == 0 for node in wg_restructured.nodes
+    assert all([edge.lag == 0 if edge.start.work_unit.is_service_unit else edge.lag == 1
+                for node in wg_restructured.nodes
                 for edge in node.edges_to
-                if edge.type is not EdgeType.FinishStart]), \
-        "Not all lags in not-FS edges are zero"
+                ]), \
+        "Not all lags in restructured work graph have correct lag amount"

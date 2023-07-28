@@ -103,10 +103,11 @@ class GraphNode(JSONSerializable['GraphNode']):
         :param parent_works: list of parent works
         """
         edges: list[GraphEdge] = []
-        if len(parent_works) > 0 and isinstance(parent_works[0], GraphNode):
-            edges = [GraphEdge(p, self, -1, EdgeType.FinishStart) for p in parent_works]
-        elif len(parent_works) > 0 and isinstance(parent_works[0], tuple):
-            edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
+        if parent_works:
+            if isinstance(parent_works[0], GraphNode):
+                edges = [GraphEdge(p, self, 1, EdgeType.FinishStart) for p in parent_works]
+            elif isinstance(parent_works[0], tuple):
+                edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
         for edge, parent in zip(edges, parent_works):
             parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
@@ -160,8 +161,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return inseparable son (amount of inseparable sons at most 1)
         :return: inseparable son
         """
-        inseparable_children = list([x.finish for x in self._children_edges
-                                     if x.type == EdgeType.InseparableFinishStart])
+        inseparable_children = [x.finish for x in self._children_edges
+                                if x.type == EdgeType.InseparableFinishStart]
         return inseparable_children[0] if inseparable_children else None
 
     @cached_property
@@ -171,7 +172,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return predecessor of current vertex in inseparable chain
         :return: inseparable parent
         """
-        inseparable_parents = list([x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart])
+        inseparable_parents = [x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart]
         return inseparable_parents[0] if inseparable_parents else None
 
     @cached_property
@@ -181,7 +182,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return list of predecessors of current vertex
         :return: list of parents
         """
-        return list([edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)])
+        return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
     @cached_property
     # @property
@@ -199,7 +200,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Return list of successors of current vertex
         :return: list of children
         """
-        return list([edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)])
+        return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
     @cached_property
     # @property
@@ -216,7 +217,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         Get all edges that have types SS with current vertex
         :return: list of neighbours
         """
-        return list([edge.start for edge in self._parent_edges if edge.type == EdgeType.StartStart])
+        return [edge.start for edge in self._parent_edges if edge.type == EdgeType.StartStart]
 
     @property
     def edges_to(self) -> list[GraphEdge]:
@@ -248,7 +249,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         :return: list of GraphNode or None
         """
         return [self] + self._get_inseparable_children() \
-            if bool(self.inseparable_son) and not bool(self.inseparable_parent) \
+            if self.inseparable_son and not self.inseparable_parent \
             else None
 
     def get_inseparable_chain_with_self(self) -> list['GraphNode']:
@@ -283,10 +284,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._children_edges.append(child)
 
     def min_start_time(self, node2swork: dict['GraphNode', ScheduledWork]) -> Time:
-        max_parent_time = max((node2swork[edge.start].min_child_start_time + int(edge.lag)
-                               for edge in self.edges_to), default=Time(0))
-
-        return max_parent_time
+        return max((node2swork[edge.start].finish_time + int(edge.lag)
+                    for edge in self.edges_to if edge.start in node2swork), default=Time(0))
 
 
 GraphNodeDict = dict[str, GraphNode]

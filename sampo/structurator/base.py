@@ -1,10 +1,11 @@
 from copy import deepcopy
 from typing import Optional
 from operator import itemgetter
+from math import ceil
 
 from sampo.schemas.graph import GraphNode, GraphNodeDict, GraphEdge, WorkGraph, EdgeType
-from sampo.schemas.requirements import EquipmentReq, MaterialReq, ConstructionObjectReq
 from sampo.schemas.works import WorkUnit
+from sampo.schemas.requirements import WorkerReq, MaterialReq, ConstructionObjectReq, EquipmentReq
 
 STAGE_SEP = '_stage_'
 
@@ -43,30 +44,33 @@ def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: GraphNodeDic
     parents_zero_stage: list[tuple[GraphNode, float, EdgeType]] = []
     parents_last_stage: list[tuple[GraphNode, float, EdgeType]] = []
     for edge in origin_node.edges_to:
+        indent = 1 if not edge.start.work_unit.is_service_unit else 0
         if edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]:
-            parents_zero_stage.append((id2new_nodes[edge.start.id], edge.lag, edge.type))
+            lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
+            lag = lag if lag > 0 else indent
+            parents_zero_stage.append((id2new_nodes[edge.start.id], lag, edge.type))
         elif not use_lag_edge_optimization:
             match edge.type:
                 case EdgeType.StartStart:
-                    work_id = make_new_node_id(edge.start.id, 0)
-                    parents_zero_stage.append((id2new_nodes[work_id], edge.lag, EdgeType.FinishStart))
+                    new_parent_node_id = make_new_node_id(edge.start.id, 0)
+                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
                 case EdgeType.FinishFinish:
-                    parents_last_stage.append((id2new_nodes[edge.start.id], edge.lag, EdgeType.FinishStart))
+                    parents_last_stage.append((id2new_nodes[edge.start.id], indent, EdgeType.FinishStart))
                 case EdgeType.LagFinishStart:
-                    parents_zero_stage.append((id2new_nodes[edge.start.id], edge.lag, EdgeType.FinishStart))
+                    parents_zero_stage.append((id2new_nodes[edge.start.id], indent, EdgeType.FinishStart))
         else:
             match edge.type:
                 case EdgeType.StartStart:
-                    work_id = restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))
-                    parents_zero_stage.append((id2new_nodes[work_id], 0, EdgeType.FinishStart))
+                    new_parent_node_id = restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))
+                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
                 case EdgeType.FinishFinish:
-                    work = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
-                    work.add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                    stage_node = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
+                    stage_node.add_parents([(id2new_nodes[edge.start.id], indent, EdgeType.FinishStart)])
                 case EdgeType.LagFinishStart:
-                    work = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))]
-                    parents_zero_stage.append((work, 0, EdgeType.FinishStart))
-                    work = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
-                    work.add_parents([(id2new_nodes[edge.start.id], 0, EdgeType.FinishStart)])
+                    new_parent_node_id = restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))
+                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
+                    stage_node = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
+                    stage_node.add_parents([(id2new_nodes[edge.start.id], indent, EdgeType.FinishStart)])
     id2new_nodes[zero_stage_id].add_parents(parents_zero_stage)
     id2new_nodes[last_stage_id].add_parents(parents_last_stage)
 
@@ -92,15 +96,27 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     :return: Nothing
         """
 
+    def init_reqs_amounts(volume_proportion):
+        for reqs in reqs2classes:
+            attr = 'volume' if reqs == 'worker_reqs' else 'count'
+            new_amounts = [int(volume_proportion * getattr(req, attr)) for req in getattr(wu, reqs)]
+            reqs_amounts[reqs] = new_amounts
+            reqs_amount_accum[reqs] = [accum_amount + amount
+                                       for accum_amount, amount in zip(reqs_amount_accum[reqs], new_amounts)
+                                       ]
+
     def make_new_stage_node(volume_proportion, edge_with_pred_stage_node):
-        worker_reqs = [wr.scale_volume(volume_proportion) for wr in wu.worker_reqs]
-        equipment_reqs = [EquipmentReq(er.kind, er.name) for er in wu.equipment_reqs]
-        object_reqs = [ConstructionObjectReq(cor.kind, cor.name) for cor in wu.object_reqs]
-        material_reqs = [MaterialReq(mr.kind, mr.count, mr.name) for mr in wu.material_reqs]
-        new_wu = WorkUnit(id=stage_node_id, name=f'{wu.name}{STAGE_SEP}{stage_i}', worker_reqs=worker_reqs,
-                          group=wu.group, volume=wu.volume * volume_proportion, volume_type=wu.volume_type,
-                          display_name=wu.display_name, workground_size=wu.workground_size,
-                          equipment_reqs=equipment_reqs, object_reqs=object_reqs, material_reqs=material_reqs)
+        new_reqs = {}
+        for reqs, req_class in reqs2classes.items():
+            attr = 'volume' if reqs == 'worker_reqs' else 'count'
+            for req_attrs, amount in zip(reqs2attrs[reqs], reqs_amounts[reqs]):
+                req_attrs[attr] = amount
+            new_reqs[reqs] = [req_class(**attrs) for attrs in reqs2attrs[reqs]]
+        wu_attrs.update(new_reqs)
+        wu_attrs['id'] = stage_node_id
+        wu_attrs['name'] = f'{wu.name}{STAGE_SEP}{stage_i}'
+        wu_attrs['volume'] = wu.volume * volume_proportion
+        new_wu = WorkUnit(**wu_attrs)
         return GraphNode(new_wu, edge_with_pred_stage_node)
 
     def match_pred_restructuring_edges_with_stage_nodes_id():
@@ -112,9 +128,16 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
                 pred_stage_node_id if not pred_is_edge_to_node else stage_node_id
 
     wu = origin_node.work_unit
+    wu_attrs = dict(wu.__dict__)
     if not restructuring_edges:
         id2new_nodes[wu.id] = GraphNode(deepcopy(wu), [])
         return
+    reqs2classes = {'worker_reqs': WorkerReq, 'equipment_reqs': EquipmentReq,
+                    'object_reqs': ConstructionObjectReq, 'material_reqs': MaterialReq
+                    }
+    reqs2attrs = {reqs: [dict(req.__dict__) for req in getattr(wu, reqs)] for reqs in reqs2classes}
+    reqs_amount_accum = {reqs: [0 for _ in getattr(wu, reqs)] for reqs in reqs2classes}
+    reqs_amounts = {}
     proportions_accum = [(int(is_edge_to_node) +
                           ((1 - 2 * int(is_edge_to_node)) * edge.lag / edge.start.work_unit.volume
                            if use_lag_edge_optimization and 0 < edge.lag <= edge.start.work_unit.volume
@@ -127,11 +150,12 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     stage_i = 0
     accum, edge, is_edge_to_node = proportions_accum[0]
     stage_node_id = make_new_node_id(wu.id, stage_i)
+    init_reqs_amounts(accum)
     id2new_nodes[stage_node_id] = make_new_stage_node(accum, [])
     edges_to_match_with_stage_nodes = [(edge, is_edge_to_node)] if use_lag_edge_optimization else None
-    for i, value in enumerate(proportions_accum[1:]):
+    for value, pred_value in zip(proportions_accum[1:], proportions_accum):
         accum, edge, is_edge_to_node = value
-        accum_pred, _, _ = proportions_accum[i]
+        accum_pred, _, _ = pred_value
         if accum == accum_pred:
             if use_lag_edge_optimization:
                 edges_to_match_with_stage_nodes.append((edge, is_edge_to_node))
@@ -140,7 +164,8 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         pred_stage_node_id = stage_node_id
         stage_node_id = make_new_node_id(wu.id, stage_i)
         proportion = accum - accum_pred
-        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
+        init_reqs_amounts(proportion)
+        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
                                                                         EdgeType.InseparableFinishStart)]
                                                           )
         if use_lag_edge_optimization:
@@ -150,7 +175,12 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     pred_stage_node_id = stage_node_id
     stage_node_id = wu.id
     proportion = 1 - accum
-    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
+    for reqs in reqs2classes:
+        attr = 'volume' if reqs == 'worker_reqs' else 'count'
+        reqs_amounts[reqs] = [getattr(req, attr) - req_accum
+                              for req, req_accum in zip(getattr(wu, reqs), reqs_amount_accum[reqs])
+                              ]
+    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
                                                                     EdgeType.InseparableFinishStart)]
                                                       )
     if use_lag_edge_optimization:

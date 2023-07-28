@@ -1,5 +1,6 @@
 import random
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from functools import partial
 from typing import Iterable, Callable
 
@@ -9,13 +10,16 @@ from deap import creator, base, tools
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
+from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.utilities.resource_cost import schedule_cost
 
 
 # logger = mp.log_to_stderr(logging.DEBUG)
@@ -26,7 +30,7 @@ class FitnessFunction(ABC):
     Base class for description of different fitness functions.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
         self._evaluator = evaluator
 
     @abstractmethod
@@ -43,11 +47,11 @@ class TimeFitness(FitnessFunction):
     Fitness function that relies on finish time.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
         super().__init__(evaluator)
 
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        return self._evaluator(chromosomes)
+        return [schedule.execution_time.value for schedule in self._evaluator(chromosomes)]
 
 
 class TimeAndResourcesFitness(FitnessFunction):
@@ -55,12 +59,12 @@ class TimeAndResourcesFitness(FitnessFunction):
     Fitness function that relies on finish time and the set of resources.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
         super().__init__(evaluator)
 
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
-        return [finish_time + int(np.sum(chromosome[2])) for finish_time, chromosome in zip(evaluated, chromosomes)]
+        return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in evaluated]
 
 
 class DeadlineResourcesFitness(FitnessFunction):
@@ -68,7 +72,7 @@ class DeadlineResourcesFitness(FitnessFunction):
     The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
         super().__init__(evaluator)
         self._deadline = deadline
 
@@ -81,8 +85,9 @@ class DeadlineResourcesFitness(FitnessFunction):
 
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
-        return [int(int(np.sum(chromosome[2])) * max(1.0, finish_time / self._deadline.value))
-                for finish_time, chromosome in zip(evaluated, chromosomes)]
+        return [int(get_absolute_peak_resource_usage(schedule)
+                    * max(1.0, schedule.execution_time.value / self._deadline.value))
+                for schedule in evaluated]
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -90,7 +95,7 @@ class DeadlineCostFitness(FitnessFunction):
     The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[int]]):
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
         super().__init__(evaluator)
         self._deadline = deadline
 
@@ -104,9 +109,8 @@ class DeadlineCostFitness(FitnessFunction):
     def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         evaluated = self._evaluator(chromosomes)
         # TODO Integrate cost calculation to native module
-        # here we know that all resources costs `10` coins
-        return [int(int(np.sum(chromosome[2]) * 10) * max(1.0, finish_time / self._deadline.value))
-                for finish_time, chromosome in zip(evaluated, chromosomes)]
+        return [int(schedule_cost(schedule) * max(1.0, schedule.execution_time.value / self._deadline.value))
+                for schedule in evaluated]
 
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
@@ -148,7 +152,7 @@ def init_toolbox(wg: WorkGraph,
     # generate initial population
     toolbox.register('generate_chromosome', generate_chromosome, wg=wg, contractors=contractors,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
-                     contractor2index=contractor2index, contractor_borders=contractor_borders,
+                     contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create from generate_chromosome function one individual
@@ -177,10 +181,10 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents)
     toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome, wg=wg,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
-                     contractor2index=contractor2index, contractor_borders=contractor_borders)
-    toolbox.register('chromosome_to_schedule', convert_chromosome_to_schedule, worker_pool=worker_pool,
+                     contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec)
+    toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
-                     worker_pool_indices=worker_pool_indices, spec=spec, assigned_parent_time=assigned_parent_time,
+                     worker_pool_indices=worker_pool_indices, assigned_parent_time=assigned_parent_time,
                      work_estimator=work_estimator, worker_name2index=worker_name2index,
                      contractor2index=contractor2index,
                      landscape=landscape)
@@ -188,7 +192,7 @@ def init_toolbox(wg: WorkGraph,
 
 
 def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
-    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy()
+    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), deepcopy(chromosome[3])
 
 
 def generate_chromosome(wg: WorkGraph,
@@ -198,6 +202,7 @@ def generate_chromosome(wg: WorkGraph,
                         contractor2index: dict[str, int],
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, ChromosomeType],
+                        spec: ScheduleSpec,
                         rand: random.Random,
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
@@ -213,9 +218,9 @@ def generate_chromosome(wg: WorkGraph,
     def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, landscape=landscape)
+            .schedule(wg, contractors, spec, landscape=landscape)
         return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule)
+                                              contractor2index, contractor_borders, schedule, spec)
 
     chance = rand.random()
     if chance < 0.2:

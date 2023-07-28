@@ -53,7 +53,7 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
     Scheduler, that represent 'WorkGraph' in topological order with random.
     """
     def __init__(self,
-                 work_estimator: DefaultWorkEstimator = DefaultWorkEstimator(),
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  random_seed: Optional[int] = None):
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)

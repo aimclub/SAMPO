@@ -5,6 +5,7 @@ from sampo.schemas.contractor import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType
 from sampo.schemas.works import WorkUnit
@@ -55,7 +56,7 @@ def test_insert_works_with_one_worker_kind(setup_timeline_context):
     worker_count = contractor.workers[worker_kind].count
     for i, node in enumerate(nodes):
         worker_team = [Worker(id=str(i), name=worker_kind, count=worker_count // 2, contractor_id=contractor.id)]
-        timeline.schedule(node, node2swork, worker_team, contractor)
+        timeline.schedule(node, node2swork, worker_team, contractor, WorkSpec())
 #
 # TODO
 # def test_update_resource_structure(setup_timeline, setup_worker_pool):

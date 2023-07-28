@@ -35,15 +35,18 @@ def run_test(args) -> list[tuple[Time, Time]]:
 
 
 if __name__ == '__main__':
-    num_iterations = 4
+    num_iterations = 50
 
-    sizes = [100 * i for i in range(1, num_iterations + 1)]
-    iterations = [5 - i for i in range(1, num_iterations + 1)]
+    sizes = [200 * i for i in range(1, num_iterations + 1)]
+    # iterations = [5 - i for i in range(1, num_iterations + 1)]
+    iterations = [10 for i in range(1, num_iterations + 1)]
 
     with ProcessingPool(10) as p:
         results_by_size = p.map(run_test, zip(sizes, iterations))
 
-        print()
+        print('-------------------------------------------------------------')
+        print('-------------------------| Results |-------------------------')
+        print('-------------------------------------------------------------')
         with open('genetic_init_res.txt', 'w') as f:
             for graph_size, result_list in zip(sizes, results_by_size):
                 global_ratio = 0

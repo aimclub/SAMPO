@@ -19,7 +19,7 @@ def make_new_node_id(work_unit_id: str, ind: int) -> str:
     :return:
        auxiliary_id: str - an auxiliary id for the work unit
     """
-    return f"{work_unit_id}{STAGE_SEP}{ind}"
+    return f'{work_unit_id}{STAGE_SEP}{ind}'
 
 
 def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: GraphNodeDict,

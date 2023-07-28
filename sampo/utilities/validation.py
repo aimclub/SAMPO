@@ -38,8 +38,8 @@ def _check_all_tasks_scheduled(schedule: Schedule, wg: WorkGraph) -> None:
     absent_works = [node for node in wg.nodes if node.work_unit.id not in scheduled_works]
 
     assert len(absent_works) == 0, \
-        f"Found works that are not scheduled:\n" \
-        f"\t{[work.work_unit.id for work in absent_works]}"
+        f'Found works that are not scheduled:\n' \
+        f'\t{[work.work_unit.id for work in absent_works]}'
 
 
 def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
@@ -60,8 +60,8 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
     ]
 
     assert len(service_works_with_incorrect_duration) == 0, \
-        f"Found service works that have non-zero duration:\n" \
-        f"\t{[work.work_unit.id for work in service_works_with_incorrect_duration]}"
+        f'Found service works that have non-zero duration:\n' \
+        f'\t{[work.work_unit.id for work in service_works_with_incorrect_duration]}'
 
     # # TODO: make correct duration calculation
     # works_with_incorrect_duration = [
@@ -70,8 +70,8 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
     # ]
     #
     # assert len(works_with_incorrect_duration) == 0, \
-    #     f"Found works that have incorrect duration:\n" \
-    #     f"\t{[work.work_unit.id for work in works_with_incorrect_duration]}"
+    #     f'Found works that have incorrect duration:\n' \
+    #     f'\t{[work.work_unit.id for work in works_with_incorrect_duration]}'
 
 
 def _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: Schedule,
@@ -100,7 +100,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
     # does not exceed capacity of this contractor
     ordered_start_end_events = sorted(
         (el for work in schedule.works
-         for el in [("start", work.start_time, work), ("end", work.finish_time, work)]),
+         for el in [('start', work.start_time, work), ('end', work.finish_time, work)]),
         key=itemgetter(1)
     )
 
@@ -121,15 +121,15 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
                     available = cur_worker_pool[contractor_id][worker_name]
                     # check
                     assert available + worker_count >= 0, \
-                        f"Overuse of workers (event type {event_type} " \
-                        f"at [index={index} of {len(ordered_start_end_events)}, time={time}]) " \
-                        f"for contractor '{contractor_id}' " \
-                        f"and worker type '{worker_name}': available {available}," \
-                        f" while being allocated {-worker_count}"
+                        f'Overuse of workers (event type {event_type} ' \
+                        f'at [index={index} of {len(ordered_start_end_events)}, time={time}]) ' \
+                        f'for contractor "{contractor_id}" ' \
+                        f'and worker type "{worker_name}": available {available},' \
+                        f' while being allocated {-worker_count}'
                     assert available + worker_count <= initial_worker_pool[contractor_id][worker_name], \
-                        f"Excessive workers appear for contractor '{contractor_id}' and worker type '{worker_name}':" \
-                        f"available {available}, being returned {worker_count}, " \
-                        f"initial contractor capacity {initial_worker_pool[contractor_id][worker_name]}"
+                        f'Excessive workers appear for contractor "{contractor_id}" and worker type "{worker_name}":' \
+                        f'available {available}, being returned {worker_count}, ' \
+                        f'initial contractor capacity {initial_worker_pool[contractor_id][worker_name]}'
 
                     # update
                     cur_worker_pool[contractor_id][worker_name] = available + worker_count
@@ -141,14 +141,14 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
             moment_pool[cont] = cpool
 
         # grab event to the current equivalency class
-        if event_type == "start":
+        if event_type == 'start':
             for w in work.workers:
                 cpool[w.name] = cpool.get(w.name, 0) - w.count
-        elif event_type == "end":
+        elif event_type == 'end':
             for w in work.workers:
                 cpool[w.name] = cpool.get(w.name, 0) + w.count
         else:
-            raise ValueError(f"Incorrect event type: {event_type}. Only 'start' and 'end' are supported.")
+            raise ValueError(f'Incorrect event type: {event_type}. Only "start" and "end" are supported.')
 
     return cur_worker_pool
 
@@ -165,7 +165,7 @@ def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[
     # 1. all workers of the same category belonging to the same contractor should have the same characteristics
     for c in contractors:
         assert all(ws.count >= 1 for _, ws in c.workers.items()), \
-            "There should be only one worker for the same worker category"
+            'There should be only one worker for the same worker category'
 
     # добавляем агентов в словарь
     agents = {}
@@ -181,4 +181,4 @@ def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[
                 >= (wreq.min_count + min(agents[wreq.kind], wreq.max_count)) // 2
                 for wreq in v.work_unit.worker_reqs)
             for c in contractors
-        ), f"The work unit with id {v.work_unit.id} cannot be satisfied by any contractors"
+        ), f'The work unit with id {v.work_unit.id} cannot be satisfied by any contractors'

@@ -49,9 +49,6 @@ class GraphNode(JSONSerializable['GraphNode']):
     """
     Class to describe Node in graph
     """
-    _work_unit: WorkUnit
-    _parent_edges: list[GraphEdge]
-    _children_edges: list[GraphEdge]
 
     def __init__(self, work_unit: WorkUnit,
                  parent_works: Union[list['GraphNode'], list[tuple['GraphNode', float, EdgeType]]]):

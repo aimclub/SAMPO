@@ -35,7 +35,7 @@ class WorkerReq(BaseReq):
     :param kind: type of resource/profession
     :param volume: volume of work in time units
     :param min_count: minimum number of employees needed to perform the work
-    :param max_count: maximum allowable number of employees performing work
+    :param max_count: maximum allowable number of employees performing the work
     :param name: the name of this requirement
     """
     kind: str

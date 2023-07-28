@@ -81,6 +81,7 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
 
     frame['activity_id'] = frame['activity_id'].astype(str)
     frame['volume'] = frame['volume'].astype(float)
+
     frame['predecessor_ids'] = fix_df_column_with_arrays(frame['predecessor_ids'], cast=normalize_if_number)
     frame['connection_types'] = fix_df_column_with_arrays(frame['connection_types'],
                                                           cast=EdgeType,
@@ -144,18 +145,23 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def build_work_graph(frame: pd.DataFrame, workers_max_count: dict[str, float]) -> WorkGraph:
+def build_work_graph(frame: pd.DataFrame, workers_max_count: dict[str, float], resource_names: list[str]) -> WorkGraph:
     start = get_start_stage()
     has_succ = set()
     id_to_node = {NONE_ELEM: start}
-    resources_columns = [col for col in frame.columns if col.endswith('_res_fact')]
 
     for _, row in frame.iterrows():
-        reqs = [WorkerReq(col, row[col],
-                          min(row[col + '_min'], workers_max_count[col]),
-                          min(row[col + '_max'], workers_max_count[col]),
-                          ) for col in resources_columns
-                if 0 < row[col + '_min'] <= row[col + '_max']]
+        if 'min_req' in frame.columns and 'max_req' in frame.columns:
+            reqs = [WorkerReq(res_name, row[res_name],
+                              min(row['min_req'][res_name], workers_max_count[res_name]),
+                              min(row['max_req'][res_name], workers_max_count[res_name])
+                              ) for res_name in resource_names
+                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
+        else:
+            reqs = [WorkerReq(res_name, row[res_name],
+                              int(row[res_name] / 3),
+                              math.ceil(row[res_name] * 10))
+                    for res_name in resource_names]
         work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'])
         has_succ |= set(row.predecessor_ids)

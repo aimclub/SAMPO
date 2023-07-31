@@ -83,7 +83,6 @@ class JustInTimeTimeline(Timeline):
                     needed_count -= offer_count
                     ind -= 1
 
-        # c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
         c_st = max(max_agent_time, max_parent_time)
 
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,

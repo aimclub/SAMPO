@@ -92,8 +92,9 @@ class MomentumTimeline(Timeline):
         :return: start time, end time, time of execution
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
-        
+
         contractor_id = worker_team[0].contractor_id if worker_team else ''
+
         # 1. identify earliest possible start time by max parent's end time
 
         def apply_time_spec(time: Time):
@@ -241,7 +242,7 @@ class MomentumTimeline(Timeline):
         current_start_idx = state.bisect_right(current_start_time) - 1
 
         # the condition means we have reached the end of schedule for this contractor subject to specialization (wreq)
-        # as long as we assured that this contractor has enough capacity at all to handle the the task
+        # as long as we assured that this contractor has enough capacity at all to handle the task
         # we can stop and put the task at the very end
         i = 0
         while len(state[current_start_idx:]) > 0:
@@ -256,7 +257,6 @@ class MomentumTimeline(Timeline):
                     # here we know that there are milestones within our time slot
                     # so let's go to the end
                     return state[len(state) - 1].time + 1
-
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start

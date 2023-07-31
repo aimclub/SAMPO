@@ -19,7 +19,6 @@ enum EdgeType {
     StartStart,
     FinishFinish,
     FinishStart,
-    StartFinish,
     None
 };
 

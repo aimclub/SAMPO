@@ -23,7 +23,6 @@ class EdgeType(Enum):
     StartStart = 'SS'
     FinishFinish = 'FF'
     FinishStart = 'FS'
-    StartFinish = 'SF'
 
     @staticmethod
     def is_dependency(edge) -> bool:

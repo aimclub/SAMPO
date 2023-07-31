@@ -96,15 +96,15 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     :return: Nothing
         """
 
-    def get_reqs_amounts(volume_proportion: float, reqs_amount_accum: dict[str, list[int]]):
+    def get_reqs_amounts(volume_proportion: float, reqs_amounts_accum: dict[str, list[int]]):
         reqs_amounts = {}
         for reqs in reqs2classes:
             attr = 'volume' if reqs == 'worker_reqs' else 'count'
             new_amounts = [int(volume_proportion * getattr(req, attr)) for req in getattr(wu, reqs)]
             reqs_amounts[reqs] = new_amounts
-            reqs_amount_accum[reqs] = [accum_amount + amount
-                                       for accum_amount, amount in zip(reqs_amount_accum[reqs], new_amounts)]
-        return reqs_amounts, reqs_amount_accum
+            reqs_amounts_accum[reqs] = [accum_amount + amount
+                                        for accum_amount, amount in zip(reqs_amounts_accum[reqs], new_amounts)]
+        return reqs_amounts, reqs_amounts_accum
 
     def make_new_stage_node(volume_proportion: float,
                             edge_with_pred_stage_node: list[tuple['GraphNode', float, EdgeType]],
@@ -139,7 +139,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     reqs2classes = {'worker_reqs': WorkerReq, 'equipment_reqs': EquipmentReq,
                     'object_reqs': ConstructionObjectReq, 'material_reqs': MaterialReq}
     reqs2attrs = {reqs: [dict(req.__dict__) for req in getattr(wu, reqs)] for reqs in reqs2classes}
-    reqs_amount_accum = {reqs: [0 for _ in getattr(wu, reqs)] for reqs in reqs2classes}
+    reqs_amounts_accum = {reqs: [0 for _ in getattr(wu, reqs)] for reqs in reqs2classes}
     proportions_accum = [(int(is_edge_to_node) +
                           ((1 - 2 * int(is_edge_to_node)) * edge.lag / edge.start.work_unit.volume
                            if use_lag_edge_optimization and 0 < edge.lag <= edge.start.work_unit.volume
@@ -152,7 +152,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     stage_i = 0
     accum, edge, is_edge_to_node = proportions_accum[0]
     stage_node_id = make_new_node_id(wu.id, stage_i)
-    reqs_amounts, reqs_amount_accum = get_reqs_amounts(accum, reqs_amount_accum)
+    reqs_amounts, reqs_amounts_accum = get_reqs_amounts(accum, reqs_amounts_accum)
     id2new_nodes[stage_node_id] = make_new_stage_node(accum, [], wu_attrs, reqs2attrs)
     edges_to_match_with_stage_nodes = [(edge, is_edge_to_node)] if use_lag_edge_optimization else None
     for value, pred_value in zip(proportions_accum[1:], proportions_accum):
@@ -166,7 +166,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         pred_stage_node_id = stage_node_id
         stage_node_id = make_new_node_id(wu.id, stage_i)
         proportion = accum - accum_pred
-        reqs_amounts, reqs_amount_accum = get_reqs_amounts(proportion, reqs_amount_accum)
+        reqs_amounts, reqs_amounts_accum = get_reqs_amounts(proportion, reqs_amounts_accum)
         id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
                                                                         EdgeType.InseparableFinishStart)],
                                                           wu_attrs, reqs2attrs
@@ -181,7 +181,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     for reqs in reqs2classes:
         attr = 'volume' if reqs == 'worker_reqs' else 'count'
         reqs_amounts[reqs] = [getattr(req, attr) - req_accum
-                              for req, req_accum in zip(getattr(wu, reqs), reqs_amount_accum[reqs])]
+                              for req, req_accum in zip(getattr(wu, reqs), reqs_amounts_accum[reqs])]
     id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
                                                                     EdgeType.InseparableFinishStart)],
                                                       wu_attrs, reqs2attrs

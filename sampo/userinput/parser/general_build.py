@@ -67,7 +67,7 @@ def find_all_circuits(works_info: pd.DataFrame) -> list[list[str]]:
 
 
 def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | None = str,
-                              none_elem: Any | None = NONE_ELEM):
+                              none_elem: Any | None = NONE_ELEM) -> pd.Series:
     new_column = column.copy().astype(str).apply(
         lambda elems: [cast(elem) for elem in elems.split(',')] if elems != str(math.nan) else [none_elem])
     return new_column
@@ -119,27 +119,27 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
-    frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame['edges']]
-    frame['predessors_set'] = frame['predecessor_ids'].apply(lambda ps: set(ps))  # & existed_ids)
-    id2row = {w_id: ind for w_id, ind in zip(frame['activity_id'], frame.index)}
+    # frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame['edges']]
+    frame['predecessors_set'] = frame['predecessor_ids'].apply(lambda ps: set(ps))  # & existed_ids)
+    id2row = {work_id: ind for work_id, ind in zip(frame['activity_id'], frame.index)}
     sort_keys: dict[str, int] = dict()
     used: set[str] = {NONE_ELEM}
     ind: int = 0
     q = queue.Queue()
-    for w_id in frame['activity_id']:
-        q.put(w_id)
+    for work_id in frame['activity_id']:
+        q.put(work_id)
 
     while not q.empty():
-        w_id = q.get()
-        row = frame.iloc[id2row[w_id]]
-        if len(row['predessors_set'] - used) == 0:
-            sort_keys[w_id] = ind
-            used.add(w_id)
+        work_id = q.get()
+        row = frame.iloc[id2row[work_id]]
+        if len(row['predecessors_set'] - used) == 0:
+            sort_keys[work_id] = ind
+            used.add(work_id)
             ind += 1
         else:
-            q.put(w_id)
+            q.put(work_id)
 
-    frame['sort_key'] = [sort_keys[w_id] for w_id in frame['activity_id']]
+    frame['sort_key'] = [sort_keys[work_id] for work_id in frame['activity_id']]
     frame = frame.sort_values('sort_key')
 
     return frame

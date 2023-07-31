@@ -29,7 +29,7 @@ class SupplyTimeline:
     def find_min_material_time(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> Time:
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
-        batches = math.ceil(ratio)
+        batches = max(1, math.ceil(ratio))
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
         return self.supply_resources(id, start_time, first_batch, True)[1]
@@ -45,7 +45,7 @@ class SupplyTimeline:
         """
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
-        batches = math.ceil(ratio)
+        batches = max(1, math.ceil(ratio))
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
         other_batches = [first_batch for _ in range(batches - 1)]

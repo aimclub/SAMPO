@@ -92,26 +92,18 @@ class MomentumTimeline(Timeline):
         :return: start time, end time, time of execution
         """
         inseparable_chain = node.get_inseparable_chain_with_self()
+        
         contractor_id = worker_team[0].contractor_id if worker_team else ''
         # 1. identify earliest possible start time by max parent's end time
 
         def apply_time_spec(time: Time):
             return max(time, assigned_start_time) if assigned_start_time is not None else time
 
-        max_parent_time: Time = max(apply_time_spec(
-            max((node2swork[pnode].min_child_start_time for pnode in node.parents), default=Time(0))
-        ), assigned_parent_time)
+        max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)), assigned_parent_time)
 
-        if node.neighbors:
-            max_neighbor_time = max(node2swork[neighbor].start_time for neighbor in node.neighbors)
-            max_parent_time = max(max_parent_time, max_neighbor_time)
-
-        nodes_max_parent_times: dict[GraphNode, Time] = {n: max((max(apply_time_spec(node2swork[pnode].min_child_start_time),
-                                                                     assigned_parent_time)
-                                                                 if pnode in node2swork else assigned_parent_time
-                                                                 for pnode in n.parents),
-                                                                default=assigned_parent_time)
-                                                         for n in inseparable_chain}
+        nodes_max_parent_times = {ins_node: max(apply_time_spec(ins_node.min_start_time(node2swork)),
+                                                assigned_parent_time)
+                                  for ins_node in inseparable_chain}
 
         # 2. calculating execution time of the task
 
@@ -370,12 +362,7 @@ class MomentumTimeline(Timeline):
                                     start_time: Time,
                                     exec_times: dict[GraphNode, tuple[Time, Time]]):
         # 6. create a schedule entry for the task
-
-        nodes_start_times: dict[GraphNode, Time] = {n: max((node2swork[pnode].min_child_start_time
-                                                            if pnode in node2swork else Time(0)
-                                                            for pnode in n.parents),
-                                                           default=Time(0))
-                                                    for n in inseparable_chain}
+        nodes_start_times = {ins_node: ins_node.min_start_time(node2swork) for ins_node in inseparable_chain}
 
         curr_time = start_time
         for i, chain_node in enumerate(inseparable_chain):

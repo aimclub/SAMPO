@@ -4,6 +4,7 @@ from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.requirements import MaterialReq
 from sampo.structurator import graph_restructuring
+from sampo.structurator.base import make_new_node_id
 
 pytest_plugins = ("tests.schema", "tests.models",)
 
@@ -52,24 +53,24 @@ def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -
     f = get_finish_stage([l3n1, l3n2, l3n3])
     wg = WorkGraph(s, f)
 
-    n_nodes = len(wg.nodes)
+    n_nodes_after_restructuring = len(wg.nodes)
 
     match request.param:
         case 'manual':
-            n_nodes += 9
+            n_nodes_after_restructuring += 9
         case 'manual with negative lag':
             l2n1.add_parents([(l1n2, -1, EdgeType.LagFinishStart)])
-            n_nodes += 11
+            n_nodes_after_restructuring += 11
         case 'manual with negative volume':
             l1n1.work_unit.volume = -50
-            n_nodes += 8
+            n_nodes_after_restructuring += 8
         case 'manual with lag > volume':
             l2n1.add_parents([(l1n2, 60, EdgeType.LagFinishStart)])
-            n_nodes += 11
+            n_nodes_after_restructuring += 11
         case _:
             raise ValueError(f'Unknown graph type: {request.param}')
 
-    return wg, n_nodes
+    return wg, n_nodes_after_restructuring
 
 
 def test_restructuring(setup_wg_for_restructuring):

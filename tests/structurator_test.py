@@ -6,6 +6,8 @@ from sampo.schemas.requirements import MaterialReq
 from sampo.structurator import graph_restructuring
 from sampo.structurator.base import make_new_node_id
 
+import numpy as np
+
 pytest_plugins = ("tests.schema", "tests.models",)
 
 
@@ -74,9 +76,9 @@ def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -
 
 
 def test_restructuring(setup_wg_for_restructuring):
-    wg_original, n_nodes = setup_wg_for_restructuring
+    wg_original, n_nodes_after_restructuring = setup_wg_for_restructuring
     wg_restructured = graph_restructuring(wg_original, True)
-    assert len(wg_restructured.nodes) == n_nodes, "Nodes are divided incorrect"
+    assert len(wg_restructured.nodes) == n_nodes_after_restructuring, "Nodes are divided incorrect"
     assert all([edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]
                 for node in wg_restructured.nodes
                 for edge in node.edges_to]), \
@@ -89,3 +91,26 @@ def test_restructuring(setup_wg_for_restructuring):
                 for node in wg_restructured.nodes
                 for edge in node.edges_to]), \
         "Not all lags in restructured work graph have correct lag amount"
+    for node in wg_original.nodes:
+        zero_stage = make_new_node_id(node.id, 0)
+        if zero_stage in wg_restructured.dict_nodes:
+            chain = wg_restructured.dict_nodes[zero_stage].get_inseparable_chain()
+            assert chain is not None, f"Node {node.id} - is divided incorrect"
+            volume_amount = sum([ins_node.work_unit.volume for ins_node in chain])
+            assert volume_amount == node.work_unit.volume, f"Volume of node {node.id} - is divided incorrect"
+            workers_volumes = np.array([[req.volume for req in ins_node.work_unit.worker_reqs]
+                                        for ins_node in chain])
+            assert all(np.array([req.volume for req in node.work_unit.worker_reqs]) == workers_volumes.sum(axis=0)), \
+                f"Worker requirements' volumes of node {node.id} - are divided incorrect"
+            equipments_counts = np.array([[req.count for req in ins_node.work_unit.equipment_reqs]
+                                          for ins_node in chain])
+            assert all(np.array([req.count for req in node.work_unit.equipment_reqs]) == equipments_counts.sum(axis=0)
+                       ), f"Equipment requirements' counts of node {node.id} - are divided incorrect"
+            objects_counts = np.array([[req.count for req in ins_node.work_unit.object_reqs]
+                                       for ins_node in chain])
+            assert all(np.array([req.count for req in node.work_unit.object_reqs]) == objects_counts.sum(axis=0)
+                       ), f"Object requirements' counts of node {node.id} - are divided incorrect"
+            materials_counts = np.array([[req.count for req in ins_node.work_unit.material_reqs]
+                                         for ins_node in chain])
+            assert all(np.array([req.count for req in node.work_unit.material_reqs]) == materials_counts.sum(axis=0)
+                       ), f"Material requirements' counts of node {node.id} - are divided incorrect"

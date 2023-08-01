@@ -145,7 +145,7 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def build_work_graph(frame: pd.DataFrame, workers_max_count: dict[str, float], resource_names: list[str]) -> WorkGraph:
+def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGraph:
     start = get_start_stage()
     has_succ = set()
     id_to_node = {NONE_ELEM: start}
@@ -153,8 +153,8 @@ def build_work_graph(frame: pd.DataFrame, workers_max_count: dict[str, float], r
     for _, row in frame.iterrows():
         if 'min_req' in frame.columns and 'max_req' in frame.columns:
             reqs = [WorkerReq(res_name, row[res_name],
-                              min(row['min_req'][res_name], workers_max_count[res_name]),
-                              min(row['max_req'][res_name], workers_max_count[res_name])
+                              row['min_req'][res_name],
+                              row['max_req'][res_name]
                               ) for res_name in resource_names
                     if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
         else:

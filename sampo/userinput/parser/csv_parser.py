@@ -20,6 +20,7 @@ class CSVParser:
     def work_graph_and_contractors(project_info: str,
                                    history_data: str | None = None,
                                    contractor_info: str | None = None,
+                                   contractor_types: list[int] | None = None,
                                    unique_work_names_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                                    contractors_number: int = 1) \
@@ -27,6 +28,7 @@ class CSVParser:
         """
         Gets a WorkGraph and Contractors from file .csv
 
+        :param contractor_types:
         :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
         for a generation
         :param history_data: path to history data .csv file
@@ -35,6 +37,9 @@ class CSVParser:
         :param project_info: path to .csv file
         :return: WorkGraph
         """
+
+        if contractor_types is None:
+            contractor_types = [25]
 
         graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
                                                                               str) else project_info
@@ -62,6 +67,7 @@ class CSVParser:
             resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
                          for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
             contractors = [get_contractor_for_resources_schedule(resources,
+                                                                 contractor_capacity=contractor_types[i],
                                                                  contractor_id=str(i),
                                                                  contractor_name='Contractor' + ' ' + str(i + 1))
                            for i in range(contractors_number)]
@@ -93,7 +99,7 @@ class CSVParser:
 
         works_resources = add_graph_info(works_info)
         works_resources = topsort_graph_df(works_resources)
-        work_graph = build_work_graph(works_resources, unique_res, resource_names)
+        work_graph = build_work_graph(works_resources, unique_res)
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:

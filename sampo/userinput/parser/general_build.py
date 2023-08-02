@@ -158,14 +158,18 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
                               ) for res_name in resource_names
                     if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
         else:
-            reqs = [WorkerReq(res_name, row[res_name],
-                              int(row[res_name] / 3),
-                              math.ceil(row[res_name] * 10))
-                    for res_name in resource_names]
+            reqs = [WorkerReq(kind=res_name,
+                              volume=row[res_name],
+                              min_count=int(row[res_name] / 3),
+                              max_count=math.ceil(row[res_name] * 10))
+                    for res_name in resource_names
+                    if row[res_name] > 0]
+        is_service_unit = len(reqs) == 0
         work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
-                             volume=row['volume'], volume_type=row['measurement'])
+                             volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
+                             display_name=row['activity_name'])
         has_succ |= set(row.predecessor_ids)
-        parents = [id_to_node[p_id] for p_id in row.predecessor_ids]
+        parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node
 

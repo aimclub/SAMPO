@@ -36,6 +36,9 @@ class NameMapper(ABC):
     def __getitem__(self, key):
         ...
 
+    def get(self, key):
+        ...
+
     def __setitem__(self, key, value):
         raise Exception('Trying to set a value to the NameMapper')
 
@@ -43,6 +46,9 @@ class NameMapper(ABC):
 class DummyNameMapper(NameMapper):
     def __getitem__(self, item):
         return item
+
+    def get(self, item):
+        self.__getitem__(item)
 
     @property
     def _source(self):
@@ -52,6 +58,9 @@ class DummyNameMapper(NameMapper):
 class DictNameMapper(NameMapper):
     def __init__(self, source: dict[str, str]):
         self._source = source
+
+    def get(self, item):
+        self.__getitem__(item)
 
     def __getitem__(self, item):
         return self._source[item] if item in self._source else item
@@ -64,6 +73,9 @@ class ModelNameMapper(NameMapper):
     # TODO: implement
     def __init__(self):
         self.__nie()
+
+    def get(self, item):
+        self.__getitem__(item)
 
     def __getitem__(self, item):
         self.__nie()

@@ -78,6 +78,7 @@ class EquipmentReq(BaseReq):
     :param name: the name of this requirement
     """
     kind: str
+    count: int
     name: Optional[str] = None
 
 
@@ -107,4 +108,5 @@ class ConstructionObjectReq(BaseReq):
     :param name: the name of this requirement
     """
     kind: str
+    count: int
     name: Optional[str] = None

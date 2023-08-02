@@ -41,8 +41,6 @@ namespace PythonDeserializer {
             return EdgeType::FinishFinish;
         } else if (value == "FS") {
             return EdgeType::FinishStart;
-        } else if (value == "SF") {
-            return EdgeType::StartFinish;
         } else {
             throw logic_error("Illegal EdgeType: " + value);
         }

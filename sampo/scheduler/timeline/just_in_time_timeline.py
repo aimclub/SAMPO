@@ -54,15 +54,10 @@ class JustInTimeTimeline(Timeline):
         :return: start time, end time, None(exec_times not needed in this timeline)
         """
         # if current job is the first
-        if len(node2swork) == 0:
+        if not node2swork:
             return assigned_parent_time, assigned_parent_time, None
         # define the max end time of all parent tasks
-        max_parent_time = max(max((node2swork[parent_node].min_child_start_time
-                                   for parent_node in node.parents), default=Time(0)), assigned_parent_time)
-
-        max_neighbor_time = Time(0)
-        if node.neighbors:
-            max_neighbor_time = max((node2swork[neighbor].start_time for neighbor in node.neighbors))
+        max_parent_time = max(node.min_start_time(node2swork), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
 
@@ -88,7 +83,7 @@ class JustInTimeTimeline(Timeline):
                     needed_count -= offer_count
                     ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time, max_neighbor_time)
+        c_st = max(max_agent_time, max_parent_time)
 
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,
                                                                            node.work_unit.need_materials(),
@@ -210,8 +205,7 @@ class JustInTimeTimeline(Timeline):
             # (the same as in original work)
             # set the same workers on it
             # TODO Decide where this should be
-            max_parent_time = max((node2swork[pnode].min_child_start_time for pnode in dep_node.parents),
-                                  default=Time(0))
+            max_parent_time = dep_node.min_start_time(node2swork)
 
             if dep_node.is_inseparable_son():
                 assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time

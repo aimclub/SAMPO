@@ -12,14 +12,19 @@ def get_all_connections(tasks_df: pd.DataFrame, use_mapper: bool = False, mapper
     """
     Return all connections from DataFrame of works
     """
+
+    task_name_column = 'activity_name'
+    if 'granular_name' in tasks_df:
+        task_name_column = 'granular_name'
+
     num_tasks = len(tasks_df)
     # Get the upper triangular indices to avoid duplicate pairs
     indices = np.triu_indices(num_tasks, k=1)
     works1_ids = tasks_df['activity_id'].values[indices[0]]
-    works1_names = tasks_df['granular_name'].values[indices[0]]
+    works1_names = tasks_df[task_name_column].values[indices[0]]
 
     works2_ids = tasks_df['activity_id'].values[indices[1]]
-    works2_names = tasks_df['granular_name'].values[indices[1]]
+    works2_names = tasks_df[task_name_column].values[indices[1]]
 
     if use_mapper:
         works1_names = np.vectorize(mapper.get)(works1_names)
@@ -48,6 +53,7 @@ def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
     :param f2: finish of second work
     :return: Statistics on the occurrence of different mutual arrangement of tasks
     """
+
     fs12, fs21, ss12, ss21 = 0, 0, 0, 0
     ss12_lags, ss12_percent_lags, ss21_lags, ss21_percent_lags = [], [], [], []
 

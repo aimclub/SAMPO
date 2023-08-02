@@ -26,7 +26,40 @@ class CSVParser:
                                    contractors_number: int = 1) \
             -> (WorkGraph, Contractor):
         """
-        Gets a WorkGraph and Contractors from file .csv
+        Gets a WorkGraph and Contractors from file .csv.
+
+        Schema of WorkGraph .csv file:
+            mandatory fields:
+                activity_id: str - Id of the current task,
+                measurement: str - Measure of the size of the current task (e.g., km, pcs, lit),
+                volume: float - Volume of the current task
+            optional fields:
+                granular_name: str - Task name as in the document,
+                predecessor_ids: list[str] - Ids of predecessors of the current task,
+                connection_types: list[str] - Types of links between the current task and its predecessors,
+                lags: float - Time lags,
+                min_req: dict[str: float] - A dictionary containing the minimum amount of each resource that is required to perform the current task
+                max_req: dict[str: float] - A dictionary containing the maximum amount of each resource that is required to perform the current task
+
+        Schema of Contractors .csv file (optional data):
+            mandatory fields:
+                contractor_id: str - Id of the current contractor,
+                name: str - Contractor name as in the document
+            optional fields:
+                {names of resources}: float - each resource is a separate column
+
+        Schema of history .csv file (optional data):
+            mandatory fields:
+                granular_smr_name: str - Task name as in the document,
+                first_day: str - Date of commencement of the work,
+                last_day: str - Date of completion
+                upper_works: list[str] - Names of predecessors of the current task
+
+        ATTENTION!
+            1) If you send WorkGraph .csv file without data about connections between tasks, you need to provide .csv
+            history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
+            2) If you do not provide work resource estimator, framework uses built-in estimator
+
 
         :param contractor_types:
         :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,

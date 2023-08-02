@@ -1,5 +1,4 @@
 import math
-import queue
 from typing import Callable, Any
 from uuid import uuid4
 
@@ -30,7 +29,7 @@ def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
     :param works_info: dataframe, that contains information about works
     :return: cleaned work_info
     """
-    circuits: list[list[str]] = find_all_circuits(works_info)
+    circuits = find_all_circuits(works_info)
 
     for _, row in enumerate(works_info.index[::-1]):
         for cycle in circuits:
@@ -98,48 +97,35 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
 def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
     existed_ids = set(frame['activity_id'])
 
-    predecessor_ids, connection_types, lags = [], [], []
-    for _, row in frame[['predecessor_ids', 'connection_types', 'lags']].iterrows():
-        predecessor_ids.append([])
-        connection_types.append([])
-        lags.append([])
-        for index in range(len(row['predecessor_ids'])):
-            if row['predecessor_ids'][index] in existed_ids:
-                predecessor_ids[-1].append(row['predecessor_ids'][index])
-                connection_types[-1].append(row['connection_types'][index])
-                lags[-1].append(row['lags'][index])
-        if len(predecessor_ids[-1]) == 0:
-            predecessor_ids[-1].append(NONE_ELEM)
-            connection_types[-1].append(EdgeType.FinishStart)
-            lags[-1].append(float(NONE_ELEM))
-    frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
+    def filter_predecessor_info(row):
+        filtered_predecessors = [(pred_id, con_type, lag)
+                                 for pred_id, con_type, lag in zip(row['predecessor_ids'], row['connection_types'], row['lags'])
+                                 if pred_id in existed_ids]
+        if not filtered_predecessors:
+            filtered_predecessors.append((NONE_ELEM, EdgeType.FinishStart, float(NONE_ELEM)))
+        return filtered_predecessors
 
-    frame['edges'] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
+    frame['edges'] = frame.apply(filter_predecessor_info, axis=1)
+    frame.drop(['predecessor_ids', 'connection_types', 'lags'], axis=1, inplace=True)
+
     return frame
 
 
 def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
-    # frame['predessors_sh'] = [tuple(zip(*list(zip(*edges))[:2])) for edges in frame['edges']]
-    frame['predecessors_set'] = frame['predecessor_ids'].apply(lambda ps: set(ps))  # & existed_ids)
-    id2row = {work_id: ind for work_id, ind in zip(frame['activity_id'], frame.index)}
-    sort_keys: dict[str, int] = dict()
-    used: set[str] = {NONE_ELEM}
-    ind: int = 0
-    q = queue.Queue()
-    for work_id in frame['activity_id']:
-        q.put(work_id)
+    """
+    Sort DataFrame of works in topological order
 
-    while not q.empty():
-        work_id = q.get()
-        row = frame.iloc[id2row[work_id]]
-        if len(row['predecessors_set'] - used) == 0:
-            sort_keys[work_id] = ind
-            used.add(work_id)
-            ind += 1
-        else:
-            q.put(work_id)
+    :param frame: DataFrame of works
+    :return: topologically sorted DataFrame
+    """
+    G = nx.DiGraph()
+    for _, row in frame.iterrows():
+        G.add_node(row['activity_id'])
+        for pred_id, con_type, lag in row['edges']:
+            G.add_edge(pred_id, row['activity_id'])
 
-    frame['sort_key'] = [sort_keys[work_id] for work_id in frame['activity_id']]
+    sorted_nodes = list(nx.topological_sort(G))
+    frame['sort_key'] = frame['activity_id'].apply(lambda x: sorted_nodes.index(x))
     frame = frame.sort_values('sort_key')
 
     return frame
@@ -168,7 +154,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
         work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
                              display_name=row['activity_name'])
-        has_succ |= set(row.predecessor_ids)
+        has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node

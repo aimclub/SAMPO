@@ -25,7 +25,6 @@ class WorkSpec:
     assigned_time: Time | None = None
     is_independent: bool = False
 
-
 @dataclass
 class ScheduleSpec:
     """
@@ -34,7 +33,7 @@ class ScheduleSpec:
 
     :param work2spec: work specs
     """
-    
+
     _work2spec: dict[str, WorkSpec] = field(default_factory=lambda: defaultdict(WorkSpec))
 
     def set_exec_time(self, work: str | WorkUnit, time: Time) -> 'ScheduleSpec':

@@ -33,7 +33,7 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def find_work_resources(self, work_name: str, work_volume: float) -> dict[str, int]:
+    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] = None) -> dict[str, int]:
         ...
 
     @abstractmethod
@@ -50,14 +50,11 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self.rand = rand
         self._productivity_mode = WorkerProductivityMode.Static
 
-    def find_work_resources(self, work_name: str, work_volume: float) -> dict[str, int]:
-        return {
-            'driver': numpy.random.poisson(work_volume ** 0.5, 1),
-            'fitter': numpy.random.poisson(work_volume ** 0.5, 1),
-            'manager': numpy.random.poisson(work_volume ** 0.5, 1),
-            'handyman': numpy.random.poisson(work_volume ** 0.5, 1),
-            'electrician': numpy.random.poisson(work_volume ** 0.5, 1)
-        }
+    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
+            -> dict[str, int]:
+        if resource_name is None:
+            resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
+        return {name: numpy.random.poisson(work_volume ** 0.5, 1) for name in resource_name}
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle

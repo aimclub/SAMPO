@@ -68,7 +68,8 @@ def find_all_circuits(works_info: pd.DataFrame) -> list[list[str]]:
 def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | None = str,
                               none_elem: Any | None = NONE_ELEM) -> pd.Series:
     new_column = column.copy().astype(str).apply(
-        lambda elems: [cast(elem) for elem in elems.split(',')] if elems != str(math.nan) else [none_elem])
+        lambda elems: [cast(elem) if elem != '' and elem != str(math.nan) else none_elem for elem in
+                       elems.split(',')] if (elems != str(math.nan) and elems.split(',') != '') else [none_elem])
     return new_column
 
 

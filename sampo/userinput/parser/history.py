@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from typing import Tuple
 
 import numpy as np
@@ -221,13 +221,15 @@ def set_connections_info(structure_df: pd.DataFrame, history_data: pd.DataFrame,
 
     :return: repaired DataFrame
     """
-    tasks_df = structure_df.copy().set_index('activity_id')
+    tasks_df = structure_df.copy().set_index('activity_id', drop=False)
     connections_dict = get_all_seq_statistic(history_data, structure_df, use_model_name, mapper)
 
     predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst = [], [], []
 
     for task_id, pred_info_lst in connections_dict.items():
-        pred_ids_lst, pred_types_lst, pred_lags_lst = zip(*pred_info_lst)
+        pred_ids_lst, pred_types_lst, pred_lags_lst = [], [], []
+        if len(pred_info_lst) > 0:
+            pred_ids_lst, pred_types_lst, pred_lags_lst = zip(*pred_info_lst)
 
         predecessors_ids_lst.append(','.join(map(str, pred_ids_lst)))
         predecessors_types_lst.append(','.join(map(str, pred_types_lst)))

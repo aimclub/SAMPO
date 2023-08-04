@@ -54,7 +54,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             -> dict[str, int]:
         if resource_name is None:
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
-        return {name: numpy.random.poisson(work_volume ** 0.5, 1) for name in resource_name}
+        return dict((name, numpy.random.poisson(work_volume ** 0.5, 1)[0]) for name in resource_name)
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle

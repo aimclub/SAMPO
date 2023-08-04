@@ -16,6 +16,34 @@ UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
 
 
+def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
+    """
+    Syntax sugar
+
+    :param works_info:
+    :return:
+    """
+
+    tasks_ahead = ['-1']
+    for _, row in works_info.iterrows():
+        predecessor_ids_copy = row['predecessor_ids'].copy()
+        connection_types_copy = row['connection_types'].copy()
+        lags_copy = row['lags'].copy()
+        for pred_id in row['predecessor_ids']:
+            if pred_id in tasks_ahead:
+                continue
+            index = predecessor_ids_copy.index(pred_id)
+            predecessor_ids_copy.pop(index)
+            connection_types_copy.pop(index)
+            lags_copy.pop(index)
+        works_info.at[_, 'predecessor_ids'] = predecessor_ids_copy.copy()
+        works_info.at[_, 'connection_types'] = connection_types_copy.copy()
+        works_info.at[_, 'lags'] = lags_copy.copy()
+        tasks_ahead.append(str(_))
+
+    return works_info
+
+
 def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
     """
     The function breaks circuits:
@@ -31,7 +59,7 @@ def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
     """
     circuits = find_all_circuits(works_info)
 
-    for _, row in enumerate(works_info.index[::-1]):
+    for _, row in works_info[::-1].iterrows():
         for cycle in circuits:
             inter = list(set(row['predecessor_ids']) & set(cycle))
             if len(inter) != 0:
@@ -90,7 +118,7 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
         frame['lags'] = [NONE_ELEM] * len(frame)
     frame['lags'] = fix_df_column_with_arrays(frame['lags'], float)
 
-    frame = break_circuits_in_input_work_info(frame)
+    frame = break_loops_in_input_graph(frame)
 
     return frame
 
@@ -100,7 +128,8 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
 
     def filter_predecessor_info(row):
         filtered_predecessors = [(pred_id, con_type, lag)
-                                 for pred_id, con_type, lag in zip(row['predecessor_ids'], row['connection_types'], row['lags'])
+                                 for pred_id, con_type, lag in
+                                 zip(row['predecessor_ids'], row['connection_types'], row['lags'])
                                  if pred_id in existed_ids]
         if not filtered_predecessors:
             filtered_predecessors.append((NONE_ELEM, EdgeType.FinishStart, float(NONE_ELEM)))

@@ -90,8 +90,10 @@ class SupplyTimeline:
                     count = need_count
                 delivery_list.append((time, count))
 
-        def update_material_timeline(timeline: ExtendedSortedList):
+        def update_material_timeline_and_res_sources(timeline: ExtendedSortedList, mat_sources: dict[str, int]):
             for time, count in material_delivery_list:
+                mat_sources[depot] -= count
+                assert mat_sources[depot] >= 0
                 ind = timeline.bisect_key_left(time)
                 timeline_time, timeline_count = timeline[ind]
                 if timeline_time == time:
@@ -102,6 +104,7 @@ class SupplyTimeline:
         for material in materials:
             if not material.count:
                 continue
+            material_sources = self._resource_sources[material.name]
             depot = self._find_best_supply(material.name, material.count)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
@@ -149,7 +152,7 @@ class SupplyTimeline:
                             going_right = True
 
             if not simulate:
-                update_material_timeline(material_timeline)
+                update_material_timeline_and_res_sources(material_timeline, material_sources)
                 delivery.add_deliveries(material.name, material_delivery_list)
 
             min_start_time = max(min_start_time, cur_time)

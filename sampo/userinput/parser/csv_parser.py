@@ -24,7 +24,7 @@ class CSVParser:
                                    unique_work_names_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                                    contractors_number: int = 1) \
-            -> (WorkGraph, Contractor):
+            -> (WorkGraph, Contractor, pd.DataFrame):
         """
         Gets a WorkGraph and Contractors from file .csv.
 
@@ -76,6 +76,7 @@ class CSVParser:
 
         graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
                                                                               str) else project_info
+        work_graph_csv = None
         # 1. work with tasks' connections. Preprocessing and breaking loops
         if history_data is None or (not(history_data is None) and 'predecessor_ids' in graph_df.columns):
             # 1.1. if we have info about predecessors in graph_df
@@ -88,6 +89,8 @@ class CSVParser:
             history_df = pd.read_csv(history_data)
             graph_df = set_connections_info(graph_df, history_df)
             works_info = preprocess_graph_df(graph_df)
+
+        work_graph_csv = works_info.copy()
 
         # 2. gather resources and contractors based on work resource estimator or contractor info .csv file
         contractors = []
@@ -141,4 +144,4 @@ class CSVParser:
                                                                  contractor_name='Contractor' + ' ' + str(i + 1))
                            for i in range(contractors_number)]
 
-        return work_graph, contractors
+        return work_graph, contractors, work_graph_csv

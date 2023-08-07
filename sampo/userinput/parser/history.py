@@ -104,22 +104,35 @@ def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
         ffs21, ffs21_lags, ffs21_percent_lags
 
 
-def get_all_seq_statistic(history_data: pd.DataFrame, tasks_structure_df: pd.DataFrame, use_model_name: bool = False,
-                          mapper: NameMapper = None) -> dict[int, list]:
+def get_all_seq_statistic(history_data, tasks_structure_df, use_model_name=False, mapper=None):
+
     df_grouped = history_data.copy()
 
     if use_model_name:
-        column_name = 'model_name'
+        # Группируем по объектам исторические данные
+        df_grouped = df_grouped.groupby('upper_works')['model_name'].apply(list).reset_index(name="Works")
+        # works1, works2 = get_lists_of_connected_tasks_from_works_info(tasks_structure_df, True, mapper)
+        works1, works2 = get_all_connections(tasks_structure_df, True, mapper)
     else:
-        column_name = 'granular_smr_name'
+        df_grouped = df_grouped.groupby('upper_works')['granular_smr_name'].apply(list).reset_index(name="Works")
+        # works1, works2 = get_lists_of_connected_tasks_from_works_info(tasks_structure_df)
+        works1, works2 = get_all_connections(tasks_structure_df)
 
-    df_grouped = df_grouped.groupby('upper_works')[column_name].apply(list).reset_index(name="Works")
-    works1, works2 = get_all_connections(tasks_structure_df, use_model_name, mapper)
+    print(list(zip(works1['ids'], works2['ids'])))
+
+    conn_types_lst = []
+    conn_lags_lst = []
+
+    # Создание структуры с обновленными данными о связях
+    # dict(task_id: {id_pred: {type:type_val, lag:lag_val})
+    connections_dict = dict()
 
     tasks_names = list(zip(works1['names'], works2['names']))
     tasks_ids = list(zip(works1['ids'], works2['ids']))
 
-    predecessors_info_dict = {w_id: [] for w_id in tasks_structure_df['activity_id']}
+    predecessors_info_dict = dict()
+    for w_id in tasks_structure_df.loc[:, 'activity_id']:
+        predecessors_info_dict[w_id] = [] # сюда складываем tuple-ы с w_id, типом и лагом предшественников
 
     if len(tasks_names) != 0:
         for i in range(len(tasks_names)):
@@ -127,31 +140,45 @@ def get_all_seq_statistic(history_data: pd.DataFrame, tasks_structure_df: pd.Dat
             w1_id, w2_id = tasks_ids[i]
 
             if w1 != w2:
-                fs12, fs21, ss12, ss21 = 0, 0, 0, 0
-                ss12_lags, ss12_percent_lags, ss21_lags, ss21_percent_lags = [], [], [], []
+                fs12 = 0
+                fs21 = 0
+                # fs_lags = []
+                # fs_percent_lags = []
+                ss12 = 0 # если от 1 ко 2 задаче
+                ss12_lags = []
+                ss12_percent_lags = []
+                ss21 = 0 # если от 2 к 1 задаче
+                ss21_lags = []
+                ss21_percent_lags = []
 
-                ffs12, ffs21 = 0, 0
-                ffs12_lags, ffs12_percent_lags, ffs21_lags, ffs21_percent_lags = [], [], [], []
+                ffs12 = 0
+                ffs12_lags = []
+                ffs12_percent_lags = []
+                ffs21 = 0
+                ffs21_lags = []
+                ffs21_percent_lags = []
 
-                for i, works_list in df_grouped.iterrows():
-                    if w1 in works_list and w2 in works_list:
-                        ind1 = history_data.loc[(history_data['upper_works'] == works_list['upper_works']) & (
-                                    history_data['granular_smr_name'] == w1)]
-                        ind2 = history_data.loc[(history_data['upper_works'] == works_list['upper_works']) & (
-                                    history_data['granular_smr_name'] == w2)]
+                for i in df_grouped.index:
+                    work_list = df_grouped.loc[i, 'Works']
+                    # Ищем, встречалась ли эта пара работ в рамках одного объекта в исторических данных
+                    if w1 in work_list and w2 in work_list:
+                        ind1 = history_data.loc[(history_data['upper_works'] == df_grouped.loc[i,'upper_works']) & (history_data['granular_smr_name'] == w1)]
+                        ind2 = history_data.loc[(history_data['upper_works'] == df_grouped.loc[i,'upper_works']) & (history_data['granular_smr_name'] == w2)]
 
                         ind1_sorted = ind1.sort_values(by=['first_day', 'last_day']).reset_index(drop=True)
                         ind2_sorted = ind2.sort_values(by=['first_day', 'last_day']).reset_index(drop=True)
 
                         for l in range(min(len(ind1_sorted), len(ind2_sorted))):
-                            s1, f1 = ind1_sorted.loc[l, 'first_day'], ind1_sorted.loc[l, 'last_day']
+                            s1 = ind1_sorted.loc[l, 'first_day']
+                            f1 = ind1_sorted.loc[l, 'last_day']
 
-                            s2, f2 = ind2_sorted.loc[l, 'first_day'], ind2_sorted.loc[l, 'last_day']
+                            s2 = ind2_sorted.loc[l, 'first_day']
+                            f2 = ind2_sorted.loc[l, 'last_day']
 
+                            # Собираем статистику по встречаемости разного взаимного расположения задач
                             if not any([type(x) == float for x in [s1, s2, f1, f2]]):
                                 tasks_fs12, tasks_fs21, tasks_ss12, tasks_ss12_lags, tasks_ss12_percent_lags, tasks_ss21, tasks_ss21_lags, \
-                                    tasks_ss21_percent_lags, tasks_ffs12, tasks_ffs12_lags, tasks_ffs12_percent_lags, tasks_ffs21, tasks_ffs21_lags, tasks_ffs21_percent_lags = gather_links_types_statistics(
-                                    s1, f1, s2, f2)
+                                tasks_ss21_percent_lags, tasks_ffs12, tasks_ffs12_lags, tasks_ffs12_percent_lags, tasks_ffs21, tasks_ffs21_lags, tasks_ffs21_percent_lags = gather_links_types_statistics(s1, f1, s2, f2)
 
                                 fs12 += tasks_fs12
                                 fs21 += tasks_fs21
@@ -170,7 +197,8 @@ def get_all_seq_statistic(history_data: pd.DataFrame, tasks_structure_df: pd.Dat
                                 ffs21_lags.extend(tasks_ffs21_lags)
                                 ffs21_percent_lags.extend(tasks_ffs21_percent_lags)
 
-                # Checking the mutual arrangement of tasks (follower - predecessor). We calculate which interposition is observed more often, correct the connections
+
+                # Проверка взаимного расположения задач (последователь - предшественник). Считаем, какое взаиморасположение наблюдается чаще, корректируем связи
                 if fs12 + ffs12 + ss12 >= fs21 + ffs21 + ss21:
                     order_con = 1
                     fs = fs12
@@ -198,15 +226,15 @@ def get_all_seq_statistic(history_data: pd.DataFrame, tasks_structure_df: pd.Dat
                                 predecessors_info_dict[w1_id].append((w2_id, 'FS', -1))
                     elif ss > ffs:
                         if order_con == 1:
-                            predecessors_info_dict[w2_id].append((w1_id, 'SS',
-                                                                  find_min_without_outliers(ss12_percent_lags)))
+                                predecessors_info_dict[w2_id].append((w1_id, 'SS',
+                                                                      find_min_without_outliers(ss12_percent_lags)))
                         else:
                             predecessors_info_dict[w1_id].append((w2_id, 'SS',
                                                                   find_min_without_outliers(ss21_percent_lags)))
                     else:
                         if order_con == 1:
-                            predecessors_info_dict[w2_id].append((w1_id, 'FFS',
-                                                                  find_min_without_outliers(ffs12_percent_lags)))
+                                predecessors_info_dict[w2_id].append((w1_id, 'FFS',
+                                                                      find_min_without_outliers(ffs12_percent_lags)))
                         else:
                             predecessors_info_dict[w1_id].append((w2_id, 'FFS',
                                                                   find_min_without_outliers(ffs21_percent_lags)))
@@ -223,6 +251,7 @@ def set_connections_info(structure_df: pd.DataFrame, history_data: pd.DataFrame,
     """
     tasks_df = structure_df.copy().set_index('activity_id', drop=False)
     connections_dict = get_all_seq_statistic(history_data, structure_df, use_model_name, mapper)
+    # connections_dict = {25809398: [], 25809830: [], 25809831: [(25809830, 'FFS', 0.01)], 25809833: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809834, 'FS', -1)], 25813507: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01)], 25809836: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809835, 'FS', -1), (25809856, 'FS', -1)], 25809832: [(25809831, 'FFS', 0.17), (25809847, 'FS', -1), (25809852, 'FS', -1), (25809848, 'FS', -1), (25809854, 'FS', -1)], 25809837: [(25809831, 'FS', -1), (25809836, 'SS', 0.75), (25809835, 'FS', -1), (25809841, 'FS', -1), (25809847, 'FS', -1), (25809848, 'FS', -1)], 25809838: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.08), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01)], 25809839: [(25809830, 'FS', -1), (25809831, 'FS', -1), (25809833, 'FFS', 0.33), (25813507, 'FFS', 0.9), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809834, 'FS', -1), (25809847, 'FFS', 0.5), (25809848, 'FFS', 0.5)], 25809834: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809836, 'FS', -1), (25809837, 'FS', -1), (25809838, 'FFS', 0.5), (25809840, 'FFS', 0.75), (25809841, 'FFS', 0.14), (25809847, 'FS', -1), (25809848, 'FS', -1), (25809856, 'SS', 0.5)], 25809835: [(25809831, 'FFS', 0.01), (25809833, 'SS', 0.25), (25809838, 'SS', 0.5), (25809834, 'FFS', 0.01), (25809841, 'FS', -1), (25809847, 'SS', 0.44), (25809852, 'FS', -1), (25809848, 'SS', 0.44), (25809854, 'FS', -1)], 25809842: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809840, 'SS', 0.79), (25809841, 'FS', -1)], 25809843: [(25809832, 'FFS', 0.01), (25809841, 'FS', -1)], 25809844: [(25809843, 'SS', 0.03), (25809841, 'FS', -1)], 25809840: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809833, 'FS', -1), (25813507, 'FS', -1), (25809836, 'FFS', 0.17), (25809838, 'FS', -1), (25809835, 'FFS', 0.01), (25809841, 'FS', -1), (25809847, 'FS', -1), (25809850, 'FFS', 0.12), (25809848, 'FS', -1), (25809853, 'FFS', 0.12)], 25809841: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809832, 'SS', 0.32), (25809838, 'FFS', 0.01), (25809839, 'FFS', 0.01), (25809847, 'FFS', 0.2), (25809850, 'FS', -1), (25809852, 'FS', -1), (25809848, 'FFS', 0.2), (25809853, 'FS', -1), (25809854, 'FS', -1)], 25809399: [], 25809400: [], 25809847: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809850, 'FFS', 0.03), (25809853, 'FFS', 0.03)], 25809850: [(25809831, 'FS', -1), (25809833, 'FS', -1), (25809836, 'FFS', 0.67), (25809838, 'FFS', 0.03), (25809856, 'FS', -1)], 25809852: [(25809831, 'FFS', 0.68), (25809836, 'FFS', 0.46), (25809838, 'SS', 0.01), (25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809857, 'FS', -1), (25809855, 'FFS', 0.15)], 25809848: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809852, 'FFS', 0.01), (25809853, 'FFS', 0.03)], 25809853: [(25809831, 'FS', -1), (25809833, 'FS', -1), (25809836, 'FFS', 0.67), (25809838, 'FFS', 0.03), (25809852, 'FFS', 0.01), (25809856, 'FS', -1)], 25809854: [(25809831, 'FFS', 0.68), (25809836, 'FFS', 0.46), (25809838, 'SS', 0.01), (25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809848, 'FFS', 0.01), (25809853, 'FFS', 0.01), (25809857, 'FS', -1), (25809855, 'FFS', 0.15)], 25809856: [(25809830, 'FFS', 0.47), (25809831, 'FFS', 0.01), (25809833, 'FS', -1), (25813507, 'FFS', 0.91), (25809838, 'FFS', 0.01), (25809835, 'FS', -1), (25809841, 'FS', -1), (25809847, 'FFS', 0.36), (25809848, 'FFS', 0.36)], 25809401: [], 25809857: [(25809847, 'FS', -1), (25809850, 'FS', -1), (25809848, 'FS', -1), (25809853, 'FS', -1), (25809855, 'FS', -1)], 25809855: [(25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809848, 'FFS', 0.01), (25809853, 'FFS', 0.01)], 25809858: [(25809836, 'FS', -1), (25809838, 'FS', -1), (25809839, 'FFS', 0.01), (25809841, 'SS', 0.36), (25809847, 'FS', -1), (25809850, 'FFS', 0.93), (25809852, 'FS', -1), (25809848, 'FS', -1), (25809853, 'FFS', 0.93), (25809854, 'FS', -1), (25809856, 'SS', 0.64), (25809857, 'FS', -1)]}
 
     predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst = [], [], []
 

@@ -63,7 +63,6 @@ class MaterialDelivery:
         self.delivery = {}
 
     def add_delivery(self, name: str, time: Time, count: int):
-        assert count > 0
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             material_delivery = []
@@ -71,7 +70,6 @@ class MaterialDelivery:
         material_delivery.append((time, count))
 
     def add_deliveries(self, name: str, deliveries: list[tuple[Time, int]]):
-        assert all([count > 0 for time, count in deliveries])
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             self.delivery[name] = deliveries

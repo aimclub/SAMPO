@@ -47,8 +47,10 @@ class SupplyTimeline:
         batches = max(1, math.ceil(ratio))
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
-        other_batches = [first_batch for _ in range(batches - 1)]
-        # other_batches.append([material.copy().with_count(material.count * (ratio - batches)) for material in materials])
+        other_batches = [first_batch for _ in range(batches - 2)]
+        if batches > 1:
+            other_batches.append([material.copy().with_count(material.count - batch_material.count)
+                                  for material, batch_material in zip(materials, first_batch)])
 
         deliveries = []
         d, start_time = self.supply_resources(id, start_time, first_batch, False)
@@ -59,16 +61,21 @@ class SupplyTimeline:
 
         return deliveries, start_time, finish_time
 
-    def _find_best_supply(self, material: str, count: int) -> str:
+    def _find_best_supply(self, material: str, count: int, deadline: Time) -> str:
         # TODO Make better algorithm
-        # Return the first depot that can supply given materials
         if self._resource_sources.get(material, None) is None:
-            raise NoAvailableResources(f'Schedule can not be built. No available resource sources with material {material}')
+            raise NoAvailableResources(
+                f'Schedule can not be built. No available resource sources with material {material}')
         depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
                   if depot_count >= count]
         if not depots:
-            raise NotEnoughMaterialsInDepots(f"Schedule can not be built. No one supplier has enough '{material}' material")
-        return depots[0]
+            raise NotEnoughMaterialsInDepots(
+                f"Schedule can not be built. No one supplier has enough '{material}' material")
+        depots = [(depot_id, self._timeline[depot_id].bisect_key_left(deadline), -self._capacity[depot_id])
+                  for depot_id in depots]
+        depots.sort(key=itemgetter(1, 2))
+
+        return depots[0][0]
 
     def supply_resources(self, work_id: str, deadline: Time, materials: list[Material], simulate: bool) \
             -> tuple[MaterialDelivery, Time]:
@@ -93,7 +100,6 @@ class SupplyTimeline:
         def update_material_timeline_and_res_sources(timeline: ExtendedSortedList, mat_sources: dict[str, int]):
             for time, count in material_delivery_list:
                 mat_sources[depot] -= count
-                assert mat_sources[depot] >= 0
                 ind = timeline.bisect_key_left(time)
                 timeline_time, timeline_count = timeline[ind]
                 if timeline_time == time:
@@ -101,11 +107,26 @@ class SupplyTimeline:
                 else:
                     timeline.add((time, capacity - count))
 
+            time, count = timeline[0]
+            if not count:
+                ind = 1
+                is_zero_count = True
+                while ind < len(timeline) - 1 and is_zero_count:
+                    next_time, next_count = timeline[ind]
+                    if not next_count and next_time == time + 1:
+                        ind += 1
+                        time = next_time
+                    else:
+                        is_zero_count = False
+                if ind == len(timeline) - 1 or timeline[ind][0] != time + 1:
+                    ind -= 1
+                del timeline[:ind]
+
         for material in materials:
             if not material.count:
                 continue
             material_sources = self._resource_sources[material.name]
-            depot = self._find_best_supply(material.name, material.count)
+            depot = self._find_best_supply(material.name, material.count, deadline)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
             need_count = material.count

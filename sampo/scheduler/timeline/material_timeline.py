@@ -42,7 +42,6 @@ class SupplyTimeline:
 
         :return: pair of material-driven minimum start and finish times
         """
-        batch_size = 10
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
         batches = max(1, math.ceil(ratio))

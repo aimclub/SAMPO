@@ -42,6 +42,7 @@ class SupplyTimeline:
 
         :return: pair of material-driven minimum start and finish times
         """
+        batch_size = 10
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
         batches = max(1, math.ceil(ratio))
@@ -49,17 +50,19 @@ class SupplyTimeline:
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
         other_batches = [first_batch for _ in range(batches - 2)]
         if batches > 1:
-            other_batches.append([material.copy().with_count(material.count - batch_material.count)
+            other_batches.append([material.copy().with_count(material.count - batch_material.count * (batches - 1))
                                   for material, batch_material in zip(materials, first_batch)])
 
         deliveries = []
         d, start_time = self.supply_resources(id, start_time, first_batch, False)
         deliveries.append(d)
-        batch_processing = [self.supply_resources(id, finish_time, batch, False) for batch in other_batches]
-        finish_time = max([b[1] for b in batch_processing], default=finish_time)
-        deliveries.extend([b[0] for b in batch_processing])
+        max_finish_time = finish_time
+        for batch in other_batches:
+            d, finish_time = self.supply_resources(id, max_finish_time, batch, False, start_time)
+            deliveries.append(d)
+            max_finish_time = finish_time if finish_time > max_finish_time else max_finish_time
 
-        return deliveries, start_time, finish_time
+        return deliveries, start_time, max_finish_time
 
     def _find_best_supply(self, material: str, count: int, deadline: Time) -> str:
         # TODO Make better algorithm
@@ -77,7 +80,8 @@ class SupplyTimeline:
 
         return depots[0][0]
 
-    def supply_resources(self, work_id: str, deadline: Time, materials: list[Material], simulate: bool) \
+    def supply_resources(self, work_id: str, deadline: Time, materials: list[Material], simulate: bool,
+                         min_supply_start_time: Time = Time(0)) \
             -> tuple[MaterialDelivery, Time]:
         """
         Finds minimal time that given materials can be supplied, greater than given start time
@@ -86,10 +90,12 @@ class SupplyTimeline:
         :param deadline: the time work starts
         :param materials: material resources that are required to start
         :param simulate: should timeline only find minimum supply time and not change timeline
+        :param min_supply_start_time:
         :return: material deliveries, the time when resources are ready
         """
+        assert min_supply_start_time <= deadline
         delivery = MaterialDelivery(work_id)
-        min_start_time = deadline
+        min_work_start_time = deadline
 
         def append_in_material_delivery_list(time: Time, count: int, delivery_list: list[tuple[Time, int]]):
             if not simulate:
@@ -155,11 +161,11 @@ class SupplyTimeline:
                     if need_count > 0:
                         idx_left += 1
                 else:
-                    while need_count > 0 and time_left < cur_time:
+                    while need_count > 0 and time_left < cur_time and min_supply_start_time <= cur_time:
                         append_in_material_delivery_list(cur_time, capacity, material_delivery_list)
                         need_count -= capacity
                         cur_time -= 1
-                    if need_count > 0 and cur_time == time_left:
+                    if need_count > 0 and cur_time == time_left and min_supply_start_time <= cur_time:
                         time_left_capacity = material_timeline[idx_left][1]
                         if time_left_capacity:
                             append_in_material_delivery_list(cur_time, time_left_capacity, material_delivery_list)
@@ -167,7 +173,7 @@ class SupplyTimeline:
                         cur_time -= 1
                     if need_count > 0:
                         idx_left -= 1
-                        if idx_left < 0:
+                        if idx_left < 0 or cur_time < min_supply_start_time:
                             idx_left = idx_base
                             cur_time = deadline
                             going_right = True
@@ -176,9 +182,9 @@ class SupplyTimeline:
                 update_material_timeline_and_res_sources(material_timeline, material_sources)
                 delivery.add_deliveries(material.name, material_delivery_list)
 
-            min_start_time = max(min_start_time, cur_time)
+            min_work_start_time = max(min_work_start_time, cur_time)
 
-        return delivery, min_start_time
+        return delivery, min_work_start_time
 
     @property
     def resource_sources(self):

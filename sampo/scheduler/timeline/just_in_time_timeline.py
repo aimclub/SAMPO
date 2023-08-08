@@ -218,8 +218,8 @@ class JustInTimeTimeline(Timeline):
 
             deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, start_time,
                                                                                        new_finish_time,
-                                                                                       node.work_unit.need_materials(),
-                                                                                       node.work_unit.workground_size)
+                                                                                       dep_node.work_unit.need_materials(),
+                                                                                       dep_node.work_unit.workground_size)
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(start_time, new_finish_time),

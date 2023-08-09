@@ -1,18 +1,20 @@
 import math
 import random
 import time
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 import seaborn as sns
 from deap import tools
+from deap.base import Toolbox
 from deap.tools import initRepeat
 from matplotlib import pyplot as plt
+from numpy import ndarray
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, is_chromosome_correct
+    FitnessFunction, TimeFitness, is_chromosome_correct, wrap
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
@@ -26,57 +28,28 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.collections_util import reverse_dictionary
 
 
-def build_schedule(wg: WorkGraph,
+def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
-                   population_size: int,
-                   generation_number: int,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec]],
                    rand: random.Random,
-                   spec: ScheduleSpec,
-                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
-                                                 FitnessFunction] = TimeFitness,
-                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                   show_fitness_graph: bool = False,
-                   n_cpu: int = 1,
-                   assigned_parent_time: Time = Time(0),
-                   timeline: Timeline | None = None,
-                   time_border: int = None) \
-        -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
-    """
-    Genetic algorithm.
-    Structure of chromosome:
-    [[order of job], [numbers of workers types 1 for each job], [numbers of workers types 2], ... ]
-
-    Different mate and mutation for order and for workers.
-    Generate order of job by prioritization from HEFTs and from Topological.
-    Generate resources from min to max.
-    Overall initial population is valid.
-
-    :param spec: spec for current scheduling
-    :param n_cpu: number or parallel workers to use in computational process
-    :param assigned_parent_time: start time of the whole schedule(time shift)
-    :return: scheduler
-    """
-
-    if show_fitness_graph:
-        fitness_history = []
-
-    global_start = time.time()
-
+                   spec: ScheduleSpec = ScheduleSpec(),
+                   work_estimator: WorkTimeEstimator = None,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration()) -> tuple[
+    Toolbox, ndarray, ndarray, ndarray]:
     start = time.time()
+
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
-    index2node: dict[int, GraphNode] = dict(enumerate(nodes))
+    index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
-    index2contractor_obj = dict(enumerate(contractors))
+    index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
     contractor2index = reverse_dictionary(index2contractor)
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
@@ -109,6 +82,96 @@ def build_schedule(wg: WorkGraph,
             inseparable_parents[child] = node
 
     # here we aggregate information about relationships from the whole inseparable chain
+    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
+                                         for inseparable in node.get_inseparable_chain_with_self()
+                                         for child in inseparable.children]
+                for node in nodes}
+
+    parents = {work_id2index[node.id]: [] for node in nodes}
+    for node, node_children in children.items():
+        for child in node_children:
+            parents[child].append(node)
+
+    # initial chromosomes construction
+    init_chromosomes: dict[str, ChromosomeType] = \
+        {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                              contractor2index, contractor_borders, schedule, spec, order)
+        if schedule is not None else None
+         for name, (schedule, order, spec) in init_schedules.items()}
+
+    for name, chromosome in init_chromosomes.items():
+        if chromosome is not None:
+            if not is_chromosome_correct(chromosome, node_indices, parents):
+                raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+
+    print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
+
+    return init_toolbox(wg,
+                        contractors,
+                        worker_pool,
+                        landscape,
+                        index2node,
+                        work_id2index,
+                        worker_name2index,
+                        index2contractor,
+                        index2contractor_obj,
+                        init_chromosomes,
+                        mutate_order,
+                        mutate_resources,
+                        selection_size,
+                        rand,
+                        spec,
+                        worker_pool_indices,
+                        contractor2index,
+                        contractor_borders,
+                        node_indices,
+                        parents,
+                        Time(0),
+                        work_estimator), resources_border, contractors_capacity, resources_min_border
+
+
+def build_schedule(wg: WorkGraph,
+                   contractors: list[Contractor],
+                   worker_pool: WorkerContractorPool,
+                   population_size: int,
+                   generation_number: int,
+                   selection_size: int,
+                   mutate_order: float,
+                   mutate_resources: float,
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec]],
+                   rand: random.Random,
+                   spec: ScheduleSpec,
+                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
+                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                   show_fitness_graph: bool = False,
+                   n_cpu: int = 1,
+                   assigned_parent_time: Time = Time(0),
+                   timeline: Timeline | None = None,
+                   time_border: int = None) \
+        -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
+    if show_fitness_graph:
+        fitness_history = []
+
+    global_start = time.time()
+
+    # preparing access-optimized data structures
+    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+
+    work_id2index: dict[str, int] = {node.id: index for index, node in enumerate(nodes)}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
+    contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
+    worker_pool_indices = {worker_name2index[worker_name]: {
+        contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
+    } for worker_name, workers_of_type in worker_pool.items()}
+
+    # construct inseparable_child -> inseparable_parent mapping
+    inseparable_parents = {}
+    for node in nodes:
+        for child in node.get_inseparable_chain_with_self():
+            inseparable_parents[child] = node
+
+    # here we aggregate information about relationships from the whole inseparable chain
     children = {work_id2index[node.id]: list({work_id2index[inseparable_parents[child].id]
                                               for inseparable in node.get_inseparable_chain_with_self()
                                               for child in inseparable.children})
@@ -119,28 +182,15 @@ def build_schedule(wg: WorkGraph,
         for child in node_children:
             parents[child].append(node)
 
-    print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
-
     start = time.time()
 
-    # initial chromosomes construction
-    init_chromosomes: dict[str, ChromosomeType] = \
-        {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec, order)
-            if schedule is not None else None
-         for name, (schedule, order, spec) in init_schedules.items()}
-
-    toolbox = init_toolbox(wg, contractors, worker_pool, landscape, index2node,
-                           work_id2index, worker_name2index, index2contractor,
-                           index2contractor_obj, init_chromosomes, mutate_order,
-                           mutate_resources, selection_size, rand, spec, worker_pool_indices,
-                           contractor2index, contractor_borders, node_indices, parents,
-                           assigned_parent_time, work_estimator)
-
-    for name, chromosome in init_chromosomes.items():
-        if chromosome is not None:
-            if not is_chromosome_correct(chromosome, node_indices, parents):
-                raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
+    toolbox, resources_border, contractors_capacity, resources_min_border = create_toolbox(wg, contractors, worker_pool,
+                                                                                           selection_size,
+                                                                                           mutate_order,
+                                                                                           mutate_resources,
+                                                                                           init_schedules,
+                                                                                           rand, spec, work_estimator,
+                                                                                           landscape)
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
@@ -199,7 +249,9 @@ def build_schedule(wg: WorkGraph,
             prev_best_fitness = best_fitness
 
             # select individuals of next generation
-            offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
+            # offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
+            offspring = toolbox.select(pop, selection_size)
+
             # clone selected individuals
             # offspring = [toolbox.clone(ind) for ind in offspring]
 
@@ -360,16 +412,3 @@ def build_schedule(wg: WorkGraph,
 
 def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
     return (first[0][0] == second[0][0]).all() and (first[0][1] == second[0][1]).all()
-
-
-def wrap(chromosome: ChromosomeType) -> Individual:
-    """
-    Creates an individual from chromosome.
-    """
-
-    def ind_getter():
-        return chromosome
-
-    ind = initRepeat(Individual, ind_getter, n=1)
-    ind.fitness.invalid_steps = 0
-    return ind

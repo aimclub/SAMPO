@@ -6,6 +6,7 @@ from typing import Iterable, Callable
 
 import numpy as np
 from deap import creator, base, tools
+from deap.tools import initRepeat
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
@@ -193,6 +194,19 @@ def init_toolbox(wg: WorkGraph,
 
 def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
     return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), deepcopy(chromosome[3])
+
+
+def wrap(chromosome: ChromosomeType) -> Individual:
+    """
+    Created an individual from chromosome.
+    """
+
+    def ind_getter():
+        return chromosome
+
+    ind = initRepeat(Individual, ind_getter, n=1)
+    ind.fitness.invalid_steps = 0
+    return ind
 
 
 def generate_chromosome(wg: WorkGraph,

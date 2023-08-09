@@ -1,19 +1,18 @@
 import math
 import random
 import time
-from typing import Callable, Tuple
+from typing import Callable
 
 import numpy as np
 import seaborn as sns
 from deap import tools
 from deap.base import Toolbox
-from deap.tools import initRepeat
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, copy_chromosome, \
     FitnessFunction, TimeFitness, is_chromosome_correct, wrap
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
@@ -38,8 +37,8 @@ def create_toolbox(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None,
-                   landscape: LandscapeConfiguration = LandscapeConfiguration()) -> tuple[
-    Toolbox, ndarray, ndarray, ndarray]:
+                   landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+        -> tuple[Toolbox, ndarray, ndarray, ndarray]:
     start = time.time()
 
     # preparing access-optimized data structures
@@ -96,7 +95,7 @@ def create_toolbox(wg: WorkGraph,
     init_chromosomes: dict[str, ChromosomeType] = \
         {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, order)
-        if schedule is not None else None
+         if schedule is not None else None
          for name, (schedule, order, spec) in init_schedules.items()}
 
     for name, chromosome in init_chromosomes.items():
@@ -142,7 +141,8 @@ def build_schedule(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[
+                       [Callable[[list[ChromosomeType]], list[int]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,

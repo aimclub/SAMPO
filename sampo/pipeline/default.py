@@ -18,7 +18,7 @@ from sampo.structurator import graph_restructuring
 
 class DefaultInputPipeline(InputPipeline):
     """
-    Default pipeline, that help to use framework
+    Default pipeline, that help to use the framework
     """
 
     def __init__(self):
@@ -132,7 +132,8 @@ class DefaultInputPipeline(InputPipeline):
         match self._lag_optimize:
             case LagOptimizationStrategy.NONE:
                 wg = self._wg
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
+                                                                           self._landscape_config,
                                                                            self._spec,
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
@@ -140,11 +141,13 @@ class DefaultInputPipeline(InputPipeline):
             case LagOptimizationStrategy.AUTO:
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
-                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors, self._landscape_config,
+                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors,
+                                                                             self._landscape_config,
                                                                              self._spec,
                                                                              assigned_parent_time=self._assigned_parent_time)
                 wg2 = graph_restructuring(self._wg, True)
-                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors, self._landscape_config,
+                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors,
+                                                                             self._landscape_config,
                                                                              self._spec,
                                                                              assigned_parent_time=self._assigned_parent_time)
 
@@ -159,7 +162,8 @@ class DefaultInputPipeline(InputPipeline):
 
             case _:
                 wg = graph_restructuring(self._wg, self._lag_optimize.value)
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
+                                                                           self._landscape_config,
                                                                            self._spec,
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
@@ -190,7 +194,6 @@ class DefaultInputPipeline(InputPipeline):
         return True
 
 
-
 # noinspection PyProtectedMember
 class DefaultSchedulePipeline(SchedulePipeline):
 
@@ -200,14 +203,15 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
         self._scheduled_works = {wg[swork.work_unit.id]:
-                                 swork for swork in schedule.to_schedule_work_dict.values()}
+                                     swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,
-                                       (self._input._node_order, self._input._contractors, self._input._landscape_config,
-                                        self._input._spec, self._worker_pool, self._input._work_estimator,
-                                        self._input._assigned_parent_time, area))
+                                       (
+                                       self._input._node_order, self._input._contractors, self._input._landscape_config,
+                                       self._input._spec, self._worker_pool, self._input._work_estimator,
+                                       self._input._assigned_parent_time, area))
         return self
 
     def finish(self) -> Schedule:

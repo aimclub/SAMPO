@@ -25,6 +25,7 @@ def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
     """
 
     tasks_ahead = ['-1']
+    print(works_info)
     for _, row in works_info.iterrows():
         predecessor_ids_copy = row['predecessor_ids'].copy()
         connection_types_copy = row['connection_types'].copy()
@@ -36,9 +37,9 @@ def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
             predecessor_ids_copy.pop(index)
             connection_types_copy.pop(index)
             lags_copy.pop(index)
-        works_info.at[_, 'predecessor_ids'] = predecessor_ids_copy.copy()
-        works_info.at[_, 'connection_types'] = connection_types_copy.copy()
-        works_info.at[_, 'lags'] = lags_copy.copy()
+        works_info.at[_, 'predecessor_ids'] = ','.join(map(str, predecessor_ids_copy))
+        works_info.at[_, 'connection_types'] = ','.join(map(str, connection_types_copy))
+        works_info.at[_, 'lags'] = ','.join(map(str, lags_copy))
         tasks_ahead.append(str(_))
 
     return works_info
@@ -118,26 +119,31 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
         frame['lags'] = [NONE_ELEM] * len(frame)
     frame['lags'] = fix_df_column_with_arrays(frame['lags'], float)
 
-    frame = break_loops_in_input_graph(frame)
+    # frame = break_loops_in_input_graph(frame)
 
     return frame
 
 
 def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
-    existed_ids = set(frame['activity_id'])
+    existed_ids = set(frame["activity_id"])
 
-    def filter_predecessor_info(row):
-        filtered_predecessors = [(pred_id, con_type, lag)
-                                 for pred_id, con_type, lag in
-                                 zip(row['predecessor_ids'], row['connection_types'], row['lags'])
-                                 if pred_id in existed_ids]
-        if not filtered_predecessors:
-            filtered_predecessors.append((NONE_ELEM, EdgeType.FinishStart, float(NONE_ELEM)))
-        return filtered_predecessors
+    predecessor_ids, connection_types, lags = [], [], []
+    for _, row in frame[['predecessor_ids', 'connection_types', 'lags']].iterrows():
+        predecessor_ids.append([])
+        connection_types.append([])
+        lags.append([])
+        for index in range(len(row['predecessor_ids'])):
+            if row['predecessor_ids'][index] in existed_ids:
+                predecessor_ids[-1].append(row['predecessor_ids'][index])
+                connection_types[-1].append(row['connection_types'][index])
+                lags[-1].append(row['lags'][index])
+        if len(predecessor_ids[-1]) == 0:
+            predecessor_ids[-1].append(NONE_ELEM)
+            connection_types[-1].append(EdgeType.FinishStart)
+            lags[-1].append(float(NONE_ELEM))
+    frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
 
-    frame['edges'] = frame.apply(filter_predecessor_info, axis=1)
-    frame.drop(['predecessor_ids', 'connection_types', 'lags'], axis=1, inplace=True)
-
+    frame["edges"] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
     return frame
 
 
@@ -183,7 +189,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
         is_service_unit = len(reqs) == 0
         work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
-                             display_name=row['activity_name'])
+                             display_name=row['granular_name'])
         has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)

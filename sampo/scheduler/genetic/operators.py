@@ -156,10 +156,8 @@ def init_toolbox(wg: WorkGraph,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
-    # create from generate_chromosome function one individual
-    toolbox.register('individual', tools.initRepeat, Individual, toolbox.generate_chromosome, n=1)
     # create population from individuals
-    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+    toolbox.register('population', tools.initRepeat, list, lambda: Individual(toolbox.generate_chromosome()))
     # crossover for order
     toolbox.register('mate', mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -194,19 +192,6 @@ def init_toolbox(wg: WorkGraph,
 
 def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
     return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), deepcopy(chromosome[3])
-
-
-def wrap(chromosome: ChromosomeType) -> Individual:
-    """
-    Created an individual from chromosome.
-    """
-
-    def ind_getter():
-        return chromosome
-
-    ind = initRepeat(Individual, ind_getter, n=1)
-    ind.fitness.invalid_steps = 0
-    return ind
 
 
 def generate_chromosome(wg: WorkGraph,
@@ -317,11 +302,11 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 
     :return: two cross individuals
     """
-    ind1 = copy_chromosome(ind1)
-    ind2 = copy_chromosome(ind2)
+    child1 = Individual(copy_chromosome(ind1))
+    child2 = Individual(copy_chromosome(ind2))
 
-    order1 = ind1[0]
-    order2 = ind2[0]
+    order1 = child1[0]
+    order2 = child2[0]
 
     border = len(order1) // 4
     # randomly select the point where the crossover will take place
@@ -333,7 +318,7 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     order1[crossover_point:] = ind1_new_tail
     order2[crossover_point:] = ind2_new_tail
 
-    return ind1, ind2
+    return child1, child2
 
 
 def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,
@@ -346,7 +331,7 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
     :param up: upper bound specified by `WorkUnit`
     :return: mutate individual
     """
-    ind = copy_chromosome(ind)
+    # ind = copy_chromosome(ind)
 
     # select random number from interval from min to max from uniform distribution
     size = len(ind[1])
@@ -377,7 +362,7 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     """
     Mutation for contractors' resource borders.
     """
-    ind = copy_chromosome(ind)
+    # ind = copy_chromosome(ind)
 
     num_resources = len(resources_min_border)
     num_contractors = len(ind[2])
@@ -409,8 +394,8 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     :param rand: the rand object used for exchange point selection
     :return: first and second individual
     """
-    ind1 = copy_chromosome(ind1)
-    ind2 = copy_chromosome(ind2)
+    ind1 = Individual(copy_chromosome(ind1))
+    ind2 = Individual(copy_chromosome(ind2))
 
     # exchange work resources
     res1 = ind1[1][:, mate_positions]
@@ -428,8 +413,8 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
     """
     Crossover for contractors' resource borders.
     """
-    ind1 = copy_chromosome(ind1)
-    ind2 = copy_chromosome(ind2)
+    # ind1 = copy_chromosome(ind1)
+    # ind2 = copy_chromosome(ind2)
 
     num_contractors = len(ind1[2])
     contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))

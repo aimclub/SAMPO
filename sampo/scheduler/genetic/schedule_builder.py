@@ -250,7 +250,7 @@ def build_schedule(wg: WorkGraph,
 
             # select individuals of next generation
             # offspring = toolbox.select(pop, int(math.sqrt(len(pop))))
-            offspring = toolbox.select(pop, selection_size)
+            offspring = toolbox.select(pop, population_size)
 
             # clone selected individuals
             # offspring = [toolbox.clone(ind) for ind in offspring]

@@ -323,8 +323,9 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     order1 = ind1[0]
     order2 = ind2[0]
 
+    border = len(order1) // 4
     # randomly select the point where the crossover will take place
-    crossover_point = rand.randint(1, len(ind1))
+    crossover_point = rand.randint(border, len(order1) - border)
 
     ind1_new_tail = get_order_tail(order1[:crossover_point], order2)
     ind2_new_tail = get_order_tail(order2[:crossover_point], order1)
@@ -419,7 +420,7 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     mate_positions = rand.sample(list(range(len(res1))), cxpoint)
 
     res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
-    return ind1, ind2
+    return ind1, ind2  # это не должно работать так как если mate_positions это массив, то advanced indexing вернет копию
 
 
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,

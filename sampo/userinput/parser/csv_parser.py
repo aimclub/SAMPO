@@ -1,3 +1,4 @@
+import math
 from itertools import chain
 from uuid import uuid4
 
@@ -69,8 +70,12 @@ class CSVParser:
 
         if not ('predecessor_ids' in graph_df.columns):
             # if we ought to restore predecessor info from history data
-            graph_df = set_connections_info(graph_df, history_df)
-            works_info = preprocess_graph_df(graph_df)
+            temp_lst = [math.nan] * graph_df.shape[0]
+            for col in ['predecessor_ids', 'connection_types', 'lags']:
+                graph_df[col] = temp_lst
+            # graph_df = set_connections_info(graph_df, history_df)
+            graph_df = preprocess_graph_df(graph_df)
+            works_info = set_connections_info(graph_df, history_df)
         else:
             graph_df = preprocess_graph_df(graph_df)
             if full_connections or change_base_on_history:

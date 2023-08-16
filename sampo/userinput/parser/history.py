@@ -251,32 +251,30 @@ def set_connections_info(graph_df: pd.DataFrame,
         else:
             pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], ['-1'], ['-1']
 
-        if 'predecessor_ids' in tasks_df.columns:
-            if str(task_id) in tasks_df.index:
-                if tasks_df.loc[str(task_id), 'predecessor_ids'] != ['-1']:
-                    if expert_connections_info:
-                        predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
-                        predecessors_types_lst.append(tasks_df.loc[str(task_id), 'connection_types'])
-                        predecessors_lags_lst.append(tasks_df.loc[str(task_id), 'lags'])
-                        predecessors_counts_lst.append(pred_counts_lst)
-                        continue
-                    if change_connections_info:
-                        predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
-                    else:
-                        predecessors_ids_lst.append(pred_ids_lst)
+        if str(task_id) in tasks_df.index:
+            if tasks_df.loc[str(task_id), 'predecessor_ids'] != ['-1']:
+                if expert_connections_info:
+                    predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
+                    predecessors_types_lst.append(tasks_df.loc[str(task_id), 'connection_types'])
+                    predecessors_lags_lst.append(tasks_df.loc[str(task_id), 'lags'])
+                    predecessors_counts_lst.append(pred_counts_lst)
+                    continue
+                if change_connections_info:
+                    predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
                 else:
                     predecessors_ids_lst.append(pred_ids_lst)
             else:
                 predecessors_ids_lst.append(pred_ids_lst)
         else:
             predecessors_ids_lst.append(pred_ids_lst)
+
         predecessors_types_lst.append(pred_types_lst)
         predecessors_lags_lst.append(pred_lags_lst)
         predecessors_counts_lst.append(pred_counts_lst)
         while len(predecessors_types_lst[-1]) != len(predecessors_ids_lst[-1]):
             predecessors_types_lst[-1].append('FS')
-            predecessors_lags_lst[-1].append(-1)
-            predecessors_counts_lst[-1].append(0)
+            predecessors_lags_lst[-1].append('-1')
+            predecessors_counts_lst[-1].append('0')
 
     # Convert strings to arrays
     tasks_df['predecessor_ids'] = predecessors_ids_lst

@@ -31,6 +31,7 @@ def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
                    selection_size: int,
+                   population_size: int,
                    mutate_order: float,
                    mutate_resources: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec]],
@@ -118,6 +119,7 @@ def create_toolbox(wg: WorkGraph,
                         mutate_order,
                         mutate_resources,
                         selection_size,
+                        population_size,
                         rand,
                         spec,
                         worker_pool_indices,
@@ -186,6 +188,7 @@ def build_schedule(wg: WorkGraph,
 
     toolbox, resources_border, contractors_capacity, resources_min_border = create_toolbox(wg, contractors, worker_pool,
                                                                                            selection_size,
+                                                                                           population_size,
                                                                                            mutate_order,
                                                                                            mutate_resources,
                                                                                            init_schedules,
@@ -259,6 +262,12 @@ def build_schedule(wg: WorkGraph,
                 # add to population
                 cur_generation.append(child1)
                 cur_generation.append(child2)
+
+            # offspring_fitness = fitness_f.evaluate(cur_generation)
+            # for fit in offspring_fitness:
+            #     if fit < best_fitness:
+            #         print('crossover')
+            #         break
 
             if worker_name2index:
                 # operations for RESOURCES
@@ -338,10 +347,13 @@ def build_schedule(wg: WorkGraph,
 
             # renewing population
             pop += offspring
-            pop = toolbox.select(pop, population_size)
-            hof.update(pop)
+            # pop = toolbox.select(pop, population_size)
+            pop = toolbox.select(pop)
+            hof.update([pop[0]])
 
             best_fitness = hof[0].fitness.values[0]
+            if best_fitness < prev_best_fitness:
+                print(hof[0].type)
 
             generation += 1
 
@@ -373,4 +385,4 @@ def build_schedule(wg: WorkGraph,
 
 
 def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
-    return (first[0] == second[0]).all() and (first[1] == second[1]).all()
+    return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()

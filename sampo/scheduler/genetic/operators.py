@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial
 from typing import Iterable, Callable
+from operator import attrgetter
 
 import numpy as np
 from deap import creator, base, tools
@@ -134,6 +135,7 @@ def init_toolbox(wg: WorkGraph,
                  mutate_order: float,
                  mutate_resources: float,
                  selection_size: int,
+                 population_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
                  worker_pool_indices: dict[int, dict[int, Worker]],
@@ -165,7 +167,8 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('mutate', mutate_scheduling_order, indpb=mutate_order, rand=rand)
     # selection. Some random individuals and arranges a battle between them as a result in a continuing genus,
     # this is the best among these it
-    toolbox.register('select', tools.selTournament, tournsize=selection_size)
+    # toolbox.register('select', tools.selTournament, tournsize=selection_size)
+    toolbox.register('select', select_new_population, pop_size=population_size)
 
     # mutation for resources
     toolbox.register('mutate_resources', mut_uniform_int, probability_mutate_resources=mutate_resources,
@@ -244,6 +247,11 @@ def generate_chromosome(wg: WorkGraph,
     return chromosome
 
 
+def select_new_population(population: list[ChromosomeType], pop_size: int) -> list[ChromosomeType]:
+    population.sort(key=attrgetter('fitness'), reverse=True)
+    return population[:pop_size]
+
+
 def is_chromosome_correct(chromosome: ChromosomeType,
                           node_indices: list[int],
                           parents: dict[int, list[int]]) -> bool:
@@ -305,6 +313,8 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     """
     child1 = Individual(copy_chromosome(ind1))
     child2 = Individual(copy_chromosome(ind2))
+    child1.type = 'mate'
+    child2.type = 'mate'
 
     order1 = child1[0]
     order2 = child2[0]
@@ -326,6 +336,7 @@ def mutate_scheduling_order(ind: ChromosomeType, indpb: float, rand: random.Rand
     order = ind[0]
     for i in range(1, len(order) - 2):
         if rand.random() < indpb:
+            ind.type = 'mutate'
             order[i], order[i + 1] = order[i + 1], order[i]
 
     return ind
@@ -351,12 +362,14 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
         # print('Contractor mutation!')
         for i in range(size):
             if rand.random() < probability_mutate_resources:
+                ind.type = 'mutate_uniform_int'
                 ind[1][i][type_of_worker] = rand.randint(0, contractor_count - 1)
         return ind
 
     # change in this interval in random number from interval
     for i, xl, xu in zip(range(size), low, up):
         if rand.random() < probability_mutate_resources:
+            ind.type = 'mutate_uniform_int'
             # borders
             contractor = ind[1][i][-1]
             border = ind[2][contractor][type_of_worker]
@@ -378,6 +391,7 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     num_contractors = len(ind[2])
     for contractor in range(num_contractors):
         if rand.random() < probability_mutate_contractors:
+            ind.type = 'mutate_resource_borders'
             ind[2][contractor][type_of_worker] -= rand.randint(resources_min_border[type_of_worker] + 1,
                                                                max(resources_min_border[type_of_worker] + 1,
                                                                    ind[2][contractor][type_of_worker] // 10))

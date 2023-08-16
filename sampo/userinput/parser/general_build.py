@@ -16,9 +16,62 @@ UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
 
 
+# def break_loops(works_info: pd.DataFrame) -> pd.DataFrame:
+#
+#     adj_list = {}
+#     for _, row in works_info.iterrows():
+#         adj_list[row['activity_id']] =
+#
+#     def dfs_in(visited: dict, node: str):
+#         path = []
+#         stack = [node]
+#         while len(stack) > 0:
+#             v = stack.pop(0)
+#             # path.append(v)
+#             if visited[v] == 0:
+#                 visited[v] = 1
+#                 for u in works_info[v]['predecessor_ids']:
+#                     if visited[u] == 0:
+#                         stack.append(u)
+#                     if visited[u] == 1:
+#                         index = works_info[v]['predecessor_ids'].index(path[-1])
+#                         min_count = works_info[v]['counts'][index]
+#                         from_vertex = path[-1]
+#                         to_vertex = v
+#                         for i in range(len(path) - 1, 0, -1):
+#                             if path[i] == v:
+#                                 index = works_info[to_vertex]['predecessor_ids'].index(from_vertex)
+#                                 for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
+#                                     works_info[to_vertex][col].pop(index)
+#                                 break
+#                             index = works_info[path[i]]['predecessor_ids'].index(path[i - 1])
+#                             if works_info[path[i]]['counts'][index] < min_count:
+#                                 min_count = works_info[path[i]]['counts'][index]
+#                                 from_vertex = path[i - 1]
+#                                 to_vertex = path[i]
+#
+#
+#             elif visited[v] == 1:
+#
+#                 continue
+#             else
+#
+#
+#     def dfs(visited: dict, node: str):
+#         if visited[node] == 0:
+#             visited[node] = 1
+#             for neighbour in works_info[node]['predecessor_ids']:
+#                 dfs(visited, neighbour)
+#             visited[node] = 2
+#         elif visited[node] == 1:
+#
+#     visited = {}
+#     for work_id, _ in works_info.iterrows():
+#         visited[work_id] = 0
+
 def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
     """
-    Syntax sugar
+    Temporary function
 
     :param works_info:
     :return:
@@ -30,6 +83,7 @@ def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
         predecessor_ids_copy = row['predecessor_ids'].copy()
         connection_types_copy = row['connection_types'].copy()
         lags_copy = row['lags'].copy()
+        counts_copy = row['counts'].copy()
         for pred_id in row['predecessor_ids']:
             if pred_id in tasks_ahead:
                 continue
@@ -37,12 +91,14 @@ def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
             predecessor_ids_copy.pop(index)
             connection_types_copy.pop(index)
             lags_copy.pop(index)
-        works_info.at[_, 'predecessor_ids'] = ','.join(map(str, predecessor_ids_copy))
-        works_info.at[_, 'connection_types'] = ','.join(map(str, connection_types_copy))
-        works_info.at[_, 'lags'] = ','.join(map(str, lags_copy))
+            counts_copy.pop(index)
+        works_info.at[_, 'predecessor_ids'] = list(predecessor_ids_copy)
+        works_info.at[_, 'connection_types'] = list(connection_types_copy)
+        works_info.at[_, 'lags'] = list(lags_copy)
+        works_info.at[_, 'counts'] = list(counts_copy)
         tasks_ahead.append(str(_))
 
-    return works_info
+    return works_info.drop(columns=['counts'])
 
 
 def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:

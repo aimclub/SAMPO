@@ -161,7 +161,7 @@ class DefaultInputPipeline(InputPipeline):
                     schedule = schedule2
 
             case _:
-                wg = graph_restructuring(self._wg, self._lag_optimize.value)
+                wg = graph_restructuring(self._wg, self._lag_optimize)
                 schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
                                                                            self._landscape_config,
                                                                            self._spec,

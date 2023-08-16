@@ -131,6 +131,8 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                 fs12, fs21, ss12, ss21 = 0, 0, 0, 0
                 ss12_lags, ss12_percent_lags, ss21_lags, ss21_percent_lags = [], [], [], []
 
+                count = 0
+
                 ffs12, ffs21 = 0, 0
                 ffs12_lags, ffs12_percent_lags, ffs21_lags, ffs21_percent_lags = [], [], [], []
 
@@ -155,6 +157,8 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                                 tasks_fs12, tasks_fs21, tasks_ss12, tasks_ss12_lags, tasks_ss12_percent_lags, tasks_ss21, tasks_ss21_lags, \
                                     tasks_ss21_percent_lags, tasks_ffs12, tasks_ffs12_lags, tasks_ffs12_percent_lags, tasks_ffs21, tasks_ffs21_lags, tasks_ffs21_percent_lags = gather_links_types_statistics(
                                     s1, f1, s2, f2)
+
+                                count += 1
 
                                 fs12 += tasks_fs12
                                 fs21 += tasks_fs21
@@ -189,30 +193,34 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                     if fs > ss:
                         if ffs > 0:
                             if order_con == 1:
-                                predecessors_info_dict[w2_id].append((w1_id, 'FFS',
-                                                                      find_min_without_outliers(ffs12_percent_lags)))
+                                predecessors_info_dict[w2_id].append([w1_id, 'FFS',
+                                                                      find_min_without_outliers(ffs12_percent_lags),
+                                                                      count])
                             else:
-                                predecessors_info_dict[w1_id].append((w2_id, 'FFS',
-                                                                      find_min_without_outliers(ffs21_percent_lags)))
+                                predecessors_info_dict[w1_id].append([w2_id, 'FFS',
+                                                                      find_min_without_outliers(ffs21_percent_lags),
+                                                                      count])
                         else:
                             if order_con == 1:
-                                predecessors_info_dict[w2_id].append((w1_id, 'FS', -1))
+                                predecessors_info_dict[w2_id].append([w1_id, 'FS', -1, count])
                             else:
-                                predecessors_info_dict[w1_id].append((w2_id, 'FS', -1))
+                                predecessors_info_dict[w1_id].append([w2_id, 'FS', -1, count])
                     elif ss > ffs:
                         if order_con == 1:
-                            predecessors_info_dict[w2_id].append((w1_id, 'SS',
-                                                                  find_min_without_outliers(ss12_percent_lags)))
+                                predecessors_info_dict[w2_id].append([w1_id, 'SS',
+                                                                      find_min_without_outliers(ss12_percent_lags),
+                                                                      count])
                         else:
-                            predecessors_info_dict[w1_id].append((w2_id, 'SS',
-                                                                  find_min_without_outliers(ss21_percent_lags)))
+                            predecessors_info_dict[w1_id].append([w2_id, 'SS',
+                                                                  find_min_without_outliers(ss21_percent_lags), count])
                     else:
                         if order_con == 1:
-                            predecessors_info_dict[w2_id].append((w1_id, 'FFS',
-                                                                  find_min_without_outliers(ffs12_percent_lags)))
+                                predecessors_info_dict[w2_id].append([w1_id, 'FFS',
+                                                                      find_min_without_outliers(ffs12_percent_lags),
+                                                                      count])
                         else:
-                            predecessors_info_dict[w1_id].append((w2_id, 'FFS',
-                                                                  find_min_without_outliers(ffs21_percent_lags)))
+                            predecessors_info_dict[w1_id].append([w2_id, 'FFS',
+                                                                  find_min_without_outliers(ffs21_percent_lags), count])
 
     return predecessors_info_dict
 
@@ -233,49 +241,47 @@ def set_connections_info(graph_df: pd.DataFrame,
     """
     tasks_df = graph_df.copy().set_index('activity_id', drop=False)
     # connections_dict = get_all_seq_statistic(history_data, graph_df, use_model_name, mapper)
-    connections_dict = {25809398: [], 25809830: [], 25809831: [(25809830, 'FFS', 0.01)], 25809833: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809834, 'FS', -1)], 25813507: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01)], 25809836: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809835, 'FS', -1), (25809856, 'FS', -1)], 25809832: [(25809831, 'FFS', 0.17), (25809847, 'FS', -1), (25809852, 'FS', -1), (25809848, 'FS', -1), (25809854, 'FS', -1)], 25809837: [(25809831, 'FS', -1), (25809836, 'SS', 0.75), (25809835, 'FS', -1), (25809841, 'FS', -1), (25809847, 'FS', -1), (25809848, 'FS', -1)], 25809838: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.08), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01)], 25809839: [(25809830, 'FS', -1), (25809831, 'FS', -1), (25809833, 'FFS', 0.33), (25813507, 'FFS', 0.9), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809834, 'FS', -1), (25809847, 'FFS', 0.5), (25809848, 'FFS', 0.5)], 25809834: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809836, 'FS', -1), (25809837, 'FS', -1), (25809838, 'FFS', 0.5), (25809840, 'FFS', 0.75), (25809841, 'FFS', 0.14), (25809847, 'FS', -1), (25809848, 'FS', -1), (25809856, 'SS', 0.5)], 25809835: [(25809831, 'FFS', 0.01), (25809833, 'SS', 0.25), (25809838, 'SS', 0.5), (25809834, 'FFS', 0.01), (25809841, 'FS', -1), (25809847, 'SS', 0.44), (25809852, 'FS', -1), (25809848, 'SS', 0.44), (25809854, 'FS', -1)], 25809842: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809840, 'SS', 0.79), (25809841, 'FS', -1)], 25809843: [(25809832, 'FFS', 0.01), (25809841, 'FS', -1)], 25809844: [(25809843, 'SS', 0.03), (25809841, 'FS', -1)], 25809840: [(25809830, 'FS', -1), (25809831, 'FFS', 0.01), (25809833, 'FS', -1), (25813507, 'FS', -1), (25809836, 'FFS', 0.17), (25809838, 'FS', -1), (25809835, 'FFS', 0.01), (25809841, 'FS', -1), (25809847, 'FS', -1), (25809850, 'FFS', 0.12), (25809848, 'FS', -1), (25809853, 'FFS', 0.12)], 25809841: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809832, 'SS', 0.32), (25809838, 'FFS', 0.01), (25809839, 'FFS', 0.01), (25809847, 'FFS', 0.2), (25809850, 'FS', -1), (25809852, 'FS', -1), (25809848, 'FFS', 0.2), (25809853, 'FS', -1), (25809854, 'FS', -1)], 25809399: [], 25809400: [], 25809847: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809850, 'FFS', 0.03), (25809853, 'FFS', 0.03)], 25809850: [(25809831, 'FS', -1), (25809833, 'FS', -1), (25809836, 'FFS', 0.67), (25809838, 'FFS', 0.03), (25809856, 'FS', -1)], 25809852: [(25809831, 'FFS', 0.68), (25809836, 'FFS', 0.46), (25809838, 'SS', 0.01), (25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809857, 'FS', -1), (25809855, 'FFS', 0.15)], 25809848: [(25809830, 'FFS', 0.01), (25809831, 'FFS', 0.01), (25809833, 'FFS', 0.01), (25813507, 'FFS', 0.01), (25809836, 'FFS', 0.01), (25809838, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809852, 'FFS', 0.01), (25809853, 'FFS', 0.03)], 25809853: [(25809831, 'FS', -1), (25809833, 'FS', -1), (25809836, 'FFS', 0.67), (25809838, 'FFS', 0.03), (25809852, 'FFS', 0.01), (25809856, 'FS', -1)], 25809854: [(25809831, 'FFS', 0.68), (25809836, 'FFS', 0.46), (25809838, 'SS', 0.01), (25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809848, 'FFS', 0.01), (25809853, 'FFS', 0.01), (25809857, 'FS', -1), (25809855, 'FFS', 0.15)], 25809856: [(25809830, 'FFS', 0.47), (25809831, 'FFS', 0.01), (25809833, 'FS', -1), (25813507, 'FFS', 0.91), (25809838, 'FFS', 0.01), (25809835, 'FS', -1), (25809841, 'FS', -1), (25809847, 'FFS', 0.36), (25809848, 'FFS', 0.36)], 25809401: [], 25809857: [(25809847, 'FS', -1), (25809850, 'FS', -1), (25809848, 'FS', -1), (25809853, 'FS', -1), (25809855, 'FS', -1)], 25809855: [(25809847, 'FFS', 0.01), (25809850, 'FFS', 0.01), (25809848, 'FFS', 0.01), (25809853, 'FFS', 0.01)], 25809858: [(25809836, 'FS', -1), (25809838, 'FS', -1), (25809839, 'FFS', 0.01), (25809841, 'SS', 0.36), (25809847, 'FS', -1), (25809850, 'FFS', 0.93), (25809852, 'FS', -1), (25809848, 'FS', -1), (25809853, 'FFS', 0.93), (25809854, 'FS', -1), (25809856, 'SS', 0.64), (25809857, 'FS', -1)]}
+    connections_dict = {'25809398': [], '25809830': [], '25809831': [['25809830', 'FFS', 0.01, 185], ['25809856', 'FS', -1, 3]], '25809833': [['25809830', 'FFS', 0.01, 276], ['25809831', 'FFS', 0.01, 1646]], '25813507': [['25809830', 'FFS', 0.01, 60], ['25809831', 'FFS', 0.01, 131], ['25809833', 'FFS', 0.01, 423]], '25809836': [['25809830', 'FFS', 0.01, 113], ['25809831', 'FFS', 0.01, 907], ['25809833', 'FFS', 0.01, 1310], ['25813507', 'FFS', 0.01, 278]], '25809832': [['25809830', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.01, 5], ['25809839', 'SS', 0.05, 6], ['25809852', 'FS', -1, 2], ['25809854', 'FS', -1, 2]], '25809837': [['25809831', 'FS', -1, 2], ['25809836', 'SS', 0.75, 2], ['25809835', 'FS', -1, 2]], '25809838': [['25809830', 'FS', -1, 3], ['25809831', 'FFS', 0.01, 259], ['25809833', 'FFS', 0.01, 379], ['25813507', 'FFS', 0.01, 111], ['25809836', 'FFS', 0.01, 500]], '25809839': [['25809830', 'FFS', 0.52, 25], ['25809831', 'FFS', 0.01, 345], ['25809833', 'FFS', 0.01, 419], ['25813507', 'FFS', 0.33, 61], ['25809836', 'FFS', 0.01, 497], ['25809838', 'FFS', 0.01, 372], ['25809835', 'FS', -1, 2], ['25809847', 'FFS', 0.27, 10], ['25809850', 'FS', -1, 1], ['25809852', 'FFS', 0.05, 97], ['25809848', 'FFS', 0.27, 10], ['25809853', 'FS', -1, 1], ['25809854', 'FFS', 0.05, 97]], '25809834': [['25809830', 'FS', -1, 5], ['25809831', 'FS', -1, 6], ['25809833', 'FS', -1, 7], ['25809836', 'FFS', 0.38, 13], ['25809838', 'FFS', 0.5, 8], ['25809839', 'SS', 0.68, 4], ['25809835', 'FS', -1, 18], ['25809840', 'FS', -1, 18], ['25809841', 'FFS', 0.86, 12]], '25809835': [['25809831', 'FFS', 0.04, 6], ['25809833', 'FFS', 0.04, 6], ['25809836', 'SS', 0.19, 8], ['25809838', 'SS', 0.5, 5], ['25809841', 'SS', 0.76, 1], ['25809852', 'FS', -1, 2], ['25809854', 'FS', -1, 2]], '25809842': [['25809830', 'FFS', 0.01, 6], ['25809831', 'FFS', 0.01, 2], ['25809833', 'FFS', 0.01, 8], ['25813507', 'FFS', 0.25, 1], ['25809836', 'FFS', 0.01, 9], ['25809832', 'FFS', 0.01, 1], ['25809839', 'FFS', 0.01, 2], ['25809840', 'SS', 0.79, 1], ['25809841', 'FS', -1, 11]], '25809843': [['25809832', 'FFS', 0.01, 23], ['25809839', 'FS', -1, 1], ['25809842', 'FFS', 0.06, 1], ['25809841', 'FS', -1, 4]], '25809844': [['25809832', 'FFS', 0.01, 4], ['25809843', 'SS', 0.03, 4], ['25809841', 'FS', -1, 2]], '25809840': [['25809830', 'FS', -1, 2], ['25809831', 'FFS', 0.01, 40], ['25809833', 'FFS', 0.01, 43], ['25809836', 'FFS', 0.17, 45], ['25809838', 'FS', -1, 8], ['25809839', 'FS', -1, 13], ['25809835', 'FFS', 0.01, 24], ['25809841', 'FS', -1, 19], ['25809847', 'FS', -1, 7], ['25809850', 'FFS', 0.12, 1], ['25809848', 'FS', -1, 7], ['25809853', 'FFS', 0.12, 1]], '25809841': [['25809830', 'FFS', 0.01, 202], ['25809831', 'FFS', 0.01, 334], ['25809833', 'FFS', 0.01, 446], ['25813507', 'FFS', 0.01, 105], ['25809836', 'FFS', 0.01, 358], ['25809832', 'SS', 0.32, 7], ['25809838', 'FFS', 0.01, 103], ['25809839', 'FFS', 0.01, 190], ['25809847', 'FS', -1, 17], ['25809850', 'FS', -1, 2], ['25809852', 'FS', -1, 2], ['25809848', 'FS', -1, 17], ['25809853', 'FS', -1, 2], ['25809854', 'FS', -1, 2], ['25809856', 'FS', -1, 1]], '25809399': [], '25809400': [], '25809847': [['25809830', 'FS', -1, 1], ['25809831', 'FFS', 0.01, 81], ['25809833', 'FFS', 0.01, 85], ['25809836', 'FFS', 0.01, 133], ['25809838', 'FFS', 0.01, 54], ['25809834', 'FS', -1, 2], ['25809850', 'FFS', 0.03, 68], ['25809853', 'FFS', 0.03, 68], ['25809856', 'FS', -1, 2]], '25809850': [['25809831', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.67, 8], ['25809838', 'FFS', 0.03, 44], ['25809856', 'FS', -1, 3]], '25809852': [['25809831', 'FFS', 0.68, 3], ['25809833', 'FFS', 0.68, 3], ['25809836', 'FFS', 0.46, 6], ['25809838', 'SS', 0.01, 2], ['25809847', 'FFS', 0.01, 9], ['25809850', 'FFS', 0.01, 265], ['25809857', 'FS', -1, 1], ['25809855', 'FFS', 0.16, 20]], '25809848': [['25809830', 'FS', -1, 1], ['25809831', 'FFS', 0.01, 81], ['25809833', 'FFS', 0.01, 85], ['25809836', 'FFS', 0.01, 133], ['25809838', 'FFS', 0.01, 54], ['25809834', 'FS', -1, 2], ['25809850', 'FFS', 0.01, 68], ['25809852', 'FFS', 0.01, 9], ['25809853', 'FFS', 0.03, 68], ['25809856', 'FS', -1, 2]], '25809853': [['25809831', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.67, 8], ['25809838', 'FFS', 0.03, 44], ['25809852', 'FFS', 0.01, 265], ['25809856', 'FS', -1, 3]], '25809854': [['25809831', 'FFS', 0.68, 3], ['25809833', 'FFS', 0.68, 3], ['25809836', 'FFS', 0.46, 6], ['25809838', 'SS', 0.01, 2], ['25809847', 'FFS', 0.01, 9], ['25809850', 'FFS', 0.01, 265], ['25809848', 'FFS', 0.01, 9], ['25809853', 'FFS', 0.01, 265], ['25809857', 'FS', -1, 1], ['25809855', 'FFS', 0.16, 20]], '25809856': [['25809833', 'FS', -1, 43], ['25813507', 'FFS', 0.91, 33], ['25809836', 'FFS', 0.47, 41], ['25809838', 'FFS', 0.01, 7], ['25809839', 'FFS', 0.01, 12], ['25809835', 'FS', -1, 1]], '25809401': [], '25809857': [['25809855', 'FS', -1, 1]], '25809858': [['25809833', 'FS', -1, 1], ['25809836', 'FS', -1, 1], ['25809838', 'FS', -1, 1], ['25809839', 'FFS', 0.01, 56], ['25809841', 'SS', 0.36, 4], ['25809847', 'FFS', 0.01, 17], ['25809850', 'FFS', 0.93, 91], ['25809852', 'FS', -1, 89], ['25809848', 'FFS', 0.01, 17], ['25809853', 'FFS', 0.93, 91], ['25809854', 'FS', -1, 89], ['25809856', 'SS', 0.64, 1], ['25809857', 'FS', -1, 1]], '25809855': [['25809850', 'FFS', 0.12, 4], ['25809853', 'FFS', 0.12, 4]]}
 
-    predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst = [], [], []
+    predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst, predecessors_counts_lst = [], [], [], []
 
     for task_id, pred_info_lst in connections_dict.items():
-        pred_ids_lst, pred_types_lst, pred_lags_lst = [], [], []
-
         if len(pred_info_lst) > 0:
-            pred_ids_lst, pred_types_lst, pred_lags_lst = zip(*pred_info_lst)
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
+        else:
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], ['-1'], ['-1']
 
-        if 'predecessor_ids' in graph_df.columns:
+        if 'predecessor_ids' in tasks_df.columns:
             if str(task_id) in tasks_df.index:
                 if tasks_df.loc[str(task_id), 'predecessor_ids'] != ['-1']:
                     if expert_connections_info:
-                        predecessors_ids_lst.append(graph_df.loc[str(task_id), 'predecessor_ids'])
-                        predecessors_types_lst.append(graph_df.loc[str(task_id), 'connection_types'])
-                        predecessors_lags_lst.append(graph_df.loc[str(task_id), 'lags'])
+                        predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
+                        predecessors_types_lst.append(tasks_df.loc[str(task_id), 'connection_types'])
+                        predecessors_lags_lst.append(tasks_df.loc[str(task_id), 'lags'])
+                        predecessors_counts_lst.append(pred_counts_lst)
                         continue
                     if change_connections_info:
-                        predecessors_ids_lst.append(graph_df.loc[str(task_id), 'predecessor_ids'])
-                        # predecessors_ids_lst.append(','.join(map(str, graph_df.loc[task_id, 'predecessor_ids'])))
+                        predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
                     else:
                         predecessors_ids_lst.append(pred_ids_lst)
-                        # predecessors_ids_lst.append(','.join(map(str, pred_ids_lst)))
                 else:
                     predecessors_ids_lst.append(pred_ids_lst)
-                    # predecessors_ids_lst.append(','.join(map(str, pred_ids_lst)))
             else:
                 predecessors_ids_lst.append(pred_ids_lst)
-                # predecessors_ids_lst.append(','.join(map(str, pred_ids_lst)))
         else:
             predecessors_ids_lst.append(pred_ids_lst)
-            # predecessors_ids_lst.append(','.join(map(str, pred_ids_lst)))
         predecessors_types_lst.append(pred_types_lst)
-        # predecessors_types_lst.append(','.join(map(str, pred_types_lst)))
         predecessors_lags_lst.append(pred_lags_lst)
-        # predecessors_lags_lst.append(','.join(map(str, pred_lags_lst)))
+        predecessors_counts_lst.append(pred_counts_lst)
+        while len(predecessors_types_lst[-1]) != len(predecessors_ids_lst[-1]):
+            predecessors_types_lst[-1].append('FS')
+            predecessors_lags_lst[-1].append(-1)
+            predecessors_counts_lst[-1].append(0)
 
     # Convert strings to arrays
     tasks_df['predecessor_ids'] = predecessors_ids_lst
     tasks_df['connection_types'] = predecessors_types_lst
     tasks_df['lags'] = predecessors_lags_lst
-
-
+    tasks_df['counts'] = predecessors_counts_lst
 
     return tasks_df

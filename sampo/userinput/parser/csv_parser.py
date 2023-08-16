@@ -48,6 +48,8 @@ class CSVParser:
         ATTENTION!
             1) If you send WorkGraph .csv file without data about connections between tasks, you need to provide .csv
             history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
+            2) If you send WorkGraph .csv file with column 'predecessor_ids', 'lags' etc. and there is no info in these
+            columns, so framework repair the info from history data
 
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file

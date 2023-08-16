@@ -273,25 +273,25 @@ def build_schedule(wg: WorkGraph,
                 # crossover
                 # take 2 individuals as input 1 modified individuals
 
-                workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
-
-                for ind1, ind2 in zip(pop[:len(pop) // 2], pop[len(pop) // 2:]):
-                    for ind_worker in workers:
-                        # mate resources
-                        if rand.random() < cxpb_res:
-                            child1, child2 = toolbox.mate_resources(ind1, ind2, ind_worker)
-                            # add to population
-                            cur_generation.append(child1)
-                            cur_generation.append(child2)
-
-                        # mate resource borders
-                        if rand.random() < cxpb_res:
-                            if ind_worker == len(worker_name2index):
-                                continue
-                            child1, child2 = toolbox.mate_resource_borders(ind1, ind2, ind_worker)
-                            # add to population
-                            cur_generation.append(child1)
-                            cur_generation.append(child2)
+                # workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
+                #
+                # for ind1, ind2 in zip(pop[:len(pop) // 2], pop[len(pop) // 2:]):
+                #     for ind_worker in workers:
+                #         # mate resources
+                #         if rand.random() < cxpb_res:
+                #             child1, child2 = toolbox.mate_resources(ind1, ind2, ind_worker)
+                #             # add to population
+                #             cur_generation.append(child1)
+                #             cur_generation.append(child2)
+                #
+                #         # mate resource borders
+                #         if rand.random() < cxpb_res:
+                #             if ind_worker == len(worker_name2index):
+                #                 continue
+                #             child1, child2 = toolbox.mate_resource_borders(ind1, ind2, ind_worker)
+                #             # add to population
+                #             cur_generation.append(child1)
+                #             cur_generation.append(child2)
 
                 # workers type for changing(+1 means contractor 'resource')
                 workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
@@ -318,8 +318,7 @@ def build_schedule(wg: WorkGraph,
             # mutation
             # take 1 individuals as input and return 1 individuals as output
             for mutant in cur_generation:
-                if rand.random() < mutpb:
-                    toolbox.mutate(mutant[0])
+                toolbox.mutate(mutant)
 
             evaluation_start = time.time()
 
@@ -327,8 +326,8 @@ def build_schedule(wg: WorkGraph,
             offspring = [ind for ind in cur_generation if toolbox.validate(ind)]
             print(f'Len offspring: {len(offspring)}')
 
-            invalid_fit = fitness_f.evaluate([ind for ind in offspring])
-            for fit, ind in zip(invalid_fit, offspring):
+            offspring_fitness = fitness_f.evaluate(offspring)
+            for fit, ind in zip(offspring_fitness, offspring):
                 ind.fitness.values = [fit]
             evaluation_time += time.time() - evaluation_start
 
@@ -374,4 +373,4 @@ def build_schedule(wg: WorkGraph,
 
 
 def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
-    return (first[0][0] == second[0][0]).all() and (first[0][1] == second[0][1]).all()
+    return (first[0] == second[0]).all() and (first[1] == second[1]).all()

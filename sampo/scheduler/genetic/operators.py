@@ -161,7 +161,8 @@ def init_toolbox(wg: WorkGraph,
     # crossover for order
     toolbox.register('mate', mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
-    toolbox.register('mutate', tools.mutShuffleIndexes, indpb=mutate_order)
+    # toolbox.register('mutate', tools.mutShuffleIndexes, indpb=mutate_order)
+    toolbox.register('mutate', mutate_scheduling_order, indpb=mutate_order, rand=rand)
     # selection. Some random individuals and arranges a battle between them as a result in a continuing genus,
     # this is the best among these it
     toolbox.register('select', tools.selTournament, tournsize=selection_size)
@@ -319,6 +320,15 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     order2[crossover_point:] = ind2_new_tail
 
     return child1, child2
+
+
+def mutate_scheduling_order(ind: ChromosomeType, indpb: float, rand: random.Random) -> ChromosomeType:
+    order = ind[0]
+    for i in range(1, len(order) - 2):
+        if rand.random() < indpb:
+            order[i], order[i + 1] = order[i + 1], order[i]
+
+    return ind
 
 
 def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_of_worker: int,

@@ -223,8 +223,6 @@ def generate_population(n: int,
         return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec)
 
-    # chromosome types' weights
-    # these numbers are the probability weights: prob = norm(weights), sum(prob) = 1
     count_for_specified_types = (n // 3) // len(init_chromosomes)
     count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
     count_for_topological = n - count_for_specified_types * len(init_chromosomes)
@@ -237,6 +235,8 @@ def generate_population(n: int,
                    if generated_type != 'topological' else Individual(randomized_init())
                    for generated_type in chromosome_types]
 
+    for ind in chromosomes:
+        ind.type = ''
     return chromosomes
 
 
@@ -378,7 +378,7 @@ def mutate_scheduling_order(ind: ChromosomeType, indpb: float, rand: random.Rand
     order = ind[0]
     for i in range(1, len(order) - 2):
         if rand.random() < indpb:
-            ind.type = 'mutate'
+            # ind.type = 'mutate'
             order[i], order[i + 1] = order[i + 1], order[i]
 
     return ind
@@ -394,8 +394,6 @@ def mut_uniform_int(ind: ChromosomeType, low: np.ndarray, up: np.ndarray, type_o
     :param up: upper bound specified by `WorkUnit`
     :return: mutate individual
     """
-    # ind = copy_chromosome(ind)
-
     # select random number from interval from min to max from uniform distribution
     size = len(ind[1])
     workers_count = len(ind[1][0])
@@ -427,8 +425,6 @@ def mutate_resource_borders(ind: ChromosomeType, contractors_capacity: np.ndarra
     """
     Mutation for contractors' resource borders.
     """
-    # ind = copy_chromosome(ind)
-
     num_resources = len(resources_min_border)
     num_contractors = len(ind[2])
     for contractor in range(num_contractors):
@@ -460,18 +456,20 @@ def mate_for_resources(ind1: ChromosomeType, ind2: ChromosomeType, mate_position
     :param rand: the rand object used for exchange point selection
     :return: first and second individual
     """
-    ind1 = Individual(copy_chromosome(ind1))
-    ind2 = Individual(copy_chromosome(ind2))
+    child1 = Individual(copy_chromosome(ind1))
+    child2 = Individual(copy_chromosome(ind2))
+    child1.type = 'mate_for_resources'
+    child2.type = 'mate_for_resources'
 
     # exchange work resources
-    res1 = ind1[1][:, mate_positions]
-    res2 = ind2[1][:, mate_positions]
+    res1 = child1[1][:, mate_positions]
+    res2 = child2[1][:, mate_positions]
     cxpoint = rand.randint(1, len(res1))
 
-    mate_positions = rand.sample(list(range(len(res1))), cxpoint)
+    mate_positions = rand.sample(range(len(res1)), cxpoint)
 
     res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
-    return ind1, ind2  # это не должно работать так как если mate_positions это массив, то advanced indexing вернет копию
+    return child1, child2  # это не должно работать так как если mate_positions это массив, то advanced indexing вернет копию
 
 
 def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
@@ -479,23 +477,23 @@ def mate_for_resource_borders(ind1: ChromosomeType, ind2: ChromosomeType,
     """
     Crossover for contractors' resource borders.
     """
-    # ind1 = copy_chromosome(ind1)
-    # ind2 = copy_chromosome(ind2)
+    child1 = Individual(copy_chromosome(ind1))
+    child2 = Individual(copy_chromosome(ind2))
+    child1.type = 'mate_for_resource_borders'
+    child2.type = 'mate_for_resource_borders'
 
     num_contractors = len(ind1[2])
-    contractors_to_mate = rand.sample(list(range(num_contractors)), rand.randint(1, num_contractors))
+    contractors_to_mate = rand.sample(range(num_contractors), rand.randint(1, num_contractors))
+    border1 = child1[2][contractors_to_mate]
+    border2 = child2[2][contractors_to_mate]
 
     if rand.randint(0, 2) == 0:
         # trying to mate whole contractors
-        border1 = ind1[2][contractors_to_mate]
-        border2 = ind2[2][contractors_to_mate]
         border1[:], border2[:] = border2[:], border1[:]
     else:
         # trying to mate part of selected contractors
-        border1 = ind1[2][contractors_to_mate]
-        border2 = ind2[2][contractors_to_mate]
         for c_border1, c_border2 in zip(border1, border2):
             # mate_positions = rand.sample(list(range(len(c_border1))), rand.randint(1, len(c_border1)))
             c_border1[mate_positions], c_border2[mate_positions] = c_border2[mate_positions], c_border1[mate_positions]
 
-    return ind1, ind2
+    return child1, child2

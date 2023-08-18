@@ -12,7 +12,7 @@ from numpy import ndarray
 from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, copy_chromosome, \
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, \
     FitnessFunction, TimeFitness, is_chromosome_correct
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline

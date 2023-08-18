@@ -49,7 +49,6 @@ def create_toolbox(wg: WorkGraph,
                    work_estimator: WorkTimeEstimator = None,
                    landscape: LandscapeConfiguration = LandscapeConfiguration()) \
         -> tuple[Toolbox, np.ndarray]:
-
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
@@ -133,13 +132,13 @@ def setup_toolbox(setup_default_schedules) -> tuple:
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     return (create_toolbox(setup_wg,
-                          setup_contractors,
-                          setup_worker_pool,
-                          size_of_population,
-                          mutate_order,
-                          mutate_resources,
-                          setup_default_schedules,
-                          rand,
-                          work_estimator=work_estimator,
-                          landscape=setup_landscape_many_holders), \
+                           setup_contractors,
+                           setup_worker_pool,
+                           size_of_population,
+                           mutate_order,
+                           mutate_resources,
+                           setup_default_schedules,
+                           rand,
+                           work_estimator=work_estimator,
+                           landscape=setup_landscape_many_holders),
             setup_wg, setup_contractors, setup_default_schedules, setup_landscape_many_holders)

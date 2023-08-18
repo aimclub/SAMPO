@@ -33,7 +33,6 @@ class GeneticScheduler(Scheduler):
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
-                 size_selection: Optional[int or None] = None,
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
                  size_of_population: Optional[float or None] = None,
@@ -48,7 +47,6 @@ class GeneticScheduler(Scheduler):
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
-        self.size_selection = size_selection
         self.mutate_order = mutate_order
         self.mutate_resources = mutate_resources
         self.size_of_population = size_of_population
@@ -75,13 +73,6 @@ class GeneticScheduler(Scheduler):
         :param works_count:
         :return:
         """
-        size_selection = self.size_selection
-        if size_selection is None:
-            if works_count < 300:
-                size_selection = 20
-            else:
-                size_selection = works_count // 15
-
         mutate_order = self.mutate_order
         if mutate_order is None:
             if works_count < 300:
@@ -104,7 +95,7 @@ class GeneticScheduler(Scheduler):
                 size_of_population = 50
             else:
                 size_of_population = works_count // 50
-        return size_selection, mutate_order, mutate_resources, size_of_population
+        return mutate_order, mutate_resources, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
         """
@@ -200,7 +191,7 @@ class GeneticScheduler(Scheduler):
         """
         init_schedules = self.generate_first_population(wg, contractors, landscape)
 
-        size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
+        mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
@@ -208,7 +199,6 @@ class GeneticScheduler(Scheduler):
                                                                                      worker_pool,
                                                                                      size_of_population,
                                                                                      self.number_of_generation,
-                                                                                     size_selection,
                                                                                      mutate_order,
                                                                                      mutate_resources,
                                                                                      init_schedules,

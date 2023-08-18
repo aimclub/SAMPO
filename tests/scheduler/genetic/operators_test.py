@@ -18,7 +18,7 @@ def test_mutate_order(setup_toolbox):
 
     for i in range(TEST_ITERATIONS):
         individual = tb.generate_chromosome()
-        mutant = tb.mutate(individual[0])
+        mutant = tb.mutate(individual)
         order = mutant[0]
 
         # check there are no duplications
@@ -43,14 +43,14 @@ def test_mutate_resources(setup_toolbox):
 
 def test_mate_order(setup_toolbox, setup_wg):
     (tb, resources_border), _, _, _, _ = setup_toolbox
-    _, _, _, population_size = get_params(setup_wg.vertex_count)
+    _, _, population_size = get_params(setup_wg.vertex_count)
 
     population = tb.population(n=population_size)
 
     for i in range(TEST_ITERATIONS):
-        individual1, individual2 = tb.select(population, 2)
+        individual1, individual2 = population[:2]
 
-        individual1, individual2 = tb.mate(individual1[0], individual2[0])
+        individual1, individual2 = tb.mate(individual1, individual2)
         order1 = individual1[0]
         order2 = individual2[0]
 
@@ -61,16 +61,16 @@ def test_mate_order(setup_toolbox, setup_wg):
 
 def test_mate_resources(setup_toolbox, setup_wg):
     (tb, resources_border), _, _, _, _ = setup_toolbox
-    _, _, _, population_size = get_params(setup_wg.vertex_count)
+    _, _, population_size = get_params(setup_wg.vertex_count)
 
     population = tb.population(n=population_size)
     rand = Random()
 
     for i in range(TEST_ITERATIONS):
-        individual1, individual2 = tb.select(population, 2)
+        individual1, individual2 = population[:2]
 
         worker = rand.sample(list(range(len(resources_border) + 1)), 1)[0]
-        individual1, individual2 = tb.mate_resources(individual1[0], individual2[0], worker)
+        individual1, individual2 = tb.mate_resources(individual1, individual2, worker)
 
         # check there are correct resources at mate positions
         assert (resources_border[0][worker] <= individual1[1][:, worker]).all() and \

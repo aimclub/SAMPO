@@ -7,7 +7,6 @@ from operator import attrgetter
 
 import numpy as np
 from deap import creator, base, tools
-from deap.tools import initRepeat
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
@@ -134,7 +133,6 @@ def init_toolbox(wg: WorkGraph,
                  init_chromosomes: dict[str, ChromosomeType],
                  mutate_order: float,
                  mutate_resources: float,
-                 selection_size: int,
                  population_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
@@ -159,7 +157,11 @@ def init_toolbox(wg: WorkGraph,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create population from individuals
-    toolbox.register('population', tools.initRepeat, list, lambda: Individual(toolbox.generate_chromosome()))
+    # toolbox.register('population', tools.initRepeat, list, lambda: toolbox.generate_chromosome())
+    toolbox.register('population', generate_population, wg=wg, contractors=contractors,
+                     work_id2index=work_id2index, worker_name2index=worker_name2index,
+                     contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
+                     init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
     # crossover for order
     toolbox.register('mate', mate_scheduling_order, rand=rand)
     # mutation for order. Coefficient luke one or two mutation in individual
@@ -198,6 +200,46 @@ def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
     return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), deepcopy(chromosome[3])
 
 
+def generate_population(n: int,
+                        wg: WorkGraph,
+                        contractors: list[Contractor],
+                        work_id2index: dict[str, int],
+                        worker_name2index: dict[str, int],
+                        contractor2index: dict[str, int],
+                        contractor_borders: np.ndarray,
+                        init_chromosomes: dict[str, ChromosomeType],
+                        spec: ScheduleSpec,
+                        rand: random.Random,
+                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
+    """
+    Generates population using chromosome weights.
+    Do not use `generate_chromosome` function.
+    """
+    def randomized_init() -> ChromosomeType:
+        schedule = RandomizedTopologicalScheduler(work_estimator,
+                                                  int(rand.random() * 1000000)) \
+            .schedule(wg, contractors, landscape=landscape)
+        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                              contractor2index, contractor_borders, schedule, spec)
+
+    # chromosome types' weights
+    # these numbers are the probability weights: prob = norm(weights), sum(prob) = 1
+    count_for_specified_types = (n // 3) // len(init_chromosomes)
+    count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
+    count_for_topological = n - count_for_specified_types * len(init_chromosomes)
+    count_for_topological = count_for_topological if count_for_topological > 0 else 1
+    counts = [count_for_specified_types for _ in range(len(init_chromosomes))] + [count_for_topological]
+
+    chromosome_types = rand.sample(list(init_chromosomes.keys()) + ['topological'], k=n, counts=counts)
+
+    chromosomes = [Individual(init_chromosomes[generated_type])
+                   if generated_type != 'topological' else Individual(randomized_init())
+                   for generated_type in chromosome_types]
+
+    return chromosomes
+
+
 def generate_chromosome(wg: WorkGraph,
                         contractors: list[Contractor],
                         work_id2index: dict[str, int],
@@ -208,7 +250,7 @@ def generate_chromosome(wg: WorkGraph,
                         spec: ScheduleSpec,
                         rand: random.Random,
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
+                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Individual:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)
@@ -244,7 +286,7 @@ def generate_chromosome(wg: WorkGraph,
     if chromosome is None:
         chromosome = randomized_init()
 
-    return chromosome
+    return Individual(chromosome)
 
 
 def select_new_population(population: list[ChromosomeType], pop_size: int) -> list[ChromosomeType]:

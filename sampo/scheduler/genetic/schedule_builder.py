@@ -30,7 +30,6 @@ from sampo.utilities.collections_util import reverse_dictionary
 def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
-                   selection_size: int,
                    population_size: int,
                    mutate_order: float,
                    mutate_resources: float,
@@ -118,7 +117,6 @@ def create_toolbox(wg: WorkGraph,
                         init_chromosomes,
                         mutate_order,
                         mutate_resources,
-                        selection_size,
                         population_size,
                         rand,
                         spec,
@@ -136,7 +134,6 @@ def build_schedule(wg: WorkGraph,
                    worker_pool: WorkerContractorPool,
                    population_size: int,
                    generation_number: int,
-                   selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec]],
@@ -187,7 +184,6 @@ def build_schedule(wg: WorkGraph,
     start = time.time()
 
     toolbox, resources_border, contractors_capacity, resources_min_border = create_toolbox(wg, contractors, worker_pool,
-                                                                                           selection_size,
                                                                                            population_size,
                                                                                            mutate_order,
                                                                                            mutate_resources,
@@ -206,7 +202,7 @@ def build_schedule(wg: WorkGraph,
         native_start = time.time()
         best_chromosome = native.run_genetic(list([ind[0] for ind in pop]),
                                              mutate_order, mutate_order, mutate_resources, mutate_resources,
-                                             mutate_resources, mutate_resources, selection_size)
+                                             mutate_resources, mutate_resources, population_size)
         print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
     else:
         # save best individuals
@@ -253,6 +249,8 @@ def build_schedule(wg: WorkGraph,
             else:
                 plateau_steps = 0
             prev_best_fitness = best_fitness
+
+            rand.shuffle(pop)
 
             cur_generation = []
 

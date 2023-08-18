@@ -213,7 +213,7 @@ def generate_population(n: int,
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
     """
-    Generates population using chromosome weights.
+    Generates population.
     Do not use `generate_chromosome` function.
     """
     def randomized_init() -> ChromosomeType:

@@ -30,3 +30,5 @@ furo>=2023.5.20
 # to install that as well.
 python-docs-theme>=2022.1
 sphinx-rtd-theme
+
+torch==2.0.1

@@ -4,6 +4,7 @@ from typing import Callable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.exception import NoSufficientAgents
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
@@ -36,6 +37,7 @@ class Agent:
 
         To apply returned offer, use `Agent#confirm`.
         """
+
         schedule, start_time, timeline, _ = \
             self._scheduler.schedule_with_cache(wg, self._contractors,
                                                 assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))
@@ -82,7 +84,7 @@ class Agent:
 @dataclass
 class ScheduledBlock:
     """
-    An object represents scheduled graph block(group of works).
+    An object represents a scheduled graph block(group of works).
 
     Contains all data used in scheduling, the agent and resulting information.
     """
@@ -114,13 +116,13 @@ class Manager:
     """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
-            raise Exception("Manager can't work with empty list of agents")
+            raise NoSufficientAgents("Manager can't work with empty list of agents")
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
-        Runs multi-agent system based on auction on given BlockGraph.
+        Runs the multi-agent system based on auction on given BlockGraph.
         
         :param bg: 
         :param logger:
@@ -135,7 +137,7 @@ class Manager:
             assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
 
             if logger:
-                logger(f'{agent._scheduler}')
+                logger(f'Scheduled {i} block: {agent._scheduler}')
             sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
                                     start_time=start_time,
                                     end_time=end_time)

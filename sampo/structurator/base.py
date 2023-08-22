@@ -22,7 +22,8 @@ def make_start_id(work_unit_id: str, ind: int) -> str:
 
 def find_lags(edges: list[GraphEdge], edge_type: EdgeType, is_reversed: bool) -> (list[tuple[float, float, bool]]):
     """
-    Searches for the maximum lag among the given edges and type of edge for the maximum lag saves the amount of parental work
+    Searches for the maximum lag among the given edges and type of edge for the
+    maximum lag saves the amount of parental work
 
     :param is_reversed: bool - Used to specify from which node lag is used
     :param edges: list[GraphEdge] - the given edges
@@ -73,8 +74,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
             continue
         proportions.append((accum - accum_pred, lag, is_reversed))
 
-    for ind in range(len(proportions)):
-        piece_div_main, lag, is_reversed = proportions[ind]
+    for ind, value in enumerate(proportions):
+        piece_div_main, lag, is_reversed = value
         reqs = [WorkerReq(wr.kind, wr.volume * piece_div_main, wr.min_count, wr.max_count)
                 for wr in wu.worker_reqs]
 
@@ -82,7 +83,8 @@ def node_restructuring(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
 
         new_id = make_start_id(wu.id, ind) if ind < len(proportions) - 1 else wu.id
         new_wu = WorkUnit(new_id, f'{wu.name}{STAGE_SEP}{ind}', reqs, group=wu.group,
-                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name)
+                          volume=volume, volume_type=wu.volume_type, display_name=wu.display_name,
+                          workground_size=wu.workground_size)
         parents = [(id2new_nodes[make_start_id(wu.id, ind - 1)], 0, EdgeType.InseparableFinishStart)] if ind > 0 else []
         id2new_nodes[new_id] = GraphNode(new_wu, parents)
         old_id_lag2new_id[(wu.id, lag, is_reversed)] = new_id

@@ -1,4 +1,4 @@
-.. image:: docs/sampo_logo.png
+.. image:: docs/source/_static/sampo_logo.png
    :alt: Logo of SAMPO framework
    :width: 300pt
    
@@ -28,7 +28,7 @@ Scheduler for Adaptive Manufacturing Processes Optimization
 It provides toolbox for generating schedules of manufacturing process under the constraints imposed by the subject area. The core of SAMPO is based on the combination of meta-heuristic, genetic and multi-agent algorithms. Taking as input the task graph with tasks connections and resource constraints, as well as the optimization metric, the scheduler builds the optimal tasks sequence and resources assignment according to the given metric.
 
 
-.. image:: docs/sampo-scheme.jfif
+.. image:: docs/source/_static/sampo-scheme.jfif
    :alt: scheme of sampo structure
 
 Installation
@@ -73,7 +73,7 @@ To use SAMPO for the schedule generation you need to prepare:
 
     .. code-block:: python
 
-      wg = WorkGraph.load(...)
+      wg = WorkGraph.load(my_folder_name, my_file_name)
 
     1.2. Generating synthetic WorkGraph
 
@@ -103,7 +103,7 @@ To use SAMPO for the schedule generation you need to prepare:
 
     .. code-block:: python
 
-    contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
+        contractors = [Contractor(id="OOO Berezka", workers=[Worker(id='0', kind='general', count=100)])]
 
 
 2. Scheduling process
@@ -171,11 +171,9 @@ multi-criteria evolutionary schemes and a multi-agent simulation environment.
    :alt: SAI site
    :target: https://sai.itmo.ru/
 
-
 .. |pypi| image:: https://badge.fury.io/py/sampo.svg
    :alt: Supported Python Versions
    :target: https://badge.fury.io/py/sampo
-
 
 .. |py_10| image:: https://img.shields.io/badge/python_3.10-passing-success
    :alt: Supported Python Versions
@@ -184,7 +182,6 @@ multi-criteria evolutionary schemes and a multi-agent simulation environment.
 .. |license| image:: https://img.shields.io/github/license/Industrial-AI-Research-Lab/sampo
    :alt: Supported Python Versions
    :target: https://github.com/Industrial-AI-Research-Lab/sampo/blob/master/LICENSE
-
 
 .. |mailto| image:: https://img.shields.io/badge/email-IAIRLab-blueviolet
    :alt: Framework Support

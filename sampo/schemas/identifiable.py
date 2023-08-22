@@ -6,6 +6,7 @@ from typing import Optional
 class Identifiable:
     """
     A base class for all unique entities
+
     :param id: unique id for the object
     :param name: name of for the object
     """

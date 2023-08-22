@@ -10,13 +10,13 @@ from sampo.utilities.resource_cost import schedule_cost
 
 
 def test_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     scheduler = AverageBinarySearchResourceOptimizingScheduler(HEFTScheduler())
 
     deadline = Time(30)
 
-    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, deadline)
+    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, deadline, landscape=landscape)
 
     if schedule is None:
         pytest.skip("Given contractors can't satisfy given work graph")
@@ -25,20 +25,20 @@ def test_deadline_planning(setup_scheduler_parameters):
 
     scheduler = HEFTScheduler()
 
-    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors)
+    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=landscape)
 
     print(f'Plain planning time: {schedule.execution_time}, cost: {schedule_cost(schedule)}')
 
 
 def test_genetic_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
     scheduler = GeneticScheduler(fitness_constructor=DeadlineResourcesFitness.prepare(deadline))
     scheduler.set_deadline(deadline)
 
     try:
-        schedule = scheduler.schedule(setup_wg, setup_contractors)
+        schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
 
         print(f'Planning for deadline time: {schedule.execution_time}, cost: {schedule_cost(schedule)}')
     except NoSufficientContractorError:

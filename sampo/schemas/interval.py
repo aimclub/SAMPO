@@ -91,6 +91,7 @@ class IntervalGaussian(Interval):
     :param max_val: right  border for the interval
     :param rand: object for generating random numbers with, if you want to use a randomizer with a determined seed
     """
+
     mean: float
     sigma: float
     min_val: Optional[float] = MINUS_INF

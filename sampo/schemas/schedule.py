@@ -144,17 +144,17 @@ class Schedule(JSONSerializable['Schedule']):
             return work_unit.volume, work_unit.volume_type, \
                    [(edge.finish.id, edge.type.value) for edge in wg[work_unit.id].edges_from]
 
-        def sed(t1, t2) -> tuple:
+        def sed(time1, time2) -> tuple:
             """
             Sorts times and calculates difference.
-            :param t1: time 1.
-            :param t2: time 2.
+            :param time1: time 1.
+            :param time2: time 2.
             :return: tuple: start, end, duration.
             """
-            s, e = tuple(sorted((t1, t2)))
-            return s, e, e - s
+            start, end = tuple(sorted((time1, time2)))
+            return start, end, end - start
 
-        df = [(i,                                                 # idx
+        data_frame = [(i,                                                 # idx
                w.work_unit.id,                                    # task_id
                w.work_unit.display_name,                          # task_name
                w.work_unit.name,                                  # task_name_mapped
@@ -165,20 +165,20 @@ class Schedule(JSONSerializable['Schedule']):
                repr(dict((i.name, i.count) for i in w.workers)),  # workers
                w  # full ScheduledWork info
                ) for i, w in enumerate(works)]
-        df = DataFrame.from_records(df, columns=Schedule._columns)
+        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
-        df = df.set_index('idx')
+        data_frame = data_frame.set_index('idx')
 
         if ordered_task_ids:
-            df.task_id = df.task_id.astype('category')
-            df.task_id = df.task_id.cat.set_categories(ordered_task_ids)
-            df = df.sort_values(['task_id'])
-            df.task_id = df.task_id.astype(str)
+            data_frame.task_id = data_frame.task_id.astype('category')
+            data_frame.task_id = data_frame.task_id.cat.set_categories(ordered_task_ids)
+            data_frame = data_frame.sort_values(['task_id'])
+            data_frame.task_id = data_frame.task_id.astype(str)
 
-        df = df.reindex(columns=Schedule._columns)
-        df = df.reset_index(drop=True)
+        data_frame = data_frame.reindex(columns=Schedule._columns)
+        data_frame = data_frame.reset_index(drop=True)
 
-        return Schedule(df)
+        return Schedule(data_frame)
 
 
 def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> list[str]:
@@ -208,7 +208,7 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
         cur_not_added: set[GraphNode] = set(cur_class)
         while len(cur_not_added) > 0:
             for cur_node in cur_class:
-                if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+                if any(parent_node in cur_not_added for parent_node in cur_node.parents):
                     continue  # we add this node later
                 res.append(cur_node.id)
                 cur_not_added.remove(cur_node)
@@ -219,7 +219,7 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
     cur_not_added: set[GraphNode] = set(cur_class)
     while len(cur_not_added) > 0:
         for cur_node in cur_class:
-            if any([parent_node in cur_not_added for parent_node in cur_node.parents]):
+            if any(parent_node in cur_not_added for parent_node in cur_node.parents):
                 continue  # we add this node later
             res.append(cur_node.id)
             cur_not_added.remove(cur_node)

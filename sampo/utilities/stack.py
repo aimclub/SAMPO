@@ -18,8 +18,8 @@ class Stack(object):
     def length(self):
         return self.data.size
 
-    def swap(self, i1: int, i2: int):
-        self.data[i1], self.data[i2] = self.data[i2], self.data[i1]
+    def swap(self, ind1: int, ind2: int):
+        self.data[ind1], self.data[ind2] = self.data[ind2], self.data[ind1]
 
     def __getitem__(self, item):
         return self.data[item]

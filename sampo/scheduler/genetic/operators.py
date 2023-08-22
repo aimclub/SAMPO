@@ -424,24 +424,6 @@ def mutate_for_resources(ind: ChromosomeType, resources_border: np.ndarray,
         if rand.random() < mutpb:
             work_res[-1] = rand.randint(0, len(ind[2]) - 1)
 
-    # type_of_res = rand.randint(0, res_count - 1)
-    # num_works = len(res)
-    # if type_of_res == res_count - 1:
-    #     for i in range(num_works):
-    #         if rand.random() < mutpb:
-    #             res[i][type_of_res] = rand.randint(0, len(ind[2]) - 1)
-    #     return ind
-    #
-    # # change in this interval in random number from interval
-    # low = resources_border[0, type_of_res]
-    # up = resources_border[1, type_of_res]
-    # for i, xl, xu in zip(range(num_works), low, up):
-    #     if rand.random() < mutpb:
-    #         # borders
-    #         contractor = res[i][-1]
-    #         border = ind[2][contractor][type_of_res]
-    #         res[i][type_of_res] = rand.randint(xl, max(xl, min(xu, border)))
-
     return ind
 
 

@@ -258,7 +258,6 @@ def build_schedule(wg: WorkGraph,
 
             # Gather all the fitness in one list and print the stats
             offspring = [ind for ind in cur_generation if toolbox.validate(ind)]
-            print(f'Len offspring: {len(offspring)}')
 
             offspring_fitness = fitness_f.evaluate(offspring)
             for fit, ind in zip(offspring_fitness, offspring):

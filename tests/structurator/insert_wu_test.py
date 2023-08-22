@@ -12,7 +12,6 @@ def setup_wu() -> WorkUnit:
     return WorkUnit(str(uuid4()), 'test_wu')
 
 
-# TODO docstring documentation ??
 def test_insert_work_unit_edges(setup_wg, setup_wu):
     parents_edges = [(setup_wg.start, -1, EdgeType.FinishStart)]
     children_edges = [(setup_wg.finish, -1, EdgeType.FinishStart)]

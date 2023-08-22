@@ -8,11 +8,11 @@ from sampo.schemas.works import WorkUnit
 def copy_graph_node(node: GraphNode, new_id: int | str | None = None,
                     change_id: bool = True) -> tuple[GraphNode, tuple[str, str]]:
     """
-    Makes a deep copy of GraphNode without edges, with the id changed to a new randomly generated or specified one
-    :param node: Original GraphNode
-    :param new_id: Specified new id
-    :param change_id: Do IDs in the new graph need to be changed
-    :return: The copy of GraphNode and pair(old node id, new node id)
+    Makes a deep copy of GraphNode without edges. It's id can be changed to a new randomly generated or specified one
+    :param node: original GraphNode
+    :param new_id: specified new id
+    :param change_id: do ids in the new graph need to be changed
+    :return: copy of GraphNode and pair(old node id, new node id)
     """
     if change_id:
         new_id = new_id or uuid_str()

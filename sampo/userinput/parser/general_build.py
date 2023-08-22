@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import networkx as nx
 import pandas as pd
+from collections import defaultdict
 
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.contractor import Contractor
@@ -16,138 +17,133 @@ UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
 
 
-# def break_loops(works_info: pd.DataFrame) -> pd.DataFrame:
-#
-#     adj_list = {}
-#     for _, row in works_info.iterrows():
-#         adj_list[row['activity_id']] =
-#
-#     def dfs_in(visited: dict, node: str):
-#         path = []
-#         stack = [node]
-#         while len(stack) > 0:
-#             v = stack.pop(0)
-#             # path.append(v)
-#             if visited[v] == 0:
-#                 visited[v] = 1
-#                 for u in works_info[v]['predecessor_ids']:
-#                     if visited[u] == 0:
-#                         stack.append(u)
-#                     if visited[u] == 1:
-#                         index = works_info[v]['predecessor_ids'].index(path[-1])
-#                         min_count = works_info[v]['counts'][index]
-#                         from_vertex = path[-1]
-#                         to_vertex = v
-#                         for i in range(len(path) - 1, 0, -1):
-#                             if path[i] == v:
-#                                 index = works_info[to_vertex]['predecessor_ids'].index(from_vertex)
-#                                 for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
-#                                     works_info[to_vertex][col].pop(index)
-#                                 break
-#                             index = works_info[path[i]]['predecessor_ids'].index(path[i - 1])
-#                             if works_info[path[i]]['counts'][index] < min_count:
-#                                 min_count = works_info[path[i]]['counts'][index]
-#                                 from_vertex = path[i - 1]
-#                                 to_vertex = path[i]
-#
-#
-#             elif visited[v] == 1:
-#
-#                 continue
-#             else
-#
-#
-#     def dfs(visited: dict, node: str):
-#         if visited[node] == 0:
-#             visited[node] = 1
-#             for neighbour in works_info[node]['predecessor_ids']:
-#                 dfs(visited, neighbour)
-#             visited[node] = 2
-#         elif visited[node] == 1:
-#
-#     visited = {}
-#     for work_id, _ in works_info.iterrows():
-#         visited[work_id] = 0
+class Graph:
+    def __init__(self):
+        self.graph = defaultdict(list)
+
+    def add_edge(self, u, v, weight = None):
+        self.graph[u].append((v, weight))
+
+    def dfs_cycle(self, u, visited):
+        stack = [u]
+
+        while len(stack) > 0:
+            v = stack.pop()
+            if visited[v] == 1:
+                visited[v] = 2
+                continue
+            if visited[v] == 2:
+                continue
+            visited[v] = 1
+            # path.append(v)
+            stack.append(v)
+            # if len(self.graph[v]) == 0:
+            #     path = []
+            for neighbour, weight in self.graph[v]:
+                if visited[neighbour] == 0:
+                    stack.append(neighbour)
+                elif visited[neighbour] == 1:
+                    # path.append(neighbour)
+                    return True
+        return False
+
+    def find_cycle(self):
+        visited = {}
+        for key, value in self.graph.items():
+            for v in value:
+                visited[v[0]] = 0
+            visited[key] = 0
+        path = []
+
+        for key, value in visited.items():
+            if value == 0:
+                if self.dfs_cycle(key, visited):
+                    v = key
+                    path.append(v)
+                    while v not in path[:-1]:
+                        for n, _ in self.graph[v]:
+                            if visited[n] == 1:
+                                v = n
+                                break
+                        path.append(v)
+                    for v in path:
+                        visited[v] = 2
+                    return path
+
+        return None
+
+    def eliminate_cycle(self, cycle):
+        min_weight = float('inf')
+        min_edge = None
+
+        for i in range(len(cycle) - 1):
+            u = cycle[i]
+            v = cycle[i + 1]
+
+            for neighbor, weight in self.graph[u]:
+                try:
+                    if neighbor == v and weight < min_weight:
+                        min_weight = weight
+                        min_edge = (u, v)
+                except Exception:
+                    raise Exception(f'weight: {type(weight)} and min_weight: {type(min_weight)}\nv:{v} and u: {u}')
+
+        u, v = min_edge
+        self.graph[u] = [(neighbor, weight) for neighbor, weight in self.graph[u] if neighbor != v]
+
+    def eliminate_cycles(self, eliminate_cycle: bool = True):
+        cycle = self.find_cycle()
+        cycles = []
+
+        while cycle is not None:
+            for i in range(len(cycle)):
+                if cycle[i] == cycle[-1]:
+                    cycle = cycle[i:]
+                    break
+            if not eliminate_cycle:
+                cycles.append(cycle)
+            else:
+                self.eliminate_cycle(cycle)
+            cycle = self.find_cycle()
+        if not eliminate_cycle:
+            if not cycles:
+                return cycles
+            return None
+        for v in self.graph:
+            self.graph[v] = [u for u, w in self.graph[v]]
+
 
 def break_loops_in_input_graph(works_info: pd.DataFrame) -> pd.DataFrame:
     """
-    Temporary function
+    Eliminate all cycles in received work graph. Algo breaks cycle by removing edge with the lowest weight
+    (e.x. frequency of occurrence of the link in historical data).
 
-    :param works_info:
-    :return:
+    :param works_info: given work info
+    :return: work info without cycles
     """
-
-    tasks_ahead = ['-1']
-    print(works_info)
+    graph = Graph()
     for _, row in works_info.iterrows():
-        predecessor_ids_copy = row['predecessor_ids'].copy()
-        connection_types_copy = row['connection_types'].copy()
-        lags_copy = row['lags'].copy()
-        counts_copy = row['counts'].copy()
-        for pred_id in row['predecessor_ids']:
-            if pred_id in tasks_ahead:
+        for pred_id, con_type, lag, counts in zip(row['predecessor_ids'], row['connection_types'], row['lags'],
+                                                  row['counts']):
+            if pred_id == '-1':
                 continue
-            index = predecessor_ids_copy.index(pred_id)
-            predecessor_ids_copy.pop(index)
-            connection_types_copy.pop(index)
-            lags_copy.pop(index)
-            counts_copy.pop(index)
-        works_info.at[_, 'predecessor_ids'] = list(predecessor_ids_copy)
-        works_info.at[_, 'connection_types'] = list(connection_types_copy)
-        works_info.at[_, 'lags'] = list(lags_copy)
-        works_info.at[_, 'counts'] = list(counts_copy)
-        tasks_ahead.append(str(_))
+            graph.add_edge(pred_id, row['activity_id'], counts)
 
+    graph.eliminate_cycles()
+    for _, row in works_info.iterrows():
+        i = 0
+        while i < len(row['predecessor_ids']):
+            if row['predecessor_ids'][i] not in graph.graph:
+                i += 1
+                continue
+            if row['activity_id'] in graph.graph[row['predecessor_ids'][i]]:
+                i += 1
+                continue
+            del row['predecessor_ids'][i]
+            del row['connection_types'][i]
+            del row['lags'][i]
+            del row['counts'][i]
     return works_info.drop(columns=['counts'])
-
-
-def break_circuits_in_input_work_info(works_info: pd.DataFrame) -> pd.DataFrame:
-    """
-    The function breaks circuits:
-    - find all circuits,
-    - break first edge in circle, for example,
-
-    we have edges:
-    (1-2), (2-3), (3-4), (4-2)
-    function deletes edge (2-3)
-
-    :param works_info: dataframe, that contains information about works
-    :return: cleaned work_info
-    """
-    circuits = find_all_circuits(works_info)
-
-    for _, row in works_info[::-1].iterrows():
-        for cycle in circuits:
-            inter = list(set(row['predecessor_ids']) & set(cycle))
-            if len(inter) != 0:
-                index = row['predecessor_ids'].index(inter[0])
-                row['predecessor_ids'].pop(index)
-                row['connection_types'].pop(index)
-                row['lags'].pop(index)
-
-    return works_info
-
-
-def find_all_circuits(works_info: pd.DataFrame) -> list[list[str]]:
-    """
-    The function find all elementary circuits using the algorithm of Donald B. Johnson
-    doi: 10.1137/0205007
-
-    :param works_info: dataframe, that contains information about works
-    :return: list of cycles
-    """
-    graph = nx.DiGraph()
-    edges = []
-
-    for _, row in works_info[::-1].iterrows():
-        v = row['activity_id']
-        for u in row['predecessor_ids']:
-            edges.append((v, u))
-
-    graph.add_nodes_from(list(works_info['activity_id']))
-    graph.add_edges_from(edges)
-
-    return list(nx.simple_cycles(graph))
 
 
 def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | None = str,

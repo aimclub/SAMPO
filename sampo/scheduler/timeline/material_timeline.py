@@ -1,6 +1,5 @@
 import math
 from operator import itemgetter
-from typing import Callable
 
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
@@ -48,184 +47,143 @@ class SupplyTimeline:
         batches = max(1, math.ceil(ratio))
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
-        other_batches = [first_batch for _ in range(batches - 1)]
-        other_batches.append([material.copy().with_count(material.count * (ratio - batches)) for material in materials])
+        other_batches = [first_batch for _ in range(batches - 2)]
+        if batches > 1:
+            other_batches.append([material.copy().with_count(material.count - batch_material.count * (batches - 1))
+                                  for material, batch_material in zip(materials, first_batch)])
 
         deliveries = []
         d, start_time = self.supply_resources(id, start_time, first_batch, False)
         deliveries.append(d)
-        batch_processing = [self.supply_resources(id, finish_time, batch, False) for batch in other_batches]
-        finish_time = max([b[1] for b in batch_processing])
-        deliveries.extend([b[0] for b in batch_processing])
+        max_finish_time = finish_time
+        for batch in other_batches:
+            d, finish_time = self.supply_resources(id, max_finish_time, batch, False, start_time)
+            deliveries.append(d)
+            max_finish_time = finish_time if finish_time > max_finish_time else max_finish_time
 
-        return deliveries, start_time, finish_time
+        return deliveries, start_time, max_finish_time
 
-    def _find_best_supply(self, material: str, count: int) -> str:
+    def _find_best_supply(self, material: str, count: int, deadline: Time) -> str:
         # TODO Make better algorithm
-        # Return the first depot that can supply given materials
-        if len(self._resource_sources) == 0:
-            raise NoAvailableResources(f'Schedule can not be built. No available resource sources with material {material}')
+        if self._resource_sources.get(material, None) is None:
+            raise NoAvailableResources(
+                f'Schedule can not be built. No available resource sources with material {material}')
         depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
                   if depot_count >= count]
-        if len(depots) == 0:
-            raise NotEnoughMaterialsInDepots(f"Schedule can not be built. No one supplier has enough '{material}' material")
-        return depots[0]
+        if not depots:
+            raise NotEnoughMaterialsInDepots(
+                f"Schedule can not be built. No one supplier has enough '{material}' material")
+        depots = [(depot_id, self._timeline[depot_id].bisect_key_left(deadline), -self._capacity[depot_id])
+                  for depot_id in depots]
+        depots.sort(key=itemgetter(1, 2))
 
-    @staticmethod
-    def _grab_from_current_area(material_timeline: ExtendedSortedList,
-                                cur_time: Time, idx_start: int, need_count: int,
-                                capacity: int, going_right: bool, simulate: bool,
-                                delivery_writer: Callable[[Time, int], None]) -> Time:
-        """
-        Processes the whole area starts with `idx_start` from `cur_time` moment
+        return depots[0][0]
 
-        :param material_timeline:
-        :param cur_time:
-        :param idx_start:
-        :param need_count:
-        :param capacity:
-        :param going_right:
-        :param simulate:
-        :return: pair of finish time and grabbed amount
-        """
-        time_start = material_timeline[idx_start][0]
-        time_end = material_timeline[idx_start + 1][0]
-
-        def process_start_milestone():
-            nonlocal cur_time, need_count, going_right
-            if cur_time == time_start:  # grab from start milestone
-                start_count = material_timeline[idx_start][1]
-                if need_count > start_count:
-                    need_count -= start_count
-                    if not simulate:  # drop start milestone
-                        material_timeline[idx_start] = (time_start, 0)
-                    delivery_writer(cur_time, start_count)  # write to the result
-
-                    if going_right:
-                        cur_time += 1
-                    else:
-                        cur_time -= 1
-                else:
-                    if not simulate:  # subtract from start milestone
-                        material_timeline[idx_start] = (time_start, start_count - need_count)
-                    delivery_writer(cur_time, need_count)  # write to the result
-                    need_count = 0
-
-        process_start_milestone()
-
-        # TODO Check that we can remove this
-        # if not going_right:
-        #     return cur_time
-
-        # grab from area
-        if going_right:
-            while need_count > 0 and cur_time < time_end:  # inside area
-                delivery_writer(cur_time, capacity)  # write to the result
-                need_count -= capacity
-                cur_time += 1
-
-            if cur_time >= time_end:
-                # we grabbed all the area, so we don't need to insert any milestone
-                # our start milestone is already processed upper
-                return cur_time
-
-            if not simulate:
-                # if we are here, need_count < 0
-                # we grabbed not all the area, so insert milestone to cur_time - 1 moment.
-                # 'cur_time - 1' because cur_time is the moment after the last 'need_count' addition performed
-                # '-need_count' is resources count that are left at the last seen time moment
-                material_timeline.add((cur_time - 1, -need_count))
-        else:
-            while need_count > 0 and time_start < cur_time:  # inside area
-                delivery_writer(cur_time, capacity)  # write to the result
-                need_count -= capacity
-                cur_time -= 1
-
-            if cur_time == time_start:
-                # we grabbed all the area, so now we are allowed to grab the start milestone
-                process_start_milestone()
-                return cur_time
-
-            if not simulate:
-                # if we are here, need_count < 0
-                # we grabbed not all the area, so insert milestone to cur_time + 1 moment.
-                # 'cur_time + 1' because cur_time is the moment after the last 'need_count' subtraction performed
-                # '-need_count' is resources count that are left at the last seen time moment
-                material_timeline.add((cur_time + 1, -need_count))
-
-        return cur_time
-
-    def supply_resources(self, id: str, deadline: Time, materials: list[Material], simulate: bool) \
+    def supply_resources(self, work_id: str, deadline: Time, materials: list[Material], simulate: bool,
+                         min_supply_start_time: Time = Time(0)) \
             -> tuple[MaterialDelivery, Time]:
         """
-        Finds minimal time that given materials can be supplied, greater that given start time
+        Finds minimal time that given materials can be supplied, greater than given start time
 
-        :param id: work id
+        :param work_id: work id
         :param deadline: the time work starts
         :param materials: material resources that are required to start
         :param simulate: should timeline only find minimum supply time and not change timeline
-        # :param workground_size: material capacity of the workground
-        :return: the time when resources are ready
+        :param min_supply_start_time:
+        :return: material deliveries, the time when resources are ready
         """
-        min_start_time = deadline
-        delivery = MaterialDelivery(id)
+        assert min_supply_start_time <= deadline
+        delivery = MaterialDelivery(work_id)
+        min_work_start_time = deadline
 
-        grabbed = 0
+        def append_in_material_delivery_list(time: Time, count: int, delivery_list: list[tuple[Time, int]]):
+            if not simulate:
+                if count > need_count:
+                    count = need_count
+                delivery_list.append((time, count))
 
-        cur_start_time = deadline
-        going_right = False
+        def update_material_timeline_and_res_sources(timeline: ExtendedSortedList, mat_sources: dict[str, int]):
+            for time, count in material_delivery_list:
+                mat_sources[depot] -= count
+                ind = timeline.bisect_key_left(time)
+                timeline_time, timeline_count = timeline[ind]
+                if timeline_time == time:
+                    timeline[ind] = (time, timeline_count - count)
+                else:
+                    timeline.add((time, capacity - count))
+
+            time, count = timeline[0]
+            if not count:
+                ind = 1
+                is_zero_count = True
+                while ind < len(timeline) - 1 and is_zero_count:
+                    next_time, next_count = timeline[ind]
+                    if not next_count and next_time == time + 1:
+                        ind += 1
+                        time = next_time
+                    else:
+                        is_zero_count = False
+                if ind == len(timeline) - 1 or timeline[ind][0] != time + 1:
+                    ind -= 1
+                del timeline[:ind]
 
         for material in materials:
-            depot = self._find_best_supply(material.name, material.count)
+            if not material.count:
+                continue
+            material_sources = self._resource_sources[material.name]
+            depot = self._find_best_supply(material.name, material.count, deadline)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
-
-            def record_delivery(time: Time, count: int):
-                nonlocal count_left
-                count_left -= count
-
-                if not simulate:
-                    # update depot state
-                    self._resource_sources[material.name][depot] -= count
-                    # add to the result
-                    delivery.add_delivery(material.name, time, count)
-
-            count_left = material.count
-            cur_start_time = deadline
+            need_count = material.count
+            idx_left = idx_base = material_timeline.bisect_key_right(deadline) - 1
+            cur_time = deadline - 1
+            material_delivery_list = [] if not simulate else None
 
             going_right = False
 
-            i = 0
-            while count_left > 0:
-                if i > 0 and i % 50 == 0:
-                    print(f'Probably cycle: cur_start_time={cur_start_time}, idx_left={idx_left}', flush=True)
-
-                # find current area
-                idx_left = material_timeline.bisect_key_right(cur_start_time) - 1
+            while need_count > 0:
+                # find current period
                 time_left = material_timeline[idx_left][0]
                 time_right = material_timeline[idx_left + 1][0]
 
-                cur_start_time = self._grab_from_current_area(material_timeline, cur_start_time, idx_left,
-                                                              count_left, capacity, going_right, simulate,
-                                                              record_delivery)
+                if going_right:
+                    if cur_time == time_left:
+                        time_left_capacity = material_timeline[idx_left][1]
+                        if time_left_capacity:
+                            append_in_material_delivery_list(cur_time, time_left_capacity, material_delivery_list)
+                            need_count -= time_left_capacity
+                        cur_time += 1
+                    while need_count > 0 and cur_time < time_right:
+                        append_in_material_delivery_list(cur_time, capacity, material_delivery_list)
+                        need_count -= capacity
+                        cur_time += 1
+                    if need_count > 0:
+                        idx_left += 1
+                else:
+                    while need_count > 0 and time_left < cur_time and min_supply_start_time <= cur_time:
+                        append_in_material_delivery_list(cur_time, capacity, material_delivery_list)
+                        need_count -= capacity
+                        cur_time -= 1
+                    if need_count > 0 and cur_time == time_left and min_supply_start_time <= cur_time:
+                        time_left_capacity = material_timeline[idx_left][1]
+                        if time_left_capacity:
+                            append_in_material_delivery_list(cur_time, time_left_capacity, material_delivery_list)
+                            need_count -= time_left_capacity
+                        cur_time -= 1
+                    if need_count > 0:
+                        idx_left -= 1
+                        if idx_left < 0 or cur_time < min_supply_start_time:
+                            idx_left = idx_base
+                            cur_time = deadline
+                            going_right = True
 
-                # record_delivery(material.name, depot, cur_start_time, material.count)
+            if not simulate:
+                update_material_timeline_and_res_sources(material_timeline, material_sources)
+                delivery.add_deliveries(material.name, material_delivery_list)
 
-                if cur_start_time < time_left:
-                    # over left of current area, step left
-                    idx_left -= 1
-                    if idx_left < 0:
-                        cur_start_time = deadline
-                        going_right = True
-                elif cur_start_time > time_right:
-                    # over right of current area, step right
-                    idx_left += 1
+            min_work_start_time = max(min_work_start_time, cur_time)
 
-                i += 1
-
-            min_start_time = min(min_start_time, cur_start_time)
-
-        return delivery, min_start_time
+        return delivery, min_work_start_time
 
     @property
     def resource_sources(self):

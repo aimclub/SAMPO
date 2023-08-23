@@ -61,12 +61,12 @@ class GeneticScheduler(Scheduler):
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
                f'generations={self.number_of_generation},' \
-               f'size_selection={self.size_selection},' \
+               f'population_size={self.size_of_population},' \
                f'mutate_order={self.mutate_order},' \
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[float, float, int]:
         """
         Return base parameters for model to make new population
 
@@ -83,18 +83,18 @@ class GeneticScheduler(Scheduler):
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
             if works_count < 300:
-                mutate_resources = 0.1
+                mutate_resources = 0.01
             else:
-                mutate_resources = 6 / math.sqrt(works_count)
+                mutate_resources = 5 / math.sqrt(works_count)
 
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
-                size_of_population = 20
-            elif 1500 > works_count >= 300:
                 size_of_population = 50
+            elif 1500 > works_count >= 300:
+                size_of_population = 100
             else:
-                size_of_population = works_count // 50
+                size_of_population = works_count // 25
         return mutate_order, mutate_resources, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
@@ -144,7 +144,7 @@ class GeneticScheduler(Scheduler):
                 try:
                     return scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
                                                                                         landscape=landscape), \
-                            list(reversed(prioritization(wg, self.work_estimator))), spec
+                        list(reversed(prioritization(wg, self.work_estimator))), spec
                 except NoSufficientContractorError:
                     return None, None, None
         else:
@@ -165,7 +165,6 @@ class GeneticScheduler(Scheduler):
             "75%": init_k_schedule(HEFTScheduler, 4 / 3),
             "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
         }
-
 
     def schedule_with_cache(self,
                             wg: WorkGraph,

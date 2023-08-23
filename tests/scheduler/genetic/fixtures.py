@@ -1,5 +1,5 @@
 from random import Random
-from typing import List, Dict, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 from deap.base import Toolbox
@@ -14,7 +14,6 @@ from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.utilities.collections_util import reverse_dictionary
 
 
 def get_params(works_count: int) -> Tuple[float, float, int]:
@@ -48,27 +47,28 @@ def create_toolbox(wg: WorkGraph,
                    spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None,
                    landscape: LandscapeConfiguration = LandscapeConfiguration()) \
-        -> tuple[Toolbox, np.ndarray]:
+        -> Tuple[Toolbox, np.ndarray]:
     # preparing access-optimized data structures
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
 
     index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
-    index2contractor = {ind: contractor.id for ind, contractor in enumerate(contractors)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
-    contractor2index = reverse_dictionary(index2contractor)
+    contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
     } for worker_name, workers_of_type in worker_pool.items()}
     node_indices = list(range(len(nodes)))
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
+    resources_min_border = np.zeros((len(worker_pool)))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
+            resources_min_border[worker_index] = max(resources_min_border[worker_index], req.min_count)
 
     contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
     for ind, contractor in enumerate(contractors):
@@ -105,7 +105,6 @@ def create_toolbox(wg: WorkGraph,
                         index2node,
                         work_id2index,
                         worker_name2index,
-                        index2contractor,
                         index2contractor_obj,
                         init_chromosomes,
                         mutate_order,
@@ -118,6 +117,8 @@ def create_toolbox(wg: WorkGraph,
                         contractor_borders,
                         node_indices,
                         parents,
+                        resources_border,
+                        resources_min_border,
                         Time(0),
                         work_estimator), resources_border
 

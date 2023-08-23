@@ -61,14 +61,14 @@ class CSVParser:
         graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
                                                                               str) else project_info
         history_df = None
-        if not (history_data is None):
+        if history_data is not None:
             history_df = pd.read_csv(history_data)
 
-        if not ('predecessor_ids' in graph_df.columns) and history_data is None:
+        if 'predecessor_ids' not in graph_df.columns and history_data is None:
             raise InputDataException(
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 
-        if not ('predecessor_ids' in graph_df.columns):
+        if 'predecessor_ids' not in graph_df.columns:
             # if we ought to restore predecessor info from history data
             temp_lst = [math.nan] * graph_df.shape[0]
             for col in ['predecessor_ids', 'connection_types', 'lags']:

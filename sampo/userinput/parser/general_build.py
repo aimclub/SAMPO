@@ -171,13 +171,11 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
         frame['lags'] = [NONE_ELEM] * len(frame)
     frame['lags'] = fix_df_column_with_arrays(frame['lags'], float)
 
-    # frame = break_loops_in_input_graph(frame)
-
     return frame
 
 
 def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
-    existed_ids = set(frame["activity_id"])
+    existed_ids = set(frame['activity_id'])
 
     predecessor_ids, connection_types, lags = [], [], []
     for _, row in frame[['predecessor_ids', 'connection_types', 'lags']].iterrows():
@@ -195,7 +193,7 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
             lags[-1].append(float(NONE_ELEM))
     frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
 
-    frame["edges"] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
+    frame['edges'] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
     return frame
 
 

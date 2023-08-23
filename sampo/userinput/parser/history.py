@@ -9,9 +9,6 @@ from sampo.utilities.task_name import NameMapper
 
 def get_all_connections(graph_df: pd.DataFrame, use_mapper: bool = False, mapper: NameMapper = None) \
         -> Tuple[dict[str, list], dict[str, list]]:
-    """
-    Return 2 dicts, that assists to build all pairs of works
-    """
 
     task_name_column = 'activity_name'
     if 'granular_name' in graph_df:
@@ -152,7 +149,6 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
 
                             s2, f2 = ind2_sorted.loc[l, 'first_day'], ind2_sorted.loc[l, 'last_day']
 
-                            # Собираем статистику по встречаемости разного взаимного расположения задач
                             if not any([type(x) == float for x in [s1, s2, f1, f2]]):
                                 tasks_fs12, tasks_fs21, tasks_ss12, tasks_ss12_lags, tasks_ss12_percent_lags, tasks_ss21, tasks_ss21_lags, \
                                     tasks_ss21_percent_lags, tasks_ffs12, tasks_ffs12_lags, tasks_ffs12_percent_lags, tasks_ffs21, tasks_ffs21_lags, tasks_ffs21_percent_lags = gather_links_types_statistics(
@@ -177,7 +173,6 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                                 ffs21_lags.extend(tasks_ffs21_lags)
                                 ffs21_percent_lags.extend(tasks_ffs21_percent_lags)
 
-                # Проверка взаимного расположения задач (последователь - предшественник). Считаем, какое взаиморасположение наблюдается чаще, корректируем связи
                 if fs12 + ffs12 + ss12 >= fs21 + ffs21 + ss21:
                     order_con = 1
                     fs = fs12

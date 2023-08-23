@@ -9,10 +9,7 @@ from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
-from sampo.scheduler.heft.base import HEFTBetweenScheduler
-from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
-from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
+from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -192,26 +189,11 @@ def setup_empty_contractors(setup_wg) -> list[Contractor]:
 def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
-    setup_wg, setup_contractors, setup_landscape_many_holders = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
-    def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors,
-                                                                                        landscape=setup_landscape_many_holders)
-
-    def init_k_schedule(scheduler_class, k):
-        return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors,
-                                                                                           landscape=setup_landscape_many_holders)
-
-    return setup_scheduler_parameters, {
-        'heft_end': init_schedule(HEFTScheduler),
-        'heft_between': init_schedule(HEFTBetweenScheduler),
-        '12.5%': init_k_schedule(HEFTScheduler, 8),
-        '25%': init_k_schedule(HEFTScheduler, 4),
-        '75%': init_k_schedule(HEFTScheduler, 4 / 3),
-        '87.5%': init_k_schedule(HEFTScheduler, 8 / 7)
-    }
+    return setup_scheduler_parameters, GeneticScheduler.generate_first_population(setup_wg, setup_contractors,
+                                                                                  setup_landscape,
+                                                                                  work_estimator=work_estimator)
 
 
 @fixture(scope='session',

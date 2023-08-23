@@ -9,4 +9,4 @@ def test_multiprocessing(setup_scheduler_parameters):
                                mutate_resources=0.005,
                                size_of_population=50)
 
-    genetic.schedule(setup_wg, setup_contractors)
+    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)

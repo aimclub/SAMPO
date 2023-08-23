@@ -38,7 +38,7 @@ if __name__ == '__main__':
     with open(f'algorithms_2_multi_agency_comparison.txt', 'w') as logfile:
         logger = partial(log, logfile=logfile)
 
-        bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, 10, [1, 1, 1], lambda x: (30, 50), 0.5,
+        bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, 10, [0, 1, 1], lambda x: (None, 50), 0.5,
                                   rand, obstruction_getter, 2, [3, 4], [3, 4], logger=logger)
         conjuncted = bg.to_work_graph()
 
@@ -57,4 +57,4 @@ if __name__ == '__main__':
 
         schedule = best_algo.schedule(conjuncted, contractors)
 
-        print(f'Best algo res res: {schedule.execution_time}')
+        print(f'Best algo res: {schedule.execution_time}')

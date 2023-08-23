@@ -79,16 +79,16 @@ def create_toolbox(wg: WorkGraph,
         for child in node_children:
             parents[child].append(node)
 
-    # initial chromosomes construction
-    init_chromosomes: dict[str, ChromosomeType] = \
-        {name: convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec, order)
+    init_chromosomes: dict[str, tuple[ChromosomeType, int]] = \
+        {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
+                                               contractor2index, contractor_borders, schedule, chromosome_spec, order),
+                importance, chromosome_spec)
          if schedule is not None else None
-         for name, (schedule, order, spec) in init_schedules.items()}
+         for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
     for name, chromosome in init_chromosomes.items():
         if chromosome is not None:
-            if not is_chromosome_correct(chromosome, node_indices, parents):
+            if not is_chromosome_correct(chromosome[0], node_indices, parents):
                 raise NoSufficientContractorError('HEFTs are deploying wrong chromosomes')
 
     print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')

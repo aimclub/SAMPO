@@ -6,7 +6,7 @@ from typing import Iterable, Callable
 from operator import attrgetter
 
 import numpy as np
-from deap import creator, base, tools
+from deap import creator, base
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
@@ -129,7 +129,7 @@ def init_toolbox(wg: WorkGraph,
                  work_id2index: dict[str, int],
                  worker_name2index: dict[str, int],
                  index2contractor_obj: dict[int, Contractor],
-                 init_chromosomes: dict[str, ChromosomeType],
+                 init_chromosomes: dict[str, tuple[ChromosomeType, float]],
                  mutate_order: float,
                  mutate_resources: float,
                  population_size: int,
@@ -200,14 +200,14 @@ def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
 def generate_population(n: int,
                         wg: WorkGraph,
                         contractors: list[Contractor],
+                        spec: ScheduleSpec,
                         work_id2index: dict[str, int],
                         worker_name2index: dict[str, int],
                         contractor2index: dict[str, int],
                         contractor_borders: np.ndarray,
-                        init_chromosomes: dict[str, ChromosomeType],
-                        spec: ScheduleSpec,
+                        init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         rand: random.Random,
-                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                        work_estimator: WorkTimeEstimator = None,
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
     """
     Generates population.
@@ -228,7 +228,7 @@ def generate_population(n: int,
 
     chromosome_types = rand.sample(list(init_chromosomes.keys()) + ['topological'], k=n, counts=counts)
 
-    chromosomes = [Individual(init_chromosomes[generated_type])
+    chromosomes = [Individual(init_chromosomes[generated_type][0])
                    if generated_type != 'topological' else Individual(randomized_init())
                    for generated_type in chromosome_types]
 
@@ -241,7 +241,7 @@ def generate_chromosome(wg: WorkGraph,
                         worker_name2index: dict[str, int],
                         contractor2index: dict[str, int],
                         contractor_borders: np.ndarray,
-                        init_chromosomes: dict[str, ChromosomeType],
+                        init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         spec: ScheduleSpec,
                         rand: random.Random,
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -264,21 +264,18 @@ def generate_chromosome(wg: WorkGraph,
 
     chance = rand.random()
     if chance < 0.2:
-        chromosome = init_chromosomes['heft_end']
+        chromosome = init_chromosomes['heft_end'][0]
     elif chance < 0.4:
-        chromosome = init_chromosomes['heft_between']
+        chromosome = init_chromosomes['heft_between'][0]
     elif chance < 0.5:
-        chromosome = init_chromosomes['12.5%']
+        chromosome = init_chromosomes['12.5%'][0]
     elif chance < 0.6:
-        chromosome = init_chromosomes['25%']
+        chromosome = init_chromosomes['25%'][0]
     elif chance < 0.7:
-        chromosome = init_chromosomes['75%']
+        chromosome = init_chromosomes['75%'][0]
     elif chance < 0.8:
-        chromosome = init_chromosomes['87.5%']
+        chromosome = init_chromosomes['87.5%'][0]
     else:
-        chromosome = randomized_init()
-
-    if chromosome is None:
         chromosome = randomized_init()
 
     return Individual(chromosome)

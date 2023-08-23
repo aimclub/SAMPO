@@ -3,7 +3,6 @@ from typing import Tuple
 
 from pytest import fixture
 
-from sampo.schemas.graph import GraphNode
 import numpy as np
 
 from sampo.scheduler.genetic.schedule_builder import create_toolbox
@@ -42,11 +41,12 @@ def setup_toolbox(setup_default_schedules) -> tuple:
 
     nodes = [node for node in setup_wg.nodes if not node.is_inseparable_son()]
     worker_name2index = {worker_name: index for index, worker_name in enumerate(setup_worker_pool)}
-    resources_min_border = np.zeros(len(setup_worker_pool))
+    resources_border = np.zeros((2, len(setup_worker_pool), len(nodes)))
     for work_index, node in enumerate(nodes):
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
-            resources_min_border[worker_index] = max(resources_min_border[worker_index], req.min_count)
+            resources_border[0, worker_index, work_index] = req.min_count
+            resources_border[1, worker_index, work_index] = req.max_count
 
     return (create_toolbox(setup_wg,
                            setup_contractors,
@@ -57,5 +57,5 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                            setup_default_schedules,
                            rand,
                            work_estimator=work_estimator,
-                           landscape=setup_landscape_many_holders), resources_min_border,
+                           landscape=setup_landscape_many_holders), resources_border,
             setup_wg, setup_contractors, setup_default_schedules, setup_landscape_many_holders)

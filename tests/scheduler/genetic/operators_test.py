@@ -1,5 +1,6 @@
 from tests.scheduler.genetic.fixtures import *
 from sampo.scheduler.genetic.converter import ChromosomeType
+import random
 
 
 TEST_ITERATIONS = 10
@@ -60,7 +61,7 @@ def test_mate_resources(setup_toolbox, setup_wg):
     population = tb.population(n=population_size)
 
     for i in range(TEST_ITERATIONS):
-        individual1, individual2 = population[:2]
+        individual1, individual2 = random.sample(population, 2)
         individual1, individual2 = tb.mate_resources(individual1, individual2)
 
         # check there are correct resources at mate positions

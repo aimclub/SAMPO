@@ -10,10 +10,6 @@ from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
 from sampo.scheduler.genetic.base import GeneticScheduler
-from sampo.scheduler.heft.base import HEFTBetweenScheduler
-from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
-from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -196,7 +192,8 @@ def setup_default_schedules(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
     return setup_scheduler_parameters, GeneticScheduler.generate_first_population(setup_wg, setup_contractors,
-                                                                                  setup_landscape, work_estimator)
+                                                                                  setup_landscape,
+                                                                                  work_estimator=work_estimator)
 
 
 @fixture(scope='session',

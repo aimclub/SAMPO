@@ -13,7 +13,7 @@ from pandas import DataFrame
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Individual, copy_chromosome, \
-    FitnessFunction, TimeFitness, is_chromosome_correct, wrap
+    FitnessFunction, TimeFitness, is_chromosome_correct
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
@@ -33,7 +33,7 @@ def create_toolbox(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, int]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, int]],
                    rand: random.Random,
                    spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None,
@@ -92,9 +92,10 @@ def create_toolbox(wg: WorkGraph,
 
     init_chromosomes: dict[str, tuple[ChromosomeType, int]] = \
         {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                               contractor2index, contractor_borders, schedule, order), importance)
-         if schedule is not None else None
-        for name, (schedule, order, importance) in init_schedules.items()}
+                                               contractor2index, contractor_borders, schedule, chromosome_spec, order),
+                importance, chromosome_spec)
+        if schedule is not None else None
+         for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
     for name, chromosome in init_chromosomes.items():
         if chromosome is not None:
@@ -127,6 +128,7 @@ def create_toolbox(wg: WorkGraph,
                         Time(0),
                         work_estimator), resources_border
 
+
 def build_schedule(wg: WorkGraph,
                    contractors: list[Contractor],
                    worker_pool: WorkerContractorPool,
@@ -135,12 +137,12 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, int, ScheduleSpec]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, int]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[int]]],
-                                                 FitnessFunction] = TimeFitness,
+                   FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    show_fitness_graph: bool = False,
                    n_cpu: int = 1,
@@ -316,8 +318,8 @@ def build_schedule(wg: WorkGraph,
                         if rand.random() < mutpb_res:
                             ind = toolbox.mutate_resource_borders(mutant[0],
                                                                   type_of_worker=worker)
-                        # add to population
-                        cur_generation.append(wrap(ind))
+                            # add to population
+                            cur_generation.append(wrap(ind))
 
                 # for the crossover, we use those types that did not participate
                 # in the mutation(+1 means contractor 'resource')

@@ -28,7 +28,7 @@ class BreakType(Enum):
 def test_check_order_validity_right(setup_default_schedules):
     (setup_wg, _, _), setup_default_schedules = setup_default_schedules
 
-    for scheduler, (schedule, _, _) in setup_default_schedules.items():
+    for scheduler, (schedule, _, _, _) in setup_default_schedules.items():
         try:
             _check_all_tasks_scheduled(schedule, setup_wg)
             _check_parent_dependencies(schedule, setup_wg)
@@ -39,7 +39,7 @@ def test_check_order_validity_right(setup_default_schedules):
 def test_check_order_validity_wrong(setup_default_schedules):
     (setup_wg, _, _), setup_default_schedules = setup_default_schedules
 
-    for (schedule, _, _) in setup_default_schedules.values():
+    for (schedule, _, _, _) in setup_default_schedules.values():
         for break_type in BreakType:
             if break_type.is_order_break():
                 broken = break_schedule(break_type, schedule, setup_wg)
@@ -56,7 +56,7 @@ def test_check_order_validity_wrong(setup_default_schedules):
 def test_check_resources_validity_right(setup_default_schedules):
     (setup_wg, setup_contractors, _), setup_default_schedules = setup_default_schedules
 
-    for scheduler, (schedule, _, _) in setup_default_schedules.items():
+    for scheduler, (schedule, _, _, _) in setup_default_schedules.items():
         try:
             _check_all_workers_correspond_to_worker_reqs(schedule)
             _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, setup_contractors)
@@ -68,7 +68,7 @@ def test_check_resources_validity_wrong(setup_default_schedules):
     (setup_wg, setup_contractors, _), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
 
-    for (schedule, _, _) in setup_default_schedules.values():
+    for (schedule, _, _, _) in setup_default_schedules.values():
         for break_type in BreakType:
             if break_type.is_resources_break():
                 broken = break_schedule(break_type, schedule, setup_wg, setup_worker_pool)

@@ -7,7 +7,7 @@ from sampo.utilities.validation import validate_schedule
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
     schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape_many_holders)
 
@@ -16,7 +16,7 @@ def test_convert_schedule_to_chromosome(setup_toolbox):
 
 
 def test_convert_chromosome_to_schedule(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, _ = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
@@ -26,7 +26,7 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
 
 
 def test_converter_with_borders_contractor_accounting(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
     chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
 

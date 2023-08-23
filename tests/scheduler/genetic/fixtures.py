@@ -1,19 +1,13 @@
 from random import Random
-from typing import List, Dict, Tuple
+from typing import Tuple
 
-import numpy as np
-from deap.base import Toolbox
 from pytest import fixture
 
-from sampo.scheduler.genetic.converter import ChromosomeType, convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox
+from sampo.schemas.graph import GraphNode
+import numpy as np
+
 from sampo.scheduler.genetic.schedule_builder import create_toolbox
-from sampo.schemas.contractor import Contractor, WorkerContractorPool, get_worker_contractor_pool
-from sampo.schemas.graph import WorkGraph, GraphNode
-from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.schedule import Schedule
-from sampo.schemas.schedule_spec import ScheduleSpec
-from sampo.schemas.time import Time
+from sampo.schemas.contractor import get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
@@ -46,6 +40,14 @@ def setup_toolbox(setup_default_schedules) -> tuple:
     rand = Random(123)
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
+    nodes = [node for node in setup_wg.nodes if not node.is_inseparable_son()]
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(setup_worker_pool)}
+    resources_min_border = np.zeros(len(setup_worker_pool))
+    for work_index, node in enumerate(nodes):
+        for req in node.work_unit.worker_reqs:
+            worker_index = worker_name2index[req.kind]
+            resources_min_border[worker_index] = max(resources_min_border[worker_index], req.min_count)
+
     return (create_toolbox(setup_wg,
                            setup_contractors,
                            setup_worker_pool,
@@ -55,5 +57,5 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                            setup_default_schedules,
                            rand,
                            work_estimator=work_estimator,
-                           landscape=setup_landscape_many_holders),
+                           landscape=setup_landscape_many_holders), resources_min_border,
             setup_wg, setup_contractors, setup_default_schedules, setup_landscape_many_holders)

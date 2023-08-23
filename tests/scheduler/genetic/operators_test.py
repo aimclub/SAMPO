@@ -6,7 +6,7 @@ TEST_ITERATIONS = 10
 
 
 def test_generate_individual(setup_toolbox):
-    (tb, _), _, _, _, _ = setup_toolbox
+    tb, _, _, _, _, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
         chromosome: ChromosomeType = tb.generate_chromosome()
@@ -14,7 +14,7 @@ def test_generate_individual(setup_toolbox):
 
 
 def test_mutate_order(setup_toolbox):
-    (tb, _), _, _, _, _ = setup_toolbox
+    tb, _, _, _, _, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
         individual = tb.generate_chromosome()
@@ -26,7 +26,7 @@ def test_mutate_order(setup_toolbox):
 
 
 def test_mutate_resources(setup_toolbox):
-    (tb, _), _, _, _, _ = setup_toolbox
+    tb, _, _, _, _, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
         individual = tb.generate_chromosome()
@@ -36,7 +36,7 @@ def test_mutate_resources(setup_toolbox):
 
 
 def test_mate_order(setup_toolbox, setup_wg):
-    (tb, _), _, _, _, _ = setup_toolbox
+    tb, _, _, _, _, _ = setup_toolbox
     _, _, population_size = get_params(setup_wg.vertex_count)
 
     population = tb.population(n=population_size)
@@ -54,7 +54,7 @@ def test_mate_order(setup_toolbox, setup_wg):
 
 
 def test_mate_resources(setup_toolbox, setup_wg):
-    (tb, resources_border), _, _, _, _ = setup_toolbox
+    tb, resources_border, _, _, _, _ = setup_toolbox
     _, _, population_size = get_params(setup_wg.vertex_count)
 
     population = tb.population(n=population_size)

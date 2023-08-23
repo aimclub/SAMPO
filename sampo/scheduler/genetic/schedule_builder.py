@@ -19,7 +19,6 @@ from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.utilities.collections_util import reverse_dictionary
 
 
 def create_toolbox(wg: WorkGraph,
@@ -50,7 +49,7 @@ def create_toolbox(wg: WorkGraph,
     node_indices = list(range(len(nodes)))
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
-    resources_min_border = np.zeros((len(worker_pool)))
+    resources_min_border = np.zeros(len(worker_pool))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]

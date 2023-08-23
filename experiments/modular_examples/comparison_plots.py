@@ -36,9 +36,10 @@ launch_algo_bg_type_downtimes = defaultdict(lambda: defaultdict(lambda: defaultd
 
 
 # parsing raw data
-def parse_raw_data(mode_index: int, iterations: int, algos: list[str], algo_labels: list[str]):
+def parse_raw_data(block_size: int, iterations: int, algos: list[str], algo_labels: list[str]):
     for launch_index in range(iterations):
-        with open(f'algorithms_comparison_block_size_{mode_index}_{launch_index}.txt', 'r') as f:
+        # with open(f'algorithms_comparison_block_size_{mode_index}_{launch_index}.txt', 'r') as f:
+        with open(f'algorithms_efficiency_block_size_{block_size}_iteration_{launch_index}.txt', 'r') as f:
             mode = None
             finished = True
             bg_info_read = False
@@ -72,7 +73,7 @@ def parse_raw_data(mode_index: int, iterations: int, algos: list[str], algo_labe
                     bg_info = line.split(' ')
                     bg_info_read = True
                     continue
-                if i == 10 or (i == 7 and bg_info[0] == 'Queues'):
+                if i == 10 or (i == 7 and bg_info[0] == 'QUEUES'):
                     finished = True
                     downtimes = [int(downtime) for downtime in line.split(' ')]
                     for algo_ind, algo in enumerate(algos):
@@ -199,11 +200,11 @@ def compare_algos_block_type(title: str, compare_dict: Dict, algo_labels: list[s
 
 # boxplot block type comparison
 def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels: list[str]):
-    fig = plt.figure(figsize=(14, 10))
+    fig = plt.figure(figsize=(15, 5))
     fig.suptitle(title, fontsize=32)
     for i, freq_by_step in enumerate(compare_dict.items()):
         values = np.array([[f for f in freq.values()] for freq in freq_by_step[1].values()])
-        ax = fig.add_subplot(33 * 10 + i + 1)
+        ax = fig.add_subplot(13 * 10 + i + 1)
         ax.set(title=algo_labels[i])
         ax.set_xlabel('Block type')
         ax.set_ylabel('Count')
@@ -220,13 +221,11 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
 
 
 # all algorithms
-# algos = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
-#          'Genetic[generations=50,size_selection=None,mutate_order=None,mutate_resources=None]']
-# algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological',
-#                'Genetic[\ngenerations=50,size_selection=None,\nmutate_order=None,mutate_resources=None]']
-#
+algos = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological']
+algo_labels = ['HEFTAddEnd', 'HEFTAddBetween', 'Topological']
+
 # parse_raw_data(0, 10, algos, algo_labels)
-#
+
 # compare_algos_general('Algorithms block receive count - average', global_algo_frequencies, algos, algo_labels)
 # compare_algos_general('Algorithms downtimes - average', global_algo_downtimes, algos, algo_labels)
 #
@@ -238,53 +237,60 @@ def boxplot_compare_algos_block_type(title: str, compare_dict: Dict, algo_labels
 #                          global_algo_block_type_frequencies, algo_labels)
 
 # genetics
-algos = ['Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
-         'Genetic[generations=50,size_selection=100,mutate_order=0.25,mutate_resources=0.5]',
-         'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.75]',
-         'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
-         'Genetic[generations=50,size_selection=50,mutate_order=0.9,mutate_resources=0.9]',
-         'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',
-         'Genetic[generations=50,size_selection=200,mutate_order=0.25,mutate_resources=0.5]',
-         'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.75]',
-         'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
-         'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.9]']
-# algo_labels = ['first_population=100,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.5',
-#                'first_population=100,\nsize_selection=100,\nmutate_order=0.25,\nmutate_resources=0.5',
-#                'first_population=100,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.75',
-#                'first_population=100,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75',
-#                'first_population=100,\nsize_selection=50,\nmutate_order=0.9\n,mutate_resources=0.9',
-#                'first_population=500,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.5]',
-#                'first_population=500,\nsize_selection=200,\nmutate_order=0.25,\nmutate_resources=0.5]',
-#                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.75]',
-#                'first_population=500,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75]',
-#                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.9]']
-algo_labels = [str(i) for i in range(1, 10 + 1)]
+# algos = ['Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.5]',
+#          'Genetic[generations=50,size_selection=100,mutate_order=0.25,mutate_resources=0.5]',
+#          'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.75]',
+#          'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
+#          'Genetic[generations=50,size_selection=50,mutate_order=0.9,mutate_resources=0.9]',
+#          'Genetic[generations=50,size_selection=100,mutate_order=0.5,mutate_resources=0.5]',
+#          'Genetic[generations=50,size_selection=200,mutate_order=0.25,mutate_resources=0.5]',
+#          'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.75]',
+#          'Genetic[generations=50,size_selection=100,mutate_order=0.75,mutate_resources=0.75]',
+#          'Genetic[generations=50,size_selection=50,mutate_order=0.5,mutate_resources=0.9]']
+# # algo_labels = ['first_population=100,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.5',
+# #                'first_population=100,\nsize_selection=100,\nmutate_order=0.25,\nmutate_resources=0.5',
+# #                'first_population=100,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.75',
+# #                'first_population=100,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75',
+# #                'first_population=100,\nsize_selection=50,\nmutate_order=0.9\n,mutate_resources=0.9',
+# #                'first_population=500,\nsize_selection=100,\nmutate_order=0.5,\nmutate_resources=0.5]',
+# #                'first_population=500,\nsize_selection=200,\nmutate_order=0.25,\nmutate_resources=0.5]',
+# #                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.75]',
+# #                'first_population=500,\nsize_selection=100,\nmutate_order=0.75,\nmutate_resources=0.75]',
+# #                'first_population=500,\nsize_selection=50,\nmutate_order=0.5,\nmutate_resources=0.9]']
+# algo_labels = [str(i) for i in range(1, 10 + 1)]
+#
+# # clear previous data
+# global_algo_frequencies.clear()
+# global_algo_downtimes.clear()
+# global_algo_bg_type_frequencies.clear()
+# global_algo_bg_type_downtimes.clear()
+# global_algo_block_type_frequencies.clear()
+# global_algo_block_type_downtimes.clear()
+# launch_algo_frequencies.clear()
+# launch_algo_downtimes.clear()
+# launch_algo_bg_type_frequencies.clear()
+# launch_algo_bg_type_downtimes.clear()
+# launch_algo_block_type_frequencies.clear()
+# launch_algo_block_type_downtimes.clear()
+#
+parse_raw_data(200, 10, algos, algo_labels)
 
-# clear previous data
-global_algo_frequencies.clear()
-global_algo_downtimes.clear()
-global_algo_bg_type_frequencies.clear()
-global_algo_bg_type_downtimes.clear()
-global_algo_block_type_frequencies.clear()
-global_algo_block_type_downtimes.clear()
-launch_algo_frequencies.clear()
-launch_algo_downtimes.clear()
-launch_algo_bg_type_frequencies.clear()
-launch_algo_bg_type_downtimes.clear()
-launch_algo_block_type_frequencies.clear()
-launch_algo_block_type_downtimes.clear()
+comparison_class = 'algorithms'
 
-parse_raw_data(1, 1, algos, algo_labels)
+boxplot_compare_algos_general(f'Received blocks - {comparison_class} comparison', launch_algo_frequencies, algos, algo_labels)
+boxplot_compare_algos_general(f'Downtimes blocks - {comparison_class} comparison', launch_algo_downtimes, algos, algo_labels)
 
-boxplot_compare_algos_general('Received blocks - genetics comparison', launch_algo_frequencies, algos, algo_labels)
-boxplot_compare_algos_general('Downtimes blocks - genetics comparison', launch_algo_downtimes, algos, algo_labels)
-
-boxplot_compare_algos_bg_type('Received blocks - genetics with graph types comparison',
+boxplot_compare_algos_bg_type(f'Received blocks - {comparison_class} with graph types comparison',
                               launch_algo_bg_type_frequencies, algo_labels)
-boxplot_compare_algos_bg_type('Downtimes - genetics with graph types comparison',
+boxplot_compare_algos_bg_type(f'Downtimes - {comparison_class} with graph types comparison',
                               launch_algo_bg_type_downtimes, algo_labels)
 
-boxplot_compare_algos_block_type('Received blocks - genetics with block types comparison',
+for v in launch_algo_block_type_frequencies.values():
+    for vv in v.values():
+        for block_type in ['GENERAL', 'SEQUENTIAL', 'PARALLEL']:
+            temp = vv[block_type]
+
+boxplot_compare_algos_block_type(f'Received blocks - {comparison_class} with block types comparison',
                                  launch_algo_block_type_frequencies, algo_labels)
 
 

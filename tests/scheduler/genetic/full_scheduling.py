@@ -10,4 +10,4 @@ def test_multiprocessing(setup_scheduler_parameters):
                                size_of_population=100,
                                size_selection=500)
 
-    genetic.schedule(setup_wg, setup_contractors)
+    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)

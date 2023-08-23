@@ -40,6 +40,7 @@ class GeneticScheduler(Scheduler):
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
+                 weights: list[int] = None,
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
@@ -56,6 +57,7 @@ class GeneticScheduler(Scheduler):
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
         self._n_cpu = n_cpu
+        self._weights = None
 
         self._time_border = None
         self._deadline = None
@@ -125,11 +127,18 @@ class GeneticScheduler(Scheduler):
         """
         self._deadline = deadline
 
+    def set_weights(self, weights: list[int]):
+        self._weights = weights
+
+    @classmethod
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                                  spec: ScheduleSpec = ScheduleSpec()):
+                                  spec: ScheduleSpec = ScheduleSpec(),
+                                  work_estimator: WorkTimeEstimator = None,
+                                  deadline: Time = None,
+                                  weights=None):
         """
-        Heuristic algorithm, that generate first population
+        Algorithm, that generate first population
 
         :param landscape:
         :param wg: graph of works
@@ -138,43 +147,46 @@ class GeneticScheduler(Scheduler):
         :return:
         """
 
+        if weights is None:
+            weights = [2, 2, 1, 1, 1, 1]
+
         def init_k_schedule(scheduler_class, k):
             try:
-                return scheduler_class(work_estimator=self.work_estimator,
+                return scheduler_class(work_estimator=work_estimator,
                                        resource_optimizer=AverageReqResourceOptimizer(k)) \
                     .schedule(wg, contractors,
                               spec,
-                              landscape=landscape), list(reversed(prioritization(wg, self.work_estimator))), spec
+                              landscape=landscape), list(reversed(prioritization(wg, work_estimator))), spec
             except NoSufficientContractorError:
                 return None, None, None
 
-        if self._deadline is None:
+        if deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
-                                                                                        landscape=landscape), \
-                            list(reversed(prioritization(wg, self.work_estimator))), spec
+                    return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors,
+                                                                                   landscape=landscape), \
+                        list(reversed(prioritization(wg, work_estimator))), spec
                 except NoSufficientContractorError:
                     return None, None, None
+
         else:
             def init_schedule(scheduler_class):
                 try:
                     (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
-                        scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline, spec, landscape=landscape)
-                    return schedule, list(reversed(prioritization(wg, self.work_estimator))), modified_spec
+                        scheduler_class(work_estimator=work_estimator)
+                    ).schedule_with_cache(wg, contractors, deadline, spec, landscape=landscape)
+                    return schedule, list(reversed(prioritization(wg, work_estimator))), modified_spec
                 except NoSufficientContractorError:
                     return None, None, None
 
         return {
-            "heft_end": init_schedule(HEFTScheduler),
-            "heft_between": init_schedule(HEFTBetweenScheduler),
-            "12.5%": init_k_schedule(HEFTScheduler, 8),
-            "25%": init_k_schedule(HEFTScheduler, 4),
-            "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-            "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
+            "heft_end": (*init_schedule(HEFTScheduler), weights[0]),
+            "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[1]),
+            "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[2]),
+            "25%": (*init_k_schedule(HEFTScheduler, 4), weights[3]),
+            "75%": (*init_k_schedule(HEFTScheduler, 4 / 3), weights[4]),
+            "87.5%": (*init_k_schedule(HEFTScheduler, 8 / 7), weights[5])
         }
-
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
@@ -198,7 +210,8 @@ class GeneticScheduler(Scheduler):
         :param timeline:
         :return:
         """
-        init_schedules = self.generate_first_population(wg, contractors, landscape)
+        init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, spec,
+                                                                    self.work_estimator, self._deadline, self._weights)
 
         size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)

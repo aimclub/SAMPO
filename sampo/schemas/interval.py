@@ -9,8 +9,8 @@ from sampo.schemas.serializable import AutoJSONSerializable
 # to work with float and avoid errors due to inaccuracy
 EPS = 1e5
 # to work with distributions when certain start and finish value is undefined
-INF = float("inf")
-MINUS_INF = float("-inf")
+INF = float('inf')
+MINUS_INF = float('-inf')
 
 
 # TODO: Take out common parts, deal with types, rethink intervals

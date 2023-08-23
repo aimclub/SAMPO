@@ -1,4 +1,4 @@
-from fixtures import *
+from tests.scheduler.genetic.fixtures import *
 from sampo.scheduler.genetic.converter import ChromosomeType
 
 

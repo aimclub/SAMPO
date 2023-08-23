@@ -31,7 +31,8 @@ def _value_by_req(method: ContractorGenerationMethod, req: WorkerReq) -> int:
     return int(val)
 
 
-def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1,
+def get_contractor_by_wg(wg: WorkGraph,
+                         scaler: float | None = 1,
                          method: ContractorGenerationMethod = ContractorGenerationMethod.AVG) -> Contractor:
     """
     Creates a pool of contractor resources based on job requirements, selecting the maximum specified parameter
@@ -42,7 +43,7 @@ def get_contractor_by_wg(wg: WorkGraph, scaler: float | None = 1,
     :return: Contractor capable of completing the work schedule
     """
     if scaler < 1:
-        raise ValueError("scaler should be greater than 1")
+        raise ValueError('scaler should be greater than 1')
     wg_reqs = list(chain(*[n.work_unit.worker_reqs for n in wg.nodes]))
     min_wg_reqs = [(req.kind, _value_by_req(method, req)) for req in wg_reqs]
     maximal_min_req: dict[str, int] = \

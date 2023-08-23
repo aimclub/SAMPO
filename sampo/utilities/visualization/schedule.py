@@ -42,9 +42,9 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     fig.update_traces(textposition='outside')
 
     fig.update_yaxes(showticklabels=False, title_text='Project tasks',
-                     type="category")
+                     type='category')
 
-    fig.update_xaxes(type="date",
+    fig.update_xaxes(type='date',
                      range=[schedule_start - visualization_start_delta,
                             schedule_finish + visualization_finish_delta],
                      title_text='Date')

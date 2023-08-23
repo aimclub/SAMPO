@@ -131,8 +131,8 @@ class ConstructionObject(Resource):
 
 @dataclass(init=False)
 class EmptySpaceConstructionObject(ConstructionObject):
-    id: str = "00000000000000000"
-    name: str = "empty space construction object"
+    id: str = '00000000000000000'
+    name: str = 'empty space construction object'
 
 
 @dataclass

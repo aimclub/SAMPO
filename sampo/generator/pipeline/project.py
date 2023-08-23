@@ -167,7 +167,7 @@ def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> Gra
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(work_id, "start of project", wr.START_PROJECT, group="service_works", is_service_unit=True)
+    work = WorkUnit(work_id, 'start of project', wr.START_PROJECT, group='service_works', is_service_unit=True)
     node = GraphNode(work, [])
     return node
 
@@ -183,6 +183,6 @@ def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(str(work_id), "finish of project", wr.END_PROJECT, group="service_works", is_service_unit=True)
+    work = WorkUnit(str(work_id), 'finish of project', wr.END_PROJECT, group='service_works', is_service_unit=True)
     node = GraphNode(work, parents)
     return node

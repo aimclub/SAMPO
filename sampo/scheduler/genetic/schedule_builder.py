@@ -135,7 +135,7 @@ def build_schedule(wg: WorkGraph,
                    selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, int]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, int, ScheduleSpec]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
@@ -187,8 +187,8 @@ def build_schedule(wg: WorkGraph,
 
     # here we aggregate information about relationships from the whole inseparable chain
     children = {work_id2index[node.id]: list({work_id2index[inseparable_parents[child].id]
-                                                  for inseparable in node.get_inseparable_chain_with_self()
-                                                  for child in inseparable.children})
+                                              for inseparable in node.get_inseparable_chain_with_self()
+                                              for child in inseparable.children})
                 for node in nodes}
 
     parents = {work_id2index[node.id]: [] for node in nodes}
@@ -251,7 +251,7 @@ def build_schedule(wg: WorkGraph,
 
         while generation < generation_number and plateau_steps < max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
-            print(f"-- Generation {generation}, population={len(pop)}, best time={best_fitness} --")
+            print(f'-- Generation {generation}, population={len(pop)}, best time={best_fitness} --')
             if best_fitness == prev_best_fitness:
                 plateau_steps += 1
             else:
@@ -285,65 +285,66 @@ def build_schedule(wg: WorkGraph,
                 if rand.random() < mutpb:
                     ind_order = toolbox.mutate(mutant[0][0])
                     ind = copy_chromosome(mutant[0])
-                    ind = (ind_order[0], ind[1], ind[2])
+                    ind = (ind_order[0], ind[1], ind[2], ind[3])
                     # add to population
                     cur_generation.append(wrap(ind))
 
-            # operations for RESOURCES
-            # mutation
-            # select types for mutation
-            # numbers of changing types
-            number_of_type_for_changing = rand.randint(1, len(worker_name2index) - 1)
-            # workers type for changing(+1 means contractor 'resource')
-            workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
+            if worker_name2index:
+                # operations for RESOURCES
+                # mutation
+                # select types for mutation
+                # numbers of changing types
+                number_of_type_for_changing = rand.randint(1, len(worker_name2index) - 1)
+                # workers type for changing(+1 means contractor 'resource')
+                workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
 
-            # resources mutation
-            for worker in workers:
-                low = resources_border[0, worker] if worker != len(worker_name2index) else 0
-                up = resources_border[1, worker] if worker != len(worker_name2index) else 0
-                for mutant in offspring:
-                    if rand.random() < mutpb_res:
-                        ind = toolbox.mutate_resources(mutant[0], low=low, up=up, type_of_worker=worker)
+                # resources mutation
+                for worker in workers:
+                    low = resources_border[0, worker] if worker != len(worker_name2index) else 0
+                    up = resources_border[1, worker] if worker != len(worker_name2index) else 0
+                    for mutant in offspring:
+                        if rand.random() < mutpb_res:
+                            ind = toolbox.mutate_resources(mutant[0], low=low, up=up, type_of_worker=worker)
+                            # add to population
+                            cur_generation.append(wrap(ind))
+
+                # resource borders mutation
+                for worker in workers:
+                    if worker == len(worker_name2index):
+                        continue
+                    for mutant in offspring:
+                        if rand.random() < mutpb_res:
+                            ind = toolbox.mutate_resource_borders(mutant[0],
+                                                                  type_of_worker=worker)
                         # add to population
                         cur_generation.append(wrap(ind))
 
-            # resource borders mutation
-            for worker in workers:
-                if worker == len(worker_name2index):
-                    continue
-                for mutant in offspring:
-                    if rand.random() < mutpb_res:
-                        ind = toolbox.mutate_resource_borders(mutant[0],
-                                                              type_of_worker=worker)
-                        # add to population
-                        cur_generation.append(wrap(ind))
+                # for the crossover, we use those types that did not participate
+                # in the mutation(+1 means contractor 'resource')
+                # workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
+                # crossover
+                # take 2 individuals as input 1 modified individuals
 
-            # for the crossover, we use those types that did not participate
-            # in the mutation(+1 means contractor 'resource')
-            # workers_for_mate = list(set(list(range(len(worker_name2index) + 1))) - set(workers))
-            # crossover
-            # take 2 individuals as input 1 modified individuals
+                workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
 
-            workers = rand.sample(range(len(worker_name2index) + 1), number_of_type_for_changing)
+                for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                    for ind_worker in workers:
+                        # mate resources
+                        if rand.random() < cxpb_res:
+                            ind1, ind2 = toolbox.mate_resources(child1[0], child2[0], ind_worker)
+                            # add to population
+                            cur_generation.append(wrap(ind1))
+                            cur_generation.append(wrap(ind2))
 
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                for ind_worker in workers:
-                    # mate resources
-                    if rand.random() < cxpb_res:
-                        ind1, ind2 = toolbox.mate_resources(child1[0], child2[0], ind_worker)
-                        # add to population
-                        cur_generation.append(wrap(ind1))
-                        cur_generation.append(wrap(ind2))
+                        # mate resource borders
+                        if rand.random() < cxpb_res:
+                            if ind_worker == len(worker_name2index):
+                                continue
+                            ind1, ind2 = toolbox.mate_resource_borders(child1[0], child2[0], ind_worker)
 
-                    # mate resource borders
-                    if rand.random() < cxpb_res:
-                        if ind_worker == len(worker_name2index):
-                            continue
-                        ind1, ind2 = toolbox.mate_resource_borders(child1[0], child2[0], ind_worker)
-
-                        # add to population
-                        cur_generation.append(wrap(ind1))
-                        cur_generation.append(wrap(ind2))
+                            # add to population
+                            cur_generation.append(wrap(ind1))
+                            cur_generation.append(wrap(ind2))
 
             evaluation_start = time.time()
 
@@ -380,7 +381,7 @@ def build_schedule(wg: WorkGraph,
             # fits = [ind.fitness.values[0] for ind in pop]
             # evaluation = chromosome_evaluation(best, index2node, resources_border, work_id2index, worker_name2index,
             #                                   parent2inseparable_son, agents)
-            # print("fits: ", fits)
+            # print('fits: ', fits)
             # print(evaluation)
             generation += 1
 
@@ -408,9 +409,9 @@ def build_schedule(wg: WorkGraph,
     if show_fitness_graph:
         sns.lineplot(
             data=DataFrame.from_records([(generation * 4, v) for generation, v in enumerate(fitness_history)],
-                                        columns=["Поколение", "Функция качества"]),
-            x="Поколение",
-            y="Функция качества",
+                                        columns=['Поколение', 'Функция качества']),
+            x='Поколение',
+            y='Функция качества',
             palette='r')
         plt.show()
 
@@ -419,3 +420,16 @@ def build_schedule(wg: WorkGraph,
 
 def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
     return (first[0][0] == second[0][0]).all() and (first[0][1] == second[0][1]).all()
+
+
+def wrap(chromosome: ChromosomeType) -> Individual:
+    """
+    Creates an individual from chromosome.
+    """
+
+    def ind_getter():
+        return chromosome
+
+    ind = initRepeat(Individual, ind_getter, n=1)
+    ind.fitness.invalid_steps = 0
+    return ind

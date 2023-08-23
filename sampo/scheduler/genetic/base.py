@@ -134,10 +134,17 @@ class GeneticScheduler(Scheduler):
     def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                   work_estimator: WorkTimeEstimator = None,
+                                  spec: ScheduleSpec = ScheduleSpec(),
                                   deadline: Time = None,
                                   weights = None):
         """
-        The first population generator
+        Algorithm, that generate first population
+
+        :param landscape:
+        :param wg: graph of works
+        :param contractors:
+        :param spec:
+        :return:
         """
 
         if weights is None:
@@ -145,31 +152,32 @@ class GeneticScheduler(Scheduler):
 
         def init_k_schedule(scheduler_class, k):
             try:
-                return (scheduler_class(work_estimator=work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
-                                                                                                    landscape=landscape),
-                        list(reversed(prioritization(wg, work_estimator))))
+                return scheduler_class(work_estimator=work_estimator,
+                                       resource_optimizer=AverageReqResourceOptimizer(k)) \
+                    .schedule(wg, contractors,
+                              spec,
+                              landscape=landscape), list(reversed(prioritization(wg, work_estimator))), spec
             except NoSufficientContractorError:
-                return None, None
+                return None, None, None
 
         if deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=work_estimator).schedule(wg, contractors,
-                                                                                         landscape=landscape),
-                            list(reversed(prioritization(wg, work_estimator))))
+                    return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors,
+                                                                                        landscape=landscape), \
+                            list(reversed(prioritization(wg, work_estimator))), spec
                 except NoSufficientContractorError:
-                    return None, None
+                    return None, None, None
 
         else:
             def init_schedule(scheduler_class):
                 try:
-                    schedule = AverageBinarySearchResourceOptimizingScheduler(
+                    (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=work_estimator)
-                    ).schedule_with_cache(wg, contractors, deadline, landscape=landscape)[0]
-                    return schedule, list(reversed(prioritization(wg, work_estimator)))
+                    ).schedule_with_cache(wg, contractors, deadline, spec, landscape=landscape)[0]
+                    return schedule, list(reversed(prioritization(wg, work_estimator))), modified_spec
                 except NoSufficientContractorError:
-                    return None, None
+                    return None, None, None
 
         return {
             "heft_end":     (*init_schedule(HEFTScheduler),          weights[0]),
@@ -179,6 +187,7 @@ class GeneticScheduler(Scheduler):
             "75%":          (*init_k_schedule(HEFTScheduler, 4 / 3), weights[4]),
             "87.5%":        (*init_k_schedule(HEFTScheduler, 8 / 7), weights[5])
         }
+
 
     def schedule_with_cache(self,
                             wg: WorkGraph,

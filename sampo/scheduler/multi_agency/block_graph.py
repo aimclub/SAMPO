@@ -40,6 +40,13 @@ class BlockGraph:
 
     @staticmethod
     def pure(nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None):
+        """
+        Build BlockGraph from the received list of WorkGraphs without edges
+
+        :param nodes: list of WorkGraphs without edges - blocks of BlockGraphs
+        :param obstruction_getter:
+        :return: BlockGraph without edges
+        """
         return BlockGraph([BlockNode(node, obstruction_getter(i)) for i, node in enumerate(nodes)])
 
     def __getitem__(self, item) -> BlockNode:
@@ -66,6 +73,7 @@ class BlockGraph:
         copied_graph = self.__copy__()
         copied_nodes = copied_graph.nodes
 
+        # nodes are copied as follows, since recursion occurs when attempting to copy WorkGraph normally
         for node in copied_nodes:
             node.wg = WorkGraph._deserialize(node.wg._serialize())
 

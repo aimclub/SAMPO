@@ -119,12 +119,12 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "task_id": self.work_unit.id,
-            "task_name": self.work_unit.name,
-            "start": self.start_time.value,
-            "finish": self.finish_time.value,
-            "contractor_id": self.contractor,
-            "workers": {worker.name: worker.count for worker in self.workers},
+            'task_id': self.work_unit.id,
+            'task_name': self.work_unit.name,
+            'start': self.start_time.value,
+            'finish': self.finish_time.value,
+            'contractor_id': self.contractor,
+            'workers': {worker.name: worker.count for worker in self.workers},
         }
 
     def __deepcopy__(self, memodict={}):

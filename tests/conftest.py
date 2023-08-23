@@ -26,15 +26,15 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ("tests.schema", "tests.models",)
+pytest_plugins = ('tests.schema', 'tests.models',)
 
 
-@fixture(scope='session')
+@fixture
 def setup_sampler(request):
     return Sampler(1e-1)
 
 
-@fixture(scope='session')
+@fixture
 def setup_rand() -> Random:
     return Random(231)
 
@@ -54,7 +54,7 @@ def setup_landscape_many_holders():
                                            ])
 
 
-@fixture(scope='session')
+@fixture
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
@@ -67,7 +67,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
               for lag_opt in [True, False]
               for graph_type in ['manual',
                                  'small plain synthetic', 'big plain synthetic']])
-        # 'small advanced synthetic', 'big advanced synthetic']])
+# 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
     BIG_GRAPH_SIZE = 300
@@ -161,11 +161,32 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
     for i in range(num_contractors):
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
-                                      name="OOO Berezka",
+                                      name='OOO Berezka',
                                       workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
     return setup_wg, contractors, setup_landscape_many_holders
+
+
+@fixture
+def setup_empty_contractors(setup_wg) -> list[Contractor]:
+    resource_req: set[str] = set()
+
+    num_contractors= 1
+
+    for node in setup_wg.nodes:
+        for req in node.work_unit.worker_reqs:
+            resource_req.add(req.kind)
+
+    contractors = []
+    for i in range(num_contractors):
+        contractor_id = str(uuid4())
+        contractors.append(Contractor(id=contractor_id,
+                                      name='OOO Berezka',
+                                      workers={name: Worker(str(uuid4()), name, 0, contractor_id=contractor_id)
+                                               for name in resource_req},
+                                      equipments={}))
+    return contractors
 
 
 @fixture

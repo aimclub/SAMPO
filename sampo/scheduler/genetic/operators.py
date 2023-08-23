@@ -229,7 +229,7 @@ def generate_population(size_population: int,
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[ChromosomeType]:
     """
     Generates population using chromosome weights.
-    Don not use `generate_chromosome` function.
+    Do not use `generate_chromosome` function.
     """
     def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator,

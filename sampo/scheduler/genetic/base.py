@@ -54,7 +54,7 @@ class GeneticScheduler(Scheduler):
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
         self._n_cpu = n_cpu
-        self._weights = None
+        self._weights = weights
 
         self._time_border = None
         self._deadline = None
@@ -114,8 +114,8 @@ class GeneticScheduler(Scheduler):
     def set_weights(self, weights: list[int]):
         self._weights = weights
 
-    @classmethod
-    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
+    @staticmethod
+    def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                   spec: ScheduleSpec = ScheduleSpec(),
                                   work_estimator: WorkTimeEstimator = None,

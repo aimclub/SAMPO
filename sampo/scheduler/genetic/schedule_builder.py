@@ -27,7 +27,7 @@ def create_toolbox(wg: WorkGraph,
                    population_size: int,
                    mutate_order: float,
                    mutate_resources: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, int]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec = ScheduleSpec(),
                    work_estimator: WorkTimeEstimator = None,
@@ -79,7 +79,7 @@ def create_toolbox(wg: WorkGraph,
         for child in node_children:
             parents[child].append(node)
 
-    init_chromosomes: dict[str, tuple[ChromosomeType, int]] = \
+    init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
         {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
                                                contractor2index, contractor_borders, schedule, chromosome_spec, order),
                 importance, chromosome_spec)
@@ -125,7 +125,7 @@ def build_schedule(wg: WorkGraph,
                    generation_number: int,
                    mutpb_order: float,
                    mutpb_res: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, int]],
+                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),

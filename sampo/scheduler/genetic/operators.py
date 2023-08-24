@@ -282,6 +282,10 @@ def generate_chromosome(wg: WorkGraph,
 
 
 def select_new_population(population: list[ChromosomeType], pop_size: int) -> list[ChromosomeType]:
+    """
+    Selection operator for genetic algorithm.
+    Selecting top n individuals in population.
+    """
     population = sorted(population, key=attrgetter('fitness'), reverse=True)
     return population[:pop_size]
 
@@ -365,6 +369,10 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 
 
 def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Random) -> ChromosomeType:
+    """
+    Mutation operator for order.
+    Swap neighbors.
+    """
     order = ind[0]
     for i in range(1, len(order) - 2):
         if rand.random() < mutpb:

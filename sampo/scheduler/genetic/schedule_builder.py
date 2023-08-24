@@ -138,7 +138,21 @@ def build_schedule(wg: WorkGraph,
                    time_border: int = None,
                    optimize_resources: bool = False) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
+    """
+    Genetic algorithm.
+    Structure of chromosome:
+    [[order of job],
+     [[numbers of workers types 1 for each job], [numbers of workers types 2], ... ],
+      [[border of workers types 1 for each contractor], [border of workers types 2], ...]
+    ]
 
+    Different mate and mutation for order and for workers.
+    Generate order of job by prioritization from HEFTs and from Topological.
+    Generate resources from min to max.
+    Overall initial population is valid.
+
+    :return: schedule
+    """
     global_start = time.time()
 
     # preparing access-optimized data structures

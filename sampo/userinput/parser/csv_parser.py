@@ -73,7 +73,6 @@ class CSVParser:
             temp_lst = [math.nan] * graph_df.shape[0]
             for col in ['predecessor_ids', 'connection_types', 'lags']:
                 graph_df[col] = temp_lst
-            # graph_df = set_connections_info(graph_df, history_df)
             graph_df = preprocess_graph_df(graph_df)
             works_info = set_connections_info(graph_df, history_df)
         else:
@@ -82,12 +81,13 @@ class CSVParser:
                 works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
             else:
                 works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
+            # works_info = preprocess_graph_df(works_info)
 
         return break_loops_in_input_graph(works_info)
 
     @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
-                                   contractor_info: str | None = None,
+                                   contractor_info: str | list[Contractor] |  None = None,
                                    contractor_types: list[int] | None = None,
                                    unique_work_names_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -111,7 +111,7 @@ class CSVParser:
         :param contractor_types:
         :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
         for a generation
-        :param contractor_info: path to contractor info .csv file
+        :param contractor_info: path to contractor info .csv file or list of Contractors
         :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
         :return: WorkGraph and list of Contractors
         """
@@ -133,6 +133,10 @@ class CSVParser:
                                                                  contractor_id=str(i),
                                                                  contractor_name='Contractor' + ' ' + str(i + 1))
                            for i in range(contractors_number)]
+        elif isinstance(contractor_info, list):
+            contractors = contractor_info
+            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
+                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
         else:
             # if contractor info is given or contractor info and work resource estimator are received simultaneously
             contractor_df = pd.read_csv(contractor_info, sep=';', header=0) if isinstance(contractor_info,

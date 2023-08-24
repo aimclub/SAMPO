@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
+from sampo.schemas.graph import EdgeType
 from sampo.utilities.task_name import NameMapper
 
 
@@ -244,7 +245,7 @@ def set_connections_info(graph_df: pd.DataFrame,
         if len(pred_info_lst) > 0:
             pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
         else:
-            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], ['-1'], ['-1']
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], [-1], [0]
 
         if str(task_id) in tasks_df.index:
             if tasks_df.loc[str(task_id), 'predecessor_ids'] != ['-1']:
@@ -268,7 +269,7 @@ def set_connections_info(graph_df: pd.DataFrame,
         predecessors_counts_lst.append(pred_counts_lst)
         while len(predecessors_types_lst[-1]) != len(predecessors_ids_lst[-1]):
             predecessors_types_lst[-1].append('FS')
-            predecessors_lags_lst[-1].append('-1')
+            predecessors_lags_lst[-1].append(-1)
             predecessors_counts_lst[-1].append(0)
 
     # Convert strings to arrays
@@ -276,5 +277,9 @@ def set_connections_info(graph_df: pd.DataFrame,
     tasks_df['connection_types'] = predecessors_types_lst
     tasks_df['lags'] = predecessors_lags_lst
     tasks_df['counts'] = predecessors_counts_lst
+
+    tasks_df['connection_types'] = tasks_df['connection_types'].apply(
+        lambda x: [EdgeType(elem) if elem != '-1' else EdgeType.FinishStart for elem in x]
+    )
 
     return tasks_df

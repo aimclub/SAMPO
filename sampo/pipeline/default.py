@@ -14,6 +14,10 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
+from sampo.userinput.parser.csv_parser import CSVParser
+from sampo.utilities.task_name import NameMapper
+
+import pandas as pd
 
 
 class DefaultInputPipeline(InputPipeline):
@@ -22,8 +26,8 @@ class DefaultInputPipeline(InputPipeline):
     """
 
     def __init__(self):
-        self._wg: WorkGraph | None = None
-        self._contractors: list[Contractor] | None = None
+        self._wg: WorkGraph | pd.DataFrame | str | None = None
+        self._contractors: list[Contractor] | pd.DataFrame | str | None = None
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_order: list[GraphNode] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
@@ -31,18 +35,28 @@ class DefaultInputPipeline(InputPipeline):
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
         self._landscape_config = LandscapeConfiguration()
+        self._history: pd.DataFrame | None = None
+        self._full_connection: bool = False
+        self._change_base_on_history: bool = False
+        self._name_mapper: NameMapper | None = None
 
-    def wg(self, wg: WorkGraph) -> 'InputPipeline':
+    def wg(self, wg: WorkGraph | pd.DataFrame | str,
+           full_connection: bool = False,
+           change_base_on_history: bool = False) -> 'InputPipeline':
         """
         Mandatory argument.
 
+        :param change_base_on_history: whether it is necessary to change project information based on connection history data?
+        :param full_connection: does the project information contain full details of the works?
         :param wg: the WorkGraph object for scheduling task
         :return: the pipeline object
         """
         self._wg = wg
+        self._full_connection = full_connection
+        self._change_base_on_history = change_base_on_history
         return self
 
-    def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str) -> 'InputPipeline':
         """
         Mandatory argument.
 
@@ -62,6 +76,24 @@ class DefaultInputPipeline(InputPipeline):
         :return:
         """
         self._landscape_config = landscape_config
+        return self
+
+    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+        """
+        Set works' name mapper
+        :param name_mapper:
+        :return:
+        """
+        self._name_mapper = name_mapper
+        return self
+
+    def history(self, history: pd.DataFrame | str) -> 'InputPipeline':
+        """
+        Set historical data. Mandatory method, if work graph hasn't info about links
+        :param history:
+        :return:
+        """
+        self._history = history
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -108,6 +140,17 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+        if isinstance(self._wg, pd.DataFrame) or isinstance(self._wg, str):
+            self._wg, self._contractors = \
+                CSVParser.work_graph_and_contractors(
+                    works_info=CSVParser.read_graph_info(self._wg,
+                                                         self._history,
+                                                         self._full_connection,
+                                                         self._change_base_on_history),
+                    contractor_info=self._contractors,
+                    work_resource_estimator=self._work_estimator,
+                    unique_work_names_mapper=self._name_mapper
+                )
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
             # cache upper-layer self to another variable to get it from inner class
@@ -209,9 +252,10 @@ class DefaultSchedulePipeline(SchedulePipeline):
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,
                                        (
-                                       self._input._node_order, self._input._contractors, self._input._landscape_config,
-                                       self._input._spec, self._worker_pool, self._input._work_estimator,
-                                       self._input._assigned_parent_time, area))
+                                           self._input._node_order, self._input._contractors,
+                                           self._input._landscape_config,
+                                           self._input._spec, self._worker_pool, self._input._work_estimator,
+                                           self._input._assigned_parent_time, area))
         return self
 
     def finish(self) -> Schedule:

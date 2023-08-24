@@ -35,15 +35,11 @@ class Graph:
             if visited[v] == 2:
                 continue
             visited[v] = 1
-            # path.append(v)
             stack.append(v)
-            # if len(self.graph[v]) == 0:
-            #     path = []
             for neighbour, weight in self.graph[v]:
                 if visited[neighbour] == 0:
                     stack.append(neighbour)
                 elif visited[neighbour] == 1:
-                    # path.append(neighbour)
                     return True
         return False
 
@@ -81,12 +77,9 @@ class Graph:
             v = cycle[i + 1]
 
             for neighbor, weight in self.graph[u]:
-                try:
-                    if neighbor == v and weight < min_weight:
-                        min_weight = weight
-                        min_edge = (u, v)
-                except Exception:
-                    raise Exception(f'weight: {type(weight)} and min_weight: {type(min_weight)}\nv:{v} and u: {u}')
+                if neighbor == v and weight < min_weight:
+                    min_weight = weight
+                    min_edge = (u, v)
 
         u, v = min_edge
         self.graph[u] = [(neighbor, weight) for neighbor, weight in self.graph[u] if neighbor != v]

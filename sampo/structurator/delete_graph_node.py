@@ -50,12 +50,3 @@ def _node_deletion(remove_gn: GraphNode, nodes: dict[str, GraphNode]):
 
     for child in children:
         child.add_parents(parents)
-
-    for node in nodes.values():
-        node.__dict__.pop('parents', None)
-        node.__dict__.pop('parents_set', None)
-        node.__dict__.pop('children', None)
-        node.__dict__.pop('children_set', None)
-        node.__dict__.pop('inseparable_parent', None)
-        node.__dict__.pop('inseparable_son', None)
-        node.__dict__.pop('get_inseparable_chain', None)

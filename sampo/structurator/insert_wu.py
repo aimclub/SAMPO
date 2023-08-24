@@ -35,7 +35,7 @@ def insert_work_unit(original_wg: WorkGraph, inserted_wu: WorkUnit,
 
 def _new_edges(copied_nodes: dict[str, GraphNode], original_old_to_new_ids: dict[str, str],
                edges: list[tuple[GraphNode, float, EdgeType]]) \
-        -> list[GraphNode] or list[tuple[GraphNode, float, EdgeType]]:
+        -> list[tuple[GraphNode, float, EdgeType]]:
     return [(copied_nodes[original_old_to_new_ids[parent.id]], lag, edge_type)
             for parent, lag, edge_type in edges]
 

@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import pandas as pd
+
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
@@ -10,6 +12,7 @@ from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.utilities.task_name import NameMapper
 
 
 class InputPipeline(ABC):
@@ -18,11 +21,21 @@ class InputPipeline(ABC):
     """
 
     @abstractmethod
-    def wg(self, wg: WorkGraph) -> 'InputPipeline':
+    def wg(self, wg: WorkGraph | pd.DataFrame | str,
+           full_connection: bool = False,
+           change_base_on_history: bool = False) -> 'InputPipeline':
         ...
 
     @abstractmethod
-    def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def history(self, history: pd.DataFrame | str) -> 'InputPipeline':
         ...
 
     @abstractmethod

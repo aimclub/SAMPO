@@ -1,4 +1,5 @@
 import random
+import math
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial
@@ -129,7 +130,7 @@ def init_toolbox(wg: WorkGraph,
                  work_id2index: dict[str, int],
                  worker_name2index: dict[str, int],
                  index2contractor_obj: dict[int, Contractor],
-                 init_chromosomes: dict[str, tuple[ChromosomeType, float]],
+                 init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                  mutate_order: float,
                  mutate_resources: float,
                  population_size: int,
@@ -222,9 +223,15 @@ def generate_population(n: int,
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)
     count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
-    count_for_topological = n - count_for_specified_types * len(init_chromosomes)
+    sum_counts_for_specified_types = count_for_specified_types * len(init_chromosomes)
+    counts = [count_for_specified_types * importance for _, importance, _ in init_chromosomes.values()]
+
+    weights_multiplier = math.ceil(sum_counts_for_specified_types / sum(counts))
+    counts = [count * weights_multiplier for count in counts]
+
+    count_for_topological = n - sum_counts_for_specified_types
     count_for_topological = count_for_topological if count_for_topological > 0 else 1
-    counts = [count_for_specified_types for _ in range(len(init_chromosomes))] + [count_for_topological]
+    counts += [count_for_topological]
 
     chromosome_types = rand.sample(list(init_chromosomes.keys()) + ['topological'], k=n, counts=counts)
 

@@ -81,7 +81,6 @@ class CSVParser:
                 works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
             else:
                 works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
-            # works_info = preprocess_graph_df(works_info)
 
         return break_loops_in_input_graph(works_info)
 

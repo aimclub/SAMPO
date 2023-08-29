@@ -26,6 +26,8 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     schedule_dataframe = schedule_dataframe.rename({'workers': 'workers_dict'}, axis=1)
     schedule_dataframe.loc[:, 'workers'] = schedule_dataframe.loc[:, 'workers_dict']\
         .apply(lambda x: x.replace(", '", ", <br>'"))
+    # add one time unit to the end should remove hole within the immediately close tasks
+    schedule_dataframe['finish'] = schedule_dataframe['finish'] + timedelta(1)
 
     schedule_start = schedule_dataframe.loc[:, 'start'].min()
     schedule_finish = schedule_dataframe.loc[:, 'finish'].max()

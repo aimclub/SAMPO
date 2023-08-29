@@ -94,5 +94,5 @@ def remove_service_tasks(service_schedule_df: pd.DataFrame) -> pd.DataFrame:
         for connection in connections_lst:
             if connection[0] not in service_tasks_ids:
                 fixed_connections_lst[-1].append(connection)
-    schedule_df.loc[:, 'successors'] = fixed_connections_lst
+    schedule_df.loc[:, 'successors'] = pd.Series(fixed_connections_lst)
     return schedule_df

@@ -36,7 +36,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.is_service_unit = is_service_unit
         self.volume = volume
         self.volume_type = volume_type
-        self.display_name = display_name
+        self.display_name = display_name if display_name else name
         self.workground_size = workground_size
 
     def need_materials(self) -> list[Material]:

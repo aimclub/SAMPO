@@ -1,10 +1,10 @@
 import math
+from collections import defaultdict
 from typing import Callable, Any
 from uuid import uuid4
 
 import networkx as nx
 import pandas as pd
-from collections import defaultdict
 
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.contractor import Contractor
@@ -230,9 +230,9 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
                     for res_name in resource_names
                     if row[res_name] > 0]
         is_service_unit = len(reqs) == 0
-        work_unit = WorkUnit(row['activity_id'], row['activity_name'], reqs, group=row['activity_name'],
+        work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
-                             display_name=row['granular_name'])
+                             display_name=row['activity_name'])
         has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)

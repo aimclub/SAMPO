@@ -27,7 +27,7 @@ if __name__ == '__main__':
     schedulers = [HEFTScheduler(),
                   HEFTBetweenScheduler(),
                   TopologicalScheduler()]
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 20)]
+                  # GeneticScheduler(50, 0.5, 0.5, 20)]
 
     contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 

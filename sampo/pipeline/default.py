@@ -14,16 +14,20 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
+from sampo.userinput.parser.csv_parser import CSVParser
+from sampo.utilities.task_name import NameMapper
+
+import pandas as pd
 
 
 class DefaultInputPipeline(InputPipeline):
     """
-    Default pipeline, that help to use framework
+    Default pipeline, that help to use the framework
     """
 
     def __init__(self):
-        self._wg: WorkGraph | None = None
-        self._contractors: list[Contractor] | None = None
+        self._wg: WorkGraph | pd.DataFrame | str | None = None
+        self._contractors: list[Contractor] | pd.DataFrame | str | None = None
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_order: list[GraphNode] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
@@ -31,18 +35,28 @@ class DefaultInputPipeline(InputPipeline):
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
         self._landscape_config = LandscapeConfiguration()
+        self._history: pd.DataFrame | None = None
+        self._is_wg_has_full_info_about_connections: bool = False
+        self._change_base_on_history: bool = False
+        self._name_mapper: NameMapper | None = None
 
-    def wg(self, wg: WorkGraph) -> 'InputPipeline':
+    def wg(self, wg: WorkGraph | pd.DataFrame | str,
+           is_wg_has_full_info_about_connections: bool = False,
+           change_base_on_history: bool = False) -> 'InputPipeline':
         """
         Mandatory argument.
 
+        :param change_base_on_history: whether it is necessary to change project information based on connection history data
+        :param is_wg_has_full_info_about_connections: does the project information contain full details of the works
         :param wg: the WorkGraph object for scheduling task
         :return: the pipeline object
         """
         self._wg = wg
+        self._is_wg_has_full_info_about_connections = is_wg_has_full_info_about_connections
+        self._change_base_on_history = change_base_on_history
         return self
 
-    def contractors(self, contractors: list[Contractor]) -> 'InputPipeline':
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str) -> 'InputPipeline':
         """
         Mandatory argument.
 
@@ -62,6 +76,24 @@ class DefaultInputPipeline(InputPipeline):
         :return:
         """
         self._landscape_config = landscape_config
+        return self
+
+    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+        """
+        Set works' name mapper
+        :param name_mapper:
+        :return:
+        """
+        self._name_mapper = name_mapper
+        return self
+
+    def history(self, history: pd.DataFrame | str) -> 'InputPipeline':
+        """
+        Set historical data. Mandatory method, if work graph hasn't info about links
+        :param history:
+        :return:
+        """
+        self._history = history
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -108,6 +140,17 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+        if isinstance(self._wg, pd.DataFrame) or isinstance(self._wg, str):
+            self._wg, self._contractors = \
+                CSVParser.work_graph_and_contractors(
+                    works_info=CSVParser.read_graph_info(self._wg,
+                                                         self._history,
+                                                         self._is_wg_has_full_info_about_connections,
+                                                         self._change_base_on_history),
+                    contractor_info=self._contractors,
+                    work_resource_estimator=self._work_estimator,
+                    unique_work_names_mapper=self._name_mapper
+                )
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
             # cache upper-layer self to another variable to get it from inner class
@@ -132,7 +175,8 @@ class DefaultInputPipeline(InputPipeline):
         match self._lag_optimize:
             case LagOptimizationStrategy.NONE:
                 wg = self._wg
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
+                                                                           self._landscape_config,
                                                                            self._spec,
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
@@ -140,11 +184,13 @@ class DefaultInputPipeline(InputPipeline):
             case LagOptimizationStrategy.AUTO:
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
-                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors, self._landscape_config,
+                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors,
+                                                                             self._landscape_config,
                                                                              self._spec,
                                                                              assigned_parent_time=self._assigned_parent_time)
                 wg2 = graph_restructuring(self._wg, True)
-                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors, self._landscape_config,
+                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors,
+                                                                             self._landscape_config,
                                                                              self._spec,
                                                                              assigned_parent_time=self._assigned_parent_time)
 
@@ -158,8 +204,9 @@ class DefaultInputPipeline(InputPipeline):
                     schedule = schedule2
 
             case _:
-                wg = graph_restructuring(self._wg, self._lag_optimize.value)
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors, self._landscape_config,
+                wg = graph_restructuring(self._wg, self._lag_optimize)
+                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
+                                                                           self._landscape_config,
                                                                            self._spec,
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
@@ -190,7 +237,6 @@ class DefaultInputPipeline(InputPipeline):
         return True
 
 
-
 # noinspection PyProtectedMember
 class DefaultSchedulePipeline(SchedulePipeline):
 
@@ -200,14 +246,16 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
         self._scheduled_works = {wg[swork.work_unit.id]:
-                                 swork for swork in schedule.to_schedule_work_dict.values()}
+                                     swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,
-                                       (self._input._node_order, self._input._contractors, self._input._landscape_config,
-                                        self._input._spec, self._worker_pool, self._input._work_estimator,
-                                        self._input._assigned_parent_time, area))
+                                       (
+                                           self._input._node_order, self._input._contractors,
+                                           self._input._landscape_config,
+                                           self._input._spec, self._worker_pool, self._input._work_estimator,
+                                           self._input._assigned_parent_time, area))
         return self
 
     def finish(self) -> Schedule:

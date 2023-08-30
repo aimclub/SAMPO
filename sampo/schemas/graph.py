@@ -7,11 +7,10 @@ from typing import Union, Optional
 import numpy as np
 from scipy.sparse import dok_matrix
 
-from sampo.schemas.serializable import JSONSerializable, T, JS
-from sampo.schemas.works import WorkUnit
-
-from sampo.schemas.time import Time
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.serializable import JSONSerializable, T, JS
+from sampo.schemas.time import Time
+from sampo.schemas.works import WorkUnit
 
 
 class EdgeType(Enum):
@@ -131,6 +130,9 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     def is_inseparable_son(self) -> bool:
         return self.inseparable_parent is not None
+
+    def is_service(self) -> bool:
+        return len(self.parents) == 0
 
     def traverse_children(self, topologically: bool = False):
         """

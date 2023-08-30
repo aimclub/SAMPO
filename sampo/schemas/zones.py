@@ -13,15 +13,7 @@ class Zone:
 @dataclass
 class ZoneReq:
     name: str
-    require_status: int
-
-
-@dataclass
-class ZoneConfiguration:
-    time_costs: np.ndarray
-
-    def change_cost(self, from_status: int, to_status: int):
-        return self.time_costs[from_status, to_status]
+    required_status: int
 
 
 class ZoneStatuses(ABC):
@@ -35,7 +27,7 @@ class ZoneStatuses(ABC):
     @abstractmethod
     def match_status(self, target: int, to_compare: int) -> bool:
         """
-        :param target: statues that should match
+        :param target: statuses that should match
         :param to_compare: status that should be matched
         :return: does target match to_compare
         """
@@ -52,3 +44,13 @@ class DefaultZoneStatuses(ZoneStatuses):
 
     def match_status(self, target: int, to_compare: int) -> bool:
         return target == 0 or target == to_compare
+
+
+@dataclass
+class ZoneConfiguration:
+    start_statuses: dict[str, int]
+    time_costs: np.ndarray
+    statuses: ZoneStatuses = DefaultZoneStatuses()
+
+    def change_cost(self, from_status: int, to_status: int):
+        return self.time_costs[from_status, to_status]

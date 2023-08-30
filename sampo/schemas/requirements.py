@@ -110,3 +110,9 @@ class ConstructionObjectReq(BaseReq):
     kind: str
     count: int
     name: Optional[str] = None
+
+
+class ZoneReq(BaseReq):
+    kind: str
+    status: int
+    name: Optional[str] = None

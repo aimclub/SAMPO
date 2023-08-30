@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from sampo.schemas.identifiable import Identifiable
-from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq
+from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq, ZoneReq
 from sampo.schemas.resources import Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.utilities.serializers import custom_serializer
@@ -12,15 +12,26 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
     Class that describe vertex in graph (one work/task)
     """
-    def __init__(self, id: str, name: str, worker_reqs: list[WorkerReq] = [], equipment_reqs: list[EquipmentReq] = [],
-                 material_reqs: list[MaterialReq] = [], object_reqs: list[ConstructionObjectReq] = [],
-                 group: str = 'default', is_service_unit=False, volume: float = 0,
-                 volume_type: str = 'unit', display_name: str = "", workground_size: int = 100):
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 worker_reqs: list[WorkerReq] = None,
+                 equipment_reqs: list[EquipmentReq] = None,
+                 material_reqs: list[MaterialReq] = None,
+                 object_reqs: list[ConstructionObjectReq] = None,
+                 zone_reqs: list[ZoneReq] = None,
+                 group: str = 'default',
+                 is_service_unit: bool = False,
+                 volume: float = 0,
+                 volume_type: str = 'unit',
+                 display_name: str = "",
+                 workground_size: int = 100):
         """
         :param worker_reqs: list of required professions (i.e. workers)
         :param equipment_reqs: list of required equipment
         :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
         :param object_reqs: list of required objects (e.g. electricity, pipelines, roads)
+        :param zone_reqs: list of required zone statuses (e.g. opened/closed doors, attached equipment, etc.)
         :param group: union block of works
         :param is_service_unit: service units are additional vertexes
         :param volume: scope of work
@@ -28,10 +39,21 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param display_name: name of work
         """
         super(WorkUnit, self).__init__(id, name)
+        if material_reqs is None:
+            material_reqs = []
+        if object_reqs is None:
+            object_reqs = []
+        if equipment_reqs is None:
+            equipment_reqs = []
+        if worker_reqs is None:
+            worker_reqs = []
+        if zone_reqs is None:
+            zone_reqs = []
         self.worker_reqs = worker_reqs
         self.equipment_reqs = equipment_reqs
         self.object_reqs = object_reqs
         self.material_reqs = material_reqs
+        self.zone_reqs = zone_reqs
         self.group = group
         self.is_service_unit = is_service_unit
         self.volume = volume

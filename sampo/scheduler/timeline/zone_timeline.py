@@ -4,7 +4,6 @@ from operator import attrgetter
 
 from sortedcontainers import SortedList
 
-from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
 from sampo.schemas.zones import ZoneReq, ZoneConfiguration, Zone
 from sampo.utilities.collections_util import build_index
@@ -19,7 +18,7 @@ class ZoneScheduleEvent:
 class ZoneTimeline:
 
     def __init__(self, config: ZoneConfiguration):
-        self._timeline = {zone: ExtendedSortedList([ZoneScheduleEvent(Time(0), status)], key=attrgetter('time'))
+        self._timeline = {zone: SortedList([ZoneScheduleEvent(Time(0), status)], key=attrgetter('time'))
                           for zone, status in config.start_statuses.items()}
         self._config = config
 
@@ -29,7 +28,7 @@ class ZoneTimeline:
         start = parent_time
         scheduled_wreqs: list[ZoneReq] = []
 
-        type2count: dict[str, int] = build_index(zones, lambda w: w.name, lambda w: w.required_status)
+        type2status: dict[str, int] = build_index(zones, lambda w: w.name, lambda w: w.required_status)
 
         queue = deque(zones)
 
@@ -42,7 +41,7 @@ class ZoneTimeline:
             # we look for the earliest time slot starting from 'start' time moment
             # if we have found a time slot for the previous task,
             # we should start to find for the earliest time slot of other task since this new time
-            found_start = self._find_earliest_time_slot(state, start, exec_time, type2count[wreq.name])
+            found_start = self._find_earliest_time_slot(state, start, exec_time, type2status[wreq.name])
 
             assert found_start >= start
 

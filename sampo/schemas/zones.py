@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -14,6 +14,9 @@ class Zone:
 class ZoneReq:
     name: str
     required_status: int
+
+    def to_zone(self) -> Zone:
+        return Zone(self.name, self.required_status)
 
 
 class ZoneStatuses(ABC):
@@ -48,9 +51,9 @@ class DefaultZoneStatuses(ZoneStatuses):
 
 @dataclass
 class ZoneConfiguration:
-    start_statuses: dict[str, int]
-    time_costs: np.ndarray
-    statuses: ZoneStatuses = DefaultZoneStatuses()
+    start_statuses: dict[str, int] = field(default_factory=dict)
+    time_costs: np.ndarray = field(default_factory=lambda: np.ndarray([[]]))
+    statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
     def change_cost(self, from_status: int, to_status: int):
         return self.time_costs[from_status, to_status]

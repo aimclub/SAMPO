@@ -44,19 +44,21 @@ def argmin(array) -> int:
 #                 print(f'{generated_label}: {bins[generated_label]}/{bin_size} processed')
 #     return result
 
+def generate():
+    wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
+    encoding = encode_graph(wg)
+    schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
+    generated_label = argmin(schedulers_results)
+
+    return generated_label, encoding
+
+
 def generate_graph(label: int):
     while True:
-        try:
-            wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
-            encoding = encode_graph(wg)
-            schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
-            generated_label = argmin(schedulers_results)
-
-            if generated_label == label:
-                print(f'{generated_label} processed')
-                return tuple([encoding, generated_label])
-        except Exception:
-            raise Exception()
+        generated_label, encoding = generate()
+        if generated_label == label:
+            print(f'{generated_label} processed')
+            return tuple([encoding, generated_label])
 
 
 if __name__ == '__main__':

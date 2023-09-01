@@ -110,3 +110,4 @@ class ConstructionObjectReq(BaseReq):
     kind: str
     count: int
     name: Optional[str] = None
+

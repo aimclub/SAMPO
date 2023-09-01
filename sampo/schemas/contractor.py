@@ -102,6 +102,6 @@ def get_contractor_for_resources_schedule(resources: Union[DataFrame, list[dict[
     # TODO: process equipment
     return Contractor(id=contractor_id,
                       name=contractor_name,
-                      workers={item[0]: Worker(str(i), item[0], int(item[1]), contractor_id)
+                      workers={item[0]: Worker(str(i), str(item[0]), int(item[1]), contractor_id)
                                for i, item in enumerate(aggregate_resources(resources_df, contractor_capacity).items())},
                       equipments=dict())

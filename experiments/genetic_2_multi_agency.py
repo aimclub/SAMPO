@@ -18,11 +18,11 @@ def obstruction_getter(i: int):
 
 
 if __name__ == '__main__':
-    schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),]
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100)]
+    schedulers = [GeneticScheduler(50, 0.5, 0.5, 100),]
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100)]
 
     contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 

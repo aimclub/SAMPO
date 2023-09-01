@@ -1,18 +1,16 @@
+import warnings
+
 from matplotlib import pyplot as plt
 
-from sampo.utilities.schedule import remove_service_tasks
-
-from sampo.utilities.visualization.base import VisualizationMode
-
-from sampo.generator import get_contractor_by_wg  # Warning!!! sampo~=0.1.1.77
+from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg
 from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.schemas.graph import WorkGraph
 from sampo.schemas.contractor import Contractor
+from sampo.schemas.graph import WorkGraph
 from sampo.structurator.base import graph_restructuring
-from sampo.utilities.visualization.work_graph import work_graph_fig
+from sampo.utilities.schedule import remove_service_tasks
+from sampo.utilities.visualization.base import VisualizationMode
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
-
-import warnings
+from sampo.utilities.visualization.work_graph import work_graph_fig
 
 warnings.filterwarnings("ignore")  # for matplotlib warning suppression
 

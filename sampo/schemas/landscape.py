@@ -68,3 +68,10 @@ class MaterialDelivery:
             material_delivery = []
             self.delivery[name] = material_delivery
         material_delivery.append((time, count))
+
+    def add_deliveries(self, name: str, deliveries: list[tuple[Time, int]]):
+        material_delivery = self.delivery.get(name, None)
+        if material_delivery is None:
+            self.delivery[name] = deliveries
+        else:
+            material_delivery.extend(deliveries)

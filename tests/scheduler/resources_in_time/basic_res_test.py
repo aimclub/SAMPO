@@ -35,7 +35,11 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
-    scheduler = GeneticScheduler(fitness_constructor=DeadlineResourcesFitness.prepare(deadline))
+    scheduler = GeneticScheduler(number_of_generation=50,
+                                 mutate_order=0.05,
+                                 mutate_resources=0.005,
+                                 size_of_population=50,
+                                 fitness_constructor=DeadlineResourcesFitness.prepare(deadline))
     scheduler.set_deadline(deadline)
 
     try:

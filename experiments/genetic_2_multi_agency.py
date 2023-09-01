@@ -18,11 +18,11 @@ def obstruction_getter(i: int):
 
 
 if __name__ == '__main__':
-    schedulers = [GeneticScheduler(50, 50, 0.5, 0.5, 100),]
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100),
-                  # GeneticScheduler(50, 50, 0.5, 0.5, 100)]
+    schedulers = [GeneticScheduler(50, 0.5, 0.5, 100),]
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100),
+                  # GeneticScheduler(50, 0.5, 0.5, 100)]
 
     contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    bg = generate_block_graph(SyntheticBlockGraphType.Sequential, 100, [1, 0, 0], lambda x: (30, 50), 0.2,
+    bg = generate_block_graph(SyntheticBlockGraphType.SEQUENTIAL, 100, [1, 0, 0], lambda x: (None, 50), 0.2,
                               rand, obstruction_getter, 2, [3, 4] * 1, [3, 4] * 1, logger=print)
 
     conjuncted = bg.to_work_graph()

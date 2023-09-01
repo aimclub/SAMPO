@@ -56,7 +56,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._children_edges = []
 
     def __del__(self):
-        for name, attr in self.__dict__.items():
+        for attr in self.__dict__.values():
             del attr
 
     def __hash__(self) -> int:
@@ -338,9 +338,8 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def __del__(self):
-        for name, attr in self.__dict__.items():
+        for attr in self.__dict__.values():
             del attr
-        print('\nWorkGraph successfully deleted')
 
     def _serialize(self) -> T:
         return {

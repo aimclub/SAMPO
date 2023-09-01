@@ -340,6 +340,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     def __del__(self):
         for name, attr in self.__dict__.items():
             del attr
+        print('\nWorkGraph successfully deleted')
 
     def _serialize(self) -> T:
         return {

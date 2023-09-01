@@ -1,3 +1,6 @@
+import os
+import sys
+
 from sampo.pipeline import SchedulingPipeline
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
@@ -37,7 +40,6 @@ def test_local_optimize_scheduling(setup_scheduler_parameters):
 
 def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors,
                                                                    setup_landscape_many_holders):
-
     thrown = False
     try:
         schedule = SchedulingPipeline.create() \
@@ -47,3 +49,14 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
         thrown = True
 
     assert thrown
+
+
+def test_plain_scheduling_with_parse_data():
+
+    schedule = SchedulingPipeline.create() \
+        .wg(wg=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'), change_base_on_history=True) \
+        .history(history=os.path.join(sys.path[0], 'tests/parser/test_history_data.csv')) \
+        .schedule(HEFTScheduler()) \
+        .finish()
+
+    print(f'Scheduled {len(schedule.to_schedule_work_dict)} works')

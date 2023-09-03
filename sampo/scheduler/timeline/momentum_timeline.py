@@ -402,7 +402,8 @@ class MomentumTimeline(Timeline):
 
         self.update_timeline(curr_time, node, node2swork, worker_team)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        self._zone_timeline.update_timeline(len(node2swork), zones, start_time, curr_time - start_time)
+        node2swork[node].zones = self._zone_timeline.update_timeline(len(node2swork), zones, start_time, curr_time - start_time)
+
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

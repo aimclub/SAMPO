@@ -9,6 +9,7 @@ from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
+from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.serializers import custom_serializer
 
 
@@ -34,12 +35,14 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  workers: list[Worker],
                  contractor: Contractor | str,
                  equipments: list[Equipment] | None = None,
+                 zones: list[ZoneTransition] | None = None,
                  materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
         self.workers = workers
         self.equipments = equipments
+        self.zones = zones
         self.materials = materials
         self.object = object
 

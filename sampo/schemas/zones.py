@@ -48,3 +48,10 @@ class ZoneConfiguration:
 
     def change_cost(self, from_status: int, to_status: int):
         return self.time_costs[from_status, to_status]
+
+
+@dataclass
+class ZoneTransition:
+    name: str
+    from_status: int
+    to_status: int

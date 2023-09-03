@@ -5,7 +5,7 @@ from sortedcontainers import SortedList
 from sampo.schemas.requirements import ZoneReq
 from sampo.schemas.time import Time
 from sampo.schemas.types import EventType, ScheduleEvent
-from sampo.schemas.zones import ZoneConfiguration, Zone
+from sampo.schemas.zones import ZoneConfiguration, Zone, ZoneTransition
 from sampo.utilities.collections_util import build_index
 
 
@@ -117,7 +117,13 @@ class ZoneTimeline:
             # here we are outside the all intervals or inside the interval with right status
             # if we are outside intervals, we can be in right or wrong status, so let's check it
             # else we are inside the interval with right status so let
-            if state[current_start_idx].event_type == EventType.END \
+
+            # we should count starts and ends on timeline prefix before the start_time
+            # if starts_count is equal to ends_count, start_time is out of all the zone usage intervals
+            # so we can change its status
+            starts_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.START])
+            ends_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.END])
+            if starts_count == ends_count \
                 and not self._match_status(required_status, state[current_start_idx].available_workers_count):
                 # we are outside all intervals, so let's decide should
                 # we change zone status or go to the next checkpoint
@@ -160,7 +166,9 @@ class ZoneTimeline:
 
         return current_start_time
 
-    def update_timeline(self, index: int, zones: list[Zone], start_time: Time, exec_time: Time):
+    def update_timeline(self, index: int, zones: list[Zone], start_time: Time, exec_time: Time) -> list[ZoneTransition]:
+        sworks = []
+
         for zone in zones:
             state = self._timeline[zone.name]
             start_idx = state.bisect_right(start_time)
@@ -180,3 +188,8 @@ class ZoneTimeline:
 
             state.add(ScheduleEvent(index, EventType.START, start_time, None, zone.status))
             state.add(ScheduleEvent(index, EventType.END, start_time + exec_time, None, zone.status))
+
+            sworks.append(ZoneTransition(name=f'Access card {zone.name} status: {start_status} -> {zone.status}',
+                                         from_status=start_status,
+                                         to_status=zone.status))
+        return sworks

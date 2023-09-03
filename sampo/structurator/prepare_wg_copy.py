@@ -44,7 +44,7 @@ def restore_parents(new_nodes: dict[str, GraphNode], original_wg: WorkGraph, old
 
 
 def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [], use_ids_simplification: bool = False,
-                            id_offset: int = 0, change_id: bool = True) -> (dict[str, GraphNode], dict[str, str]):
+                            id_offset: int = 0, change_id: bool = True) -> tuple[dict[str, GraphNode], dict[str, str]]:
     """
     Makes a deep copy of the GraphNodes of the original graph with new ids and updated edges,
     ignores all GraphNodes specified in the exception list and GraphEdges associated with them

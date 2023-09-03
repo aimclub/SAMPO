@@ -226,9 +226,6 @@ class JustInTimeTimeline(Timeline):
                                                                                        dep_node.work_unit.need_materials(),
                                                                                        dep_node.work_unit.workground_size)
 
-            zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-            self._zone_timeline.update_timeline(zones, start_time, working_time)
-
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(start_time, new_finish_time),
                                                  workers=workers,
@@ -238,3 +235,5 @@ class JustInTimeTimeline(Timeline):
             c_ft = new_finish_time
 
         self.update_timeline(c_ft, node, node2swork, workers, spec)
+        zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
+        self._zone_timeline.update_timeline(len(node2swork), zones, start_time, c_ft - start_time)

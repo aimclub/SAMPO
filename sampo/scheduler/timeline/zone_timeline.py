@@ -1,24 +1,35 @@
 from collections import deque
-from dataclasses import dataclass
-from operator import attrgetter
 
 from sortedcontainers import SortedList
 
+from sampo.schemas.requirements import ZoneReq
 from sampo.schemas.time import Time
-from sampo.schemas.zones import ZoneReq, ZoneConfiguration, Zone
+from sampo.schemas.types import EventType, ScheduleEvent
+from sampo.schemas.zones import ZoneConfiguration, Zone
 from sampo.utilities.collections_util import build_index
-
-
-@dataclass
-class ZoneScheduleEvent:
-    time: Time
-    status: int
 
 
 class ZoneTimeline:
 
     def __init__(self, config: ZoneConfiguration):
-        self._timeline = {zone: SortedList([ZoneScheduleEvent(Time(0), status)], key=attrgetter('time'))
+        def event_cmp(event: ScheduleEvent | Time | tuple[Time, int, int]) -> tuple[Time, int, int]:
+            if isinstance(event, ScheduleEvent):
+                if event.event_type is EventType.INITIAL:
+                    return Time(-1), -1, event.event_type.priority
+
+                return event.time, event.seq_id, event.event_type.priority
+
+            if isinstance(event, Time):
+                # instances of Time must be greater than almost all ScheduleEvents with same time point
+                return event, Time.inf().value, 2
+
+            if isinstance(event, tuple):
+                return event
+
+            raise ValueError(f'Incorrect type of value: {type(event)}')
+
+        self._timeline = {zone: SortedList([ScheduleEvent(-1, EventType.INITIAL, Time(0), None, status)],
+                                           key=event_cmp)
                           for zone, status in config.start_statuses.items()}
         self._config = config
 
@@ -28,7 +39,7 @@ class ZoneTimeline:
         start = parent_time
         scheduled_wreqs: list[ZoneReq] = []
 
-        type2status: dict[str, int] = build_index(zones, lambda w: w.name, lambda w: w.required_status)
+        type2status: dict[str, int] = build_index(zones, lambda w: w.kind, lambda w: w.required_status)
 
         queue = deque(zones)
 
@@ -37,11 +48,11 @@ class ZoneTimeline:
             i += 1
 
             wreq = queue.popleft()
-            state = self._timeline[wreq.name]
+            state = self._timeline[wreq.kind]
             # we look for the earliest time slot starting from 'start' time moment
             # if we have found a time slot for the previous task,
             # we should start to find for the earliest time slot of other task since this new time
-            found_start = self._find_earliest_time_slot(state, start, exec_time, type2status[wreq.name])
+            found_start = self._find_earliest_time_slot(state, start, exec_time, type2status[wreq.kind])
 
             assert found_start >= start
 
@@ -63,8 +74,11 @@ class ZoneTimeline:
 
         return start
 
+    def _match_status(self, target: int, match: int) -> bool:
+        return self._config.statuses.match_status(target, match)
+
     def _find_earliest_time_slot(self,
-                                 state: SortedList[ZoneScheduleEvent],
+                                 state: SortedList[ScheduleEvent],
                                  parent_time: Time,
                                  exec_time: Time,
                                  required_status: int) -> Time:
@@ -92,15 +106,40 @@ class ZoneTimeline:
             i += 1
             end_idx = state.bisect_right(current_start_time + exec_time)
 
-            # checking from the end of execution interval, i.e., end_idx - 1
-            # up to (including) the event right prepending the start
-            # of the execution interval, i.e., current_start_idx - 1
-            # we need to check the event current_start_idx - 1 cause it is the first event
-            # that influence amount of available for us workers
+            # if we are inside the interval with wrong status
+            # we should go right and search the best begin
+            if state[current_start_idx].event_type == EventType.START \
+                    and not self._match_status(required_status, state[current_start_idx]):
+                current_start_idx += 1
+                current_start_time = state[current_start_idx].time
+                continue
+
+            # here we are outside the all intervals or inside the interval with right status
+            # if we are outside intervals, we can be in right or wrong status, so let's check it
+            # else we are inside the interval with right status so let
+            if state[current_start_idx].event_type == EventType.END \
+                and not self._match_status(required_status, state[current_start_idx].available_workers_count):
+                # we are outside all intervals, so let's decide should
+                # we change zone status or go to the next checkpoint
+                old_status = state[current_start_idx].available_workers_count
+                start_time_changed = current_start_time + self._config.time_costs[old_status, required_status]
+                next_cpkt_time = state[min(current_start_idx + 1, len(state) - 1)].time
+                if next_cpkt_time <= start_time_changed:
+                    # waiting until the next checkpoint is faster that change zone status
+                    current_start_time = next_cpkt_time
+                    current_start_idx += 1
+                else:
+                    current_start_time = start_time_changed
+                # renewing the end index
+                end_idx = state.bisect_right(current_start_time + exec_time)
+
+
+            # here we are guaranteed that current_start_time is in right status
+            # so go right and check matching statuses
+            # this step performed like in MomentumTimeline
             not_compatible_status_found = False
             for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if not self._config.statuses.match_status(required_status, state[idx].status) \
-                        or state[idx].time < parent_time:
+                if not self._match_status(required_status, state[idx].available_workers_count) or state[idx].time < parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
@@ -115,24 +154,29 @@ class ZoneTimeline:
                 break
 
             if current_start_idx >= len(state):
-                break
+                return max(parent_time, state[-1].time)
 
             current_start_time = state[current_start_idx].time
 
         return current_start_time
 
-    def update_timeline(self, zones: list[Zone], start_time: Time, exec_time: Time):
+    def update_timeline(self, index: int, zones: list[Zone], start_time: Time, exec_time: Time):
         for zone in zones:
             state = self._timeline[zone.name]
             start_idx = state.bisect_right(start_time)
             end_idx = state.bisect_right(start_time + exec_time)
-            start_status = state[start_idx - 1].status
+            start_status = state[start_idx - 1].available_workers_count
+
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
                 # TODO Check that we shouldn't change the between statuses
-                assert self._config.statuses.match_status(zone.status, event[1])
+                assert self._config.statuses.match_status(zone.status, event.available_workers_count)
                 # event.available_workers_count -= w.count
 
-            assert self._config.statuses.match_status(zone.status, start_status)
+            assert state[start_idx - 1].event_type == EventType.END \
+                   or (state[start_idx - 1].event_type in {EventType.START, EventType.INITIAL}
+                       and self._config.statuses.match_status(zone.status, start_status)), \
+                f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
 
-            state.add(ZoneScheduleEvent(start_time, zone.status))
+            state.add(ScheduleEvent(index, EventType.START, start_time, None, zone.status))
+            state.add(ScheduleEvent(index, EventType.END, start_time + exec_time, None, zone.status))

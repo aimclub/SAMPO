@@ -5,6 +5,7 @@ from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -67,6 +68,7 @@ class MomentumTimeline(Timeline):
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
         self._material_timeline = SupplyTimeline(landscape)
+        self._zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
@@ -122,21 +124,39 @@ class MomentumTimeline(Timeline):
             max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
                                                                                node.work_unit.need_materials(),
                                                                                node.work_unit.workground_size)
-            max_parent_time = max(max_parent_time, max_material_time)
+            max_zone_time = self._zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
+
+            max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
             return max_parent_time, max_parent_time, exec_times
 
-        start_time = assigned_start_time if assigned_start_time is not None else self._find_min_start_time(
-            self._timeline[contractor_id], inseparable_chain, spec, max_parent_time, exec_time, worker_team
-        )
+        if assigned_start_time is not None:
+            st = assigned_start_time
+        else:
+            prev_st = max_parent_time
+            st = self._find_min_start_time(
+                self._timeline[contractor_id], inseparable_chain, spec, max_parent_time, exec_time, worker_team
+            )
 
-        max_material_time = self._material_timeline.find_min_material_time(node.id,
-                                                                           start_time,
-                                                                           node.work_unit.need_materials(),
-                                                                           node.work_unit.workground_size)
-        st = max(max_material_time, start_time)
-        assert st >= assigned_parent_time
+            # we can't just use max() of all times we found from different constraints
+            # because start time shifting can corrupt time slots we found from every constraint
+            # so let's find the time that is agreed with all constraints
+            while st != prev_st:
+                prev_st = st
+                start_time = self._find_min_start_time(
+                    self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
+                )
 
-        return start_time, start_time + exec_time, exec_times
+                max_material_time = self._material_timeline.find_min_material_time(node.id,
+                                                                                   start_time,
+                                                                                   node.work_unit.need_materials(),
+                                                                                   node.work_unit.workground_size)
+                max_zone_time = self._zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
+
+                st = max(max_material_time, max_zone_time, start_time)
+
+                assert st >= max_parent_time
+
+        return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
                              resource_timeline: dict[str, SortedList[ScheduleEvent]],
@@ -381,6 +401,8 @@ class MomentumTimeline(Timeline):
             node2swork[chain_node] = swork
 
         self.update_timeline(curr_time, node, node2swork, worker_team)
+        zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
+        self._zone_timeline.update_timeline(len(node2swork), zones, start_time, curr_time - start_time)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

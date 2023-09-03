@@ -135,7 +135,7 @@ class GenericScheduler(Scheduler):
         node2swork: dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
         if not isinstance(timeline, self._timeline_type):
-            timeline = self._timeline_type(ordered_nodes, contractors, worker_pool, landscape)
+            timeline = self._timeline_type(contractors, landscape)
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit

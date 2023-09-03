@@ -10,15 +10,6 @@ class Zone:
     status: int
 
 
-@dataclass
-class ZoneReq:
-    name: str
-    required_status: int
-
-    def to_zone(self) -> Zone:
-        return Zone(self.name, self.required_status)
-
-
 class ZoneStatuses(ABC):
     @abstractmethod
     def statuses_available(self) -> int:
@@ -52,7 +43,7 @@ class DefaultZoneStatuses(ZoneStatuses):
 @dataclass
 class ZoneConfiguration:
     start_statuses: dict[str, int] = field(default_factory=dict)
-    time_costs: np.ndarray = field(default_factory=lambda: np.ndarray([[]]))
+    time_costs: np.ndarray = field(default_factory=lambda: np.array([[]]))
     statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
     def change_cost(self, from_status: int, to_status: int):

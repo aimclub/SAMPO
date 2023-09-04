@@ -10,7 +10,7 @@ from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.time import Time
 
 GRAPHS_TOP_BORDER = 200
-GRAPHS_COUNT = 10000
+GRAPHS_COUNT = 1000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
@@ -49,6 +49,8 @@ def generate():
     encoding = encode_graph(wg)
     schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
     generated_label = argmin(schedulers_results)
+    del wg
+    del schedulers_results
 
     return generated_label, encoding
 

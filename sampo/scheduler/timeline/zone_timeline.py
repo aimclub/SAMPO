@@ -128,6 +128,7 @@ class ZoneTimeline:
                 # we are outside all intervals, so let's decide should
                 # we change zone status or go to the next checkpoint
                 old_status = state[current_start_idx].available_workers_count
+                # TODO Make this time calculation better: search the time slot for zone change before the start time
                 start_time_changed = current_start_time + self._config.time_costs[old_status, required_status]
                 next_cpkt_time = state[min(current_start_idx + 1, len(state) - 1)].time
                 if next_cpkt_time <= start_time_changed:

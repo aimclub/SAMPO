@@ -21,7 +21,7 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
+    def __init__(self, contractors: Iterable[Contractor],
                  worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         self._timeline = {}
         # stacks of time(Time) and count[int]

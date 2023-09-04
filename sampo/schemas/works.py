@@ -61,6 +61,10 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.display_name = display_name if display_name else name
         self.workground_size = workground_size
 
+    def __del__(self):
+        for name, attr in self.__dict__.items():
+            del attr
+
     def need_materials(self) -> list[Material]:
         return [req.material() for req in self.material_reqs]
 

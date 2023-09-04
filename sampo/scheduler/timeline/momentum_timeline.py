@@ -16,6 +16,7 @@ from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
+from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.collections_util import build_index
 
 
@@ -68,7 +69,7 @@ class MomentumTimeline(Timeline):
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
         self._material_timeline = SupplyTimeline(landscape)
-        self._zone_timeline = ZoneTimeline(landscape.zone_config)
+        self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self,
                                             node: GraphNode,
@@ -124,7 +125,7 @@ class MomentumTimeline(Timeline):
             max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
                                                                                node.work_unit.need_materials(),
                                                                                node.work_unit.workground_size)
-            max_zone_time = self._zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
             return max_parent_time, max_parent_time, exec_times
@@ -150,7 +151,7 @@ class MomentumTimeline(Timeline):
                                                                                    start_time,
                                                                                    node.work_unit.need_materials(),
                                                                                    node.work_unit.workground_size)
-                max_zone_time = self._zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
+                max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
 
                 st = max(max_material_time, max_zone_time, start_time)
 
@@ -309,7 +310,8 @@ class MomentumTimeline(Timeline):
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: dict[GraphNode, ScheduledWork],
-                        worker_team: list[Worker]):
+                        worker_team: list[Worker],
+                        spec: WorkSpec):
         """
         Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
         """
@@ -369,13 +371,25 @@ class MomentumTimeline(Timeline):
                           for n in inseparable_chain}
 
         # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
-        self._schedule_with_inseparables(node, node2swork, inseparable_chain,
+        self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,
                                          workers, contractor, start_time, exec_times)
+
+    def process_zones(self,
+                      index: int,
+                      node: GraphNode,
+                      parent_time: Time,
+                      start_time: Time | None,
+                      exec_time: Time) -> list[ZoneTransition]:
+        if start_time is None:
+            start_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, parent_time, exec_time)
+        zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
+        return self.zone_timeline.update_timeline(index, zones, start_time, exec_time)
 
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
                                     node2swork: dict[GraphNode, ScheduledWork],
                                     inseparable_chain: list[GraphNode],
+                                    spec: WorkSpec,
                                     worker_team: list[Worker],
                                     contractor: Contractor,
                                     start_time: Time,
@@ -400,10 +414,10 @@ class MomentumTimeline(Timeline):
             curr_time += node_time + node_lag
             node2swork[chain_node] = swork
 
-        self.update_timeline(curr_time, node, node2swork, worker_team)
+        self.update_timeline(curr_time, node, node2swork, worker_team, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        node2swork[node].zones = self._zone_timeline.update_timeline(len(node2swork), zones, start_time, curr_time - start_time)
-
+        node2swork[node].zones = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
+                                                                    curr_time - start_time)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

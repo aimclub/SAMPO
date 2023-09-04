@@ -31,7 +31,7 @@ class JustInTimeTimeline(Timeline):
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
         self._material_timeline = SupplyTimeline(landscape)
-        self._zone_timeline = ZoneTimeline(landscape.zone_config)
+        self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self, node: GraphNode,
                                             worker_team: list[Worker],
@@ -92,7 +92,7 @@ class JustInTimeTimeline(Timeline):
                                                                            node.work_unit.need_materials(),
                                                                            node.work_unit.workground_size)
 
-        max_zone_time = self._zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
+        max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
 
         c_st = max(c_st, max_material_time, max_zone_time)
 
@@ -236,4 +236,5 @@ class JustInTimeTimeline(Timeline):
 
         self.update_timeline(c_ft, node, node2swork, workers, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        node2swork[node].zones = self._zone_timeline.update_timeline(len(node2swork), zones, start_time, c_ft - start_time)
+        node2swork[node].zones = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
+                                                                    c_ft - start_time)

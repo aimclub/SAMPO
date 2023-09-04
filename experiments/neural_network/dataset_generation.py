@@ -9,8 +9,13 @@ from sampo.scheduler.selection.metrics import encode_graph
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.time import Time
 
+from collections import Counter
+import linecache
+import os
+import tracemalloc
+
 GRAPHS_TOP_BORDER = 200
-GRAPHS_COUNT = 10000
+GRAPHS_COUNT = 1000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
@@ -44,11 +49,46 @@ def argmin(array) -> int:
 #                 print(f'{generated_label}: {bins[generated_label]}/{bin_size} processed')
 #     return result
 
+
+def display_top(snapshot, key_type='lineno', limit=3):
+    snapshot = snapshot.filter_traces((
+        tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+        tracemalloc.Filter(False, "<unknown>"),
+    ))
+    top_stats = snapshot.statistics(key_type)
+
+    print("Top %s lines" % limit)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        # replace "/path/to/module/file.py" with "module/file.py"
+        filename = os.sep.join(frame.filename.split(os.sep)[-2:])
+        print("#%s: %s:%s: %.1f KiB"
+              % (index, filename, frame.lineno, stat.size / 1024))
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            print('    %s' % line)
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        print("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    print("Total allocated size: %.1f KiB" % (total / 1024))
+
+
 def generate():
+    tracemalloc.start()
     wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
     encoding = encode_graph(wg)
     schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
     generated_label = argmin(schedulers_results)
+    del wg
+    del schedulers_results
+
+    snapshot = tracemalloc.take_snapshot()
+    display_top(snapshot)
+
+    del wg
 
     return generated_label, encoding
 

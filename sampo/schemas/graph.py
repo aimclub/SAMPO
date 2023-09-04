@@ -156,8 +156,8 @@ class GraphNode(JSONSerializable['GraphNode']):
                 vertexes_to_visit.extend([p.finish for p in v._children_edges])
                 yield v
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def inseparable_son(self) -> Optional['GraphNode']:
         """
         Return inseparable son (amount of inseparable sons at most 1)
@@ -167,8 +167,8 @@ class GraphNode(JSONSerializable['GraphNode']):
                                 if x.type == EdgeType.InseparableFinishStart]
         return inseparable_children[0] if inseparable_children else None
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def inseparable_parent(self) -> Optional['GraphNode']:
         """
         Return predecessor of current vertex in inseparable chain
@@ -177,8 +177,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         inseparable_parents = [x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart]
         return inseparable_parents[0] if inseparable_parents else None
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def parents(self) -> list['GraphNode']:
         """
         Return list of predecessors of current vertex
@@ -186,8 +186,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def parents_set(self) -> set['GraphNode']:
         """
         Return unique predecessors of current vertex
@@ -195,8 +195,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return set(self.parents)
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def children(self) -> list['GraphNode']:
         """
         Return list of successors of current vertex
@@ -204,8 +204,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
-    @cached_property
-    # @property
+    # @cached_property
+    @property
     def children_set(self) -> set['GraphNode']:
         """
         Return unique successors of current vertex
@@ -213,7 +213,8 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return set(self.children)
 
-    @cached_property
+    # @cached_property
+    @property
     def neighbors(self):
         """
         Get all edges that have types SS with current vertex
@@ -241,7 +242,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def id(self) -> str:
         return self.work_unit.id
 
-    @cache
+    # @cache
     def get_inseparable_chain(self) -> Optional[list['GraphNode']]:
         """
         Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =

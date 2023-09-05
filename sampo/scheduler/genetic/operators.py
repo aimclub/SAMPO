@@ -134,6 +134,7 @@ def init_toolbox(wg: WorkGraph,
                  init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                  mutate_order: float,
                  mutate_resources: float,
+                 mutate_zones: float,
                  population_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
@@ -181,6 +182,9 @@ def init_toolbox(wg: WorkGraph,
     # mutation for resource borders
     toolbox.register('mutate_resource_borders', mutate_resource_borders, resources_min_border=resources_min_border,
                      mutpb=mutate_resources, rand=rand)
+    toolbox.register('mate_post_zones', mate_for_zones, rand=rand)
+    toolbox.register('mutate_post_zones', mutate_for_zones, rand=rand, mutpb=mutate_zones,
+                     statuses_available=landscape.zone_config.statuses.statuses_available())
 
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents)
     toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome, wg=wg,
@@ -488,5 +492,48 @@ def mutate_resource_borders(ind: ChromosomeType, resources_min_border: np.ndarra
                 if ind[1][work][num_resources] == contractor:
                     ind[1][work][type_of_res] = min(ind[1][work][type_of_res],
                                                     ind[2][contractor][type_of_res])
+
+    return ind
+
+
+def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType,
+                   rand: random.Random) -> tuple[ChromosomeType, ChromosomeType]:
+    """
+    CxOnePoint for zones
+
+    :param ind1: first individual
+    :param ind2: second individual
+    :param rand: the rand object used for exchange point selection
+    :return: first and second individual
+    """
+    child1 = Individual(copy_chromosome(ind1))
+    child2 = Individual(copy_chromosome(ind2))
+
+    res1 = child1[4]
+    res2 = child2[4]
+    num_works = len(res1)
+    border = num_works // 4
+    cxpoint = rand.randint(border, num_works - border)
+
+    mate_positions = rand.sample(range(num_works), cxpoint)
+
+    res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
+    return child1, child2
+
+
+def mutate_for_zones(ind: ChromosomeType, statuses_available: int,
+                     mutpb: float, rand: random.Random) -> ChromosomeType:
+    """
+    Mutation function for zones.
+    It changes selected numbers of zones in random work in a certain interval from available statuses.
+
+    :return: mutate individual
+    """
+    # select random number from interval from min to max from uniform distribution
+    res = ind[4]
+    for i, work_post_zones in enumerate(res):
+        for type_of_zone in range(len(res[0])):
+            if rand.random() < mutpb:
+                work_post_zones[type_of_zone] = rand.randint(0, statuses_available)
 
     return ind

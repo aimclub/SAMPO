@@ -27,6 +27,7 @@ def create_toolbox(wg: WorkGraph,
                    population_size: int,
                    mutate_order: float,
                    mutate_resources: float,
+                   mutate_zones: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec = ScheduleSpec(),
@@ -107,6 +108,7 @@ def create_toolbox(wg: WorkGraph,
                         init_chromosomes,
                         mutate_order,
                         mutate_resources,
+                        mutate_zones,
                         population_size,
                         rand,
                         spec,
@@ -128,6 +130,7 @@ def build_schedule(wg: WorkGraph,
                    generation_number: int,
                    mutpb_order: float,
                    mutpb_res: float,
+                   mutpb_zones: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
@@ -187,8 +190,8 @@ def build_schedule(wg: WorkGraph,
 
     start = time.time()
 
-    toolbox = create_toolbox(wg, contractors, worker_pool, population_size, mutpb_order, mutpb_res, init_schedules,
-                             rand, spec, work_estimator, landscape)
+    toolbox = create_toolbox(wg, contractors, worker_pool, population_size, mutpb_order, mutpb_res, mutpb_zones,
+                             init_schedules, rand, spec, work_estimator, landscape)
 
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
@@ -265,6 +268,15 @@ def build_schedule(wg: WorkGraph,
                     if optimize_resources:
                         # resource borders mutation
                         toolbox.mutate_resource_borders(mutant)
+
+            # operations for ZONES
+            for ind1, ind2 in zip(pop[:len(pop) // 2], pop[len(pop) // 2:]):
+                # mate resources
+                cur_generation.extend(toolbox.mate_post_zones(ind1, ind2))
+
+            for mutant in cur_generation:
+                # resources mutation
+                toolbox.mutate_post_zones(mutant)
 
             for mutant in cur_generation:
                 # order mutation

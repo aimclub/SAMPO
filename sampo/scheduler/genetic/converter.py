@@ -139,16 +139,16 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         # finish using time spec
         ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
                                st, work_spec.assigned_time, assigned_parent_time, work_estimator)
-        exec_time = sum([sum(t) for t in exec_times.values()])
         # process zones
         zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses)]
-        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, exec_time)
+        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, ft - st)
 
         # we should deny scheduling
         # if zone status change can be scheduled only in delayed manner
         if zone_start_time != ft:
-            timeline.zone_timeline.update_timeline(order_index, [z.to_zone() for z in zone_reqs],
-                                                   zone_start_time, exec_time)
+            node2swork[node].zones_post = timeline.zone_timeline.update_timeline(order_index,
+                                                                                 [z.to_zone() for z in zone_reqs],
+                                                                                 zone_start_time, ft - st)
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)

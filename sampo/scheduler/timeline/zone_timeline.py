@@ -124,7 +124,7 @@ class ZoneTimeline:
             starts_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.START])
             ends_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.END])
             if starts_count == ends_count \
-                and not self._match_status(required_status, state[current_start_idx].available_workers_count):
+                    and not self._match_status(required_status, state[current_start_idx].available_workers_count):
                 # we are outside all intervals, so let's decide should
                 # we change zone status or go to the next checkpoint
                 old_status = state[current_start_idx].available_workers_count
@@ -140,13 +140,13 @@ class ZoneTimeline:
                 # renewing the end index
                 end_idx = state.bisect_right(current_start_time + exec_time)
 
-
             # here we are guaranteed that current_start_time is in right status
             # so go right and check matching statuses
             # this step performed like in MomentumTimeline
             not_compatible_status_found = False
             for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if not self._match_status(required_status, state[idx].available_workers_count) or state[idx].time < parent_time:
+                if not self._match_status(required_status, state[idx].available_workers_count) or state[
+                    idx].time < parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
@@ -185,7 +185,7 @@ class ZoneTimeline:
             assert state[start_idx - 1].event_type == EventType.END \
                    or (state[start_idx - 1].event_type in {EventType.START, EventType.INITIAL}
                        and self._config.statuses.match_status(zone.status, start_status)), \
-                f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
+                   f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
 
             state.add(ScheduleEvent(index, EventType.START, start_time, None, zone.status))
             state.add(ScheduleEvent(index, EventType.END, start_time + exec_time, None, zone.status))

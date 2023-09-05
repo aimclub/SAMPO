@@ -16,7 +16,7 @@ from sampo.utilities.serializers import custom_serializer
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     """
-    Contains all neccessary info to represent WorkUnit in Scheduler:
+    Contains all necessary info to represent WorkUnit in schedule:
 
     * WorkUnit
     * list of workers, that are required to complete task
@@ -35,14 +35,16 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  workers: list[Worker],
                  contractor: Contractor | str,
                  equipments: list[Equipment] | None = None,
-                 zones: list[ZoneTransition] | None = None,
+                 zones_pre: list[ZoneTransition] | None = None,
+                 zones_post: list[ZoneTransition] | None = None,
                  materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
         self.workers = workers
         self.equipments = equipments
-        self.zones = zones
+        self.zones_pre = zones_pre
+        self.zones_post = zones_post
         self.materials = materials
         self.object = object
 
@@ -54,9 +56,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         else:
             self.contractor = ""
 
-        self.cost = 0
-        for worker in self.workers:
-            self.cost += worker.get_cost() * self.duration.value
+        self.cost = sum([worker.get_cost() * self.duration.value for worker in self.workers])
 
     def __str__(self):
         return f'ScheduledWork[work_unit={self.work_unit}, start_end_time={self.start_end_time}, ' \

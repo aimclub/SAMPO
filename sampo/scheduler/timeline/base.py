@@ -8,7 +8,6 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.zones import ZoneTransition
 
 
 class Timeline(ABC):
@@ -75,15 +74,6 @@ class Timeline(ABC):
                         node2swork: dict[GraphNode, ScheduledWork],
                         worker_team: list[Worker],
                         spec: WorkSpec):
-        ...
-
-    @abstractmethod
-    def process_zones(self,
-                      index: int,
-                      node: GraphNode,
-                      parent_time: Time,
-                      start_time: Time | None,
-                      exec_time: Time) -> list[ZoneTransition]:
         ...
 
     @abstractmethod

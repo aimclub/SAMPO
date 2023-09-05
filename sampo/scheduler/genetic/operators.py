@@ -1,10 +1,10 @@
-import random
 import math
+import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial
-from typing import Iterable, Callable
 from operator import attrgetter
+from typing import Iterable, Callable
 
 import numpy as np
 from deap import creator, base
@@ -130,6 +130,7 @@ def init_toolbox(wg: WorkGraph,
                  work_id2index: dict[str, int],
                  worker_name2index: dict[str, int],
                  index2contractor_obj: dict[int, Contractor],
+                 index2zone: dict[int, str],
                  init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                  mutate_order: float,
                  mutate_resources: float,
@@ -184,18 +185,20 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents)
     toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome, wg=wg,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
-                     contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec)
+                     contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
+                     landscape=landscape)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, assigned_parent_time=assigned_parent_time,
                      work_estimator=work_estimator, worker_name2index=worker_name2index,
-                     contractor2index=contractor2index,
+                     contractor2index=contractor2index, index2zone=index2zone,
                      landscape=landscape)
     return toolbox
 
 
 def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:
-    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), deepcopy(chromosome[3])
+    return chromosome[0].copy(), chromosome[1].copy(), chromosome[2].copy(), \
+        deepcopy(chromosome[3]), chromosome[4].copy()
 
 
 def generate_population(n: int,
@@ -219,7 +222,7 @@ def generate_population(n: int,
         schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
             .schedule(wg, contractors, landscape=landscape)
         return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec)
+                                              contractor2index, contractor_borders, schedule, spec, landscape)
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)
     count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
@@ -267,7 +270,7 @@ def generate_chromosome(wg: WorkGraph,
                                                   int(rand.random() * 1000000)) \
             .schedule(wg, contractors, spec, landscape=landscape)
         return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec)
+                                              contractor2index, contractor_borders, schedule, spec, landscape)
 
     chance = rand.random()
     if chance < 0.2:

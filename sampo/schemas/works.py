@@ -99,6 +99,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.equipment_reqs = new_work_unit.equipment_reqs
         self.object_reqs = new_work_unit.object_reqs
         self.material_reqs = new_work_unit.material_reqs
+        self.zone_reqs = new_work_unit.zone_reqs
         self.id = new_work_unit.id
         self.name = new_work_unit.name
         self.is_service_unit = new_work_unit.is_service_unit
@@ -107,9 +108,3 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
         self.workground_size = new_work_unit.workground_size
-
-
-# Function is chosen because it has a quadratic decrease in efficiency as the number of commands on the object
-# increases, after the maximum number of commands begins to decrease in efficiency, and its growth rate depends on
-# the maximum number of commands.
-# sum(1 - ((x-1)^2 / max_groups^2), where x from 1 to groups_count

@@ -16,7 +16,6 @@ from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.types import AgentId, ScheduleEvent, EventType
-from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.collections_util import build_index
 
 
@@ -374,17 +373,6 @@ class MomentumTimeline(Timeline):
         self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,
                                          workers, contractor, start_time, exec_times)
 
-    def process_zones(self,
-                      index: int,
-                      node: GraphNode,
-                      parent_time: Time,
-                      start_time: Time | None,
-                      exec_time: Time) -> list[ZoneTransition]:
-        if start_time is None:
-            start_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, parent_time, exec_time)
-        zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        return self.zone_timeline.update_timeline(index, zones, start_time, exec_time)
-
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
                                     node2swork: dict[GraphNode, ScheduledWork],
@@ -416,8 +404,8 @@ class MomentumTimeline(Timeline):
 
         self.update_timeline(curr_time, node, node2swork, worker_team, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        node2swork[node].zones = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
-                                                                    curr_time - start_time)
+        node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
+                                                                        curr_time - start_time)
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

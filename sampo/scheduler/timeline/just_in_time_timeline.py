@@ -236,5 +236,6 @@ class JustInTimeTimeline(Timeline):
 
         self.update_timeline(c_ft, node, node2swork, workers, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        node2swork[node].zones = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
-                                                                    c_ft - start_time)
+        node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
+                                                                        c_ft - start_time)
+        return c_ft

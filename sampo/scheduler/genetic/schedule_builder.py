@@ -42,6 +42,7 @@ def create_toolbox(wg: WorkGraph,
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
+    index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
     contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
@@ -81,7 +82,8 @@ def create_toolbox(wg: WorkGraph,
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
         {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                               contractor2index, contractor_borders, schedule, chromosome_spec, order),
+                                               contractor2index, contractor_borders, schedule, chromosome_spec,
+                                               landscape, order),
                 importance, chromosome_spec)
          if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
@@ -101,6 +103,7 @@ def create_toolbox(wg: WorkGraph,
                         work_id2index,
                         worker_name2index,
                         index2contractor_obj,
+                        index2zone,
                         init_chromosomes,
                         mutate_order,
                         mutate_resources,

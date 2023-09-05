@@ -1,7 +1,6 @@
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import cached_property, cache
 from typing import Optional
 
 import numpy as np
@@ -56,8 +55,9 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._children_edges = []
 
     def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
+        # print(f'Deleted node: {self.id}')
+        for k in list(self.__dict__):
+            del self.__dict__[k]
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -342,8 +342,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
+        # print(f'Deleting graph with {self.vertex_count} nodes')
+        for k in list(self.__dict__):
+            del self.__dict__[k]
 
     def _serialize(self) -> T:
         return {

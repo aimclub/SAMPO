@@ -13,7 +13,7 @@ from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.time import Time
 
 GRAPHS_TOP_BORDER = 100
-GRAPHS_COUNT = 4
+GRAPHS_COUNT = 1000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
@@ -75,7 +75,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
 
 
 def generate():
-    tracemalloc.start()
+    # tracemalloc.start()
     wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
     encoding = encode_graph(wg)
     schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
@@ -83,8 +83,8 @@ def generate():
     del wg
     del schedulers_results
 
-    snapshot = tracemalloc.take_snapshot()
-    display_top(snapshot)
+    # snapshot = tracemalloc.take_snapshot()
+    # display_top(snapshot)
     #
     # del wg
 
@@ -93,8 +93,11 @@ def generate():
 
 def generate_graph(label: int):
     while True:
+        tracemalloc.start()
         generated_label, encoding = generate()
         if generated_label == label:
+            snapshot = tracemalloc.take_snapshot()
+            display_top(snapshot)
             print(f'{generated_label} processed')
             return tuple([encoding, generated_label])
 
@@ -107,7 +110,7 @@ if __name__ == '__main__':
             for task in tasks:
                 result.extend(pool.map(generate_graph, task))
 
-    dataset_transposed = np.array(result).T
+    dataset_transposed = np.array(result, dtype=object).T
     df = pd.DataFrame.from_records(dataset_transposed[0])
     df['label'] = dataset_transposed[1]
     df.fillna(value=0, inplace=True)

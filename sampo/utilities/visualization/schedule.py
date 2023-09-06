@@ -23,21 +23,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
         schedule_dataframe = schedule_dataframe.loc[~schedule_dataframe.loc[:, 'task_name'].str.contains('марке')]
         schedule_dataframe = schedule_dataframe.loc[schedule_dataframe.loc[:, 'volume'] >= 0.1]
 
-    def create_zone_row(zone) -> dict:
-        zone_description = {}
-        zone_description['task_name'] = zone.name
-        zone_description['start'] = zone.start_time
-        zone_description['finish'] = zone.end_time
-        return zone_description
-
-    sworks = schedule_dataframe['scheduled_work_object'].copy()
-    # create zone information
-    for swork in sworks:
-        for zone in swork.zones_pre:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
-        for zone in swork.zones_post:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
-
     schedule_dataframe = schedule_dataframe.rename({'workers': 'workers_dict'}, axis=1)
     schedule_dataframe.loc[:, 'workers'] = schedule_dataframe.loc[:, 'workers_dict']\
         .apply(lambda x: x.replace(", '", ", <br>'"))
@@ -47,9 +32,32 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     visualization_start_delta = timedelta(days=2)
     visualization_finish_delta = timedelta(days=(schedule_finish - schedule_start).days // 3)
 
+    def create_zone_row(zone) -> dict:
+        return {'idx': len(schedule_dataframe),
+                'contractor': 'Access cards',
+                'cost': 0,
+                'volume': 0,
+                'duration': 0,
+                'measurement': 'unit',
+                'successors': [],
+                'workers_dict': str({}),
+                'workers': str({}),
+                'task_name_mapped': zone.name,
+                'task_name': zone.name,
+                'start': timedelta(int(zone.start_time)) + schedule_start - visualization_start_delta + timedelta(1),
+                'finish': timedelta(int(zone.end_time)) + schedule_start  - visualization_start_delta + timedelta(1)}
+
+    sworks = schedule_dataframe['scheduled_work_object'].copy()
+    # create zone information
+    for swork in sworks:
+        for zone in swork.zones_pre:
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+        for zone in swork.zones_post:
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+
     # add one time unit to the end should remove hole within the immediately close tasks
-    schedule_dataframe['vis_finish'] = schedule_dataframe[['start', 'finish']] \
-        .apply(lambda r: r['finish'] + timedelta(1) if r['finish'] - r['start'] > timedelta(0) else r['finish'], axis=1)
+    schedule_dataframe['vis_finish'] = schedule_dataframe[['start', 'finish', 'duration']] \
+        .apply(lambda r: r['finish'] + timedelta(1) if r['duration'] > 0 else r['finish'], axis=1)
     schedule_dataframe['vis_start'] = schedule_dataframe['start']
     schedule_dataframe['finish'] = schedule_dataframe['finish'].apply(lambda x: x.strftime('%e %b %Y'))
     schedule_dataframe['start'] = schedule_dataframe['start'].apply(lambda x: x.strftime('%e %b %Y'))

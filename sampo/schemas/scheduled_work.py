@@ -41,12 +41,12 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
-        self.workers = workers
-        self.equipments = equipments
-        self.zones_pre = zones_pre
-        self.zones_post = zones_post
-        self.materials = materials
-        self.object = object
+        self.workers = workers if workers is not None else []
+        self.equipments = equipments if equipments is not None else []
+        self.zones_pre = zones_pre if zones_pre is not None else []
+        self.zones_post = zones_post if zones_post is not None else []
+        self.materials = materials if materials is not None else []
+        self.object = object if object is not None else []
 
         if contractor is not None:
             if isinstance(contractor, str):

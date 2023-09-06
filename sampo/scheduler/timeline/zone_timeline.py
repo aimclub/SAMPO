@@ -54,13 +54,13 @@ class ZoneTimeline:
             # we should start to find for the earliest time slot of other task since this new time
             found_start = self._find_earliest_time_slot(state, start, exec_time, type2status[wreq.kind])
 
-            assert found_start >= start
+            # assert found_start >= start
 
             if len(scheduled_wreqs) == 0 or start == found_start:
                 # we schedule the first worker's specialization or the next spec has the same start time
                 # as the all previous ones
                 scheduled_wreqs.append(wreq)
-                start = max(found_start, start)
+                start = found_start
             else:
                 # The current worker specialization can be started only later than
                 # the previously found start time.
@@ -70,7 +70,7 @@ class ZoneTimeline:
                 queue.extend(scheduled_wreqs)
                 scheduled_wreqs.clear()
                 scheduled_wreqs.append(wreq)
-                start = max(found_start, start)
+                start = found_start
 
         return start
 
@@ -129,7 +129,14 @@ class ZoneTimeline:
                 # we change zone status or go to the next checkpoint
                 old_status = state[current_start_idx].available_workers_count
                 # TODO Make this time calculation better: search the time slot for zone change before the start time
-                start_time_changed = current_start_time + self._config.time_costs[old_status, required_status]
+                change_cost = self._config.time_costs[old_status, required_status]
+                prev_cpkt_idx = state.bisect_right(current_start_time - change_cost)
+                if prev_cpkt_idx == current_start_idx or prev_cpkt_idx >= len(state):
+                    # we can change status before current_start_time
+                    start_time_changed = current_start_time
+                else:
+                    start_time_changed = state[prev_cpkt_idx].time + change_cost # current_start_time + change_cost
+
                 next_cpkt_time = state[min(current_start_idx + 1, len(state) - 1)].time
                 if next_cpkt_time <= start_time_changed:
                     # waiting until the next checkpoint is faster that change zone status
@@ -184,16 +191,22 @@ class ZoneTimeline:
 
             assert state[start_idx - 1].event_type == EventType.END \
                    or (state[start_idx - 1].event_type == EventType.START
-                       and self._config.statuses.match_status(zone.status, start_status))\
+                       and self._config.statuses.match_status(zone.status, start_status)) \
                    or state[start_idx - 1].event_type == EventType.INITIAL, \
                    f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
 
-            state.add(ScheduleEvent(index, EventType.START, start_time, None, zone.status))
-            state.add(ScheduleEvent(index, EventType.END, start_time + exec_time, None, zone.status))
+            change_cost = self._config.time_costs[start_status, zone.status] \
+                            if not self._config.statuses.match_status(zone.status, start_status) \
+                            else 0
 
-            sworks.append(ZoneTransition(name=f'Access card {zone.name} status: {start_status} -> {zone.status}',
-                                         from_status=start_status,
-                                         to_status=zone.status,
-                                         start_time=start_time,
-                                         end_time=start_time + self._config.time_costs[start_status, zone.status]))
+            state.add(ScheduleEvent(index, EventType.START, start_time - change_cost, None, zone.status))
+            state.add(ScheduleEvent(index, EventType.END, start_time - change_cost + exec_time, None, zone.status))
+
+            if start_status != zone.status:
+                # if we need to change status, record it
+                sworks.append(ZoneTransition(name=f'Access card {zone.name} status: {start_status} -> {zone.status}',
+                                             from_status=start_status,
+                                             to_status=zone.status,
+                                             start_time=start_time - change_cost,
+                                             end_time=start_time))
         return sworks

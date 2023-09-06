@@ -20,7 +20,13 @@ def copy_graph_node(node: GraphNode, new_id: int | str | None = None,
     else:
         new_id = node.work_unit.id
     wu = node.work_unit
-    new_wu = WorkUnit(id=new_id, name=wu.name, worker_reqs=deepcopy(wu.worker_reqs), group=wu.group,
+    new_wu = WorkUnit(id=new_id, name=wu.name,
+                      worker_reqs=deepcopy(wu.worker_reqs),
+                      material_reqs=deepcopy(wu.material_reqs),
+                      equipment_reqs=deepcopy(wu.equipment_reqs),
+                      object_reqs=deepcopy(wu.object_reqs),
+                      zone_reqs=deepcopy(wu.zone_reqs),
+                      group=wu.group,
                       is_service_unit=wu.is_service_unit, volume=wu.volume, volume_type=wu.volume_type)
     return GraphNode(new_wu, []), (wu.id, new_id)
 

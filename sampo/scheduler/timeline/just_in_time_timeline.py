@@ -157,14 +157,14 @@ class JustInTimeTimeline(Timeline):
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
-        
+
         start_time = assigned_start_time if assigned_start_time is not None \
             else self.find_min_start_time(node, workers,
                                           node2swork,
                                           spec,
                                           assigned_parent_time,
                                           work_estimator)
-        
+
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}

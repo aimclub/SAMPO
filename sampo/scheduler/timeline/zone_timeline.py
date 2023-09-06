@@ -183,8 +183,9 @@ class ZoneTimeline:
                 # event.available_workers_count -= w.count
 
             assert state[start_idx - 1].event_type == EventType.END \
-                   or (state[start_idx - 1].event_type in {EventType.START, EventType.INITIAL}
-                       and self._config.statuses.match_status(zone.status, start_status)), \
+                   or (state[start_idx - 1].event_type == EventType.START
+                       and self._config.statuses.match_status(zone.status, start_status))\
+                   or state[start_idx - 1].event_type == EventType.INITIAL, \
                    f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
 
             state.add(ScheduleEvent(index, EventType.START, start_time, None, zone.status))

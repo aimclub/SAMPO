@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from sampo.schemas.time import Time
+
 
 @dataclass
 class Zone:
@@ -55,3 +57,5 @@ class ZoneTransition:
     name: str
     from_status: int
     to_status: int
+    start_time: Time
+    end_time: Time

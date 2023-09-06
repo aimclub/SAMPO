@@ -193,5 +193,7 @@ class ZoneTimeline:
 
             sworks.append(ZoneTransition(name=f'Access card {zone.name} status: {start_status} -> {zone.status}',
                                          from_status=start_status,
-                                         to_status=zone.status))
+                                         to_status=zone.status,
+                                         start_time=start_time,
+                                         end_time=start_time + self._config.time_costs[start_status, zone.status]))
         return sworks

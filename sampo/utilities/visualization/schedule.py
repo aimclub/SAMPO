@@ -23,6 +23,21 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
         schedule_dataframe = schedule_dataframe.loc[~schedule_dataframe.loc[:, 'task_name'].str.contains('марке')]
         schedule_dataframe = schedule_dataframe.loc[schedule_dataframe.loc[:, 'volume'] >= 0.1]
 
+    def create_zone_row(zone) -> dict:
+        zone_description = {}
+        zone_description['task_name'] = zone.name
+        zone_description['start'] = zone.start_time
+        zone_description['finish'] = zone.end_time
+        return zone_description
+
+    sworks = schedule_dataframe['scheduled_work_object'].copy()
+    # create zone information
+    for swork in sworks:
+        for zone in swork.zones_pre:
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+        for zone in swork.zones_post:
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+
     schedule_dataframe = schedule_dataframe.rename({'workers': 'workers_dict'}, axis=1)
     schedule_dataframe.loc[:, 'workers'] = schedule_dataframe.loc[:, 'workers_dict']\
         .apply(lambda x: x.replace(", '", ", <br>'"))

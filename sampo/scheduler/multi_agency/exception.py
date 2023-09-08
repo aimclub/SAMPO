@@ -1,4 +1,4 @@
-class NoSufficientAgents(Exception):
+class NoSufficientAgentsError(Exception):
     """
     Raise when manager does not have enough agents
     """

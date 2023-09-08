@@ -6,6 +6,7 @@ from sortedcontainers import SortedList
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.schemas.exceptions import NoAvailableResourcesError
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
@@ -290,7 +291,8 @@ class MomentumTimeline(Timeline):
                         finish_time: Time,
                         node: GraphNode,
                         node2swork: dict[GraphNode, ScheduledWork],
-                        worker_team: list[Worker]):
+                        worker_team: list[Worker],
+                        spec: WorkSpec):
         """
         Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
         """
@@ -315,17 +317,20 @@ class MomentumTimeline(Timeline):
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
-                assert event.available_workers_count >= w.count
+                if not event.available_workers_count >= w.count:
+                    raise NoAvailableResourcesError('There are no available resources to provide given worker team')
                 event.available_workers_count -= w.count
 
             assert available_workers_count >= w.count
 
             if start_idx < end_idx:
                 event: ScheduleEvent = state[end_idx - 1]
-                assert state[0].available_workers_count >= event.available_workers_count + w.count
+                if not state[0].available_workers_count >= event.available_workers_count + w.count:
+                    raise NoAvailableResourcesError('There are no available resources to provide given worker team')
                 end_count = event.available_workers_count + w.count
             else:
-                assert state[0].available_workers_count >= available_workers_count
+                if not state[0].available_workers_count >= available_workers_count:
+                    raise NoAvailableResourcesError('There are no available resources to provide given worker team')
                 end_count = available_workers_count
 
             state.add(ScheduleEvent(task_index, EventType.START, start, swork, available_workers_count - w.count))
@@ -381,7 +386,7 @@ class MomentumTimeline(Timeline):
             curr_time += node_time + node_lag
             node2swork[chain_node] = swork
 
-        self.update_timeline(curr_time, node, node2swork, worker_team)
+        self.update_timeline(curr_time, node, node2swork, worker_team, WorkSpec())
 
     def __getitem__(self, item: AgentId):
         return self._timeline[item[0]][item[1]]

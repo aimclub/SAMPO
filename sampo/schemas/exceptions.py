@@ -8,13 +8,13 @@ class NoSufficientContractorError(Exception):
         super().__init__(message)
 
 
-class NotEnoughMaterialsInDepots(Exception):
+class NotEnoughMaterialsInDepotsError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
 
 
-class NoAvailableResources(Exception):
+class NoAvailableResourcesError(Exception):
 
     def __init__(self, message):
         super().__init__(message)

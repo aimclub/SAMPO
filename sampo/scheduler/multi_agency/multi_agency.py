@@ -4,7 +4,7 @@ from typing import Callable
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
-from sampo.scheduler.multi_agency.exception import NoSufficientAgents
+from sampo.scheduler.multi_agency.exception import NoSufficientAgentsError
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
@@ -119,7 +119,7 @@ class Manager:
     """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
-            raise NoSufficientAgents('Manager can not work with empty list of agents')
+            raise NoSufficientAgentsError('Manager can not work with empty list of agents')
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism

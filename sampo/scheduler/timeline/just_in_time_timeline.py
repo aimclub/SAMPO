@@ -4,6 +4,7 @@ from sampo.scheduler.heft.time_computaion import calculate_working_time, calcula
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.schemas.exceptions import NoAvailableResourcesError
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -37,8 +38,7 @@ class JustInTimeTimeline(Timeline):
                                             spec: WorkSpec,
                                             assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
-                                            work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
-            -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
+                                            work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         """
         Define the nearest possible start time for the current job. It is equal the max value from:
         1. end time of all parent tasks,
@@ -127,9 +127,11 @@ class JustInTimeTimeline(Timeline):
                 # Consume needed workers
                 while needed_count > 0:
                     next_time, next_count = worker_timeline.pop()
-                    if next_count > needed_count or len(worker_timeline) == 0:
+                    if next_count > needed_count or (next_count == needed_count and len(worker_timeline) == 0):
                         worker_timeline.append((next_time, next_count - needed_count))
                         break
+                    if len(worker_timeline) == 0 and next_count < needed_count:
+                        raise NoAvailableResourcesError('There are no available resources to provide given worker team')
                     needed_count -= next_count
 
                 # Add to the right place

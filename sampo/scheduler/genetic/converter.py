@@ -58,7 +58,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     # zone status changes after node executing
     zone_changes_chromosome = np.random.randint(0,
                                                 landscape.zone_config.statuses.statuses_available(),
-                                                len(landscape.zone_config.start_statuses))
+                                                (len(landscape.zone_config.start_statuses), len(order_chromosome)))
 
     for node in order:
         node_id = node.work_unit.id
@@ -140,7 +140,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
                                st, work_spec.assigned_time, assigned_parent_time, work_estimator)
         # process zones
-        zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses)]
+        zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_index])]
         zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, ft - st)
 
         # we should deny scheduling

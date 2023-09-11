@@ -19,6 +19,7 @@ def setup_zoned_wg(setup_rand, setup_simple_synthetic) -> WorkGraph:
 
     return wg
 
+
 @fixture
 def setup_landscape_config() -> LandscapeConfiguration:
     zone_config = ZoneConfiguration(start_statuses={'zone1': 1},
@@ -28,6 +29,7 @@ def setup_landscape_config() -> LandscapeConfiguration:
                                         [0, 1, 1]
                                     ]))
     return LandscapeConfiguration(zone_config=zone_config)
+
 
 def test_zoned_scheduling(setup_zoned_wg, setup_landscape_config):
     contractors = [get_contractor_by_wg(setup_zoned_wg)]

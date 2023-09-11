@@ -32,28 +32,39 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     visualization_start_delta = timedelta(days=2)
     visualization_finish_delta = timedelta(days=(schedule_finish - schedule_start).days // 3)
 
-    def create_zone_row(zone) -> dict:
-        return {'idx': len(schedule_dataframe),
+    def create_zone_row(i, work_name, zone_names, zone) -> dict:
+        return {'idx': i,
                 'contractor': 'Access cards',
                 'cost': 0,
                 'volume': 0,
                 'duration': 0,
                 'measurement': 'unit',
                 'successors': [],
-                'workers_dict': str({}),
-                'workers': str({}),
-                'task_name_mapped': zone.name,
-                'task_name': zone.name,
+                'workers_dict': '',
+                'workers': '',
+                'task_name_mapped': zone_names,
+                'task_name': '',
                 'start': timedelta(int(zone.start_time)) + schedule_start - visualization_start_delta + timedelta(1),
                 'finish': timedelta(int(zone.end_time)) + schedule_start  - visualization_start_delta + timedelta(1)}
 
     sworks = schedule_dataframe['scheduled_work_object'].copy()
+    idx = schedule_dataframe['idx'].copy()
+
     # create zone information
-    for swork in sworks:
+    for i, swork in zip(idx, sworks):
+        zone_names = '<br>' + '<br>'.join([zone.name for zone in swork.zones_pre])
         for zone in swork.zones_pre:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(i, swork.work_unit.name, zone_names, zone), ignore_index=True)
+        zone_names = '<br>' + '<br>'.join([zone.name for zone in swork.zones_post])
         for zone in swork.zones_post:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(zone), ignore_index=True)
+            schedule_dataframe = schedule_dataframe.append(create_zone_row(i, swork.work_unit.name, zone_names, zone), ignore_index=True)
+
+    schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
+        .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
+    schedule_dataframe['idx'] = (schedule_dataframe[['idx', 'task_name']]
+                                 .apply(lambda r: schedule_dataframe[schedule_dataframe['task_name'] ==
+                                                                     r['task_name'].split(':')[0]]['idx'].iloc[0]
+                                 if ':' in r['task_name'] else r['idx'], axis=1))
 
     # add one time unit to the end should remove hole within the immediately close tasks
     schedule_dataframe['vis_finish'] = schedule_dataframe[['start', 'finish', 'duration']] \
@@ -63,7 +74,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     schedule_dataframe['start'] = schedule_dataframe['start'].apply(lambda x: x.strftime('%e %b %Y'))
 
     fig = px.timeline(schedule_dataframe, x_start='vis_start', x_end='vis_finish', y='idx', hover_name='task_name',
-                      color=schedule_dataframe.loc[:, 'contractor'],
+                      color=schedule_dataframe.loc[:, 'color'],
                       hover_data={'vis_start': False,
                                   'vis_finish': False,
                                   'start': True,
@@ -88,5 +99,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                      title_text='Date')
 
     fig.update_layout(autosize=True, font_size=12)
+    # fig.update_layout(height=1000)
 
     return visualize(fig, mode=visualization, file_name=fig_file_name)

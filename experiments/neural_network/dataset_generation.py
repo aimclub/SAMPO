@@ -9,7 +9,6 @@ import pandas as pd
 from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.selection.metrics import encode_graph
-from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.time import Time
 
 GRAPHS_TOP_BORDER = 100
@@ -17,7 +16,7 @@ GRAPHS_COUNT = 1000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
-schedulers = [HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler()]
+schedulers = [HEFTScheduler(), HEFTBetweenScheduler()]
 
 
 def argmin(array) -> int:
@@ -116,4 +115,4 @@ if __name__ == '__main__':
     df.fillna(value=0, inplace=True)
     dataset_size = min(df.groupby('label', group_keys=False).apply(lambda x: len(x)))
     df = df.groupby('label', group_keys=False).apply(lambda x: x.sample(dataset_size))
-    df.to_csv('dataset.csv', index_label='index')
+    df.to_csv('dataset_mod.csv', index_label='index')

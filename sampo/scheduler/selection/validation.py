@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from sklearn.model_selection import KFold
 
-from sampo.scheduler.selection.metrics import one_hot_encode
+from sampo.scheduler.selection.metrics import one_hot_encode, one_hot_decode
 from sampo.scheduler.selection.neural_net import NeuralNet
 
 
@@ -35,17 +35,19 @@ def cross_val_score(train_dataset: pd.DataFrame,
 
     for fold, (train_idx, test_idx) in enumerate(kf.split(train_dataset)):
         train_tensor = [torch.Tensor(v) for v in train_dataset.iloc[train_idx, :].drop(columns=[target_column]).values]
-        train_target_tensor = [torch.Tensor(one_hot_encode(v, 3)) for v in train_dataset.loc[train_idx, target_column].values]
+        train_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.loc[train_idx, target_column].values]
         test_tensor = [torch.Tensor(v) for v in train_dataset.iloc[test_idx, :].drop(columns=[target_column]).values]
-        test_target_tensor = [torch.Tensor(one_hot_encode(v, 3)) for v in train_dataset.loc[test_idx, target_column].values]
+        test_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.loc[test_idx, target_column].values]
 
         model.fit(train_tensor, train_target_tensor, epochs)
         predicted_target_tensor = model.predict(test_tensor)
+        predicted_target_tensor = [one_hot_decode(elem) for elem in predicted_target_tensor]
+        test_target_tensor = [one_hot_decode(elem) for elem in test_target_tensor]
 
         if isinstance(scorer, dict):
             for name, scorer in scorer.items():
                 scores.append(scorer(test_target_tensor, predicted_target_tensor))
         else:
-            scores = scorer(test_target_tensor, predicted_target_tensor)
+            scores.append(scorer(test_target_tensor, predicted_target_tensor))
 
     return scores

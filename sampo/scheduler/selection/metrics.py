@@ -1,3 +1,5 @@
+import torch
+
 from sampo.schemas.graph import WorkGraph
 
 
@@ -5,6 +7,12 @@ def one_hot_encode(v, max_v):
     res = [float(0) for _ in range(max_v)]
     res[v] = float(1)
     return res
+
+
+def one_hot_decode(v: torch.Tensor):
+    for i in range(len(v)):
+        if v[i] == 1:
+            return i
 
 
 def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
@@ -36,17 +44,30 @@ def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
 def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
     parallelism_degree = []
     current_node = wg.start
+    node_count = wg.vertex_count
 
     stack = [current_node]
     while stack:
-        tmp_stack = []
+        tmp_stack = set()
         parallelism_coef = 0
+
+        for i in range(len(stack)):
+            if stack[i] == 0:
+                continue
+            for j in range(i + 1, len(stack)):
+                if stack[j] == 0:
+                    continue
+                if stack[j] in stack[i].children:
+                    stack[j] = 0
+
         for node in stack:
+            if node == 0:
+                continue
             parallelism_coef += 1
             for child in node.children:
-                tmp_stack.append(child)
-        parallelism_degree.append(parallelism_coef)
-        stack = tmp_stack.copy()
+                tmp_stack.add(child)
+        parallelism_degree.append(parallelism_coef / node_count)
+        stack = list(tmp_stack)
 
     return parallelism_degree
 
@@ -59,8 +80,8 @@ def metric_average_work_per_activity(wg: WorkGraph) -> float:
     return sum(node.work_unit.volume for node in wg.nodes) / wg.vertex_count
 
 
-def metric_max_children(wg: WorkGraph) -> float:
-    return max((len(node.children) for node in wg.nodes if node.children))
+def metric_relative_max_children(wg: WorkGraph) -> float:
+    return max((len(node.children) for node in wg.nodes if node.children)) / wg.vertex_count
 
 
 def metric_average_resource_usage(wg: WorkGraph) -> float:
@@ -68,16 +89,15 @@ def metric_average_resource_usage(wg: WorkGraph) -> float:
                for node in wg.nodes) / wg.vertex_count
 
 
-def metric_max_parents(wg: WorkGraph) -> float:
-    return max((len(node.parents) for node in wg.nodes if node.parents))
+def metric_relative_max_parents(wg: WorkGraph) -> float:
+    return max((len(node.parents) for node in wg.nodes if node.parents)) / wg.vertex_count
 
 
 def encode_graph(wg: WorkGraph) -> list[float]:
     return [
         metric_vertex_count(wg),
         metric_average_work_per_activity(wg),
-        metric_max_children(wg),
+        metric_relative_max_children(wg),
         metric_average_resource_usage(wg),
-        metric_max_children(wg),
         *metric_graph_parallelism_degree(wg)
     ]

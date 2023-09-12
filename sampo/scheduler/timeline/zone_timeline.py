@@ -45,6 +45,9 @@ class ZoneTimeline:
 
         i = 0
         while len(queue) > 0:
+            # if i > 0 and i % 50 == 0:
+            #     print(f'Warning! Probably cycle in scheduling all the reqs: {i} iteration')
+            #     print(f'Current start time: {start}, current queue: {list(queue)}')
             i += 1
 
             wreq = queue.popleft()
@@ -54,13 +57,13 @@ class ZoneTimeline:
             # we should start to find for the earliest time slot of other task since this new time
             found_start = self._find_earliest_time_slot(state, start, exec_time, type2status[wreq.kind])
 
-            # assert found_start >= start
+            assert found_start >= start
 
             if len(scheduled_wreqs) == 0 or start == found_start:
                 # we schedule the first worker's specialization or the next spec has the same start time
                 # as the all previous ones
                 scheduled_wreqs.append(wreq)
-                start = found_start
+                start = max(start, found_start)
             else:
                 # The current worker specialization can be started only later than
                 # the previously found start time.
@@ -70,7 +73,7 @@ class ZoneTimeline:
                 queue.extend(scheduled_wreqs)
                 scheduled_wreqs.clear()
                 scheduled_wreqs.append(wreq)
-                start = found_start
+                start = max(start, found_start)
 
         return start
 
@@ -111,7 +114,7 @@ class ZoneTimeline:
             if state[current_start_idx].event_type == EventType.START \
                     and not self._match_status(required_status, state[current_start_idx]):
                 current_start_idx += 1
-                current_start_time = state[current_start_idx].time
+                current_start_time = state[current_start_idx].time + 1
                 continue
 
             # here we are outside the all intervals or inside the interval with right status
@@ -123,6 +126,9 @@ class ZoneTimeline:
             # so we can change its status
             starts_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.START])
             ends_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.END])
+
+            old_status = state[current_start_idx].available_workers_count
+            change_cost = self._config.time_costs[old_status, required_status]
             if starts_count == ends_count \
                     and not self._match_status(required_status, state[current_start_idx].available_workers_count):
                 # we are outside all intervals, so let's decide should
@@ -137,8 +143,10 @@ class ZoneTimeline:
                 else:
                     start_time_changed = state[prev_cpkt_idx].time + change_cost # current_start_time + change_cost
 
-                next_cpkt_time = state[min(current_start_idx + 1, len(state) - 1)].time
-                if next_cpkt_time <= start_time_changed:
+                next_cpkt = state[min(current_start_idx + 1, len(state) - 1)]
+                next_cpkt_time = next_cpkt.time
+                if (parent_time <= next_cpkt_time <= start_time_changed
+                        and self._match_status(next_cpkt.available_workers_count, required_status)):
                     # waiting until the next checkpoint is faster that change zone status
                     current_start_time = next_cpkt_time
                     current_start_idx += 1
@@ -150,10 +158,13 @@ class ZoneTimeline:
             # here we are guaranteed that current_start_time is in right status
             # so go right and check matching statuses
             # this step performed like in MomentumTimeline
+            if len([v for v in state if (v.time == (current_start_time - change_cost) and not self._match_status(v.available_workers_count, required_status))]) > 0:
+                print('Problem 11!')
+
             not_compatible_status_found = False
             for idx in range(end_idx - 1, current_start_idx - 2, -1):
                 if not self._match_status(required_status, state[idx].available_workers_count) or state[
-                    idx].time < parent_time:
+                    idx].time <= parent_time:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
@@ -168,7 +179,7 @@ class ZoneTimeline:
                 break
 
             if current_start_idx >= len(state):
-                return max(parent_time, state[-1].time)
+                break # return max(parent_time, state[-1].time + 1)
 
             current_start_time = state[current_start_idx].time
 
@@ -198,6 +209,9 @@ class ZoneTimeline:
             change_cost = self._config.time_costs[start_status, zone.status] \
                             if not self._config.statuses.match_status(zone.status, start_status) \
                             else 0
+
+            if len([v for v in state if (v.time == (start_time - change_cost) and not self._match_status(v.available_workers_count, zone.status))]) > 0:
+                print('Problem 22!')
 
             state.add(ScheduleEvent(index, EventType.START, start_time - change_cost, None, zone.status))
             state.add(ScheduleEvent(index, EventType.END, start_time - change_cost + exec_time, None, zone.status))

@@ -35,9 +35,9 @@ def cross_val_score(train_dataset: pd.DataFrame,
 
     for fold, (train_idx, test_idx) in enumerate(kf.split(train_dataset)):
         train_tensor = [torch.Tensor(v) for v in train_dataset.iloc[train_idx, :].drop(columns=[target_column]).values]
-        train_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.loc[train_idx, target_column].values]
+        train_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.iloc[train_idx, list(train_dataset.columns).index('label')].values]
         test_tensor = [torch.Tensor(v) for v in train_dataset.iloc[test_idx, :].drop(columns=[target_column]).values]
-        test_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.loc[test_idx, target_column].values]
+        test_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in train_dataset.iloc[test_idx, list(train_dataset.columns).index('label')].values]
 
         model.fit(train_tensor, train_target_tensor, epochs)
         predicted_target_tensor = model.predict(test_tensor)

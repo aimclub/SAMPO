@@ -1,4 +1,5 @@
 import pandas as pd
+import sklearn.base
 import torch
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
@@ -7,25 +8,31 @@ from torch import nn
 from sampo.scheduler.selection.metrics import one_hot_encode
 
 
-class NeuralNet(nn.Module):
-    def __init__(self, input_size: int, layer_size: int, layer_count: int, out_size: int, learning_rate=0.001):
-        super(NeuralNet, self).__init__()
-        self._layers_count = layer_count
-        self._linear0 = torch.nn.Linear(input_size, layer_size)
-        for i in range(layer_count - 2):
-            self.__dict__[f'_linear{i + 1}'] = torch.nn.Linear(layer_size, layer_size)
-        self.__dict__[f'_linear{layer_count - 1}'] = torch.nn.Linear(layer_size, out_size)
-        self._learning_rate = learning_rate
+class NeuralNet(nn.Module, sklearn.base.BaseEstimator):
+    def __init__(self, input_size: int = 13, layer_size: int = 15, layer_count: int = 6, out_size: int = 2, learning_rate=0.001):
+        super().__init__()
+        self.input_size = input_size
+        self.layer_size = layer_size
+        self.layer_count = layer_count
+        self.out_size = out_size
+        self.learning_rate = learning_rate
+
+        self._layers_count = self.layer_count
+        self._linear0 = torch.nn.Linear(self.input_size, self.layer_size)
+        for i in range(self.layer_count - 2):
+            self.__dict__[f'_linear{i + 1}'] = torch.nn.Linear(self.layer_size, self.layer_size)
+        self.__dict__[f'_linear{self.layer_count - 1}'] = torch.nn.Linear(self.layer_size, self.out_size)
+        self._learning_rate = self.learning_rate
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    def forward(self, x):
-        x = self._linear0(x)
+    def forward(self, X):
+        X = self._linear0(X)
         for i in range(1, self._layers_count):
             linear = self.__dict__[f'_linear{i}']
-            x = F.relu(x)
-            x = linear(x)
-        x = F.softmax(x, dim=0)
-        return x
+            X = F.relu(X)
+            X = linear(X)
+        X = F.softmax(X, dim=0)
+        return X
 
     def fit(self, x, y, epochs=10):
         criterion = torch.nn.CrossEntropyLoss()
@@ -59,7 +66,7 @@ class NeuralNet(nn.Module):
                 image = image.to(self._device)
                 outputs = self(image)
                 _, predicted = torch.max(outputs.data, 0)
-                result.append(torch.tensor(one_hot_encode(predicted, 3)))
+                result.append(torch.tensor(one_hot_encode(predicted, 2)))
         return result
 
 

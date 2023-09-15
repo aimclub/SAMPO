@@ -38,8 +38,8 @@ class DefaultZoneStatuses(ZoneStatuses):
     def statuses_available(self) -> int:
         return 3
 
-    def match_status(self, target: int, to_compare: int) -> bool:
-        return target == 0 or target == to_compare
+    def match_status(self, status_to_check: int, required_status: int) -> bool:
+        return required_status == 0 or status_to_check == 0 or status_to_check == required_status
 
 
 @dataclass

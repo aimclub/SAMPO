@@ -11,7 +11,8 @@ from sampo.utilities.validation import validate_schedule
 def test_convert_schedule_to_chromosome(setup_toolbox):
     tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
-    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape_many_holders)
+    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True,
+                                        landscape=setup_landscape_many_holders)
 
     chromosome = tb.schedule_to_chromosome(schedule=schedule)
     assert tb.validate(chromosome)
@@ -44,10 +45,22 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
     for i in range(len(chromosome[2])):
         contractors.append(Contractor(id=setup_contractors[i].id,
                                       name=setup_contractors[i].name,
-                                      workers={name: Worker(str(uuid4()), name, count, contractor_id=setup_contractors[i].id)
-                                               for name, count in zip(workers, chromosome[2][i])},
+                                      workers={
+                                          name: Worker(str(uuid4()), name, count, contractor_id=setup_contractors[i].id)
+                                          for name, count in zip(workers, chromosome[2][i])},
                                       equipments={}))
 
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
     validate_schedule(schedule, setup_wg, contractors)
+
+
+def test_converter_with_borders_update(setup_toolbox):
+    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
+    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome, landscape=setup_landscape_many_holders)
+    schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
+    updated_chromosome = tb.update_resource_borders(chromosome, schedule)
+    updated_schedule, _, _, _ = tb.chromosome_to_schedule(updated_chromosome, landscape=setup_landscape_many_holders)
+    updated_schedule = Schedule.from_scheduled_works(updated_schedule.values(), setup_wg)
+    assert schedule.execution_time == updated_schedule.execution_time

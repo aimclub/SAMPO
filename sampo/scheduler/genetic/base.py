@@ -42,7 +42,10 @@ class GeneticScheduler(Scheduler):
                  fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 optimize_resources: bool = False,
+                 deadline: Time = None,
+                 verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -53,11 +56,13 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self.optimize_resources = optimize_resources
         self._n_cpu = n_cpu
         self._weights = weights
+        self._verbose = verbose
 
         self._time_border = None
-        self._deadline = None
+        self._deadline = deadline
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -199,6 +204,7 @@ class GeneticScheduler(Scheduler):
 
         mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
+        deadline = None if self.optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
@@ -213,10 +219,13 @@ class GeneticScheduler(Scheduler):
                                                                                      landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
-                                                                                     n_cpu=self._n_cpu,
-                                                                                     assigned_parent_time=assigned_parent_time,
-                                                                                     timeline=timeline,
-                                                                                     time_border=self._time_border)
+                                                                                     self._n_cpu,
+                                                                                     assigned_parent_time,
+                                                                                     timeline,
+                                                                                     self._time_border,
+                                                                                     self.optimize_resources,
+                                                                                     deadline,
+                                                                                     self._verbose)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:

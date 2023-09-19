@@ -2,9 +2,9 @@ import random
 import math
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from functools import partial
-from typing import Iterable, Callable
+from typing import Iterable
 from operator import attrgetter
+from enum import Enum
 
 import numpy as np
 from deap import creator, base
@@ -33,17 +33,6 @@ class FitnessFunction(ABC):
     Base class for description of different fitness functions.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        self._evaluator = evaluator
-
-    @abstractmethod
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        """
-        Calculate the value of fitness function of the all chromosomes.
-        It is better when value is less.
-        """
-        ...
-
     @abstractmethod
     def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
         """
@@ -58,12 +47,6 @@ class TimeFitness(FitnessFunction):
     Fitness function that relies on finish time.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        super().__init__(evaluator)
-
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        return [schedule.execution_time.value for schedule in self._evaluator(chromosomes)]
-
     def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
         return [schedule.execution_time.value for schedule in schedules]
 
@@ -72,13 +55,6 @@ class TimeAndResourcesFitness(FitnessFunction):
     """
     Fitness function that relies on finish time and the set of resources.
     """
-
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        super().__init__(evaluator)
-
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in evaluated]
 
     def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
         return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in schedules]
@@ -89,22 +65,8 @@ class DeadlineResourcesFitness(FitnessFunction):
     The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        super().__init__(evaluator)
+    def __init__(self, deadline: Time):
         self._deadline = deadline
-
-    @staticmethod
-    def prepare(deadline: Time):
-        """
-        Returns the constructor of that fitness function prepared to use in Genetic
-        """
-        return partial(DeadlineResourcesFitness, deadline)
-
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [int(get_absolute_peak_resource_usage(schedule)
-                    * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in evaluated]
 
     def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
         return [int(get_absolute_peak_resource_usage(schedule)
@@ -117,24 +79,11 @@ class DeadlineCostFitness(FitnessFunction):
     The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        super().__init__(evaluator)
+    def __init__(self, deadline: Time):
         self._deadline = deadline
 
-    @staticmethod
-    def prepare(deadline: Time):
-        """
-        Returns the constructor of that fitness function prepared to use in Genetic
-        """
-        return partial(DeadlineCostFitness, deadline)
-
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        # TODO Integrate cost calculation to native module
-        return [int(schedule_cost(schedule) * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in evaluated]
-
     def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+        # TODO Integrate cost calculation to native module
         return [int(schedule_cost(schedule) * max(1.0, schedule.execution_time.value / self._deadline.value))
                 for schedule in schedules]
 
@@ -144,6 +93,14 @@ class DeadlineCostFitness(FitnessFunction):
 creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
 creator.create('Individual', list, fitness=creator.FitnessMin)
 Individual = creator.Individual
+
+
+class IndividualType(Enum):
+    """
+    Class to define a type of individual in genetic algorithm
+    """
+    population = 'population'
+    offspring = 'offspring'
 
 
 def init_toolbox(wg: WorkGraph,
@@ -219,8 +176,8 @@ def init_toolbox(wg: WorkGraph,
                      contractor2index=contractor2index,
                      landscape=landscape)
     toolbox.register('copy_individual', lambda ind: Individual(copy_chromosome(ind)))
-    toolbox.register('update_resource_borders', update_resource_borders, worker_name2index=worker_name2index,
-                     contractor2index=contractor2index)
+    toolbox.register('update_resource_borders_to_peak_values', update_resource_borders_to_peak_values,
+                     worker_name2index=worker_name2index, contractor2index=contractor2index)
     return toolbox
 
 
@@ -513,15 +470,8 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
     masks &= res_up_borders != res_low_borders
     mask = masks.any(axis=1)
 
-    for work, l_borders, u_borders, res_mask in zip(works_indexes[mask], res_low_borders[mask],
-                                                    res_up_borders[mask], masks[mask]):
-        work_res = res[work]
-        for type_of_res, current_amount, l_border, u_border in zip(res_indexes[res_mask], work_res[:-1][res_mask],
-                                                                   l_borders[res_mask], u_borders[res_mask]):
-            choices = np.concatenate((np.arange(l_border, current_amount),
-                                      np.arange(current_amount + 1, u_border + 1)))
-            weights = 1 / abs(choices - current_amount)
-            work_res[type_of_res] = rand.choices(choices, weights=weights)[0]
+    mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask], res_up_borders[mask], masks[mask], -1,
+                  rand)
 
     return ind
 
@@ -595,21 +545,31 @@ def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Rand
     masks &= contractor_up_borders != contractor_low_borders
     mask = masks.any(axis=1)
 
-    for contractor, l_borders, u_borders, res_mask in zip(contractors[mask], contractor_low_borders[mask],
-                                                          contractor_up_borders[mask], masks[mask]):
-        cur_borders = borders[contractor]
-        for type_of_res, current_amount, l_border, u_border in zip(res_indexes[res_mask], cur_borders[res_mask],
-                                                                   l_borders[res_mask], u_borders[res_mask]):
-            choices = np.concatenate((np.arange(l_border, current_amount),
-                                      np.arange(current_amount + 1, u_border + 1)))
-            weights = 1 / abs(choices - current_amount)
-            cur_borders[type_of_res] = rand.choices(choices, weights=weights)[0]
+    mutate_values(borders, contractors[mask], res_indexes, contractor_low_borders[mask], contractor_up_borders[mask],
+                  masks[mask], len(res_indexes), rand)
 
     return ind
 
 
-def update_resource_borders(ind: ChromosomeType, schedule: Schedule, worker_name2index: dict[str, int],
-                            contractor2index: dict[str, int]):
+def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_indexes: np.ndarray,
+                  low_borders: np.ndarray, up_borders: np.ndarray, masks: np.ndarray, mut_part: int,
+                  rand: random.Random) -> None:
+    """
+    Changes numeric values in m x n part of chromosome.
+    This function is needed to make mutation for resources and resource borders.
+    """
+    for row_index, l_borders, u_borders, row_mask in zip(row_indexes, low_borders, up_borders, masks):
+        cur_row = chromosome_part[row_index]
+        for col_index, current_amount, l_border, u_border in zip(col_indexes[row_mask], cur_row[:mut_part][row_mask],
+                                                                 l_borders[row_mask], u_borders[row_mask]):
+            choices = np.concatenate((np.arange(l_border, current_amount),
+                                      np.arange(current_amount + 1, u_border + 1)))
+            weights = 1 / abs(choices - current_amount)
+            cur_row[col_index] = rand.choices(choices, weights=weights)[0]
+
+
+def update_resource_borders_to_peak_values(ind: ChromosomeType, schedule: Schedule, worker_name2index: dict[str, int],
+                                           contractor2index: dict[str, int]):
     """
     Changes the resource borders to the peak values obtained in the schedule.
 
@@ -642,6 +602,5 @@ def update_resource_borders(ind: ChromosomeType, schedule: Schedule, worker_name
         if contractor_id:
             index = contractor2index[contractor_id]
             actual_borders[index] = contractor_res_schedule.max(axis=0)
-    assert (actual_borders <= ind[2]).all()
     ind[2][:] = actual_borders
     return ind

@@ -1,10 +1,8 @@
 import random
 from typing import Optional, Callable
 
-from deap.base import Toolbox
-
 from sampo.scheduler.base import Scheduler, SchedulerType
-from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
+from sampo.scheduler.genetic.operators import TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
@@ -39,12 +37,11 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: list[int] = None,
-                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
+                 fitness_function: Callable[[list[Schedule]], list[int]] = TimeFitness().evaluate_from_schedules,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  optimize_resources: bool = False,
-                 deadline: Time = None,
                  verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
@@ -54,7 +51,7 @@ class GeneticScheduler(Scheduler):
         self.mutate_resources = mutate_resources
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
-        self.fitness_constructor = fitness_constructor
+        self.fitness_function = fitness_function
         self.work_estimator = work_estimator
         self.optimize_resources = optimize_resources
         self._n_cpu = n_cpu
@@ -62,7 +59,7 @@ class GeneticScheduler(Scheduler):
         self._verbose = verbose
 
         self._time_border = None
-        self._deadline = deadline
+        self._deadline = None
 
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
@@ -217,7 +214,7 @@ class GeneticScheduler(Scheduler):
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
-                                                                                     self.fitness_constructor,
+                                                                                     self.fitness_function,
                                                                                      self.work_estimator,
                                                                                      self._n_cpu,
                                                                                      assigned_parent_time,

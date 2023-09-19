@@ -20,14 +20,39 @@ def setup_zoned_wg(setup_rand, setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture
-def setup_landscape_config() -> LandscapeConfiguration:
-    zone_config = ZoneConfiguration(start_statuses={'zone1': 1},
-                                    time_costs=np.array([
-                                        [0, 0, 0],
-                                        [0, 1, 1],
-                                        [0, 1, 1]
-                                    ]))
+@fixture(params=[(costs_mode, start_status_mode) for start_status_mode in range(3) for costs_mode in range(2)],
+         ids=[f'Costs mode: {costs_mode}, start status mode: {start_status_mode}' for start_status_mode in range(3) for costs_mode in range(2)])
+def setup_landscape_config(request) -> LandscapeConfiguration:
+    costs_mode, start_status_mode = request.param
+
+    match costs_mode:
+        case 0:
+            time_costs = np.array([
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
+            ])
+        case 1:
+            time_costs = np.array([
+                [0, 0, 0],
+                [0, 1, 1],
+                [0, 1, 1]
+            ])
+        case _:
+            raise ValueError('Illegal costs mode')
+
+    match start_status_mode:
+        case 0:
+            start_status = 0
+        case 1:
+            start_status = 1
+        case 2:
+            start_status = 2
+        case _:
+            raise ValueError('Illegal start status mode')
+
+    zone_config = ZoneConfiguration(start_statuses={'zone1': start_status},
+                                    time_costs=time_costs)
     return LandscapeConfiguration(zone_config=zone_config)
 
 

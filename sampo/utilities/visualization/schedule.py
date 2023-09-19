@@ -51,9 +51,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     idx = schedule_dataframe['idx'].copy()
 
     def get_zone_usage_info(swork) -> str:
-        zone_names_pre = '<br>' + '<br>'.join([zone.name for zone in swork.zones_pre])
-        zone_names_post = '<br>' + '<br>'.join([zone.name for zone in swork.zones_post])
-        return zone_names_pre + zone_names_post
+        return '<br>' + '<br>'.join([f'{zone.kind}: {zone.required_status}' for zone in swork.work_unit.zone_reqs])
 
     schedule_dataframe['zone_information'] = sworks.apply(get_zone_usage_info)
 

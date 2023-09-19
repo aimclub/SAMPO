@@ -179,7 +179,7 @@ class ZoneTimeline:
             # so go right and check matching statuses
             # this step performed like in MomentumTimeline
             not_compatible_status_found = False
-            for idx in range(end_idx - 1, current_start_idx - 2, -1):
+            for idx in range(end_idx - 1, current_start_idx - 1, -1):
                 if not self._match_status(state[idx].available_workers_count, required_status):
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check

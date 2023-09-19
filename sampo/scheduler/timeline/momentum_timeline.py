@@ -323,6 +323,7 @@ class MomentumTimeline(Timeline):
                 break
 
             if current_start_idx >= len(state):
+                current_start_time = max(parent_time, state[-1].time + 1)
                 break
 
             current_start_time = state[current_start_idx].time

@@ -6,7 +6,6 @@ from sampo.scheduler.genetic.operators import DeadlineResourcesFitness
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
-from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.time import Time
 from sampo.utilities.resource_cost import schedule_cost
 
@@ -40,15 +39,16 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=50,
-                                 fitness_function=DeadlineResourcesFitness(deadline).evaluate_from_schedules)
+                                 fitness_function=DeadlineResourcesFitness(deadline).evaluate_from_schedules,
+                                 optimize_resources=True,
+                                 verbose=False)
 
-    try:
-        schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
+    scheduler.set_deadline(deadline)
 
-        print(f'Planning for deadline time: {schedule.execution_time}, ' +
-              f'peaks: {get_absolute_peak_resource_usage(schedule)}, cost: {schedule_cost(schedule)}')
-    except NoSufficientContractorError:
-        pytest.skip("Given contractors can't satisfy given work graph")
+    schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
+
+    print(f'Planning for deadline time: {schedule.execution_time}, ' +
+          f'peaks: {get_absolute_peak_resource_usage(schedule)}, cost: {schedule_cost(schedule)}')
 
 
 def test_true_deadline_planning(setup_scheduler_parameters):
@@ -105,20 +105,15 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler_lexicographic.set_deadline(deadline)
 
-    try:
-        schedule = scheduler_combined.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
-        time_combined = schedule.execution_time
+    schedule = scheduler_combined.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    time_combined = schedule.execution_time
 
-        print(f'\tCombined genetic: time = {time_combined}, ' +
-              f'peak = {get_absolute_peak_resource_usage(schedule)}')
+    print(f'\tCombined genetic: time = {time_combined}, ' +
+          f'peak = {get_absolute_peak_resource_usage(schedule)}')
 
-        schedule = scheduler_lexicographic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
-        time_lexicographic = schedule.execution_time
+    schedule = scheduler_lexicographic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    time_lexicographic = schedule.execution_time
 
-        print(f'\tLexicographic genetic: time = {time_lexicographic}, ' +
-              f'peak = {get_absolute_peak_resource_usage(schedule)}')
-
-    except NoSufficientContractorError:
-        pytest.skip("Given contractors can't satisfy given work graph")
-
+    print(f'\tLexicographic genetic: time = {time_lexicographic}, ' +
+          f'peak = {get_absolute_peak_resource_usage(schedule)}')
     print()

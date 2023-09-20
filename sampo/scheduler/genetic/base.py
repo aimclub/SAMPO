@@ -1,8 +1,6 @@
 import random
 from typing import Optional, Callable
 
-from deap.base import Toolbox
-
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
@@ -39,10 +37,12 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: list[int] = None,
-                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
+                 fitness_constructor: Callable[[Time | None], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 optimize_resources: bool = False,
+                 verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -53,8 +53,10 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self._optimize_resources = optimize_resources
         self._n_cpu = n_cpu
         self._weights = weights
+        self._verbose = verbose
 
         self._time_border = None
         self._deadline = None
@@ -113,6 +115,12 @@ class GeneticScheduler(Scheduler):
 
     def set_weights(self, weights: list[int]):
         self._weights = weights
+
+    def set_optimize_resources(self, optimize_resources: bool):
+        self._optimize_resources = optimize_resources
+
+    def set_verbose(self, verbose: bool):
+        self._verbose = verbose
 
     @staticmethod
     def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
@@ -199,6 +207,8 @@ class GeneticScheduler(Scheduler):
 
         mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
+        fitness_object = self.fitness_constructor(self._deadline)
+        deadline = None if self._optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
@@ -211,12 +221,15 @@ class GeneticScheduler(Scheduler):
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
-                                                                                     self.fitness_constructor,
+                                                                                     fitness_object,
                                                                                      self.work_estimator,
-                                                                                     n_cpu=self._n_cpu,
-                                                                                     assigned_parent_time=assigned_parent_time,
-                                                                                     timeline=timeline,
-                                                                                     time_border=self._time_border)
+                                                                                     self._n_cpu,
+                                                                                     assigned_parent_time,
+                                                                                     timeline,
+                                                                                     self._time_border,
+                                                                                     self._optimize_resources,
+                                                                                     deadline,
+                                                                                     self._verbose)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:

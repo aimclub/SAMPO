@@ -116,7 +116,7 @@ class JustInTimeTimeline(Timeline):
                 worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
                 count_workers = sum([count for _, count in worker_timeline])
                 worker_timeline.clear()
-                worker_timeline.append((finish_time, count_workers))
+                worker_timeline.append((finish_time + 1, count_workers))
         else:
             # For each worker type consume the nearest available needed worker amount
             # and re-add it to the time when current work should be finished.

@@ -1,13 +1,12 @@
 import random
 import time
-from typing import Callable
 
 import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, TimeFitness, IndividualType
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, IndividualType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
@@ -124,7 +123,7 @@ def build_schedule(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_function: Callable[[list[Schedule]], list[int]] = TimeFitness().evaluate_from_schedules,
+                   fitness_object: FitnessFunction = TimeFitness(),
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
@@ -182,7 +181,7 @@ def build_schedule(wg: WorkGraph,
         # map to each individual fitness function
         pop = [ind for ind in pop if toolbox.validate(ind)]
         schedules = native.evaluate(pop)
-        fitness = fitness_function(schedules)
+        fitness = fitness_object.evaluate(schedules)
 
         evaluation_time = time.time() - evaluation_start
 
@@ -190,7 +189,7 @@ def build_schedule(wg: WorkGraph,
             ind.fitness.values = [fit]
             if optimize_resources:
                 toolbox.update_resource_borders_to_peak_values(ind, schedule)
-                ind.type = IndividualType.population
+                ind.type = IndividualType.Population
 
         hof.update(pop)
         best_fitness = hof[0].fitness.values[0]
@@ -228,13 +227,13 @@ def build_schedule(wg: WorkGraph,
             evaluation_start = time.time()
 
             schedules = native.evaluate(offspring)
-            offspring_fitness = fitness_function(schedules)
+            offspring_fitness = fitness_object.evaluate(schedules)
 
             for ind, fit, schedule in zip(offspring, offspring_fitness, schedules):
                 ind.fitness.values = [fit]
                 if optimize_resources:
                     ind.schedule = schedule
-                    ind.type = IndividualType.offspring
+                    ind.type = IndividualType.Offspring
 
             evaluation_time += time.time() - evaluation_start
 
@@ -243,10 +242,10 @@ def build_schedule(wg: WorkGraph,
             pop = toolbox.select(pop)
             if optimize_resources:
                 for ind in pop:
-                    if ind.type is IndividualType.offspring:
+                    if ind.type is IndividualType.Offspring:
                         toolbox.update_resource_borders_to_peak_values(ind, ind.schedule)
                         del ind.schedule
-                        ind.type = IndividualType.population
+                        ind.type = IndividualType.Population
             hof.update([pop[0]])
 
             prev_best_fitness = best_fitness
@@ -296,7 +295,7 @@ def build_schedule(wg: WorkGraph,
                     ind.time = ind.fitness.values[0]
                     ind.fitness.values = [fit]
                     toolbox.update_resource_borders_to_peak_values(ind, schedule)
-                    ind.type = IndividualType.population
+                    ind.type = IndividualType.Population
 
                 evaluation_time += time.time() - evaluation_start
 
@@ -342,7 +341,7 @@ def build_schedule(wg: WorkGraph,
                         ind.time = schedule.execution_time.value
                         if ind.time <= deadline:
                             ind.fitness.values = [get_absolute_peak_resource_usage(schedule)]
-                            ind.type = IndividualType.offspring
+                            ind.type = IndividualType.Offspring
                             ind.schedule = schedule
 
                     offspring = [ind for ind in offspring if ind.time <= deadline]
@@ -353,10 +352,10 @@ def build_schedule(wg: WorkGraph,
                     pop += offspring
                     pop = toolbox.select(pop)
                     for ind in pop:
-                        if ind.type is IndividualType.offspring:
+                        if ind.type is IndividualType.Offspring:
                             toolbox.update_resource_borders_to_peak_values(ind, ind.schedule)
                             del ind.schedule
-                            ind.type = IndividualType.population
+                            ind.type = IndividualType.Population
                     hof.update([pop[0]])
 
                     prev_best_fitness = best_fitness

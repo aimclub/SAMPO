@@ -32,9 +32,12 @@ class FitnessFunction(ABC):
     """
     Base class for description of different fitness functions.
     """
+    
+    def __init__(self, deadline: Time | None):
+        self._deadline = deadline
 
     @abstractmethod
-    def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+    def evaluate(self, schedules: list[Schedule]) -> list[int]:
         """
         Calculate the value of fitness function of the all schedules.
         It is better when value is less.
@@ -46,8 +49,11 @@ class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
+    
+    def __init__(self, deadline: Time | None = None):
+        super().__init__(deadline)
 
-    def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+    def evaluate(self, schedules: list[Schedule]) -> list[int]:
         return [schedule.execution_time.value for schedule in schedules]
 
 
@@ -56,7 +62,10 @@ class TimeAndResourcesFitness(FitnessFunction):
     Fitness function that relies on finish time and the set of resources.
     """
 
-    def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+    def __init__(self, deadline: Time | None = None):
+        super().__init__(deadline)
+
+    def evaluate(self, schedules: list[Schedule]) -> list[int]:
         return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in schedules]
 
 
@@ -66,9 +75,9 @@ class DeadlineResourcesFitness(FitnessFunction):
     """
 
     def __init__(self, deadline: Time):
-        self._deadline = deadline
+        super().__init__(deadline)
 
-    def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+    def evaluate(self, schedules: list[Schedule]) -> list[int]:
         return [int(get_absolute_peak_resource_usage(schedule)
                     * max(1.0, schedule.execution_time.value / self._deadline.value))
                 for schedule in schedules]
@@ -80,9 +89,9 @@ class DeadlineCostFitness(FitnessFunction):
     """
 
     def __init__(self, deadline: Time):
-        self._deadline = deadline
+        super().__init__(deadline)
 
-    def evaluate_from_schedules(self, schedules: list[Schedule]) -> list[int]:
+    def evaluate(self, schedules: list[Schedule]) -> list[int]:
         # TODO Integrate cost calculation to native module
         return [int(schedule_cost(schedule) * max(1.0, schedule.execution_time.value / self._deadline.value))
                 for schedule in schedules]
@@ -99,8 +108,8 @@ class IndividualType(Enum):
     """
     Class to define a type of individual in genetic algorithm
     """
-    population = 'population'
-    offspring = 'offspring'
+    Population = 'population'
+    Offspring = 'offspring'
 
 
 def init_toolbox(wg: WorkGraph,

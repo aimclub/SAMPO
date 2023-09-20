@@ -39,7 +39,7 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=50,
-                                 fitness_function=DeadlineResourcesFitness(deadline).evaluate_from_schedules,
+                                 fitness_constructor=DeadlineResourcesFitness,
                                  optimize_resources=True,
                                  verbose=False)
 
@@ -81,7 +81,8 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
     scheduler = HEFTScheduler()
     schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)
 
-    # assigning deadline to the time-10^(order_of_magnitude(time) - 1), time - time of schedule from HEFT
+    # assigning deadline to the time-10^(order_of_magnitude(time) - 1)
+    # time - time of schedule from HEFT
     deadline = schedule.execution_time
     deadline -= 10 ** max(0, int(math.log10(deadline.value) - 1))
 
@@ -91,7 +92,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
                                           mutate_order=0.05,
                                           mutate_resources=0.005,
                                           size_of_population=50,
-                                          fitness_function=DeadlineResourcesFitness(deadline).evaluate_from_schedules,
+                                          fitness_constructor=DeadlineResourcesFitness,
                                           optimize_resources=True,
                                           verbose=False)
 

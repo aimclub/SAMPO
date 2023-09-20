@@ -2,7 +2,7 @@ import random
 from typing import Optional, Callable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
-from sampo.scheduler.genetic.operators import TimeFitness
+from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
@@ -37,7 +37,7 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: list[int] = None,
-                 fitness_function: Callable[[list[Schedule]], list[int]] = TimeFitness().evaluate_from_schedules,
+                 fitness_constructor: Callable[[Time | None], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -51,9 +51,9 @@ class GeneticScheduler(Scheduler):
         self.mutate_resources = mutate_resources
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
-        self.fitness_function = fitness_function
+        self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
-        self.optimize_resources = optimize_resources
+        self._optimize_resources = optimize_resources
         self._n_cpu = n_cpu
         self._weights = weights
         self._verbose = verbose
@@ -115,6 +115,12 @@ class GeneticScheduler(Scheduler):
 
     def set_weights(self, weights: list[int]):
         self._weights = weights
+
+    def set_optimize_resources(self, optimize_resources: bool):
+        self._optimize_resources = optimize_resources
+
+    def set_verbose(self, verbose: bool):
+        self._verbose = verbose
 
     @staticmethod
     def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
@@ -201,7 +207,8 @@ class GeneticScheduler(Scheduler):
 
         mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
-        deadline = None if self.optimize_resources else self._deadline
+        fitness_object = self.fitness_constructor(self._deadline)
+        deadline = None if self._optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
@@ -214,13 +221,13 @@ class GeneticScheduler(Scheduler):
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
-                                                                                     self.fitness_function,
+                                                                                     fitness_object,
                                                                                      self.work_estimator,
                                                                                      self._n_cpu,
                                                                                      assigned_parent_time,
                                                                                      timeline,
                                                                                      self._time_border,
-                                                                                     self.optimize_resources,
+                                                                                     self._optimize_resources,
                                                                                      deadline,
                                                                                      self._verbose)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)

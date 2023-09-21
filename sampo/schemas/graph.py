@@ -2,16 +2,15 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, cache
-from typing import Union, Optional
+from typing import Optional
 
 import numpy as np
 from scipy.sparse import dok_matrix
 
-from sampo.schemas.serializable import JSONSerializable, T, JS
-from sampo.schemas.works import WorkUnit
-
-from sampo.schemas.time import Time
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.serializable import JSONSerializable, T, JS
+from sampo.schemas.time import Time
+from sampo.schemas.works import WorkUnit
 
 
 class EdgeType(Enum):
@@ -50,11 +49,15 @@ class GraphNode(JSONSerializable['GraphNode']):
     """
 
     def __init__(self, work_unit: WorkUnit,
-                 parent_works: Union[list['GraphNode'], list[tuple['GraphNode', float, EdgeType]]]):
+                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
         self._work_unit = work_unit
         self._parent_edges = []
         self.add_parents(parent_works)
         self._children_edges = []
+
+    def __del__(self):
+        for attr in self.__dict__.values():
+            del attr
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -333,6 +336,10 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'start', deserialized.start)
         object.__setattr__(self, 'finish', deserialized.finish)
         self.__post_init__()
+
+    def __del__(self):
+        for attr in self.__dict__.values():
+            del attr
 
     def _serialize(self) -> T:
         return {

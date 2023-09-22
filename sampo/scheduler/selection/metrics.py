@@ -1,3 +1,5 @@
+from math import ceil
+
 import torch
 
 from sampo.schemas.graph import WorkGraph
@@ -69,7 +71,12 @@ def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
         parallelism_degree.append(parallelism_coef / node_count)
         stack = list(tmp_stack)
 
-    return parallelism_degree
+    step = ceil(len(parallelism_degree) / 4)
+    aggregated_degree = [0] * 4
+    for i in range(0, len(parallelism_degree), step):
+        aggregated_degree[i // step] = max(parallelism_degree[i:(i + step)])
+
+    return aggregated_degree
 
 
 def metric_vertex_count(wg: WorkGraph) -> float:

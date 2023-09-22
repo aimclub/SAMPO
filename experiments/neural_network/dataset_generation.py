@@ -12,7 +12,7 @@ from sampo.scheduler.selection.metrics import encode_graph
 from sampo.schemas.time import Time
 
 GRAPHS_TOP_BORDER = 100
-GRAPHS_COUNT = 1000
+GRAPHS_COUNT = 10000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
@@ -115,4 +115,4 @@ if __name__ == '__main__':
     df.fillna(value=0, inplace=True)
     dataset_size = min(df.groupby('label', group_keys=False).apply(lambda x: len(x)))
     df = df.groupby('label', group_keys=False).apply(lambda x: x.sample(dataset_size))
-    df.to_csv('dataset_mod.csv', index_label='index')
+    df.to_csv('datasets/dataset_mod1.csv', index_label='index')

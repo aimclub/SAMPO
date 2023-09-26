@@ -123,8 +123,8 @@ class NeuralNetTrainer:
                 result.append(outputs)
         return np.array([v.numpy() for v in result])
 
-    def save_checkpoint(self, tmp_checkpoint_dir):
-        checkpoint_path = os.path.join(tmp_checkpoint_dir, "best_model_2.pth")
+    def save_checkpoint(self, tmp_checkpoint_dir, file_name):
+        checkpoint_path = os.path.join(tmp_checkpoint_dir, file_name)
         torch.save({
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),

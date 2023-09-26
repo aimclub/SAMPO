@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import torch
@@ -12,7 +14,9 @@ from sklearn.preprocessing import Normalizer
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet
 from sampo.scheduler.selection.validation import cross_val_score
 
-dataset = pd.read_csv('C:/SAMPO/experiments/neural_network/dataset_mod.csv', index_col='index')
+# path = 'C:/SAMPO/experiments/neural_network/dataset_mod.csv'
+path = os.path.join(os.getcwd(), '../../../experiments/neural_network/datasets/dataset_mod2.csv')
+dataset = pd.read_csv(path, index_col='index')
 for col in dataset.columns[:-1]:
     dataset[col] = dataset[col].apply(lambda x: float(x))
 
@@ -37,7 +41,8 @@ x_tr, x_ts, y_tr, y_ts = train_test_split(train_dataset.drop(columns=['label']),
 
 def train(config):
     checkpoint = session.get_checkpoint()
-    model = NeuralNet(layer_size=config['layer_size'],
+    model = NeuralNet(input_size=8,
+                      layer_size=config['layer_size'],
                       layer_count=config['layer_count'])
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
@@ -78,12 +83,12 @@ def best_model(best_trained_model):
 
 def main():
     config = {
-        'layer_size': tune.grid_search([i for i in range(11, 15)]),
-        'layer_count': tune.grid_search([i for i in range(7, 9)]),
-        # 'lr': tune.loguniform(1e-5, 1e-1),
-        'lr': tune.grid_search([0.0001, 0.000055, 0.000075, 0.000425]),
+        'layer_size': tune.grid_search([i for i in range(7, 20)]),
+        'layer_count': tune.grid_search([i for i in range(7, 20)]),
+        'lr': tune.loguniform(1e-7, 1e-2),
+        # 'lr': tune.grid_search([0.0001, 0.000055, 0.000075, 0.000425]),
         'epochs': tune.grid_search([100]),
-        'cv': tune.grid_search([5]),
+        'cv': tune.grid_search([10]),
         'scorer': tune.grid_search([accuracy_score])
     }
 
@@ -101,7 +106,7 @@ def main():
 
     result = tune.run(
         train,
-        resources_per_trial={'cpu': 4},
+        resources_per_trial={'cpu': 6},
         config=config,
         num_samples=1,
         scheduler=scheduler,
@@ -116,7 +121,7 @@ def main():
     except Exception as e:
         Exception(f'{best_checkpoint} with {e}')
 
-    best_trained_model = NeuralNet(13, layer_size=best_trial.config['layer_size'],
+    best_trained_model = NeuralNet(8, layer_size=best_trial.config['layer_size'],
                                    layer_count=best_trial.config['layer_count'],
                                    out_size=2)
     best_trained_model.load_state_dict(best_checkpoint_data['model_state_dict'])
@@ -126,10 +131,12 @@ def main():
 
     best_model(best_trainer)
 
-    f = open(f'C:/SAMPO/experiments/neural_network/checkpoints/best_model_2.pth', "w")
+    # f = open(f'C:/SAMPO/experiments/neural_network/checkpoints/best_model_10000_objs.pth', "w")
+    f = open(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/best_model_10000_objs.pth'), 'w')
     f.close()
 
-    best_trainer.save_checkpoint(f'C:/SAMPO/experiments/neural_network/checkpoints/')
+    # best_trainer.save_checkpoint(f'C:/SAMPO/experiments/neural_network/checkpoints/')
+    best_trainer.save_checkpoint(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/'), 'best_model_10000_objs.pth')
 
     print(f'Best trial config: {best_trial.config}')
     print(f'Best trial validation loss: {best_trial.last_result["loss"]}')

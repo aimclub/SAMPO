@@ -56,7 +56,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
     # zone status changes after node executing
-    zone_changes_chromosome = np.zeros((len(landscape.zone_config.start_statuses), len(order_chromosome)), dtype=int)
+    zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=int)
 
     for node in order:
         node_id = node.work_unit.id

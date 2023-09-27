@@ -75,32 +75,33 @@ class ZoneTimeline:
                 scheduled_wreqs.append(wreq)
                 start = max(start, found_start)
 
-        # === THE INNER VALIDATION ===
-
-        start_time = start
-        for zone in zones:
-            state = self._timeline[zone.kind]
-            start_idx = state.bisect_right(start_time)
-            end_idx = state.bisect_right(start_time + exec_time)
-            start_status = state[start_idx - 1].available_workers_count
-
-            # updating all events in between the start and the end of our current task
-            for event in state[start_idx: end_idx]:
-                # TODO Check that we shouldn't change the between statuses
-                assert self._config.statuses.match_status(event.available_workers_count, zone.required_status)
-
-            assert state[start_idx - 1].event_type == EventType.END \
-                   or (state[start_idx - 1].event_type == EventType.START
-                       and self._config.statuses.match_status(zone.required_status, start_status)) \
-                   or state[start_idx - 1].event_type == EventType.INITIAL, \
-                   f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.required_status} {start_status}'
-
-        # === END OF INNER VALIDATION ===
+        for w in zones:
+            self._validate(start, exec_time, self._timeline[w.kind], w.required_status)
 
         return start
 
     def _match_status(self, target: int, match: int) -> bool:
         return self._config.statuses.match_status(target, match)
+
+    def _validate(self, start_time: Time, exec_time: Time, state: SortedList[ScheduleEvent], required_status: int):
+        # === THE INNER VALIDATION ===
+
+        start_idx = state.bisect_right(start_time)
+        end_idx = state.bisect_right(start_time + exec_time)
+        start_status = state[start_idx - 1].available_workers_count
+
+        # updating all events in between the start and the end of our current task
+        for event in state[start_idx: end_idx]:
+            # TODO Check that we shouldn't change the between statuses
+            assert self._config.statuses.match_status(event.available_workers_count, required_status)
+
+        assert state[start_idx - 1].event_type == EventType.END \
+               or (state[start_idx - 1].event_type == EventType.START
+                   and self._config.statuses.match_status(start_status, required_status)) \
+               or state[start_idx - 1].event_type == EventType.INITIAL, \
+            f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {required_status} {start_status}'
+
+        # === END OF INNER VALIDATION ===
 
     def _find_earliest_time_slot(self,
                                  state: SortedList[ScheduleEvent],
@@ -195,7 +196,7 @@ class ZoneTimeline:
                 break
 
             if current_start_idx >= len(state):
-                cur_cpkt = state[-1]
+                # cur_cpkt = state[-1]
                 # if cur_cpkt.time == current_start_time and not self._match_status(cur_cpkt.available_workers_count,
                 #                                                                   required_status):
                 #     # print('Problem!')
@@ -205,25 +206,7 @@ class ZoneTimeline:
 
             current_start_time = state[current_start_idx].time
 
-        # === THE INNER VALIDATION ===
-
-        start_time = current_start_time
-        start_idx = state.bisect_right(start_time)
-        end_idx = state.bisect_right(start_time + exec_time)
-        start_status = state[start_idx - 1].available_workers_count
-
-        # updating all events in between the start and the end of our current task
-        for event in state[start_idx: end_idx]:
-            # TODO Check that we shouldn't change the between statuses
-            assert self._config.statuses.match_status(event.available_workers_count, required_status)
-
-        assert state[start_idx - 1].event_type == EventType.END \
-               or (state[start_idx - 1].event_type == EventType.START
-                   and self._config.statuses.match_status(start_status, required_status)) \
-               or state[start_idx - 1].event_type == EventType.INITIAL, \
-            f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {required_status} {start_status}'
-
-        # === END OF INNER VALIDATION ===
+        self._validate(current_start_time, exec_time, state, required_status)
 
         return current_start_time
 
@@ -236,20 +219,11 @@ class ZoneTimeline:
             end_idx = state.bisect_right(start_time + exec_time)
             start_status = state[start_idx - 1].available_workers_count
 
-            # updating all events in between the start and the end of our current task
-            for event in state[start_idx: end_idx]:
-                # TODO Check that we shouldn't change the between statuses
-                assert self._config.statuses.match_status(event.available_workers_count, zone.status)
-
-            assert state[start_idx - 1].event_type == EventType.END \
-                   or (state[start_idx - 1].event_type == EventType.START
-                       and self._config.statuses.match_status(zone.status, start_status)) \
-                   or state[start_idx - 1].event_type == EventType.INITIAL, \
-                   f'{state[start_idx - 1].time} {state[start_idx - 1].event_type} {zone.status} {start_status}'
+            self._validate(start_time, exec_time, state, zone.status)
 
             change_cost = self._config.time_costs[start_status, zone.status] \
-                            if not self._config.statuses.match_status(zone.status, start_status) \
-                            else 0
+                if not self._config.statuses.match_status(zone.status, start_status) \
+                else 0
 
             state.add(ScheduleEvent(index, EventType.START, start_time - change_cost, None, zone.status))
             state.add(ScheduleEvent(index, EventType.END, start_time - change_cost + exec_time, None, zone.status))

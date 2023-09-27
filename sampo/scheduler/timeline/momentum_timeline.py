@@ -132,9 +132,12 @@ class MomentumTimeline(Timeline):
 
         if assigned_start_time is not None:
             st = assigned_start_time
-            # max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
-            # if st != max_zone_time:
-            #     print(f'1 Start time: {st}, zone time: {max_zone_time}')
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
+            if st != max_zone_time:
+                print(f'1 Start time: {st}, zone time: {max_zone_time}, exec_time: {exec_time}')
+                self.find_min_start_time_with_additional(
+                    node, worker_team, node2swork, spec, assigned_start_time, assigned_parent_time, work_estimator
+                )
         else:
             prev_st = max_parent_time
 
@@ -146,7 +149,7 @@ class MomentumTimeline(Timeline):
                                                                                start_time,
                                                                                node.work_unit.need_materials(),
                                                                                node.work_unit.workground_size)
-            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, exec_time)
 
             st = max(max_material_time, max_zone_time, start_time)
 
@@ -171,9 +174,9 @@ class MomentumTimeline(Timeline):
                 prev_st = st
                 st = max(max_material_time, max_zone_time, start_time)
 
-                # max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
-                # if st != max_zone_time_after:
-                #     print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
+                max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
+                if st != max_zone_time_after:
+                    print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
 
                 assert st >= max_parent_time
 

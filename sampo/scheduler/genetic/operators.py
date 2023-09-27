@@ -534,6 +534,6 @@ def mutate_for_zones(ind: ChromosomeType, statuses_available: int,
     for i, work_post_zones in enumerate(res):
         for type_of_zone in range(len(res[0])):
             if rand.random() < mutpb:
-                work_post_zones[type_of_zone] = rand.randint(0, statuses_available)
+                work_post_zones[type_of_zone] = rand.randint(0, statuses_available - 1)
 
     return ind

@@ -77,10 +77,10 @@ class GenericScheduler(Scheduler):
 
                 c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, spec, None,
                                                                              assigned_parent_time, work_estimator)
-                # max_zone_time_after = timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
-                # if c_st != max_zone_time_after:
-                #     print(f'22222 Start time: {c_st}, zone time: {max_zone_time_after}')
-                #     timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
+                max_zone_time_after = timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
+                if c_st != max_zone_time_after:
+                    print(f'22222 Start time: {c_st}, zone time: {max_zone_time_after}')
+                    # timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
                 return c_st, c_ft, workers
 
             return run_contractor_search(contractors, run_with_contractor)
@@ -156,6 +156,11 @@ class GenericScheduler(Scheduler):
                 # this work should always have start_time = 0, so we just re-assign it
                 start_time = assigned_parent_time
                 finish_time += start_time
+
+            max_zone_time_after = timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time,
+                                                                             finish_time - start_time)
+            #if start_time != max_zone_time_after:
+            print(f'333333 Start time: {start_time}, zone time: {max_zone_time_after}, exec_time: {finish_time - start_time}')
 
             # apply work to scheduling
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,

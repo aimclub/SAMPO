@@ -1,6 +1,6 @@
 from typing import Optional, Iterable
 
-from sampo.scheduler.heft.time_computaion import calculate_working_time, calculate_working_time_cascade
+from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
@@ -57,7 +57,13 @@ class JustInTimeTimeline(Timeline):
         """
         # if current job is the first
         if not node2swork:
-            return assigned_parent_time, assigned_parent_time, None
+            max_material_time = self._material_timeline.find_min_material_time(node.id, assigned_parent_time,
+                                                                               node.work_unit.need_materials(),
+                                                                               node.work_unit.workground_size)
+
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, Time(0))
+
+            return max_zone_time, max_zone_time, None
         # define the max end time of all parent tasks
         max_parent_time = max(node.min_start_time(node2swork), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
@@ -86,7 +92,24 @@ class JustInTimeTimeline(Timeline):
                     ind -= 1
 
         c_st = max(max_agent_time, max_parent_time)
-        exec_time = calculate_working_time_cascade(node, worker_team, work_estimator)
+
+        new_finish_time = c_st
+        for dep_node in node.get_inseparable_chain_with_self():
+            # set start time as finish time of original work
+            # set finish time as finish time + working time of current node with identical resources
+            # (the same as in original work)
+            # set the same workers on it
+            # TODO Decide where this should be
+            dep_parent_time = dep_node.min_start_time(node2swork)
+
+            if dep_node.is_inseparable_son():
+                assert dep_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
+
+            dep_st = max(new_finish_time, dep_parent_time)
+            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
+            new_finish_time = dep_st + working_time
+
+        exec_time = new_finish_time - c_st
 
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,
                                                                            node.work_unit.need_materials(),
@@ -95,6 +118,10 @@ class JustInTimeTimeline(Timeline):
         max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
 
         c_st = max(c_st, max_material_time, max_zone_time)
+
+        max_zone_time_new = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
+        if max_zone_time_new != c_st:
+            print('ERROR!!!')
 
         c_ft = c_st + exec_time
         return c_st, c_ft, None
@@ -121,7 +148,7 @@ class JustInTimeTimeline(Timeline):
                 worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
                 count_workers = sum([count for _, count in worker_timeline])
                 worker_timeline.clear()
-                worker_timeline.append((finish_time, count_workers))
+                worker_timeline.append((finish_time + 1, count_workers))
         else:
             # For each worker type consume the nearest available needed worker amount
             # and re-add it to the time when current work should be finished.
@@ -216,26 +243,29 @@ class JustInTimeTimeline(Timeline):
                 assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
             working_time = exec_times.get(dep_node, None)
-            start_time = max(c_ft, max_parent_time)
+            c_st = max(c_ft, max_parent_time)
             if working_time is None:
                 working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
-            new_finish_time = start_time + working_time
+            new_finish_time = c_st + working_time
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, start_time,
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
                                                                                        new_finish_time,
                                                                                        dep_node.work_unit.need_materials(),
                                                                                        dep_node.work_unit.workground_size)
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
-                                                 start_end_time=(start_time, new_finish_time),
+                                                 start_end_time=(c_st, new_finish_time),
                                                  workers=workers,
                                                  contractor=contractor,
                                                  materials=deliveries)
             # change finish time for using workers
             c_ft = new_finish_time
 
-        self.update_timeline(c_ft, node, node2swork, workers, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
+        zone_st = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, c_ft - start_time)
+        if zone_st != start_time:
+            raise AssertionError(f'The Very Big Problems; start time: {start_time}, zone time: {zone_st}, exec_time: {c_ft - start_time}')
+        self.update_timeline(c_ft, node, node2swork, workers, spec)
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         c_ft - start_time)
         return c_ft

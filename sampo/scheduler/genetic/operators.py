@@ -362,21 +362,23 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 
     # randomly select the points where the crossover will take place
     mating_amount = rand.randint(min_mating_amount, 3 * min_mating_amount)
-    crossover_head_point = rand.randint(1, mating_amount - 1)
-    crossover_tail_point = mating_amount - crossover_head_point
+    if mating_amount > 1:
+        crossover_head_point = rand.randint(1, mating_amount - 1)
+        crossover_tail_point = mating_amount - crossover_head_point
 
-    ind_new_part = get_order_part(np.concatenate((order1[:crossover_head_point], order1[-crossover_tail_point:])),
-                                  order2)
-    order1[crossover_head_point:-crossover_tail_point] = ind_new_part
+        ind_new_part = get_order_part(np.concatenate((order1[:crossover_head_point], order1[-crossover_tail_point:])),
+                                      order2)
+        order1[crossover_head_point:-crossover_tail_point] = ind_new_part
 
     # randomly select the points where the crossover will take place
     mating_amount = rand.randint(min_mating_amount, 3 * min_mating_amount)
-    crossover_head_point = rand.randint(1, mating_amount - 1)
-    crossover_tail_point = mating_amount - crossover_head_point
+    if mating_amount > 1:
+        crossover_head_point = rand.randint(1, mating_amount - 1)
+        crossover_tail_point = mating_amount - crossover_head_point
 
-    ind_new_part = get_order_part(np.concatenate((order2[:crossover_head_point], order2[-crossover_tail_point:])),
-                                  order1)
-    order2[crossover_head_point:-crossover_tail_point] = ind_new_part
+        ind_new_part = get_order_part(np.concatenate((order2[:crossover_head_point], order2[-crossover_tail_point:])),
+                                      order1)
+        order2[crossover_head_point:-crossover_tail_point] = ind_new_part
 
     return child1, child2
 
@@ -461,7 +463,7 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
             new_contractors = np.array([rand.randint(0, num_contractors - 1) for _ in range(mask.sum())])
             contractor_mask = (res[mask, :-1] <= ind[2][new_contractors]).all(axis=1)
             new_contractors = new_contractors[contractor_mask]
-            mask &= contractor_mask
+            mask[mask] &= contractor_mask
             res[mask, -1] = new_contractors
 
     num_res = len(res[0, :-1])

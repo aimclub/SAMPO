@@ -50,6 +50,11 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     sworks = schedule_dataframe['scheduled_work_object'].copy()
     idx = schedule_dataframe['idx'].copy()
 
+    def get_zone_usage_info(swork) -> str:
+        return '<br>' + '<br>'.join([f'{zone.kind}: {zone.required_status}' for zone in swork.work_unit.zone_reqs])
+
+    schedule_dataframe['zone_information'] = sworks.apply(get_zone_usage_info)
+
     # create zone information
     for i, swork in zip(idx, sworks):
         zone_names = '<br>' + '<br>'.join([zone.name for zone in swork.zones_pre])
@@ -83,7 +88,8 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                                   'cost': True,
                                   'volume': True,
                                   'measurement': True,
-                                  'workers': True},
+                                  'workers': True,
+                                  'zone_information': True},
                       title=f"{'Project tasks - Gant chart'}",
                       category_orders={'idx': list(schedule_dataframe.idx)},
                       text='task_name')
@@ -99,6 +105,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                      title_text='Date')
 
     fig.update_layout(autosize=True, font_size=12)
-    # fig.update_layout(height=1000)
+    fig.update_layout(height=1000)
 
     return visualize(fig, mode=visualization, file_name=fig_file_name)

@@ -127,21 +127,40 @@ class MomentumTimeline(Timeline):
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
+            # print(f'Start time: {max_parent_time}, zone time: {max_zone_time}')
             return max_parent_time, max_parent_time, exec_times
 
         if assigned_start_time is not None:
             st = assigned_start_time
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
+            if st != max_zone_time:
+                print(f'1 Start time: {st}, zone time: {max_zone_time}, exec_time: {exec_time}')
+                self.find_min_start_time_with_additional(
+                    node, worker_team, node2swork, spec, assigned_start_time, assigned_parent_time, work_estimator
+                )
         else:
             prev_st = max_parent_time
-            st = self._find_min_start_time(
-                self._timeline[contractor_id], inseparable_chain, spec, max_parent_time, exec_time, worker_team
+
+            start_time = self._find_min_start_time(
+                self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
             )
+
+            max_material_time = self._material_timeline.find_min_material_time(node.id,
+                                                                               start_time,
+                                                                               node.work_unit.need_materials(),
+                                                                               node.work_unit.workground_size)
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, exec_time)
+
+            st = max(max_material_time, max_zone_time, start_time)
 
             # we can't just use max() of all times we found from different constraints
             # because start time shifting can corrupt time slots we found from every constraint
             # so let's find the time that is agreed with all constraints
+            j = 0
             while st != prev_st:
-                prev_st = st
+                if j > 0 and j % 50 == 0:
+                    print(f'ERROR! Probably cycle in looking for diff start time: {j} iteration, {prev_st}, {st}')
+                j += 1
                 start_time = self._find_min_start_time(
                     self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
                 )
@@ -152,9 +171,17 @@ class MomentumTimeline(Timeline):
                                                                                    node.work_unit.workground_size)
                 max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
 
+                prev_st = st
                 st = max(max_material_time, max_zone_time, start_time)
 
+                max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
+                if st != max_zone_time_after:
+                    print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
+
                 assert st >= max_parent_time
+
+                if st.is_inf():
+                    break
 
         return st, st + exec_time, exec_times
 
@@ -299,6 +326,7 @@ class MomentumTimeline(Timeline):
                 break
 
             if current_start_idx >= len(state):
+                current_start_time = max(parent_time, state[-1].time + 1)
                 break
 
             current_start_time = state[current_start_idx].time

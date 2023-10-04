@@ -56,9 +56,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
     # zone status changes after node executing
-    zone_changes_chromosome = np.random.randint(0,
-                                                landscape.zone_config.statuses.statuses_available(),
-                                                (len(landscape.zone_config.start_statuses), len(order_chromosome)))
+    zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=int)
 
     for node in order:
         node_id = node.work_unit.id
@@ -141,14 +139,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                st, work_spec.assigned_time, assigned_parent_time, work_estimator)
         # process zones
         zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_index])]
-        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, ft - st)
+        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
 
         # we should deny scheduling
         # if zone status change can be scheduled only in delayed manner
         if zone_start_time != ft:
             node2swork[node].zones_post = timeline.zone_timeline.update_timeline(order_index,
                                                                                  [z.to_zone() for z in zone_reqs],
-                                                                                 zone_start_time, ft - st)
+                                                                                 zone_start_time, 0)
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)

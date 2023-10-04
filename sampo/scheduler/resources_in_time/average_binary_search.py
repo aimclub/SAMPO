@@ -60,7 +60,7 @@ class AverageBinarySearchResourceOptimizingScheduler:
 
         result_min_resources = fitness(k_max, copied_spec)
         if result_min_resources < deadline:
-            print('Can keep deadline at minimum resources')
+            # print('Can keep deadline at minimum resources')
             # we can keep the deadline if pass minimum resources,
             # so let's go preventing the works going in parallel
             for node in wg.nodes:

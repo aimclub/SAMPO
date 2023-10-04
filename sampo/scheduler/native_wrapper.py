@@ -32,7 +32,7 @@ class NativeWrapper:
                  contractors: list[Contractor],
                  worker_name2index: dict[str, int],
                  worker_pool_indices: dict[int, dict[int, Worker]],
-                 parents: dict[int, list[int]],
+                 parents: dict[int, set[int]],
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:
@@ -59,7 +59,7 @@ class NativeWrapper:
         self.numeration = numeration
         # for each vertex index store list of parents' indices
         self.parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
-        head_parents = [parents[i] for i in range(len(parents))]
+        head_parents = [list(parents[i]) for i in range(len(parents))]
         # for each vertex index store list of whole it's inseparable chain indices
         self.inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain_with_self()]
                              for index in range(wg.vertex_count)]

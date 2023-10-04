@@ -66,6 +66,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         return self.__str__()
 
     @custom_serializer('workers')
+    @custom_serializer('zones_pre')
+    @custom_serializer('zones_post')
     @custom_serializer('start_end_time')
     def serialize_serializable_list(self, value):
         return [t._serialize() for t in value]
@@ -77,6 +79,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
     @classmethod
     @custom_serializer('workers', deserializer=True)
+    @custom_serializer('zones_pre', deserializer=True)
+    @custom_serializer('zones_post', deserializer=True)
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
@@ -115,7 +119,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def duration(self) -> Time:
         start, end = self.start_end_time
         return end - start
-    
+
     def is_overlapped(self, time: int) -> bool:
         start, end = self.start_end_time
         return start <= time < end

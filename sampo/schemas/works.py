@@ -89,6 +89,27 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         """
         return [WorkerReq._deserialize(wr) for wr in value]
 
+    @custom_serializer('zone_reqs')
+    def zone_reqs_serializer(self, value: list[WorkerReq]):
+        """
+        Return serialized list of worker requirements
+
+        :param value: list of worker requirements
+        :return: list of worker requirements
+        """
+        return [wr._serialize() for wr in value]
+
+    @classmethod
+    @custom_serializer('zone_reqs', deserializer=True)
+    def zone_reqs_deserializer(cls, value):
+        """
+        Get list of worker requirements
+
+        :param value: serialized list of work requirements
+        :return: list of worker requirements
+        """
+        return [WorkerReq._deserialize(wr) for wr in value]
+
     def __getstate__(self):
         # custom method to avoid calling __hash__() on GraphNode objects
         return self._serialize()

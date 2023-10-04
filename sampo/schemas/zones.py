@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from sampo.schemas.time import Time
+from sampo.schemas.serializable import AutoJSONSerializable
 
 
 @dataclass
@@ -38,8 +39,8 @@ class DefaultZoneStatuses(ZoneStatuses):
     def statuses_available(self) -> int:
         return 3
 
-    def match_status(self, target: int, to_compare: int) -> bool:
-        return target == 0 or target == to_compare
+    def match_status(self, status_to_check: int, required_status: int) -> bool:
+        return required_status == 0 or status_to_check == 0 or status_to_check == required_status
 
 
 @dataclass
@@ -53,7 +54,7 @@ class ZoneConfiguration:
 
 
 @dataclass
-class ZoneTransition:
+class ZoneTransition(AutoJSONSerializable['ZoneTransition']):
     name: str
     from_status: int
     to_status: int

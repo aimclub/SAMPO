@@ -113,7 +113,7 @@ class ConstructionObjectReq(BaseReq):
     name: Optional[str] = None
 
 
-@dataclass
+@dataclass(frozen=True)
 class ZoneReq(BaseReq):
     kind: str
     required_status: int

@@ -119,25 +119,67 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(c_st, max_material_time, max_zone_time)
 
-        max_zone_time_new = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
-        if max_zone_time_new != c_st:
-            print('ERROR!!!')
+        # max_zone_time_new = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
+        # if max_zone_time_new != c_st:
+        #     print('ERROR!!!')
 
         c_ft = c_st + exec_time
         return c_st, c_ft, None
 
+    def can_schedule_at_the_moment(self,
+                                   node: GraphNode,
+                                   worker_team: list[Worker],
+                                   spec: WorkSpec,
+                                   start_time: Time,
+                                   exec_time: Time) -> bool:
+        if spec.is_independent:
+            # squash all the timeline to the last point
+            for worker in worker_team:
+                worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
+                last_cpkt_time, _ = worker_timeline[0]
+                if last_cpkt_time >= start_time:
+                    return False
+            return True
+        else:
+            max_agent_time = Time(0)
+            for worker in worker_team:
+                needed_count = worker.count
+                offer_stack = self._timeline[worker.get_agent_id()]
+                # traverse list while not enough resources and grab it
+                ind = len(offer_stack) - 1
+                while needed_count > 0:
+                    offer_time, offer_count = offer_stack[ind]
+                    max_agent_time = max(max_agent_time, offer_time)
+
+                    if needed_count < offer_count:
+                        offer_count = needed_count
+                    needed_count -= offer_count
+                    ind -= 1
+
+            if not max_agent_time <= start_time:
+                return False
+
+            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
+                                                                      node.work_unit.need_materials(),
+                                                                      node.work_unit.workground_size):
+                return False
+            if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
+                return False
+
+            return True
+
     def update_timeline(self,
                         finish_time: Time,
+                        exec_time: Time,
                         node: GraphNode,
-                        node2swork: dict[GraphNode, ScheduledWork],
                         worker_team: list[Worker],
                         spec: WorkSpec):
         """
         Adds given `worker_team` to the timeline at the moment `finish`
 
         :param finish_time:
+        :param exec_time:
         :param node:
-        :param node2swork:
         :param worker_team:
         :param spec: work specification
         :return:
@@ -262,10 +304,10 @@ class JustInTimeTimeline(Timeline):
             c_ft = new_finish_time
 
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        zone_st = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, c_ft - start_time)
-        if zone_st != start_time:
-            raise AssertionError(f'The Very Big Problems; start time: {start_time}, zone time: {zone_st}, exec_time: {c_ft - start_time}')
-        self.update_timeline(c_ft, node, node2swork, workers, spec)
+        # zone_st = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, c_ft - start_time)
+        # if zone_st != start_time:
+        #     raise AssertionError(f'The Very Big Problems; start time: {start_time}, zone time: {zone_st}, exec_time: {c_ft - start_time}')
+        self.update_timeline(c_ft, c_ft - start_time, node, workers, spec)
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         c_ft - start_time)
         return c_ft

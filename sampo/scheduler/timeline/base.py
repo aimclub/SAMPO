@@ -68,10 +68,19 @@ class Timeline(ABC):
         ...
 
     @abstractmethod
+    def can_schedule_at_the_moment(self,
+                                   node: GraphNode,
+                                   worker_team: list[Worker],
+                                   spec: WorkSpec,
+                                   start_time: Time,
+                                   exec_time: Time) -> bool:
+        ...
+
+    @abstractmethod
     def update_timeline(self,
                         finish_time: Time,
+                        exec_time: Time,
                         node: GraphNode,
-                        node2swork: dict[GraphNode, ScheduledWork],
                         worker_team: list[Worker],
                         spec: WorkSpec):
         ...

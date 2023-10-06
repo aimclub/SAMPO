@@ -174,14 +174,11 @@ class MomentumTimeline(Timeline):
                 prev_st = st
                 st = max(max_material_time, max_zone_time, start_time)
 
-                max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
-                if st != max_zone_time_after:
-                    print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
+                # max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
+                # if st != max_zone_time_after:
+                #     print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
 
-                assert st >= max_parent_time
-
-                if st.is_inf():
-                    break
+                # assert st >= max_parent_time
 
         return st, st + exec_time, exec_times
 
@@ -333,10 +330,60 @@ class MomentumTimeline(Timeline):
 
         return current_start_time
 
+    def can_schedule_at_the_moment(self,
+                                   node: GraphNode,
+                                   worker_team: list[Worker],
+                                   spec: WorkSpec,
+                                   start_time: Time,
+                                   exec_time: Time) -> bool:
+        if spec.is_independent:
+            # squash all the timeline to the last point
+            for worker in worker_team:
+                worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
+                last_cpkt_time, _ = worker_timeline[0]
+                if last_cpkt_time >= start_time:
+                    return False
+            return True
+        else:
+            start = start_time
+            end = start_time + exec_time
+
+            # checking availability of renewable resources
+            for w in worker_team:
+                state = self._timeline[w.contractor_id][w.name]
+                start_idx = state.bisect_right(start)
+                end_idx = state.bisect_right(end)
+                available_workers_count = state[start_idx - 1].available_workers_count
+                # updating all events in between the start and the end of our current task
+                for event in state[start_idx: end_idx]:
+                    if not event.available_workers_count >= w.count:
+                        return False
+                    event.available_workers_count -= w.count
+
+                if not available_workers_count >= w.count:
+                    return False
+
+                if start_idx < end_idx:
+                    event: ScheduleEvent = state[end_idx - 1]
+                    if not state[0].available_workers_count >= event.available_workers_count + w.count:
+                        return False
+                else:
+                    if not state[0].available_workers_count >= available_workers_count:
+                        return False
+
+            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
+                                                                      node.work_unit.need_materials(),
+                                                                      node.work_unit.workground_size):
+                return False
+            if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
+                return False
+
+            return True
+
     def update_timeline(self,
                         finish_time: Time,
+                        exec_time: Time,
                         node: GraphNode,
-                        node2swork: dict[GraphNode, ScheduledWork],
                         worker_team: list[Worker],
                         spec: WorkSpec):
         """
@@ -353,9 +400,8 @@ class MomentumTimeline(Timeline):
 
         # experimental logics lightening. debugging showed its efficiency.
 
-        swork = node2swork[node]  # masking the whole chain ScheduleEvent with the first node
-        start = swork.start_time
-        end = node2swork[node.get_inseparable_chain_with_self()[-1]].finish_time
+        start = finish_time - exec_time
+        end = finish_time
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)
@@ -376,8 +422,8 @@ class MomentumTimeline(Timeline):
                 assert state[0].available_workers_count >= available_workers_count
                 end_count = available_workers_count
 
-            state.add(ScheduleEvent(task_index, EventType.START, start, swork, available_workers_count - w.count))
-            state.add(ScheduleEvent(task_index, EventType.END, end, swork, end_count))
+            state.add(ScheduleEvent(task_index, EventType.START, start, None, available_workers_count - w.count))
+            state.add(ScheduleEvent(task_index, EventType.END, end, None, end_count))
 
     def schedule(self,
                  node: GraphNode,

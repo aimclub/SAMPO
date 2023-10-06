@@ -25,6 +25,10 @@ class SupplyTimeline:
                     self._resource_sources[res] = res_source
                 res_source[landscape.id] = count
 
+    def can_schedule_at_the_moment(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> bool:
+        return self.find_min_material_time(id, start_time, materials, batch_size) == start_time
+
+
     def find_min_material_time(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> Time:
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size

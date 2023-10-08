@@ -99,13 +99,13 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def finish_time(self) -> Time:
         return self.start_end_time[1]
 
-    @property
-    def min_child_start_time(self) -> Time:
-        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
-
     @finish_time.setter
     def finish_time(self, val: Time):
         self.start_end_time = (self.start_end_time[0], val)
+
+    @property
+    def min_child_start_time(self) -> Time:
+        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
 
     @staticmethod
     def start_time_getter():
@@ -134,8 +134,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             'workers': {worker.name: worker.count for worker in self.workers},
         }
 
-    def __deepcopy__(self, memodict={}):
-        return ScheduledWork(deepcopy(self.work_unit, memodict),
-                             deepcopy(self.start_end_time, memodict),
-                             deepcopy(self.workers, memodict),
-                             self.contractor)
+    # def __deepcopy__(self, memodict={}):
+    #     return ScheduledWork(deepcopy(self.work_unit, memodict),
+    #                          deepcopy(self.start_end_time, memodict),
+    #                          deepcopy(self.workers, memodict),
+    #                          self.contractor)

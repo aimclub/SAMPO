@@ -243,9 +243,6 @@ class JustInTimeTimeline(Timeline):
             return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
                                                     inseparable_chain, start_time, {}, work_estimator)
 
-    def __getitem__(self, item: AgentId):
-        return self._timeline[item]
-
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
                                     node2swork: dict[GraphNode, ScheduledWork],

@@ -8,6 +8,7 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.schemas.types import AgentId
 
 
 class Timeline(ABC):
@@ -86,5 +87,9 @@ class Timeline(ABC):
         ...
 
     @abstractmethod
-    def __getitem__(self, item):
+    def __getitem__(self, id: AgentId, checkpoint_idx: int) -> Time:
+        ...
+
+    @abstractmethod
+    def __len__(self) -> int:
         ...

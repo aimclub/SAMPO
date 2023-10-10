@@ -1,7 +1,6 @@
 import copy
 
 import numpy as np
-from sortedcontainers import SortedList
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
@@ -16,6 +15,7 @@ from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.utilities.linked_list import LinkedList
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
 
@@ -122,14 +122,14 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     def decode(work_index):
         cur_node = index2node[work_index]
 
-        cur_work_spec = spec.get_work_spec(node.id)
+        cur_work_spec = spec.get_work_spec(cur_node.id)
         cur_resources = works_resources[work_index, :-1]
         cur_contractor_index = works_resources[work_index, -1]
         cur_contractor = index2contractor[cur_contractor_index]
         cur_worker_team: list[Worker] = [worker_pool_indices[worker_index][cur_contractor_index]
-                                     .copy().with_count(worker_count)
-                                     for worker_index, worker_count in enumerate(cur_resources)
-                                     if worker_count > 0]
+                                         .copy().with_count(worker_count)
+                                         for worker_index, worker_count in enumerate(cur_resources)
+                                         if worker_count > 0]
         if cur_work_spec.assigned_time is not None:
             cur_exec_time = cur_work_spec.assigned_time
         else:
@@ -137,40 +137,43 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         return cur_node, cur_worker_team, cur_contractor, cur_exec_time, cur_work_spec
 
     # account the remaining works
-    enumerated_works_remaining = SortedList(iterable=enumerate(
+    enumerated_works_remaining = LinkedList(iterable=enumerate(
         [(work_index, *decode(work_index)) for work_index in works_order]
     ))
 
     # while there are unprocessed checkpoints
     while cpkt_idx < len(work_timeline):
         start_time = work_timeline[cpkt_idx]
+
+        def work_scheduled(args) -> bool:
+            idx, work_idx, node, worker_team, contractor, exec_time, work_spec = args
+
+            if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, start_time, exec_time):
+                # apply worker spec
+                Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
+
+                st = start_time
+                if idx == 0:  # we are scheduling the work `start of the project`
+                    st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
+
+                # finish using time spec
+                ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
+                                       st, exec_time, assigned_parent_time, work_estimator)
+                # process zones
+                zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
+                zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
+
+                # we should deny scheduling
+                # if zone status change can be scheduled only in delayed manner
+                if zone_start_time != ft:
+                    node2swork[node].zones_post = timeline.zone_timeline.update_timeline(idx,
+                                                                                         [z.to_zone() for z in zone_reqs],
+                                                                                         zone_start_time, 0)
+                return True
+            return False
+
         # find all works that can start at start_time moment
-        enumerated_works_can_start_at_the_moment = ((idx, work_idx, w, worker_team, contractor, exec_time, work_spec)
-                                                    for idx, work_idx, w, worker_team, contractor, exec_time, work_spec in enumerated_works_remaining
-                                                    if timeline.can_schedule_at_the_moment(w, worker_team, work_spec, start_time, exec_time))
-
-        # schedule that works
-        for idx, work_idx, node, worker_team, contractor, exec_time, work_spec in enumerated_works_can_start_at_the_moment:
-            # apply worker spec
-            Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
-
-            st = start_time
-            if idx == 0:  # we are scheduling the work `start of the project`
-                st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
-
-            # finish using time spec
-            ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
-                                   st, exec_time, assigned_parent_time, work_estimator)
-            # process zones
-            zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
-            zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
-
-            # we should deny scheduling
-            # if zone status change can be scheduled only in delayed manner
-            if zone_start_time != ft:
-                node2swork[node].zones_post = timeline.zone_timeline.update_timeline(idx,
-                                                                                     [z.to_zone() for z in zone_reqs],
-                                                                                     zone_start_time, 0)
+        enumerated_works_remaining.remove_if(work_scheduled)
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)

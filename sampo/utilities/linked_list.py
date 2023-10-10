@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeVar, Iterable, Generic
+from typing import TypeVar, Iterable, Generic, Callable
 
 T = TypeVar('T')
 
@@ -20,11 +20,27 @@ class Iterator(Generic[T]):
         yield self._node
 
         while self._node is not None:
-            self._prev = self._node
-            self._node = self._node.next
-            yield self._node
+            yield self.__next__()
+
+    def __next__(self) -> Node[T]:
+        return self.next()
+
+    def next(self) -> Node[T]:
+        self._prev = self._node
+        self._node = self._node.next
+        return self._node
+
+    def get(self) -> Node[T]:
+        return self._node
+
+    def has_next(self) -> bool:
+        return self._node is not None
 
     def remove(self) -> T:
+        if self._node == self._lst._root:
+            old = self._lst._root
+            self._lst._root = old.next
+            return old.value
         node = self._node
         next = node.next
         self._prev.next = next
@@ -48,6 +64,16 @@ class LinkedList(Generic[T]):
             old_tail = self._tail
             self._tail = Node(v)
             old_tail.next = self._tail
+
+    def remove_if(self, condition: Callable[[T], bool]):
+        it = self.iterator()
+
+        while it.has_next():
+            v = it.get()
+            if condition(v.value):
+                it.remove()
+            else:
+                it.next()
 
     def __add__(self, other: T):
         self.append(other)

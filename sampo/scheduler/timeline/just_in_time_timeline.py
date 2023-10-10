@@ -12,7 +12,6 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.types import AgentId
 
 
 class JustInTimeTimeline(Timeline):
@@ -101,9 +100,6 @@ class JustInTimeTimeline(Timeline):
             # set the same workers on it
             # TODO Decide where this should be
             dep_parent_time = dep_node.min_start_time(node2swork)
-
-            if dep_node.is_inseparable_son():
-                assert dep_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
             dep_st = max(new_finish_time, dep_parent_time)
             working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)

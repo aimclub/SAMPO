@@ -110,14 +110,19 @@ def _get_boreholes_equipment_group(parents: list[GraphNode], cluster_name: str, 
 def _get_boreholes_equipment_shared(parents: list[GraphNode], cluster_name: str,
                                     rand: Random | None = None) -> list[GraphNode]:
     water_block = WorkUnit(uuid_str(rand), 'block water distribution', wr.WATER_BLOCK,
-                           group=f'{cluster_name}:borehole_env')
+                           group=f'{cluster_name}:borehole_env',
+                           volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
     automation_block = WorkUnit(uuid_str(rand), 'block local automation', wr.AUTOMATION_BLOCK,
-                                group=f'{cluster_name}:borehole_env')
+                                group=f'{cluster_name}:borehole_env',
+                                volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
     block_dosage = WorkUnit(uuid_str(rand), 'block dosage inhibitor', wr.BLOCK_DOSAGE,
-                            group=f'{cluster_name}:borehole_env')
+                            group=f'{cluster_name}:borehole_env',
+                            volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
     start_filters = WorkUnit(uuid_str(rand), 'start filters system', wr.START_FILTER,
-                             group=f'{cluster_name}:borehole_env')
-    firewall = WorkUnit(uuid_str(rand), 'firewall tank', wr.FIREWALL, group=f'{cluster_name}:borehole_env')
+                             group=f'{cluster_name}:borehole_env',
+                             volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
+    firewall = WorkUnit(uuid_str(rand), 'firewall tank', wr.FIREWALL, group=f'{cluster_name}:borehole_env',
+                        volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
     nodes = [
         GraphNode(water_block, parents),
         GraphNode(automation_block, parents),
@@ -133,7 +138,8 @@ def _get_boreholes(parents: list[GraphNode], cluster_name: str, group_ind: int, 
     nodes = []
     for i in range(borehole_count):
         borehole_work = WorkUnit(uuid_str(rand), 'borehole',
-                                 wr.BOREHOLE, group=f'{cluster_name}:borehole_groups')
+                                 wr.BOREHOLE, group=f'{cluster_name}:borehole_groups',
+                                 volume=gen_c.DIST_BETWEEN_BOREHOLES.rand_float(rand))
         nodes.append(GraphNode(borehole_work, parents))
     return nodes
 

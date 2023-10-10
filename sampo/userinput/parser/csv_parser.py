@@ -66,7 +66,7 @@ class CSVParser:
 
         if 'predecessor_ids' not in graph_df.columns and history_data is None:
             raise InputDataException(
-                'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
+                "you have neither history data about tasks nor tasks' connection info in received .csv file.")
 
         if 'predecessor_ids' not in graph_df.columns:
             # if we ought to restore predecessor info from history data
@@ -77,10 +77,12 @@ class CSVParser:
             works_info = set_connections_info(graph_df, history_df)
         else:
             graph_df = preprocess_graph_df(graph_df)
-            if full_connections or change_base_on_history:
+            if full_connections == change_base_on_history:
+                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
+            elif not full_connections:
                 works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
             else:
-                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
+                return graph_df
 
         return break_loops_in_input_graph(works_info)
 

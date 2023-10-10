@@ -96,4 +96,4 @@ def get_contractor(pack_worker_count: float,
                                contractor_id=contractor_id,
                                count=worker_counts[name])
 
-    return Contractor(contractor_id, f'Contractor {index}', workers, {})
+    return Contractor(contractor_id, f'Contractor {contractor_id}', workers, {})

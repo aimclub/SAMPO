@@ -157,11 +157,6 @@ class GenericScheduler(Scheduler):
                 start_time = assigned_parent_time
                 finish_time += start_time
 
-            max_zone_time_after = timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time,
-                                                                             finish_time - start_time)
-            #if start_time != max_zone_time_after:
-            print(f'333333 Start time: {start_time}, zone time: {max_zone_time_after}, exec_time: {finish_time - start_time}')
-
             # apply work to scheduling
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)

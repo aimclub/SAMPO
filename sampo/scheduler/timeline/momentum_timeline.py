@@ -127,17 +127,10 @@ class MomentumTimeline(Timeline):
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
-            # print(f'Start time: {max_parent_time}, zone time: {max_zone_time}')
             return max_parent_time, max_parent_time, exec_times
 
         if assigned_start_time is not None:
             st = assigned_start_time
-            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
-            if st != max_zone_time:
-                print(f'1 Start time: {st}, zone time: {max_zone_time}, exec_time: {exec_time}')
-                self.find_min_start_time_with_additional(
-                    node, worker_team, node2swork, spec, assigned_start_time, assigned_parent_time, work_estimator
-                )
         else:
             prev_st = max_parent_time
 

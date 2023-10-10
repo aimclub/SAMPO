@@ -1,7 +1,9 @@
 from math import ceil
 
+import numpy as np
 import torch
 
+from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.graph import WorkGraph
 
 
@@ -44,6 +46,7 @@ def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
 
 
 def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
+    batches = 8
     parallelism_degree = []
     current_node = wg.start
     node_count = wg.vertex_count
@@ -71,12 +74,28 @@ def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
         parallelism_degree.append(parallelism_coef / node_count)
         stack = list(tmp_stack)
 
-    step = ceil(len(parallelism_degree) / 4)
-    aggregated_degree = [0] * 4
+    step = ceil(len(parallelism_degree) / batches)
+    aggregated_degree = [0] * batches
     for i in range(0, len(parallelism_degree), step):
-        aggregated_degree[i // step] = max(parallelism_degree[i:(i + step)])
+        aggregated_degree[i // step] = np.mean(parallelism_degree[i:(i + step)])
 
     return aggregated_degree
+
+
+def metric_longest_path(wg: WorkGraph) -> float:
+    scheduler = TopologicalScheduler()
+    stack = scheduler._topological_sort(wg, None)
+
+    dist = {}
+    for node in stack:
+        dist[node.id] = 0
+
+    while stack:
+        node = stack.pop()
+        for child in node.children:
+            dist[child.id] = max(dist[child.id], dist[node.id] + 1)
+
+    return max(dist.values())
 
 
 def metric_vertex_count(wg: WorkGraph) -> float:
@@ -106,5 +125,6 @@ def encode_graph(wg: WorkGraph) -> list[float]:
         metric_average_work_per_activity(wg),
         metric_relative_max_children(wg),
         metric_average_resource_usage(wg),
+        metric_longest_path(wg),
         *metric_graph_parallelism_degree(wg)
     ]

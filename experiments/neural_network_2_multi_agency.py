@@ -1,12 +1,10 @@
-from functools import partial
+import os
+import pickle
+import time
 from random import Random
-from typing import IO
 
 import numpy as np
-import pandas as pd
 import torch
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from sampo.generator.base import SimpleSynthetic
@@ -15,27 +13,23 @@ from sampo.scheduler.multi_agency.block_generator import generate_block_graph, S
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
 from sampo.scheduler.selection import metrics
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet
-from sampo.scheduler.selection.validation import cross_val_score
-from sampo.scheduler.topological.base import TopologicalScheduler
 
 r_seed = 231
 p_rand = SimpleSynthetic(rand=r_seed)
 rand = Random(r_seed)
 
+ma_time = 0.0
+net_time = 0.0
 
 def obstruction_getter(i: int):
     return None
 
 
-def log(message: str, logfile: IO):
-    # print(message)
-    logfile.write(message + '\n')
+def run_interation(blocks_num, graph_size) -> None:
+    global ma_time, net_time
 
-
-if __name__ == '__main__':
     schedulers = [HEFTScheduler(),
-                  HEFTBetweenScheduler(),
-                  TopologicalScheduler()]
+                  HEFTBetweenScheduler()]
 
     contractors = [p_rand.contractor(10) for _ in range(len(schedulers))]
 
@@ -43,52 +37,63 @@ if __name__ == '__main__':
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    with open(f'algorithms_2_multi_agency_comparison.txt', 'w') as logfile:
-        logger = partial(log, logfile=logfile)
+    # Build block graph
 
-        # Multi agency
-        bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, 10, [0, 1, 1], lambda x: (None, 50), 0.5,
-                                  rand, obstruction_getter, 2, [3, 4], [3, 4], logger=logger)
-        conjuncted = bg.to_work_graph()
-        scheduled_blocks = manager.manage_blocks(bg, logger=logger)
-        print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    bg = generate_block_graph(SyntheticBlockGraphType.RANDOM, blocks_num, [0, 1, 1], lambda x: (None, graph_size), 0.5,
+                              rand, obstruction_getter, 2, [3, 4], [3, 4])
+    conjuncted = bg.to_work_graph()
 
-        # Neural network
-        model = NeuralNet(13, 15, 6, 2)
-        trainer = NeuralNetTrainer(model,
-                                   torch.nn.CrossEntropyLoss(),
-                                   torch.optim.Adam(model.parameters(), lr=0.0065))
+    # Multi-agency
 
-        dataset = pd.read_csv('C:/SAMPO/experiments/neural_network/dataset_mod.csv', index_col='index')
-        for col in dataset.columns[:-1]:
-            dataset[col] = dataset[col].apply(lambda x: float(x))
-        scaler = StandardScaler()
-        scaler.fit(dataset.drop(columns=['label']))
-        scaled_dataset = scaler.transform(dataset.drop(columns=['label']))
-        scaled_dataset = pd.DataFrame(scaled_dataset, columns=dataset.drop(columns=['label']).columns)
-        train_dataset = pd.concat([scaled_dataset, dataset['label']], axis=1)
+    start = time.time()
+    scheduled_blocks = manager.manage_blocks(bg)
+    finish = time.time()
+    print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    ma_time += (finish - start)
 
-        x_tr, x_ts, y_tr, y_ts = train_test_split(train_dataset.drop(columns=['label']), train_dataset['label'],
-                                                  random_state=42)
+    # Neural Network
 
-        score, final_model = cross_val_score(X=x_tr,
-                                             y=y_tr,
-                                             model=trainer,
-                                             epochs=1,
-                                             folds=2,
-                                             shuffle=True,
-                                             scorer=accuracy_score)
+    scaler = StandardScaler()
+    with open(os.path.join(os.getcwd(), 'neural_network/checkpoints/scaler.pkl'), 'rb') as f:
+        scaler = pickle.load(f)
 
-        final_model.model = final_model.model.double()
+    net = NeuralNet(13, 14, 7, 2)
 
-        wg_metrics = np.asarray(metrics.encode_graph(conjuncted)).reshape(-1, 1)
-        scaler = StandardScaler()
-        scaler.fit(wg_metrics)
-        scaled_metrics = scaler.transform(wg_metrics)
+    best_trainer = NeuralNetTrainer(net, torch.nn.CrossEntropyLoss(),
+                                    torch.optim.Adam(net.parameters(), lr=5.338346838224648e-05))
+    best_trainer.load_checkpoint(os.path.join(
+        os.getcwd(), 'neural_network/checkpoints/best_model_1k_objs_standart_scaler.pth'))
 
-        scaled_metrics = scaled_metrics[:13]
-        scaled_metrics = torch.Tensor(torch.from_numpy(scaled_metrics.reshape(1, -1)))
+    best_trainer.model = best_trainer.model.double()
 
-        print(scaled_metrics)
-        result = final_model.predict(scaled_metrics)
-        print(result)
+    start = time.time()
+    encoded_wg = np.asarray(metrics.encode_graph(conjuncted)).reshape(1, -1)
+    scaled_metrics = scaler.transform(encoded_wg)
+
+    scaled_metrics = torch.Tensor(torch.from_numpy(scaled_metrics.reshape(1, -1)))
+
+    result = best_trainer.predict(scaled_metrics)
+    best_schedule = schedulers[int(result[0])]
+    scheduler = best_schedule.schedule(conjuncted, contractors[int(result[0])])
+    finish = time.time()
+
+    print(f'Neural network results: {scheduler.execution_time}')
+    net_time += (finish - start)
+
+
+if __name__ == '__main__':
+
+    graph_size = 100
+    block_num = 5
+    iterations = 100
+
+    for i in range(iterations):
+        print(f'\nIteration {i}')
+        run_interation(block_num, graph_size)
+
+    avg_ma_time = ma_time / iterations
+    avg_net_time = net_time / iterations
+
+    print(f'The average execution time of multi-agency (MA) is: {avg_ma_time}')
+    print(f'The average execution time of neural network (NN) is: {avg_net_time}')
+    print(f'The ratio of MA time to NN time is: {avg_ma_time / avg_net_time}')

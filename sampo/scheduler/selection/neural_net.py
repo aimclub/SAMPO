@@ -16,7 +16,6 @@ class NeuralNet(nn.Module):
         self._layers_count = layer_count
         self._linear0 = torch.nn.Linear(input_size, layer_size)
         self.model = nn.Sequential(self._linear0)
-        # self.model.add_module()
         for i in range(layer_count):
             self.__dict__[f'_linear{i + 1}'] = torch.nn.Linear(layer_size, layer_size)
             self.model.add_module(name=f'_linear{i + 1}',
@@ -43,8 +42,6 @@ class NeuralNetTrainer:
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def fit(self, x, y, epochs=10):
-        # criterion = torch.nn.CrossEntropyLoss()
-        # optimizer = torch.optim.Adam(self.parameters(), lr=self._learning_rate)
         total_loss = 0.0
 
         # Train the model
@@ -99,7 +96,7 @@ class NeuralNetTrainer:
         )
         return correct / total, val_loss / val_steps
 
-    def predict(self, x: list) -> torch.tensor:
+    def predict(self, x: list) -> np.array:
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x.astype(np.float32))
         result = []
@@ -110,9 +107,8 @@ class NeuralNetTrainer:
                 _, predicted = torch.max(outputs.data, 0)
                 result.append(torch.tensor(one_hot_encode(predicted, 2)))
         return np.array([torch.max(v) for v in result])
-        # return result
 
-    def predict_proba(self, x: list) -> torch.tensor:
+    def predict_proba(self, x: list) -> np.array:
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x.astype(np.float32))
         result = []

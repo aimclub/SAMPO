@@ -7,13 +7,12 @@ import numpy as np
 import pandas as pd
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.selection.metrics import encode_graph
 from sampo.schemas.time import Time
 
 GRAPHS_TOP_BORDER = 100
-GRAPHS_COUNT = 500
+GRAPHS_COUNT = 1000
 ss = SimpleSynthetic()
 
 contractors = [ss.contractor(10)]
@@ -76,7 +75,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
 
 def generate():
     # tracemalloc.start()
-    wg = ss.work_graph(mode=SyntheticGraphType.SEQUENTIAL, top_border=GRAPHS_TOP_BORDER)
+    wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
     encoding = encode_graph(wg)
     schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
     generated_label = argmin(schedulers_results)
@@ -116,4 +115,4 @@ if __name__ == '__main__':
     df.fillna(value=0, inplace=True)
     dataset_size = min(df.groupby('label', group_keys=False).apply(lambda x: len(x)))
     df = df.groupby('label', group_keys=False).apply(lambda x: x.sample(dataset_size))
-    df.to_csv('datasets/dataset_sequential_graph.csv', index_label='index')
+    df.to_csv('datasets/dataset_1000_objs.csv', index_label='index')

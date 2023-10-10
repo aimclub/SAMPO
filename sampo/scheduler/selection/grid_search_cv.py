@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pandas as pd
 import torch
 from ray import tune
@@ -9,39 +8,55 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import Normalizer
+from sklearn.preprocessing import StandardScaler
 
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet
 from sampo.scheduler.selection.validation import cross_val_score
 
 # path = 'C:/SAMPO/experiments/neural_network/dataset_mod.csv'
-path = os.path.join(os.getcwd(), '../../../experiments/neural_network/datasets/dataset_mod2.csv')
+path = os.path.join(os.getcwd(), '../../../experiments/neural_network/datasets/dataset_1000_objs.csv')
 dataset = pd.read_csv(path, index_col='index')
 for col in dataset.columns[:-1]:
     dataset[col] = dataset[col].apply(lambda x: float(x))
 
-train_dataset = pd.DataFrame()
+# scaler = StandardScaler()
+# scaler.fit(dataset.drop(columns=['label']))
+# scaled_dataset = scaler.transform(dataset.drop(columns=['label']))
+# scaled_dataset = pd.DataFrame(scaled_dataset, columns=dataset.drop(columns=['label']).columns)
+# train_dataset = pd.concat([scaled_dataset, dataset['label']], axis=1)
 
-for col in dataset.columns[:-1]:
-    scaler = Normalizer()
-    scaler.fit([dataset[col].values])
-    scaled_dataset = scaler.transform([dataset[col].values])
-    tmp = np.array(scaled_dataset).reshape(1, -1)[0]
-    tmp = pd.Series(tmp)
-    frame = {
-        col: tmp
-    }
-    scaled_dataset = pd.DataFrame(frame)
-    train_dataset = pd.concat([train_dataset, scaled_dataset], axis=1)
 
-train_dataset = pd.concat([train_dataset, dataset['label']], axis=1)
-x_tr, x_ts, y_tr, y_ts = train_test_split(train_dataset.drop(columns=['label']), train_dataset['label'],
-                                          random_state=42)
+# for col in dataset.columns[:-1]:
+#     scaler = StandardScaler()
+#     scaler.fit([dataset[col].values])
+#     scaled_dataset = scaler.transform([dataset[col].values])
+#     tmp = np.array(scaled_dataset).reshape(1, -1)[0]
+#     tmp = pd.Series(tmp)
+#     frame = {
+#         col: tmp
+#     }
+#     scaled_dataset = pd.DataFrame(frame)
+#     train_dataset = pd.concat([train_dataset, scaled_dataset], axis=1)
+#
+# train_dataset = pd.concat([train_dataset, dataset['label']], axis=1)
+x_tr, x_ts, y_tr, y_ts = train_test_split(dataset.drop(columns=['label']), dataset['label'],
+                                          stratify=dataset['label'])
 
+scaler = StandardScaler()
+scaler.fit(x_tr)
+scaled_dataset = scaler.transform(x_tr)
+scaled_dataset = pd.DataFrame(scaled_dataset, columns=x_tr.columns)
+x_tr = scaled_dataset
+
+scaler = StandardScaler()
+scaler.fit(x_ts)
+scaled_dataset = scaler.transform(x_ts)
+scaled_dataset = pd.DataFrame(scaled_dataset, columns=x_ts.columns)
+x_ts = scaled_dataset
 
 def train(config):
     checkpoint = session.get_checkpoint()
-    model = NeuralNet(input_size=8,
+    model = NeuralNet(input_size=13,
                       layer_size=config['layer_size'],
                       layer_count=config['layer_count'])
     criterion = torch.nn.CrossEntropyLoss()
@@ -83,12 +98,15 @@ def best_model(best_trained_model):
 
 def main():
     config = {
-        'layer_size': tune.grid_search([i for i in range(7, 20)]),
-        'layer_count': tune.grid_search([i for i in range(7, 20)]),
-        'lr': tune.loguniform(1e-7, 1e-2),
+        'iters': tune.grid_search([i for i in range(7)]),
+        # 'layer_size': tune.grid_search([i for i in range(10, 15)]),
+        'layer_size': tune.qrandint(5, 30),
+        'layer_count': tune.qrandint(5, 35),
+        # 'layer_count': tune.grid_search([i for i in range(5, 9)]),
+        'lr': tune.loguniform(1e-7, 1e-1),
         # 'lr': tune.grid_search([0.0001, 0.000055, 0.000075, 0.000425]),
         'epochs': tune.grid_search([100]),
-        'cv': tune.grid_search([10]),
+        'cv': tune.grid_search([5]),
         'scorer': tune.grid_search([accuracy_score])
     }
 
@@ -121,7 +139,7 @@ def main():
     except Exception as e:
         Exception(f'{best_checkpoint} with {e}')
 
-    best_trained_model = NeuralNet(8, layer_size=best_trial.config['layer_size'],
+    best_trained_model = NeuralNet(13, layer_size=best_trial.config['layer_size'],
                                    layer_count=best_trial.config['layer_count'],
                                    out_size=2)
     best_trained_model.load_state_dict(best_checkpoint_data['model_state_dict'])
@@ -132,11 +150,11 @@ def main():
     best_model(best_trainer)
 
     # f = open(f'C:/SAMPO/experiments/neural_network/checkpoints/best_model_10000_objs.pth', "w")
-    f = open(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/best_model_10000_objs.pth'), 'w')
+    f = open(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/best_model_1k_objs_standart_scaler.pth'), 'w')
     f.close()
 
     # best_trainer.save_checkpoint(f'C:/SAMPO/experiments/neural_network/checkpoints/')
-    best_trainer.save_checkpoint(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/'), 'best_model_10000_objs.pth')
+    best_trainer.save_checkpoint(os.path.join(os.getcwd(), '../../../experiments/neural_network/checkpoints/'), 'best_model_1k_objs_standart_scaler.pth')
 
     print(f'Best trial config: {best_trial.config}')
     print(f'Best trial validation loss: {best_trial.last_result["loss"]}')

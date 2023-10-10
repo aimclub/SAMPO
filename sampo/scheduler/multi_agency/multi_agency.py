@@ -2,9 +2,15 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable
 
+import numpy as np
+import torch
+from sklearn.preprocessing import StandardScaler
+
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
 from sampo.scheduler.multi_agency.exception import NoSufficientAgents
+from sampo.scheduler.selection import metrics
+from sampo.scheduler.selection.neural_net import NeuralNetTrainer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.contractor import Contractor
@@ -168,6 +174,82 @@ class Manager:
         best_timeline = None
         best_agent = None
 
+        offers = [(agent, agent.offer(wg, parent_time)) for agent in self._agents]
+
+        for offered_agent, (offered_start_time, offered_end_time, offered_schedule, offered_timeline) in offers:
+            if offered_end_time < best_end_time:
+                best_start_time = offered_start_time
+                best_end_time = offered_end_time
+                best_schedule = offered_schedule
+                best_timeline = offered_timeline
+                best_agent = offered_agent
+        best_agent.confirm(best_timeline, best_start_time, best_end_time)
+        for agent in self._agents:
+            if agent.name != best_agent.name:
+                agent.update_stat(best_start_time)
+
+        return best_start_time, best_end_time, best_schedule, best_agent
+
+
+class NeuralManage(Manager):
+    # TODO rewrite documentation
+    def __init__(self, agents: list[Agent], trainer: NeuralNetTrainer, scaler: StandardScaler):
+        super().__init__(agents)
+        self.trainer: NeuralNetTrainer = trainer
+        self.scaler = scaler
+
+    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
+        """
+        Runs the multi-agent system based on auction on given BlockGraph.
+
+        :param bg:
+        :param logger:
+        :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
+        """
+        id2sblock = {}
+        for i, block in enumerate(bg.toposort()):
+            max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0)) + 1
+            start_time, end_time, agent_schedule, agent \
+                = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
+
+            assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
+
+            if logger and not block.is_service():
+                logger(f'{agent._scheduler}')
+            sblock = ScheduledBlock(wg=block.wg, agent=agent, schedule=agent_schedule,
+                                    start_time=start_time,
+                                    end_time=end_time)
+            id2sblock[sblock.id] = sblock
+
+        return id2sblock
+
+    def run_auction_with_obstructions(self, wg: WorkGraph, parent_time: Time = Time(0),
+                                      obstruction: Obstruction | None = None):
+        if obstruction:
+            obstruction.generate(wg)
+        return self.run_auction(wg, parent_time)
+
+    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+        """
+        Runs the auction on the given `WorkGraph`.
+
+        :param wg: target `WorkGraph`
+        :param parent_time: max parent time of given block
+        :return: best start time, end time and the agent that is able to support this working time
+        """
+        best_start_time = 0
+        best_end_time = Time.inf()
+        best_schedule = None
+        best_timeline = None
+        best_agent = None
+
+        encoded_wg = np.asarray(metrics.encode_graph(wg)).reshape(1, -1)
+        scaled_metrics = self.scaler.transform(encoded_wg)
+
+        scaled_metrics = torch.Tensor(torch.from_numpy(scaled_metrics.reshape(1, -1)))
+        result = self.trainer.predict(scaled_metrics)
+        best_schedule = schedulers[int(result[0])]
+        scheduler = best_schedule.schedule(conjuncted, contractors[int(result[0])])
         offers = [(agent, agent.offer(wg, parent_time)) for agent in self._agents]
 
         for offered_agent, (offered_start_time, offered_end_time, offered_schedule, offered_timeline) in offers:

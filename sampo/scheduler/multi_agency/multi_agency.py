@@ -7,9 +7,10 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
 from sampo.scheduler.multi_agency.exception import NoSufficientAgents
-from sampo.scheduler.selection import metrics
+from sampo.scheduler.selection.metrics import encode_graph
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
@@ -188,20 +189,33 @@ class Manager:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
+        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent
 
 
-class NeuralManage(Manager):
-    # TODO rewrite documentation
-    def __init__(self, agents: list[Agent], trainer: NeuralNetTrainer, scaler: StandardScaler):
-        super().__init__(agents)
-        self.trainer: NeuralNetTrainer = trainer
-        self.scaler = scaler
+class NeuralManager:
+    """
+    Manager entity representation in the multi-agent model
+    Manager interact with agents
+    Neural manager uses neural network as the method of the most suitable agent for each work graph
+    """
 
+    def __init__(self, agents: list[Agent], algo_trainer: NeuralNetTrainer, contractor_trainer: NeuralNetTrainer,
+                 algorithms: list[GenericScheduler], scale: StandardScaler):
+        if len(agents) == 0:
+            raise NoSufficientAgents('Manager can not work with empty list of agents')
+        self._agents = agents
+        self.algo_trainer = algo_trainer
+        self.contractor_trainer = contractor_trainer
+        self.algorithms = algorithms
+        self.scale = scale
+
+    # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
         Runs the multi-agent system based on auction on given BlockGraph.
 
+        :param bg_encoding:
         :param bg:
         :param logger:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
@@ -223,7 +237,8 @@ class NeuralManage(Manager):
 
         return id2sblock
 
-    def run_auction_with_obstructions(self, wg: WorkGraph, parent_time: Time = Time(0),
+    def run_auction_with_obstructions(self, wg: WorkGraph,
+                                      parent_time: Time = Time(0),
                                       obstruction: Obstruction | None = None):
         if obstruction:
             obstruction.generate(wg)
@@ -237,31 +252,32 @@ class NeuralManage(Manager):
         :param parent_time: max parent time of given block
         :return: best start time, end time and the agent that is able to support this working time
         """
-        best_start_time = 0
-        best_end_time = Time.inf()
-        best_schedule = None
-        best_timeline = None
+
+        wg_encoding = encode_graph(wg)
+        wg_encoding = [np.double(x) for x in wg_encoding]
+        best_algo = type(self.algorithms[int(self.algo_trainer.predict([torch.Tensor(wg_encoding)]))])
+        best_contractor = np.asarray(self.contractor_trainer.predict([torch.Tensor(wg_encoding)]))[0]
+
+        less_mse = 10**9
         best_agent = None
+        for agent in self._agents:
+            if not isinstance(agent.scheduler, best_algo):
+                continue
+            resources = []
+            for worker in agent.contractors[0].workers.values():
+                resources.append(worker.count)
+            resources = np.asarray(resources)
+            mse = sum((resources - best_contractor) ** 2)
+            if less_mse > mse:
+                less_mse = mse
+                best_agent = agent
 
-        encoded_wg = np.asarray(metrics.encode_graph(wg)).reshape(1, -1)
-        scaled_metrics = self.scaler.transform(encoded_wg)
+        best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
 
-        scaled_metrics = torch.Tensor(torch.from_numpy(scaled_metrics.reshape(1, -1)))
-        result = self.trainer.predict(scaled_metrics)
-        best_schedule = schedulers[int(result[0])]
-        scheduler = best_schedule.schedule(conjuncted, contractors[int(result[0])])
-        offers = [(agent, agent.offer(wg, parent_time)) for agent in self._agents]
-
-        for offered_agent, (offered_start_time, offered_end_time, offered_schedule, offered_timeline) in offers:
-            if offered_end_time < best_end_time:
-                best_start_time = offered_start_time
-                best_end_time = offered_end_time
-                best_schedule = offered_schedule
-                best_timeline = offered_timeline
-                best_agent = offered_agent
         best_agent.confirm(best_timeline, best_start_time, best_end_time)
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
+        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent

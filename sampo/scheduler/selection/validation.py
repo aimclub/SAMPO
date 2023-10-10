@@ -1,11 +1,9 @@
-from typing import Callable
-
 import pandas as pd
 import torch
 from sklearn.model_selection import KFold
 
 from sampo.scheduler.selection.metrics import one_hot_encode
-from sampo.scheduler.selection.neural_net import NeuralNetTrainer
+from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNetType
 
 
 def cross_val_score(X: pd.DataFrame,
@@ -15,7 +13,7 @@ def cross_val_score(X: pd.DataFrame,
                     folds: int = 5,
                     shuffle: bool = False,
                     random_state: int | None = None,
-                    scorer: dict[str, Callable[[list, list], dict[str, float]]] | Callable[[list, list], float] = None) \
+                    type_task: NeuralNetType = None) \
         -> tuple[list[float] | dict[str, float], int, NeuralNetTrainer]:
     """
     Evaluate metric by cross-validation and also record score times.
@@ -27,7 +25,6 @@ def cross_val_score(X: pd.DataFrame,
     :param folds: Training dataset is split on 'folds' folds for cross-validation.
     :param shuffle: 'True' if the splitting dataset on folds should be random, 'False' - otherwise.
     :param random_state:
-    :param scorer: Dictionary of callable scorers or just function.
     :return: List of scores that correspond to each validation fold.
     """
     kf = KFold(n_splits=folds, shuffle=shuffle, random_state=random_state)
@@ -36,10 +33,16 @@ def cross_val_score(X: pd.DataFrame,
     best_trainer: NeuralNetTrainer | None = None
 
     for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
-        train_tensor = [torch.Tensor(v) for v in X.iloc[train_idx, :].values]
-        train_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[train_idx].values]
-        test_tensor = [torch.Tensor(v) for v in X.iloc[test_idx, :].values]
-        test_target_tensor = [torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[test_idx].values]
+        if type_task is NeuralNetType.CLASSIFICATION:
+            train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
+            train_target_tensor = torch.stack([torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[train_idx].values])
+            test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])
+            test_target_tensor = torch.stack([torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[test_idx].values])
+        else:
+            train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
+            train_target_tensor = torch.stack([torch.Tensor(v) for v in y.iloc[train_idx].values])
+            test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])
+            test_target_tensor = torch.stack([torch.Tensor(v) for v in y.iloc[test_idx].values])
 
         model.fit(train_tensor, train_target_tensor, epochs)
         tmp_score, loss = model.validate(test_tensor, test_target_tensor)

@@ -1,10 +1,9 @@
-from typing import Optional, Iterable
+from typing import Optional
 
-from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -21,9 +20,8 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, contractors: Iterable[Contractor], landscape: LandscapeConfiguration):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         self._timeline = {}
-        worker_pool = get_worker_contractor_pool(contractors)
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
@@ -126,6 +124,7 @@ class JustInTimeTimeline(Timeline):
                                    node: GraphNode,
                                    worker_team: list[Worker],
                                    spec: WorkSpec,
+                                   node2swork: dict[GraphNode, ScheduledWork],
                                    start_time: Time,
                                    exec_time: Time) -> bool:
         if spec.is_independent:
@@ -137,6 +136,14 @@ class JustInTimeTimeline(Timeline):
                     return False
             return True
         else:
+            # checking edges
+            for dep_node in node.get_inseparable_chain_with_self():
+                for p in dep_node.parents:
+                    if p != dep_node.inseparable_parent:
+                        swork = node2swork.get(p, None)
+                        if swork is None or swork.finish_time >= start_time:
+                            return False
+
             max_agent_time = Time(0)
             for worker in worker_team:
                 needed_count = worker.count
@@ -277,10 +284,11 @@ class JustInTimeTimeline(Timeline):
             if dep_node.is_inseparable_son():
                 assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
-            working_time = exec_times.get(dep_node, None)
-            c_st = max(c_ft, max_parent_time)
-            if working_time is None:
-                working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
+            if dep_node in exec_times:
+                lag, working_time = exec_times[dep_node]
+            else:
+                lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
+            c_st = max(c_ft + lag, max_parent_time)
             new_finish_time = c_st + working_time
 
             deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,

@@ -7,6 +7,7 @@ from sampo.schemas.types import EventType
 
 T = TypeVar('T')
 
+
 class GeneralTimeline(Generic[T]):
     """
     The representation of general-purpose timeline that supports some general subset of functions
@@ -15,7 +16,7 @@ class GeneralTimeline(Generic[T]):
         # ScheduleEvent = time, idx, object
         def event_cmp(event: Time | tuple[EventType, Time, int, T]) -> tuple[Time, int, int]:
             if isinstance(event, tuple):
-                return event
+                return event[1], event[2], event[0].priority
 
             if isinstance(event, Time):
                 # instances of Time must be greater than almost all ScheduleEvents with same time point

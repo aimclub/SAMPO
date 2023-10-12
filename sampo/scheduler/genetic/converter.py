@@ -110,12 +110,10 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                                                           worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(index2contractor.values(), landscape)
+        timeline = JustInTimeTimeline(worker_pool, landscape)
 
     order_nodes = []
 
-    # declare current checkpoint index
-    cpkt_idx = 0
     # timeline to store starts and ends of all works
     work_timeline = GeneralTimeline()
 
@@ -141,14 +139,27 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         [(work_index, *decode(work_index)) for work_index in works_order]
     ))
 
+    # declare current checkpoint index
+    cpkt_idx = 0
+    start_time = Time(-1)
     # while there are unprocessed checkpoints
-    while cpkt_idx < len(work_timeline):
-        start_time = work_timeline[cpkt_idx]
+    while len(enumerated_works_remaining) > 0:
+        if cpkt_idx < len(work_timeline):
+            start_time = work_timeline[cpkt_idx]
+            if start_time.is_inf():
+                # break because schedule already contains Time.inf(), that is incorrect schedule
+                break
+        else:
+            start_time += 1
+        # if new_start_time == start_time:
+        #     continue
+        # start_time = new_start_time
+        # print(f'Start time: {start_time}')
 
         def work_scheduled(args) -> bool:
-            idx, work_idx, node, worker_team, contractor, exec_time, work_spec = args
+            idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
 
-            if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, start_time, exec_time):
+            if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
                 # apply worker spec
                 Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
@@ -159,6 +170,9 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                 # finish using time spec
                 ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
                                        st, exec_time, assigned_parent_time, work_estimator)
+
+                work_timeline.update_timeline(st, exec_time, None)
+
                 # process zones
                 zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
                 zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
@@ -174,6 +188,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
 
         # find all works that can start at start_time moment
         enumerated_works_remaining.remove_if(work_scheduled)
+        cpkt_idx = min(cpkt_idx + 1, len(work_timeline))
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)

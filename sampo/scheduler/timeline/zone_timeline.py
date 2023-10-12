@@ -212,7 +212,7 @@ class ZoneTimeline:
 
     def can_schedule_at_the_moment(self, zones: list[ZoneReq], start_time: Time, exec_time: Time):
         for zone in zones:
-            state = self._timeline[zone.name]
+            state = self._timeline[zone.kind]
 
             # if we are inside the interval with wrong status
             # we should go right and search the best begin
@@ -281,10 +281,10 @@ class ZoneTimeline:
                 if not self._config.statuses.match_status(event.available_workers_count, zone.required_status):
                     return False
 
-            if not state[start_idx - 1].event_type == EventType.END \
-                   or (state[start_idx - 1].event_type == EventType.START
-                       and self._config.statuses.match_status(start_status, zone.required_status)) \
-                   or state[start_idx - 1].event_type == EventType.INITIAL:
+            if not (state[start_idx - 1].event_type == EventType.END
+                    or (state[start_idx - 1].event_type == EventType.START
+                        and self._config.statuses.match_status(start_status, zone.required_status))
+                    or state[start_idx - 1].event_type == EventType.INITIAL):
                 return False
 
         return True

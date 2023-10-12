@@ -40,11 +40,14 @@ class Iterator(Generic[T]):
         if self._node == self._lst._root:
             old = self._lst._root
             self._lst._root = old.next
+            self._node = self._lst._root
+            self._lst._len -= 1
             return old.value
         node = self._node
         next = node.next
         self._prev.next = next
         self._node = next
+        self._lst._len -= 1
         return node.value
 
 
@@ -52,6 +55,7 @@ class LinkedList(Generic[T]):
     def __init__(self, iterable: Iterable[T] | None = None):
         self._root = None
         self._tail = None
+        self._len = 0
         if iterable:
             for v in iterable:
                 self.append(v)
@@ -64,6 +68,7 @@ class LinkedList(Generic[T]):
             old_tail = self._tail
             self._tail = Node(v)
             old_tail.next = self._tail
+        self._len += 1
 
     def remove_if(self, condition: Callable[[T], bool]):
         it = self.iterator()
@@ -83,3 +88,9 @@ class LinkedList(Generic[T]):
 
     def __iter__(self):
         return (node.value for node in self.iterator())
+
+    def __len__(self):
+        return self._len
+
+    def is_empty(self):
+        return len(self) == 0

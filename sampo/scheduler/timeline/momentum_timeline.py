@@ -1,12 +1,12 @@
 from collections import deque
-from typing import Optional, Union, Iterable
+from typing import Optional, Union
 
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.schemas.contractor import Contractor
+from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
@@ -15,7 +15,7 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.types import AgentId, ScheduleEvent, EventType
+from sampo.schemas.types import ScheduleEvent, EventType
 from sampo.utilities.collections_util import build_index
 
 
@@ -24,7 +24,7 @@ class MomentumTimeline(Timeline):
     Timeline that stores the intervals in which resources is occupied.
     """
 
-    def __init__(self, contractors: Iterable[Contractor], landscape: LandscapeConfiguration):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """
@@ -54,16 +54,15 @@ class MomentumTimeline(Timeline):
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
         # and remember how many workers of a certain type is available at this particular moment
-        self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {
-            contractor.id: {
-                w_name: SortedList(
-                    iterable=(ScheduleEvent(-1, EventType.INITIAL, Time(0), None, ws.count),),
+        self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {}
+        for worker_name, worker_counts in worker_pool.items():
+            for contractor, worker in worker_counts.items():
+                if contractor not in self._timeline:
+                    self._timeline[contractor] = {}
+                self._timeline[contractor][worker_name] = SortedList(
+                    iterable=(ScheduleEvent(-1, EventType.INITIAL, Time(0), None, worker.count),),
                     key=event_cmp
                 )
-                for w_name, ws in contractor.workers.items()
-            }
-            for contractor in contractors
-        }
 
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
@@ -142,7 +141,8 @@ class MomentumTimeline(Timeline):
                                                                                start_time,
                                                                                node.work_unit.need_materials(),
                                                                                node.work_unit.workground_size)
-            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, exec_time)
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time,
+                                                                   exec_time)
 
             st = max(max_material_time, max_zone_time, start_time)
 
@@ -151,11 +151,11 @@ class MomentumTimeline(Timeline):
             # so let's find the time that is agreed with all constraints
             j = 0
             while st != prev_st:
-                if j > 0 and j % 50 == 0:
-                    print(f'ERROR! Probably cycle in looking for diff start time: {j} iteration, {prev_st}, {st}')
+                # if j > 0 and j % 50 == 0:
+                #     print(f'ERROR! Probably cycle in looking for diff start time: {j} iteration, {prev_st}, {st}')
                 j += 1
                 start_time = self._find_min_start_time(
-                    self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
+                    self._timeline[contractor_id], inseparable_chain, spec, st, exec_time, worker_team
                 )
 
                 max_material_time = self._material_timeline.find_min_material_time(node.id,
@@ -166,12 +166,6 @@ class MomentumTimeline(Timeline):
 
                 prev_st = st
                 st = max(max_material_time, max_zone_time, start_time)
-
-                # max_zone_time_after = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, st, exec_time)
-                # if st != max_zone_time_after:
-                #     print(f'2 Start time: {st}, zone time: {max_zone_time_after}')
-
-                # assert st >= max_parent_time
 
         return st, st + exec_time, exec_times
 
@@ -189,7 +183,7 @@ class MomentumTimeline(Timeline):
         :param inseparable_chain: list of GraphNodes that represent one big task,
         that are divided into several dependent tasks
         :param parent_time: the minimum start time
-        :param exec_time: the time of execution 
+        :param exec_time: the time of execution
         :param passed_workers: list of passed workers. Should be IN THE SAME ORDER AS THE CORRESPONDING WREQS
         :return:
         """
@@ -321,12 +315,23 @@ class MomentumTimeline(Timeline):
 
             current_start_time = state[current_start_idx].time
 
+        st = current_start_time
+        start_idx = state.bisect_right(st)
+        end_idx = state.bisect_right(st + exec_time)
+        available_workers_count = state[start_idx - 1].available_workers_count
+        # updating all events in between the start and the end of our current task
+        for event in state[start_idx: end_idx]:
+            assert event.available_workers_count >= required_worker_count
+
+        assert available_workers_count >= required_worker_count
+
         return current_start_time
 
     def can_schedule_at_the_moment(self,
                                    node: GraphNode,
                                    worker_team: list[Worker],
                                    spec: WorkSpec,
+                                   node2swork: dict[GraphNode, ScheduledWork],
                                    start_time: Time,
                                    exec_time: Time) -> bool:
         if spec.is_independent:
@@ -351,7 +356,6 @@ class MomentumTimeline(Timeline):
                 for event in state[start_idx: end_idx]:
                     if not event.available_workers_count >= w.count:
                         return False
-                    event.available_workers_count -= w.count
 
                 if not available_workers_count >= w.count:
                     return False

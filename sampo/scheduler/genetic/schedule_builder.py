@@ -9,15 +9,15 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, IndividualType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
+from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
-from sampo.schemas.resources import Worker
 
 
 def create_toolbox_and_mapping_objects(wg: WorkGraph,
@@ -379,6 +379,7 @@ def build_schedule(wg: WorkGraph,
         if verbose:
             print(f'Final time: {best_fitness}')
             print(f'Generations processing took {(time.time() - start) * 1000} ms')
+            print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
             print(f'Evaluation time: {evaluation_time * 1000}')
 
         best_chromosome = hof[0]

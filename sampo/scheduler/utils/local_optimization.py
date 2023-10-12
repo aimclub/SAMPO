@@ -175,7 +175,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
         """
 
-        timeline = self._timeline_type(contractors, landscape_config)
+        timeline = self._timeline_type(worker_pool, landscape_config)
         node2swork_new: dict[GraphNode, ScheduledWork] = {}
 
         id2contractor = build_index(contractors, attrgetter('name'))

@@ -72,6 +72,7 @@ class Timeline(ABC):
                                    node: GraphNode,
                                    worker_team: list[Worker],
                                    spec: WorkSpec,
+                                   node2swork: dict[GraphNode, ScheduledWork],
                                    start_time: Time,
                                    exec_time: Time) -> bool:
         ...

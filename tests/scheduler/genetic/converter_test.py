@@ -6,6 +6,8 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.utilities.validation import validate_schedule
 
+from tests.scheduler.genetic.fixtures import setup_toolbox
+
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
     tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox

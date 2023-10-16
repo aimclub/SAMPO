@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet, NeuralNetType
 from sampo.scheduler.selection.validation import cross_val_score
 
-path = os.path.join(os.getcwd(), 'datasets/dataset_1000_objs.csv')
+path = os.path.join(os.getcwd(), 'datasets/wg_algo_dataset_10k.csv')
 dataset = pd.read_csv(path, index_col='index')
 for col in dataset.columns[:-1]:
     dataset[col] = dataset[col].apply(lambda x: float(x))
@@ -59,7 +59,7 @@ def train(config):
         'optimizer_state_dict': best_trainer.optimizer.state_dict()
     }
     checkpoint = Checkpoint.from_dict(checkpoint_data)
-    session.report({'loss': best_loss, 'accuracy': score}, checkpoint=checkpoint)
+    session.report({'loss': best_loss, 'score': score}, checkpoint=checkpoint)
     print('accuracy:', score)
     print('Finished Training')
     print('------------------------------------------------------------------------')
@@ -79,12 +79,12 @@ def best_model(best_trained_model):
 
 def main():
     config = {
-        'iters': tune.grid_search([i for i in range(15)]),
-        # 'layer_size': tune.grid_search([i for i in range(10, 15)]),
-        'layer_size': tune.qrandint(5, 30),
-        'layer_count': tune.qrandint(5, 35),
-        # 'layer_count': tune.grid_search([i for i in range(5, 9)]),
-        'lr': tune.loguniform(1e-7, 1e-1),
+        # 'iters': tune.grid_search([i for i in range(15)]),
+        'layer_size': tune.grid_search([i for i in range(10, 20)]),
+        # 'layer_size': tune.qrandint(5, 30),
+        # 'layer_count': tune.qrandint(5, 35),
+        'layer_count': tune.grid_search([i for i in range(5, 15)]),
+        'lr': tune.loguniform(1e-7, 1e-3),
         # 'lr': tune.grid_search([0.0001, 0.000055, 0.000075, 0.000425]),
         'epochs': tune.grid_search([100]),
         'cv': tune.grid_search([7])
@@ -99,7 +99,7 @@ def main():
     )
 
     reporter = CLIReporter(
-        metric_columns=['loss', 'accuracy']
+        metric_columns=['loss', 'score']
     )
 
     result = tune.run(
@@ -131,14 +131,14 @@ def main():
 
     best_model(best_trainer)
 
-    f = open(os.path.join(os.getcwd(), 'checkpoints/best_model_1k_objs_standart_scaler.pth'), 'w')
+    f = open(os.path.join(os.getcwd(), 'checkpoints/best_model_10k_algo.pth'), 'w')
     f.close()
 
-    best_trainer.save_checkpoint(os.path.join(os.getcwd(), 'checkpoints/'), 'best_model_1k_objs_standart_scaler.pth')
+    best_trainer.save_checkpoint(os.path.join(os.getcwd(), 'checkpoints/'), 'best_model_10k_algo.pth')
 
     print(f'Best trial config: {best_trial.config}')
     print(f'Best trial validation loss: {best_trial.last_result["loss"]}')
-    print(f'Best trial final validation accuracy: {best_trial.last_result["accuracy"]}')
+    print(f'Best trial final validation accuracy: {best_trial.last_result["score"]}')
 
 
 if __name__ == '__main__':

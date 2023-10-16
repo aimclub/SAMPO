@@ -1,11 +1,11 @@
 import os
-import pickle
 import time
 from random import Random
 
 import numpy as np
 import torch
 import torchmetrics
+from sklearn.preprocessing import StandardScaler
 
 from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
@@ -28,6 +28,8 @@ def obstruction_getter(i: int):
 
 def run_interation(blocks_num, graph_size) -> None:
     global ma_time, net_time
+
+    scaler = StandardScaler()
 
     schedulers = [HEFTScheduler(),
                   HEFTBetweenScheduler()]
@@ -52,8 +54,12 @@ def run_interation(blocks_num, graph_size) -> None:
         blocks.append(block)
         encode = encode_graph(block.wg)
         encode = [np.double(x) for x in encode]
-        encoding_blocks.append(torch.Tensor(encode))
+        encoding_blocks.append(encode)
 
+    encoding_blocks = scaler.fit_transform(encoding_blocks)
+    encoding_blocks_tensor = []
+    for block in encoding_blocks:
+        encoding_blocks_tensor.append(torch.Tensor(block))
     # Multi-agency
     # --------------------------------------------------------------------------------------------------------------
 
@@ -65,9 +71,6 @@ def run_interation(blocks_num, graph_size) -> None:
 
     # Neural Network
     # ---------------------------------------------------------------------------------------------------------------
-
-    with open(os.path.join(os.getcwd(), 'neural_network/checkpoints/scaler.pkl'), 'rb') as f:
-        scaler = pickle.load(f)
 
     net = NeuralNet(13, 14, 7, 2, NeuralNetType.CLASSIFICATION)
     scorer = torchmetrics.classification.BinaryAccuracy()
@@ -91,7 +94,7 @@ def run_interation(blocks_num, graph_size) -> None:
                                    [HEFTScheduler(), HEFTBetweenScheduler()],
                                    scaler,
                                    blocks=blocks,
-                                   encoding_blocks=encoding_blocks)
+                                   encoding_blocks=encoding_blocks_tensor)
 
     start = time.time()
 
@@ -115,7 +118,7 @@ def run_interation(blocks_num, graph_size) -> None:
 
 if __name__ == '__main__':
 
-    graph_size = 500
+    graph_size = 100
     block_num = 10
     iterations = 10
 

@@ -281,5 +281,5 @@ class NeuralManager:
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
-
+        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent

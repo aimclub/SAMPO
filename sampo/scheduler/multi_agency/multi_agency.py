@@ -3,14 +3,12 @@ from dataclasses import dataclass
 from typing import Callable
 
 import numpy as np
-import torch
 from sklearn.preprocessing import StandardScaler
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
-from sampo.scheduler.multi_agency.block_graph import BlockGraph
+from sampo.scheduler.multi_agency.block_graph import BlockGraph, BlockNode
 from sampo.scheduler.multi_agency.exception import NoSufficientAgents
-from sampo.scheduler.selection.metrics import encode_graph
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
@@ -201,7 +199,8 @@ class NeuralManager:
     """
 
     def __init__(self, agents: list[Agent], algo_trainer: NeuralNetTrainer, contractor_trainer: NeuralNetTrainer,
-                 algorithms: list[GenericScheduler], scale: StandardScaler):
+                 algorithms: list[GenericScheduler], scale: StandardScaler, blocks: list[BlockNode],
+                 encoding_blocks: list[list[float]]):
         if len(agents) == 0:
             raise NoSufficientAgents('Manager can not work with empty list of agents')
         self._agents = agents
@@ -209,9 +208,11 @@ class NeuralManager:
         self.contractor_trainer = contractor_trainer
         self.algorithms = algorithms
         self.scale = scale
+        self.blocks = blocks
+        self.encoding_blocks = encoding_blocks
 
     # TODO Upgrade to supply the best parallelism
-    def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
+    def manage_blocks(self, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
         """
         Runs the multi-agent system based on auction on given BlockGraph.
 
@@ -221,10 +222,10 @@ class NeuralManager:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
         """
         id2sblock = {}
-        for i, block in enumerate(bg.toposort()):
+        for i, block in enumerate(self.blocks):
             max_parent_time = max((id2sblock[parent.id].end_time for parent in block.blocks_from), default=Time(0)) + 1
             start_time, end_time, agent_schedule, agent \
-                = self.run_auction_with_obstructions(block.wg, max_parent_time, block.obstruction)
+                = self.run_auction_with_obstructions(block.wg, i, max_parent_time, block.obstruction)
 
             assert start_time >= max_parent_time, f'Scheduler {agent._scheduler} does not handle parent_time!'
 
@@ -238,13 +239,14 @@ class NeuralManager:
         return id2sblock
 
     def run_auction_with_obstructions(self, wg: WorkGraph,
+                                      index: int,
                                       parent_time: Time = Time(0),
                                       obstruction: Obstruction | None = None):
         if obstruction:
             obstruction.generate(wg)
-        return self.run_auction(wg, parent_time)
+        return self.run_auction(wg, index, parent_time)
 
-    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, index, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
         """
         Runs the auction on the given `WorkGraph`.
 
@@ -253,10 +255,11 @@ class NeuralManager:
         :return: best start time, end time and the agent that is able to support this working time
         """
 
-        wg_encoding = encode_graph(wg)
-        wg_encoding = [np.double(x) for x in wg_encoding]
-        best_algo = type(self.algorithms[int(self.algo_trainer.predict([torch.Tensor(wg_encoding)]))])
-        best_contractor = np.asarray(self.contractor_trainer.predict([torch.Tensor(wg_encoding)]))[0]
+        # wg_encoding = encode_graph(wg)
+        # wg_encoding = self.encoding_blocks[index]
+        # wg_encoding = [np.double(x) for x in wg_encoding]
+        best_algo = type(self.algorithms[int(self.algo_trainer.predict([self.encoding_blocks[index]]))])
+        best_contractor = np.asarray(self.contractor_trainer.predict([self.encoding_blocks[index]]))[0]
 
         less_mse = 10**9
         best_agent = None
@@ -279,5 +282,4 @@ class NeuralManager:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
-        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent

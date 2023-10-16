@@ -33,7 +33,7 @@ def cross_val_score(X: pd.DataFrame,
     best_trainer: NeuralNetTrainer | None = None
 
     for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
-        if type_task is NeuralNetType.CLASSIFICATION:
+        if type_task == NeuralNetType.CLASSIFICATION:
             train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
             train_target_tensor = torch.stack([torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[train_idx].values])
             test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])

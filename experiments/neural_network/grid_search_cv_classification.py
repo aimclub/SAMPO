@@ -2,15 +2,15 @@ import os
 
 import pandas as pd
 import torch
+import torchmetrics.classification
 from ray import tune
 from ray.air import session, Checkpoint
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet
+from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet, NeuralNetType
 from sampo.scheduler.selection.validation import cross_val_score
 
 path = os.path.join(os.getcwd(), 'datasets/dataset_1000_objs.csv')
@@ -37,10 +37,12 @@ def train(config):
     checkpoint = session.get_checkpoint()
     model = NeuralNet(input_size=13,
                       layer_size=config['layer_size'],
-                      layer_count=config['layer_count'])
+                      layer_count=config['layer_count'],
+                      task_type=NeuralNetType.CLASSIFICATION)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config['lr'])
-    net = NeuralNetTrainer(model, criterion, optimizer)
+    scorer = torchmetrics.classification.BinaryAccuracy()
+    net = NeuralNetTrainer(model, criterion, optimizer, scorer, 32)
     device = 'cpu'
 
     x_train, x_test, y_train, y_test = x_tr, x_ts, y_tr, y_ts
@@ -51,7 +53,7 @@ def train(config):
                                                      epochs=config['epochs'],
                                                      folds=config['cv'],
                                                      shuffle=True,
-                                                     scorer=config['scorer'])
+                                                     type_task=NeuralNetType.CLASSIFICATION)
     checkpoint_data = {
         'model_state_dict': best_trainer.model.state_dict(),
         'optimizer_state_dict': best_trainer.optimizer.state_dict()
@@ -77,7 +79,7 @@ def best_model(best_trained_model):
 
 def main():
     config = {
-        'iters': tune.grid_search([i for i in range(7)]),
+        'iters': tune.grid_search([i for i in range(15)]),
         # 'layer_size': tune.grid_search([i for i in range(10, 15)]),
         'layer_size': tune.qrandint(5, 30),
         'layer_count': tune.qrandint(5, 35),
@@ -85,8 +87,7 @@ def main():
         'lr': tune.loguniform(1e-7, 1e-1),
         # 'lr': tune.grid_search([0.0001, 0.000055, 0.000075, 0.000425]),
         'epochs': tune.grid_search([100]),
-        'cv': tune.grid_search([5]),
-        'scorer': tune.grid_search([accuracy_score])
+        'cv': tune.grid_search([7])
     }
 
     scheduler = ASHAScheduler(
@@ -120,11 +121,13 @@ def main():
 
     best_trained_model = NeuralNet(13, layer_size=best_trial.config['layer_size'],
                                    layer_count=best_trial.config['layer_count'],
-                                   out_size=2)
+                                   out_size=2,
+                                   task_type=NeuralNetType.CLASSIFICATION)
     best_trained_model.load_state_dict(best_checkpoint_data['model_state_dict'])
     best_trained_optimizer = torch.optim.Adam(best_trained_model.model.parameters(), lr=best_trial.config['lr'])
     best_trained_optimizer.load_state_dict(best_checkpoint_data['optimizer_state_dict'])
-    best_trainer = NeuralNetTrainer(best_trained_model, torch.nn.CrossEntropyLoss(), best_trained_optimizer)
+    best_trainer = NeuralNetTrainer(best_trained_model, torch.nn.CrossEntropyLoss(), best_trained_optimizer,
+                                    scorer=torchmetrics.classification.BinaryAccuracy(), batch_size=32)
 
     best_model(best_trainer)
 

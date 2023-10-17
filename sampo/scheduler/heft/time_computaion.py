@@ -8,7 +8,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.works import WorkUnit
 
 
-def calculate_working_time_cascade(node: GraphNode, appointed_worker: list[Worker],
+def calculate_working_time_cascade(node: GraphNode, appointed_workers: list[Worker],
                                    work_estimator: WorkTimeEstimator) -> Time:
     """
     Calculate the working time of the appointed workers at a current job for prioritization.
@@ -24,12 +24,10 @@ def calculate_working_time_cascade(node: GraphNode, appointed_worker: list[Worke
         # in the chain of connected inextricably
         return Time(0)
 
-    common_time = work_estimator.estimate_time(work_unit=node.work_unit, worker_list=appointed_worker)
-
     # calculation of the time for all work_units inextricably linked to the given
-    while node.is_inseparable_parent():
-        node = node.inseparable_son
-        common_time += work_estimator.estimate_time(node.work_unit, appointed_worker)
+    common_time = Time(0)
+    for dep_node in node.get_inseparable_chain_with_self():
+        common_time += work_estimator.estimate_time(dep_node.work_unit, appointed_workers)
     return common_time
 
 

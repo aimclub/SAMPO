@@ -133,9 +133,3 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             'contractor_id': self.contractor,
             'workers': {worker.name: worker.count for worker in self.workers},
         }
-
-    # def __deepcopy__(self, memodict={}):
-    #     return ScheduledWork(deepcopy(self.work_unit, memodict),
-    #                          deepcopy(self.start_end_time, memodict),
-    #                          deepcopy(self.workers, memodict),
-    #                          self.contractor)

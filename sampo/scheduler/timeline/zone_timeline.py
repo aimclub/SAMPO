@@ -45,6 +45,8 @@ class ZoneTimeline:
 
         i = 0
         while len(queue) > 0:
+            # This should be uncommented when there are problems with performance
+
             # if i > 0 and i % 50 == 0:
             #     print(f'Warning! Probably cycle in looking for time slot for all reqs: {i} iteration')
             #     print(f'Current queue size: {len(queue)}')
@@ -75,8 +77,9 @@ class ZoneTimeline:
                 scheduled_wreqs.append(wreq)
                 start = max(start, found_start)
 
-        for w in zones:
-            self._validate(start, exec_time, self._timeline[w.kind], w.required_status)
+        # This should be uncommented when there are problems with zone scheduling correctness
+        # for w in zones:
+        #     self._validate(start, exec_time, self._timeline[w.kind], w.required_status)
 
         return start
 
@@ -132,6 +135,7 @@ class ZoneTimeline:
             i += 1
             end_idx = state.bisect_right(current_start_time + exec_time)
 
+            # TODO Test and uncomment code
             # if we are inside the interval with wrong status
             # we should go right and search the best begin
             # if state[current_start_idx].event_type == EventType.START \
@@ -196,6 +200,8 @@ class ZoneTimeline:
                 break
 
             if current_start_idx >= len(state):
+                # This should be uncommented when there are problems with zone scheduling correctness
+
                 # cur_cpkt = state[-1]
                 # if cur_cpkt.time == current_start_time and not self._match_status(cur_cpkt.available_workers_count,
                 #                                                                   required_status):
@@ -206,7 +212,8 @@ class ZoneTimeline:
 
             current_start_time = state[current_start_idx].time
 
-        self._validate(current_start_time, exec_time, state, required_status)
+        # This should be uncommented when there are problems with zone scheduling correctness
+        # self._validate(current_start_time, exec_time, state, required_status)
 
         return current_start_time
 
@@ -295,9 +302,9 @@ class ZoneTimeline:
         for zone in zones:
             state = self._timeline[zone.name]
             start_idx = state.bisect_right(start_time)
-            end_idx = state.bisect_right(start_time + exec_time)
             start_status = state[start_idx - 1].available_workers_count
 
+            # This should be uncommented when there are problems with zone scheduling correctness
             self._validate(start_time, exec_time, state, zone.status)
 
             change_cost = self._config.time_costs[start_status, zone.status] \

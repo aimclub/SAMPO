@@ -77,10 +77,6 @@ class GenericScheduler(Scheduler):
 
                 c_st, c_ft, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork, spec, None,
                                                                              assigned_parent_time, work_estimator)
-                max_zone_time_after = timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
-                if c_st != max_zone_time_after:
-                    print(f'22222 Start time: {c_st}, zone time: {max_zone_time_after}')
-                    # timeline.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, c_ft - c_st)
                 return c_st, c_ft, workers
 
             return run_contractor_search(contractors, run_with_contractor)

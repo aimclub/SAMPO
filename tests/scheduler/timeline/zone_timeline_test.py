@@ -59,13 +59,13 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
     return LandscapeConfiguration(zone_config=zone_config)
 
 
-@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler()],
+@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(5)],
          ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
 def setup_scheduler(request) -> Scheduler:
     return request.param
 
 
 def test_zoned_scheduling(setup_zoned_wg, setup_landscape_config, setup_scheduler):
-    contractors = [get_contractor_by_wg(setup_zoned_wg)]
+    contractors = [get_contractor_by_wg(setup_zoned_wg, scaler=1000)]
     schedule = setup_scheduler.schedule(wg=setup_zoned_wg, contractors=contractors, landscape=setup_landscape_config)
     print(schedule.execution_time)

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 import numpy as np
+import torch
 from sklearn.preprocessing import StandardScaler
 
 from sampo.scheduler.base import Scheduler
@@ -200,7 +201,7 @@ class NeuralManager:
 
     def __init__(self, agents: list[Agent], algo_trainer: NeuralNetTrainer, contractor_trainer: NeuralNetTrainer,
                  algorithms: list[GenericScheduler], scale: StandardScaler, blocks: list[BlockNode],
-                 encoding_blocks: list[list[float]]):
+                 encoding_blocks: list[torch.Tensor]):
         if len(agents) == 0:
             raise NoSufficientAgents('Manager can not work with empty list of agents')
         self._agents = agents

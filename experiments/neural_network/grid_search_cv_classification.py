@@ -1,10 +1,11 @@
 import os
 
 import pandas as pd
+import ray
 import torch
 import torchmetrics.classification
 from ray import tune
-from ray.air import session, Checkpoint
+from ray.air import session
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from sklearn.model_selection import train_test_split
@@ -58,7 +59,7 @@ def train(config):
         'model_state_dict': best_trainer.model.state_dict(),
         'optimizer_state_dict': best_trainer.optimizer.state_dict()
     }
-    checkpoint = Checkpoint.from_dict(checkpoint_data)
+    checkpoint = ray.train.Checkpoint.from_dict(checkpoint_data)
     session.report({'loss': best_loss, 'score': score}, checkpoint=checkpoint)
     print('accuracy:', score)
     print('Finished Training')

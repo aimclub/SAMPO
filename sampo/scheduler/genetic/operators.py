@@ -2,9 +2,9 @@ import random
 import math
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from typing import Iterable
+from functools import partial
+from typing import Iterable, Callable
 from operator import attrgetter
-from enum import Enum
 
 import numpy as np
 from deap import creator, base
@@ -22,7 +22,6 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.resource_cost import schedule_cost
-from sortedcontainers import SortedList
 
 
 # logger = mp.log_to_stderr(logging.DEBUG)
@@ -32,14 +31,14 @@ class FitnessFunction(ABC):
     """
     Base class for description of different fitness functions.
     """
-    
-    def __init__(self, deadline: Time | None):
-        self._deadline = deadline
+
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        self._evaluator = evaluator
 
     @abstractmethod
-    def evaluate(self, schedules: list[Schedule]) -> list[int]:
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
         """
-        Calculate the value of fitness function of the all schedules.
+        Calculate the value of fitness function of the all chromosomes.
         It is better when value is less.
         """
         ...
@@ -49,24 +48,38 @@ class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
-    
-    def __init__(self, deadline: Time | None = None):
-        super().__init__(deadline)
 
-    def evaluate(self, schedules: list[Schedule]) -> list[int]:
-        return [schedule.execution_time.value for schedule in schedules]
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        super().__init__(evaluator)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        return [schedule.execution_time.value for schedule in self._evaluator(chromosomes)]
 
 
-class TimeAndResourcesFitness(FitnessFunction):
+class ResourcesFitness(FitnessFunction):
+    """
+    Fitness function that relies on resource peak usage.
+    """
+
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        super().__init__(evaluator)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
+        return [get_absolute_peak_resource_usage(schedule) for schedule in evaluated]
+
+
+class TimeWithResourcesFitness(FitnessFunction):
     """
     Fitness function that relies on finish time and the set of resources.
     """
 
-    def __init__(self, deadline: Time | None = None):
-        super().__init__(deadline)
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        super().__init__(evaluator)
 
-    def evaluate(self, schedules: list[Schedule]) -> list[int]:
-        return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in schedules]
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
+        return [schedule.execution_time.value + get_absolute_peak_resource_usage(schedule) for schedule in evaluated]
 
 
 class DeadlineResourcesFitness(FitnessFunction):
@@ -74,13 +87,22 @@ class DeadlineResourcesFitness(FitnessFunction):
     The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time):
-        super().__init__(deadline)
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        super().__init__(evaluator)
+        self._deadline = deadline
 
-    def evaluate(self, schedules: list[Schedule]) -> list[int]:
+    @staticmethod
+    def prepare(deadline: Time):
+        """
+        Returns the constructor of that fitness function prepared to use in Genetic
+        """
+        return partial(DeadlineResourcesFitness, deadline)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
         return [int(get_absolute_peak_resource_usage(schedule)
                     * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in schedules]
+                for schedule in evaluated]
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -88,13 +110,22 @@ class DeadlineCostFitness(FitnessFunction):
     The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time):
-        super().__init__(deadline)
+    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
+        super().__init__(evaluator)
+        self._deadline = deadline
 
-    def evaluate(self, schedules: list[Schedule]) -> list[int]:
+    @staticmethod
+    def prepare(deadline: Time):
+        """
+        Returns the constructor of that fitness function prepared to use in Genetic
+        """
+        return partial(DeadlineCostFitness, deadline)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
+        evaluated = self._evaluator(chromosomes)
         # TODO Integrate cost calculation to native module
         return [int(schedule_cost(schedule) * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in schedules]
+                for schedule in evaluated]
 
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
@@ -102,14 +133,6 @@ class DeadlineCostFitness(FitnessFunction):
 creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
 creator.create('Individual', list, fitness=creator.FitnessMin)
 Individual = creator.Individual
-
-
-class IndividualType(Enum):
-    """
-    Class to define a type of individual in genetic algorithm
-    """
-    Population = 'population'
-    Offspring = 'offspring'
 
 
 def init_toolbox(wg: WorkGraph,
@@ -131,6 +154,7 @@ def init_toolbox(wg: WorkGraph,
                  contractor_borders: np.ndarray,
                  node_indices: list[int],
                  parents: dict[int, set[int]],
+                 children: dict[int, set[int]],
                  resources_border: np.ndarray,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> base.Toolbox:
@@ -159,11 +183,12 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('mate', mate, rand=rand)
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, rand=rand,
-                     parents=parents, resources_border=resources_border)
+                     parents=parents, resources_border=resources_border, children=children)
     # crossover for order
     toolbox.register('mate_order', mate_scheduling_order, rand=rand)
     # mutation for order
-    toolbox.register('mutate_order', mutate_scheduling_order, mutpb=mut_order_pb, rand=rand, parents=parents)
+    toolbox.register('mutate_order', mutate_scheduling_order, mutpb=mut_order_pb, rand=rand, parents=parents,
+                     children=children)
     # crossover for resources
     toolbox.register('mate_resources', mate_resources, rand=rand)
     # mutation for resources
@@ -175,7 +200,7 @@ def init_toolbox(wg: WorkGraph,
 
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents,
                      contractor_borders=contractor_borders)
-    toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome, wg=wg,
+    toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
@@ -185,8 +210,7 @@ def init_toolbox(wg: WorkGraph,
                      contractor2index=contractor2index,
                      landscape=landscape)
     toolbox.register('copy_individual', lambda ind: Individual(copy_chromosome(ind)))
-    toolbox.register('update_resource_borders_to_peak_values', update_resource_borders_to_peak_values,
-                     worker_name2index=worker_name2index, contractor2index=contractor2index)
+
     return toolbox
 
 
@@ -214,8 +238,8 @@ def generate_population(n: int,
     def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
             .schedule(wg, contractors, landscape=landscape)
-        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec)
+        return convert_schedule_to_chromosome(work_id2index, worker_name2index, contractor2index,
+                                              contractor_borders, schedule, spec)
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)
     count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
@@ -262,8 +286,8 @@ def generate_chromosome(wg: WorkGraph,
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
             .schedule(wg, contractors, spec, landscape=landscape)
-        return convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec)
+        return convert_schedule_to_chromosome(work_id2index, worker_name2index, contractor2index,
+                                              contractor_borders, schedule, spec)
 
     chance = rand.random()
     if chance < 0.2:
@@ -384,26 +408,38 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 
 
 def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Random,
-                            parents: dict[int, set[int]]) -> ChromosomeType:
+                            parents: dict[int, set[int]], children: dict[int, set[int]]) -> ChromosomeType:
     """
-    Mutation operator for order.
-    Swap neighbors.
+    Mutation operator for works scheduling order.
 
     :param ind: the individual to be mutated
     :param mutpb: probability of gene mutation
     :param rand: the rand object used for randomized operations
     :param parents: mapping object of works and their parent-works to create valid order
+    :param children: mapping object of works and their children-works to create valid order
 
     :return: mutated individual
     """
     order = ind[0]
-    num_possible_muts = len(order) - 3
+    num_possible_muts = len(order) - 2
     mask = np.array([rand.random() < mutpb for _ in range(num_possible_muts)])
     if mask.any():
-        indexes_to_mutate = [rand.randint(1, num_possible_muts + 1) for _ in range(mask.sum())]
-        for i in indexes_to_mutate:
-            if order[i] not in parents[order[i + 1]]:
-                order[i], order[i + 1] = order[i + 1], order[i]
+        indexes_of_works_to_mutate = np.where(mask)[0] + 1
+        rand.shuffle(indexes_of_works_to_mutate)
+        works_to_mutate = order[indexes_of_works_to_mutate]
+        for work in works_to_mutate:
+            i, indexes_of_works_to_mutate = indexes_of_works_to_mutate[0], indexes_of_works_to_mutate[1:]
+            i_parent = np.max(np.where(np.isin(order[:i], list(parents[work]), assume_unique=True))[0]) + 1
+            i_children = np.min(np.where(np.isin(order[i + 1:], list(children[work]), assume_unique=True))[0]) + i
+            if i_parent == i_children:
+                continue
+            else:
+                indexes_of_works_to_mutate[indexes_of_works_to_mutate > i] -= 1
+                choices = np.concatenate((np.arange(i_parent, i), np.arange(i + 1, i_children + 1)))
+                weights = 1 / np.abs(choices - i)
+                new_i = rand.choices(choices, weights=weights)[0]
+                order[:] = np.insert(np.delete(order, i), new_i, work)
+                indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
 
     return ind
 
@@ -506,20 +542,21 @@ def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, r
 
 
 def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int, set[int]],
-           order_mutpb: float, res_mutpb: float, rand: random.Random) -> ChromosomeType:
+           order_mutpb: float, res_mutpb: float, rand: random.Random, children: dict[int, set[int]]) -> ChromosomeType:
     """
     Combined mutation function of mutation for order and mutation for resources.
 
     :param ind: the individual to be mutated
     :param resources_border: low and up borders of resources amounts
     :param parents: mapping object of works and their parent-works to create valid order
+    :param children: mapping object of works and their children-works to create valid order
     :param order_mutpb: probability of order's gene mutation
     :param res_mutpb: probability of resources' gene mutation
     :param rand: the rand object used for randomized operations
 
     :return: mutated individual
     """
-    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents)
+    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
 
     return mutant
@@ -575,43 +612,5 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
                                                                  l_borders[row_mask], u_borders[row_mask]):
             choices = np.concatenate((np.arange(l_border, current_amount),
                                       np.arange(current_amount + 1, u_border + 1)))
-            weights = 1 / abs(choices - current_amount)
+            weights = 1 / np.abs(choices - current_amount)
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]
-
-
-def update_resource_borders_to_peak_values(ind: ChromosomeType, schedule: Schedule, worker_name2index: dict[str, int],
-                                           contractor2index: dict[str, int]):
-    """
-    Changes the resource borders to the peak values obtained in the schedule.
-
-    :param ind: the individual to be updated
-    :param schedule: schedule obtained from the individual
-    :param worker_name2index: mapping object of resources and their index in chromosome
-    :param contractor2index: mapping object of contractors and their index in chromosome
-
-    :return: individual with updated resource borders
-    """
-    df = schedule.full_schedule_df
-    contractors = set(df.contractor)
-    actual_borders = np.zeros_like(ind[2])
-    for contractor in contractors:
-        contractor_df = df[df.contractor == contractor]
-        points = contractor_df[['start', 'finish']].to_numpy().copy()
-        points[:, 1] += 1
-        points = SortedList(set(points.flatten()))
-        contractor_res_schedule = np.zeros((len(points), len(worker_name2index)))
-        contractor_id = ''
-        for _, r in contractor_df.iterrows():
-            start = points.bisect_left(r['start'])
-            finish = points.bisect_left(r['finish'] + 1)
-            swork = r['scheduled_work_object']
-            workers = np.array([[worker_name2index[worker.name], worker.count] for worker in swork.workers])
-            if len(workers):
-                contractor_res_schedule[start: finish, workers[:, 0]] += workers[:, 1]
-                if not contractor_id:
-                    contractor_id = swork.workers[0].contractor_id
-        if contractor_id:
-            index = contractor2index[contractor_id]
-            actual_borders[index] = contractor_res_schedule.max(axis=0)
-    ind[2][:] = actual_borders
-    return ind

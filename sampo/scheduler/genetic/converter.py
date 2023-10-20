@@ -17,8 +17,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec]
 
 
-def convert_schedule_to_chromosome(wg: WorkGraph,
-                                   work_id2index: dict[str, int],
+def convert_schedule_to_chromosome(work_id2index: dict[str, int],
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
                                    contractor_borders: np.ndarray,
@@ -28,7 +27,6 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     """
     Receive a result of scheduling algorithm and transform it to chromosome
 
-    :param wg:
     :param work_id2index:
     :param worker_name2index:
     :param contractor2index:
@@ -40,7 +38,7 @@ def convert_schedule_to_chromosome(wg: WorkGraph,
     """
 
     order: list[GraphNode] = order if order is not None else [work for work in schedule.works
-                                                              if not wg[work.work_unit.id].is_inseparable_son()]
+                                                              if work.work_unit.id in work_id2index]
 
     # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])

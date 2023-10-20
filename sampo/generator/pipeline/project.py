@@ -6,7 +6,7 @@ from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER
     MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
 from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_work
 from sampo.generator.pipeline.types import SyntheticGraphType, StageType
-from sampo.generator.utils.graph_node_operations import count_node_ancestors
+from sampo.generator.utils.graph_node_operations import count_ancestors
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
@@ -109,9 +109,9 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
 
         root_stage = get_root_stage(stages, branching_probability, rand)
         checkpoints, roads = _get_cluster_graph(root_stage, f'{cluster_name_prefix}{masters_clusters_ind}',
-                                            addition_cluster_probability=addition_cluster_probability, rand=rand)
-        tmp_finish = get_finish_stage(checkpoints)
-        count_works = count_node_ancestors(tmp_finish, root_stage)
+                                                addition_cluster_probability=addition_cluster_probability, rand=rand)
+
+        count_works = count_ancestors(checkpoints, root_stage)
 
         if 0 < top_border < (count_works + works_generated):
             break

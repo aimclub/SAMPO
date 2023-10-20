@@ -1,5 +1,6 @@
 import os
 import time
+from multiprocessing import Pool
 from random import Random
 
 import numpy as np
@@ -26,8 +27,9 @@ def obstruction_getter(i: int):
     return None
 
 
-def run_interation(blocks_num, graph_size) -> None:
+def run_interation(iter: int, blocks_num: int = 200, graph_size: int = 10) -> None:
     global ma_time, net_time
+    print(f'Iteration: {iter}')
 
     scaler = StandardScaler()
 
@@ -66,25 +68,25 @@ def run_interation(blocks_num, graph_size) -> None:
     start = time.time()
     scheduled_blocks = manager.manage_blocks(bg)
     finish = time.time()
-    print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    # print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
     ma_time += (finish - start)
 
     # Neural Network
     # ---------------------------------------------------------------------------------------------------------------
 
-    net = NeuralNet(13, 14, 7, 2, NeuralNetType.CLASSIFICATION)
+    net = NeuralNet(13, 15, 7, 2, NeuralNetType.CLASSIFICATION)
     scorer = torchmetrics.classification.BinaryAccuracy()
     best_trainer = NeuralNetTrainer(net, torch.nn.CrossEntropyLoss(),
-                                    torch.optim.Adam(net.parameters(), lr=5.338346838224648e-05),
-                                    scorer, 32)
+                                    torch.optim.Adam(net.parameters(), lr=0.0001687954784838078),
+                                    scorer, 1)
     best_trainer.load_checkpoint(os.path.join(
-        os.getcwd(), 'neural_network/checkpoints/best_model_1k_objs_standart_scaler.pth'))
+        os.getcwd(), 'neural_network/checkpoints/best_model_10k_algo.pth'))
 
     net_contractor = NeuralNet(13, 13, 24, 6, NeuralNetType.REGRESSION)
     scorer = torchmetrics.regression.MeanSquaredError()
     best_trainer_contractor = NeuralNetTrainer(net_contractor, torch.nn.MSELoss(),
                                                torch.optim.Adam(net_contractor.parameters(), lr=0.0003584150994379109),
-                                               scorer, 32)
+                                               scorer, 1)
     best_trainer_contractor.load_checkpoint(os.path.join(
         os.getcwd(), 'neural_network/checkpoints/best_model_wg_and_contractor.pth'))
 
@@ -111,20 +113,21 @@ def run_interation(blocks_num, graph_size) -> None:
     #
     # print(f'Neural network results: {scheduler.execution_time}')
     net_time += (finish - start)
-    print(f'Neural Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    # print(f'Neural Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
     # print(f'Times of systems:')
-    print(f'Multi-agency time is {ma_time} and neural network is {net_time}')
+    # print(f'Multi-agency time is {ma_time} and neural network is {net_time}')
 
 
 if __name__ == '__main__':
 
-    graph_size = 100
-    block_num = 10
     iterations = 10
-
+    iters = []
     for i in range(iterations):
-        print(f'\nIteration {i}')
-        run_interation(block_num, graph_size)
+        iters.append(i)
+
+    result = []
+    with Pool() as pool:
+        result.extend(pool.map(run_interation, iters))
 
     avg_ma_time = ma_time / iterations
     avg_net_time = net_time / iterations

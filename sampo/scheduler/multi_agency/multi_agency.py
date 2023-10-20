@@ -86,6 +86,10 @@ class Agent:
         return self._contractors
 
     @property
+    def end_time(self) -> Time:
+        return self._last_task_executed
+
+    @property
     def scheduler(self):
         return self._scheduler
 
@@ -188,7 +192,6 @@ class Manager:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
-        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent
 
 
@@ -256,25 +259,51 @@ class NeuralManager:
         :return: best start time, end time and the agent that is able to support this working time
         """
 
-        # wg_encoding = encode_graph(wg)
-        # wg_encoding = self.encoding_blocks[index]
-        # wg_encoding = [np.double(x) for x in wg_encoding]
-        best_algo = type(self.algorithms[int(self.algo_trainer.predict([self.encoding_blocks[index]]))])
+        wg_encoding = [self.encoding_blocks[index]]
+        predicted = self.algo_trainer.predict(wg_encoding)
+        predict_proba = self.algo_trainer.predict_proba(wg_encoding)
+        best_algo = type(self.algorithms[int(predicted)])
         best_contractor = np.asarray(self.contractor_trainer.predict([self.encoding_blocks[index]]))[0]
 
-        less_mse = 10**9
-        best_agent = None
+        time_algo_agents = []
+        not_time_algo_agents = []
+        time_not_algo_agents = []
+        not_time_not_algo_agents = []
+
         for agent in self._agents:
-            if not isinstance(agent.scheduler, best_algo):
-                continue
-            resources = []
-            for worker in agent.contractors[0].workers.values():
-                resources.append(worker.count)
-            resources = np.asarray(resources)
-            mse = sum((resources - best_contractor) ** 2)
-            if less_mse > mse:
-                less_mse = mse
-                best_agent = agent
+            if parent_time > agent.end_time and isinstance(agent.scheduler, best_algo):
+                time_algo_agents.append(agent)
+            elif not isinstance(agent.scheduler, best_algo) and parent_time > agent.end_time:
+                time_not_algo_agents.append(agent)
+            elif parent_time <= agent.end_time and isinstance(agent.scheduler, best_algo):
+                not_time_algo_agents.append(agent)
+            else:
+                not_time_not_algo_agents.append(agent)
+
+        def auction(agents: list[Agent]) -> Agent:
+            less_mse = 10**9
+            best_agent = None
+
+            for agent in agents:
+                resources = []
+                for worker in agent.contractors[0].workers.values():
+                    resources.append(worker.count)
+                resources = np.asarray(resources)
+                mse = sum((resources - best_contractor) ** 2)
+                if less_mse > mse:
+                    less_mse = mse
+                    best_agent = agent
+
+            return best_agent
+
+        if len(time_algo_agents) > 0:
+            best_agent = auction(time_algo_agents)
+        elif len(time_not_algo_agents) > 0:
+            best_agent = auction(time_not_algo_agents)
+        elif len(not_time_algo_agents) > 0:
+            best_agent = auction(not_time_algo_agents)
+        else:
+            best_agent = auction(not_time_not_algo_agents)
 
         best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
 
@@ -282,5 +311,4 @@ class NeuralManager:
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
-        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent

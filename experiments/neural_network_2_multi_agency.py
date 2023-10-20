@@ -122,12 +122,14 @@ if __name__ == '__main__':
 
     iterations = 10
     iters = []
-    for i in range(iterations):
-        iters.append(i)
+    for i in range(0, iterations, iterations // 4):
+        task = [i] * (iterations // 4)
+        iters.append(task)
 
     result = []
     with Pool() as pool:
-        result.extend(pool.map(run_interation, iters))
+        for task in iters:
+            result.extend(pool.map(run_interation, task))
 
     avg_ma_time = ma_time / iterations
     avg_net_time = net_time / iterations

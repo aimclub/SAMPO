@@ -120,18 +120,14 @@ def run_interation(iter: int, blocks_num: int = 200, graph_size: int = 10) -> No
 
 if __name__ == '__main__':
 
-    iterations = 100
+    iterations = 10
     iters = []
-    for i in range(0, iterations, iterations // 4):
-        task = []
-        if i % (iterations // 4) == 0:
-            task.append(i)
-        iters.append(task)
+    for i in range(iterations):
+        iters.append(i)
 
     result = []
     with Pool() as pool:
-        for task in iters:
-            result.extend(pool.map(run_interation, task))
+        result.extend(pool.map(run_interation, iters))
 
     avg_ma_time = ma_time / iterations
     avg_net_time = net_time / iterations

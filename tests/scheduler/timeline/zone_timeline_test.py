@@ -31,13 +31,13 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
     match costs_mode:
         case 0:
             time_costs = np.array([
-                [0, 1000, 1000],
-                [1000, 1000, 1000],
-                [1000, 1000, 1000]
+                [0, 0, 0],
+                [0, 0, 0],
+                [0, 0, 0]
             ])
         case 1:
             time_costs = np.array([
-                [0, 0, 0],
+                [0, 1000, 1000],
                 [0, 1000, 1000],
                 [0, 1000, 1000]
             ])

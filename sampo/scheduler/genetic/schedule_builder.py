@@ -26,6 +26,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        population_size: int,
                                        mutate_order: float,
                                        mutate_resources: float,
+                                       mutate_zones: float,
                                        init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
@@ -43,6 +44,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
+    index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
     contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
@@ -80,7 +82,8 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
         {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                               contractor2index, contractor_borders, schedule, chromosome_spec, order),
+                                               contractor2index, contractor_borders, schedule, chromosome_spec,
+                                               landscape, order),
                 importance, chromosome_spec)
          if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
@@ -96,9 +99,12 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         work_id2index,
                         worker_name2index,
                         index2contractor_obj,
+                        index2zone,
                         init_chromosomes,
                         mutate_order,
                         mutate_resources,
+                        mutate_zones,
+                        landscape.zone_config.statuses.statuses_available(),
                         population_size,
                         rand,
                         spec,
@@ -119,6 +125,7 @@ def build_schedule(wg: WorkGraph,
                    generation_number: int,
                    mutpb_order: float,
                    mutpb_res: float,
+                   mutpb_zones: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
@@ -151,9 +158,9 @@ def build_schedule(wg: WorkGraph,
     global_start = start = time.time()
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
-                                                                   mutpb_order, mutpb_res, init_schedules, rand, spec,
-                                                                   work_estimator, assigned_parent_time, landscape,
-                                                                   verbose)
+                                                                   mutpb_order, mutpb_res, mutpb_zones, init_schedules,
+                                                                   rand, spec, work_estimator, assigned_parent_time,
+                                                                   landscape, verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 

@@ -133,10 +133,16 @@ class ZoneTimeline:
                 print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
                 print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
             i += 1
-            end_idx = state.bisect_right(current_start_time + exec_time)
+
             current_start_status = state[current_start_idx].available_workers_count
+            end_idx = state.bisect_right(current_start_time + exec_time)
 
             if not self._match_status(current_start_status, required_status):
+                if current_start_idx == len(state) - 1:
+                    current_start_time += max(0, self._config.time_costs[current_start_status, required_status]
+                                              - (current_start_time - state[-1].time))
+                    break  # if we are in the very end, break
+
                 # if we are inside the interval with wrong status
                 # we should go right and search the better begin
                 if state[current_start_idx].event_type == EventType.START \
@@ -158,8 +164,8 @@ class ZoneTimeline:
                 else:
                     # we are outside the interval, should change status
                     # check that we can do it
-                    need_window_size = exec_time + self._config.time_costs[current_start_status, required_status]
-                    end_idx = state.bisect_right(current_start_time + need_window_size)
+                    current_start_time += self._config.time_costs[current_start_status, required_status]
+                    end_idx = state.bisect_right(current_start_time + exec_time)
 
             # here we are guaranteed that current_start_time is in right status
             # so go right and check matching statuses
@@ -194,7 +200,7 @@ class ZoneTimeline:
             current_start_time = state[current_start_idx].time
 
         # This should be uncommented when there are problems with zone scheduling correctness
-        # self._validate(current_start_time, exec_time, state, required_status)
+        self._validate(current_start_time, exec_time, state, required_status)
 
         return current_start_time
 
@@ -250,7 +256,7 @@ class ZoneTimeline:
             self._validate(start_time, exec_time, state, zone.status)
 
             change_cost = self._config.time_costs[start_status, zone.status] \
-                if not self._config.statuses.match_status(zone.status, start_status) \
+                if not self._config.statuses.match_status(start_status, zone.status) \
                 else 0
 
             state.add(ScheduleEvent(index, EventType.START, start_time - change_cost, None, zone.status))

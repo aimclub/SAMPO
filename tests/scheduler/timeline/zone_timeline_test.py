@@ -31,15 +31,15 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
     match costs_mode:
         case 0:
             time_costs = np.array([
-                [0, 0, 0],
-                [0, 10, 10],
-                [0, 10, 10]
+                [0, 1000, 1000],
+                [1000, 1000, 1000],
+                [1000, 1000, 1000]
             ])
         case 1:
             time_costs = np.array([
                 [0, 0, 0],
-                [0, 10, 10],
-                [0, 10, 10]
+                [0, 1000, 1000],
+                [0, 1000, 1000]
             ])
         case _:
             raise ValueError('Illegal costs mode')

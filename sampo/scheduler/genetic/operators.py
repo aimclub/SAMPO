@@ -185,10 +185,9 @@ def init_toolbox(wg: WorkGraph,
     # combined crossover
     toolbox.register('mate', mate, rand=rand)
     # combined mutation
-    toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, rand=rand,
-                     zone_mutpb=mut_zone_pb, parents=parents, resources_border=resources_border, children=children)
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
-                     rand=rand, parents=parents, resources_border=resources_border, statuses_available=statuses_available)
+                     rand=rand, parents=parents, children=children, resources_border=resources_border,
+                     statuses_available=statuses_available)
     # crossover for order
     toolbox.register('mate_order', mate_scheduling_order, rand=rand)
     # mutation for order

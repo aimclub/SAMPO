@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Iterable
 from uuid import uuid4
 
 import numpy as np
@@ -55,7 +55,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
 
 
 # TODO move from schemas
-def get_worker_contractor_pool(contractors: Union[list['Contractor'], 'Contractor']) -> WorkerContractorPool:
+def get_worker_contractor_pool(contractors: Iterable[Contractor]) -> WorkerContractorPool:
     """
     Gets agent dictionary from contractors list.
     Alias for frequently used functionality.

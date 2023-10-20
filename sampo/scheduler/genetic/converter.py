@@ -8,13 +8,14 @@ from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.schemas.contractor import WorkerContractorPool, Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.requirements import ZoneReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
-ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec]
+ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
 
 
 def convert_schedule_to_chromosome(work_id2index: dict[str, int],
@@ -23,6 +24,7 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
                                    contractor_borders: np.ndarray,
                                    schedule: Schedule,
                                    spec: ScheduleSpec,
+                                   landscape: LandscapeConfiguration,
                                    order: list[GraphNode] | None = None) -> ChromosomeType:
     """
     Receive a result of scheduling algorithm and transform it to chromosome
@@ -33,6 +35,7 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     :param contractor_borders:
     :param schedule:
     :param spec:
+    :param landscape:
     :param order: if passed, specify the node order that should appear in the chromosome
     :return:
     """
@@ -50,6 +53,9 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     # +1 stores contractors line
     resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
 
+    # zone status changes after node executing
+    zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=int)
+
     for node in order:
         node_id = node.work_unit.id
         index = work_id2index[node_id]
@@ -62,13 +68,14 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
 
     resource_border_chromosome = np.copy(contractor_borders)
 
-    return order_chromosome, resource_chromosome, resource_border_chromosome, spec
+    return order_chromosome, resource_chromosome, resource_border_chromosome, spec, zone_changes_chromosome
 
 
 def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    worker_pool: WorkerContractorPool,
                                    index2node: dict[int, GraphNode],
                                    index2contractor: dict[int, Contractor],
+                                   index2zone: dict[int, str],
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
@@ -87,6 +94,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     works_resources = chromosome[1]
     border = chromosome[2]
     spec = chromosome[3]
+    zone_statuses = chromosome[4]
     worker_pool = copy.deepcopy(worker_pool)
 
     # use 3rd part of chromosome in schedule generator
@@ -96,15 +104,13 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                                                           worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(index2node.values(), index2contractor.values(), worker_pool, landscape)
+        timeline = JustInTimeTimeline(index2contractor.values(), landscape)
 
     order_nodes = []
 
     for order_index, work_index in enumerate(works_order):
         node = index2node[work_index]
         order_nodes.append(node)
-        # if node.id in node2swork and not node.is_inseparable_son():
-        #     continue
 
         work_spec = spec.get_work_spec(node.id)
 
@@ -119,15 +125,26 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
-        st = timeline.find_min_start_time(node, worker_team, node2swork, work_spec,
-                                          assigned_parent_time, work_estimator)
+        st, ft, exec_times = timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_spec,
+                                                                          assigned_parent_time,
+                                                                          work_estimator=work_estimator)
 
         if order_index == 0:  # we are scheduling the work `start of the project`
             st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
         # finish using time spec
-        timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
-                          st, work_spec.assigned_time, assigned_parent_time, work_estimator)
+        ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
+                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)
+        # process zones
+        zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_index])]
+        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
+
+        # we should deny scheduling
+        # if zone status change can be scheduled only in delayed manner
+        if zone_start_time != ft:
+            node2swork[node].zones_post = timeline.zone_timeline.update_timeline(order_index,
+                                                                                 [z.to_zone() for z in zone_reqs],
+                                                                                 zone_start_time, 0)
 
     schedule_start_time = min((swork.start_time for swork in node2swork.values() if
                                len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)

@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from enum import Enum
 from operator import attrgetter
+from typing import Iterable, Callable
 from typing import Iterable
 
 import numpy as np

@@ -196,9 +196,8 @@ def setup_default_schedules(setup_scheduler_parameters):
                                                                                   work_estimator=work_estimator)
 
 
-@fixture(scope='session',
-         params=list(SchedulerType),
-         ids=[f'Scheduler: {scheduler}' for scheduler in list(SchedulerType)])
+@fixture(params=list(SchedulerType),
+         ids=[f'Scheduler: {scheduler.value}' for scheduler in list(SchedulerType)])
 def setup_scheduler_type(request):
     return request.param
 

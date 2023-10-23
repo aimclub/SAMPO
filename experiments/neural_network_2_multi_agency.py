@@ -15,9 +15,8 @@ from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, NeuralMana
 from sampo.scheduler.selection.metrics import encode_graph
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet, NeuralNetType
 
-r_seed = 231
-p_rand = SimpleSynthetic(rand=r_seed)
-rand = Random(r_seed)
+p_rand = SimpleSynthetic()
+rand = Random()
 
 ma_time = 0.0
 net_time = 0.0
@@ -27,7 +26,7 @@ def obstruction_getter(i: int):
     return None
 
 
-def run_interation(iter: int, blocks_num: int = 200, graph_size: int = 10) -> None:
+def run_interation(iter: int, blocks_num: int = 10, graph_size: int = 200) -> None:
     global ma_time, net_time
     print(f'Iteration: {iter}')
 
@@ -62,16 +61,17 @@ def run_interation(iter: int, blocks_num: int = 200, graph_size: int = 10) -> No
     encoding_blocks_tensor = []
     for block in encoding_blocks:
         encoding_blocks_tensor.append(torch.Tensor(block))
-    # Multi-agency
+
+    # Multi-agency scheduling process
     # --------------------------------------------------------------------------------------------------------------
 
     start = time.time()
     scheduled_blocks = manager.manage_blocks(bg)
     finish = time.time()
-    # print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    print(f'Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
     ma_time += (finish - start)
 
-    # Neural Network
+    # Neural Manager scheduling process
     # ---------------------------------------------------------------------------------------------------------------
 
     net = NeuralNet(13, 15, 7, 2, NeuralNetType.CLASSIFICATION)
@@ -94,28 +94,19 @@ def run_interation(iter: int, blocks_num: int = 200, graph_size: int = 10) -> No
                                    best_trainer,
                                    best_trainer_contractor,
                                    [HEFTScheduler(), HEFTBetweenScheduler()],
-                                   scaler,
                                    blocks=blocks,
                                    encoding_blocks=encoding_blocks_tensor)
 
     start = time.time()
-
     scheduled_blocks = neural_manager.manage_blocks()
-    # encoded_wg = np.asarray(metrics.encode_graph(conjuncted)).reshape(1, -1)
-    # scaled_metrics = scaler.transform(encoded_wg)
-    #
-    # scaled_metrics = torch.Tensor(torch.from_numpy(scaled_metrics.reshape(1, -1)))
-    #
-    # result = best_trainer.predict(scaled_metrics)
-    # best_schedule = schedulers[int(result[0])]
-    # scheduler = best_schedule.schedule(conjuncted, contractors[int(result[0])])
     finish = time.time()
-    #
-    # print(f'Neural network results: {scheduler.execution_time}')
+
     net_time += (finish - start)
-    # print(f'Neural Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
-    # print(f'Times of systems:')
-    # print(f'Multi-agency time is {ma_time} and neural network is {net_time}')
+    print(f'Neural Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
+    print(f'Times of systems:')
+    print(f'Multi-agency time is {ma_time} and neural network is {net_time}')
+    del bg1
+    del bg
 
 
 if __name__ == '__main__':

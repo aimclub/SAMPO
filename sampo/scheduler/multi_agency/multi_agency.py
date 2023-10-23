@@ -4,7 +4,6 @@ from typing import Callable
 
 import numpy as np
 import torch
-from sklearn.preprocessing import StandardScaler
 
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
@@ -126,6 +125,8 @@ class Manager:
     """
     Manager entity representation in the multi-agent model
     Manager interact with agents
+
+    :param agents: list of agents that has own scheduling algorithm and set of contractors
     """
     def __init__(self, agents: list[Agent]):
         if len(agents) == 0:
@@ -192,18 +193,30 @@ class Manager:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
+        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent
 
 
 class NeuralManager:
     """
-    Manager entity representation in the multi-agent model
-    Manager interact with agents
+    Manager entity representation in the multi-agent model, that uses neural networks
+    Neural manager interact with agents
     Neural manager uses neural network as the method of the most suitable agent for each work graph
+
+    :param agents: list of agents that has own scheduling algorithm and set of contractors
+    :param algo_trainer: work with a neural network that predicts the most suitable scheduling algorithm
+    :param contractor_trainer: work with a neural network that predicts a set of resources
+    that the most suitable contractor should have
+    :param algorithms: list of unique scheduling algorithms that agents have
+    :param blocks: list of blocks of input Block Graph in topological order
+    :param encoding_blocks: list of graph block embeddings
     """
 
-    def __init__(self, agents: list[Agent], algo_trainer: NeuralNetTrainer, contractor_trainer: NeuralNetTrainer,
-                 algorithms: list[GenericScheduler], scale: StandardScaler, blocks: list[BlockNode],
+    def __init__(self, agents: list[Agent],
+                 algo_trainer: NeuralNetTrainer,
+                 contractor_trainer: NeuralNetTrainer,
+                 algorithms: list[GenericScheduler],
+                 blocks: list[BlockNode],
                  encoding_blocks: list[torch.Tensor]):
         if len(agents) == 0:
             raise NoSufficientAgents('Manager can not work with empty list of agents')
@@ -211,7 +224,6 @@ class NeuralManager:
         self.algo_trainer = algo_trainer
         self.contractor_trainer = contractor_trainer
         self.algorithms = algorithms
-        self.scale = scale
         self.blocks = blocks
         self.encoding_blocks = encoding_blocks
 
@@ -220,8 +232,6 @@ class NeuralManager:
         """
         Runs the multi-agent system based on auction on given BlockGraph.
 
-        :param bg_encoding:
-        :param bg:
         :param logger:
         :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
         """
@@ -250,10 +260,11 @@ class NeuralManager:
             obstruction.generate(wg)
         return self.run_auction(wg, index, parent_time)
 
-    def run_auction(self, wg: WorkGraph, index, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
         """
         Runs the auction on the given `WorkGraph`.
 
+        :param index: index of agent from the list of agents
         :param wg: target `WorkGraph`
         :param parent_time: max parent time of given block
         :return: best start time, end time and the agent that is able to support this working time
@@ -311,4 +322,6 @@ class NeuralManager:
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
+
+        print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent

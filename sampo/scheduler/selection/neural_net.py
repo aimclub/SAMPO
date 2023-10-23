@@ -65,15 +65,12 @@ class NeuralNetTrainer:
             total_step = len(loader)
 
             for i, (image, label) in enumerate(loader):
-                # Move tensors to the configured device
                 image = image.to(self._device)
                 label = label.to(self._device)
 
-                # Forward pass
                 outputs = self.model(image)
                 loss = self.criterion(outputs, label.float())
 
-                # Backpropagation and optimization
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
@@ -111,7 +108,7 @@ class NeuralNetTrainer:
         )
         return val_score / total, val_loss / total
 
-    def predict(self, x: list) -> list[float]:
+    def predict(self, x: list):
         if isinstance(x, np.ndarray):
             x = torch.from_numpy(x.astype(np.float32))
         result = []

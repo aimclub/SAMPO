@@ -648,7 +648,7 @@ def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType,
 
     zones1 = child1[4]
     zones2 = child2[4]
-    if zones1:
+    if zones1.size:
         num_works = len(zones1)
         border = num_works // 4
         cxpoint = rand.randint(border, num_works - border)
@@ -674,7 +674,7 @@ def mutate_for_zones(ind: ChromosomeType, mutpb: float, rand: random.Random, sta
     """
     # select random number from interval from min to max from uniform distribution
     zones = ind[4]
-    if zones:
+    if zones.size:
         mask = np.array([[rand.random() < mutpb for _ in range(zones.shape[1])] for _ in range(zones.shape[0])])
         new_zones = np.array([rand.randint(0, statuses_available - 1) for _ in range(mask.sum())])
         zones[mask] = new_zones

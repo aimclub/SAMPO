@@ -113,14 +113,12 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
 
         count_works = count_ancestors(checkpoints, root_stage)
 
-        if 0 < top_border < (count_works + works_generated):
-            break
-
         stages += [(c, roads) for c in checkpoints]
         masters_clusters_ind += 1
         works_generated += count_works
 
-        if 0 < bottom_border <= works_generated or 0 < cluster_counts <= (len(stages) - 1):
+        if (0 < bottom_border <= works_generated or top_border < (count_works + works_generated)
+                or 0 < cluster_counts <= (len(stages) - 1)):
             break
 
     if len(stages) == 1:

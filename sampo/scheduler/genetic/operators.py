@@ -453,8 +453,8 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
     return ind
 
 
-def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool,
-                   rand: random.Random, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
+def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
+                   optimize_resources: bool, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
     """
     One-Point crossover for resources.
 
@@ -535,7 +535,8 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
 def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, rand: random.Random) \
         -> tuple[ChromosomeType, ChromosomeType]:
     """
-    Combined crossover function of Two-Point crossover for order and One-Point crossover for resources.
+    Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
+    and One-Point crossover for zones.
 
     :param ind1: first individual
     :param ind2: second individual
@@ -545,31 +546,34 @@ def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, r
     :return: two mated individuals
     """
     child1, child2 = mate_scheduling_order(ind1, ind2, rand, copy=True)
-    child1, child2 = mate_resources(child1, child2, optimize_resources, rand, copy=False)
+    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, copy=False)
     child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
     return child1, child2
 
 
 def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int, set[int]],
-           order_mutpb: float, res_mutpb: float, zone_mutpb: float, statuses_available: int,
-           rand: random.Random, children: dict[int, set[int]]) -> ChromosomeType:
+           children: dict[int, set[int]], statuses_available: int,
+           order_mutpb: float, res_mutpb: float, zone_mutpb: float,
+           rand: random.Random) -> ChromosomeType:
     """
-    Combined mutation function of mutation for order and mutation for resources.
+    Combined mutation function of mutation for order, mutation for resources and mutation for zones.
 
     :param ind: the individual to be mutated
     :param resources_border: low and up borders of resources amounts
     :param parents: mapping object of works and their parent-works to create valid order
     :param children: mapping object of works and their children-works to create valid order
+    :param statuses_available: number of statuses available
     :param order_mutpb: probability of order's gene mutation
     :param res_mutpb: probability of resources' gene mutation
+    :param zone_mutpb: probability of zones' gene mutation
     :param rand: the rand object used for randomized operations
 
     :return: mutated individual
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
-    mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
+    mutant = mutate_for_zones(mutant, zone_mutpb, rand, statuses_available)
 
     return mutant
 
@@ -577,7 +581,7 @@ def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int,
 def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Random,
                             contractor_borders: np.ndarray) -> ChromosomeType:
     """
-    Mutation for contractors' resource borders.
+    Mutation function for contractors' resource borders.
 
     :param ind: the individual to be mutated
     :param contractor_borders: up borders of contractors capacity
@@ -635,36 +639,44 @@ def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType,
 
     :param ind1: first individual
     :param ind2: second individual
-    :param rand: the rand object used for exchange point selection
-    :return: first and second individual
+    :param rand: the rand object used for randomized operations
+    :param copy: if True individuals will be copied before mating so as not to change them
+
+    :return: two mated individuals
     """
     child1, child2 = (Individual(copy_chromosome(ind1)), Individual(copy_chromosome(ind2))) if copy else (ind1, ind2)
 
-    res1 = child1[4]
-    res2 = child2[4]
-    num_works = len(res1)
-    border = num_works // 4
-    cxpoint = rand.randint(border, num_works - border)
+    zones1 = child1[4]
+    zones2 = child2[4]
+    if zones1:
+        num_works = len(zones1)
+        border = num_works // 4
+        cxpoint = rand.randint(border, num_works - border)
 
-    mate_positions = rand.sample(range(num_works), cxpoint)
+        mate_positions = rand.sample(range(num_works), cxpoint)
 
-    res1[mate_positions], res2[mate_positions] = res2[mate_positions], res1[mate_positions]
+        zones1[mate_positions], zones2[mate_positions] = zones2[mate_positions], zones1[mate_positions]
+
     return child1, child2
 
 
-def mutate_for_zones(ind: ChromosomeType, statuses_available: int,
-                     mutpb: float, rand: random.Random) -> ChromosomeType:
+def mutate_for_zones(ind: ChromosomeType, mutpb: float, rand: random.Random, statuses_available: int) -> ChromosomeType:
     """
     Mutation function for zones.
     It changes selected numbers of zones in random work in a certain interval from available statuses.
 
-    :return: mutate individual
+    :param ind: the individual to be mutated
+    :param mutpb: probability of gene mutation
+    :param rand: the rand object used for randomized operations
+    :param statuses_available: number of statuses available
+
+    :return: mutated individual
     """
     # select random number from interval from min to max from uniform distribution
-    res = ind[4]
-    for i, work_post_zones in enumerate(res):
-        for type_of_zone in range(len(res[0])):
-            if rand.random() < mutpb:
-                work_post_zones[type_of_zone] = rand.randint(0, statuses_available - 1)
+    zones = ind[4]
+    if zones:
+        mask = np.array([[rand.random() < mutpb for _ in range(zones.shape[1])] for _ in range(zones.shape[0])])
+        new_zones = np.array([rand.randint(0, statuses_available - 1) for _ in range(mask.sum())])
+        zones[mask] = new_zones
 
     return ind

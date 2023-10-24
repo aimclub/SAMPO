@@ -430,24 +430,40 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
     :return: mutated individual
     """
     order = ind[0]
+    # number of possible mutations = number of works except start and finish works
     num_possible_muts = len(order) - 2
+    # generate mask of works to mutate based on mutation probability
     mask = np.array([rand.random() < mutpb for _ in range(num_possible_muts)])
     if mask.any():
+        # get indexes of works to mutate based on generated mask
         indexes_of_works_to_mutate = np.where(mask)[0] + 1
+        # shuffle order of mutations
         rand.shuffle(indexes_of_works_to_mutate)
+        # get works to mutate based on shuffled indexes
         works_to_mutate = order[indexes_of_works_to_mutate]
         for work in works_to_mutate:
+            # pop index of the current work
             i, indexes_of_works_to_mutate = indexes_of_works_to_mutate[0], indexes_of_works_to_mutate[1:]
+            # find max index of parent of the current work
             i_parent = np.max(np.where(np.isin(order[:i], list(parents[work]), assume_unique=True))[0]) + 1
+            # find min index of child of the current work
             i_children = np.min(np.where(np.isin(order[i + 1:], list(children[work]), assume_unique=True))[0]) + i
             if i_parent == i_children:
+                # if child and parent indexes are equal then no mutation can be done
                 continue
             else:
+                # update work indexes after the current work deletion
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate > i] -= 1
+                # range potential indexes to insert the current work
                 choices = np.concatenate((np.arange(i_parent, i), np.arange(i + 1, i_children + 1)))
+                # set weights to potential indexes based on their distance from the current one
                 weights = 1 / np.abs(choices - i)
+                # generate new index for the current work
                 new_i = rand.choices(choices, weights=weights)[0]
+                # delete current work from current index, insert in new generated index and update scheduling order
+                # in chromosome
                 order[:] = np.insert(np.delete(order, i), new_i, work)
+                # update work indexes after the current work insertion in new generated index
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
 
     return ind

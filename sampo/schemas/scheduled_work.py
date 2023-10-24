@@ -9,13 +9,14 @@ from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
+from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.serializers import custom_serializer
 
 
 @dataclass
 class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     """
-    Contains all neccessary info to represent WorkUnit in Scheduler:
+    Contains all necessary info to represent WorkUnit in schedule:
 
     * WorkUnit
     * list of workers, that are required to complete task
@@ -34,14 +35,18 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  workers: list[Worker],
                  contractor: Contractor | str,
                  equipments: list[Equipment] | None = None,
+                 zones_pre: list[ZoneTransition] | None = None,
+                 zones_post: list[ZoneTransition] | None = None,
                  materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
         self.work_unit = work_unit
         self.start_end_time = start_end_time
-        self.workers = workers
-        self.equipments = equipments
-        self.materials = materials
-        self.object = object
+        self.workers = workers if workers is not None else []
+        self.equipments = equipments if equipments is not None else []
+        self.zones_pre = zones_pre if zones_pre is not None else []
+        self.zones_post = zones_post if zones_post is not None else []
+        self.materials = materials if materials is not None else []
+        self.object = object if object is not None else []
 
         if contractor is not None:
             if isinstance(contractor, str):
@@ -51,9 +56,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         else:
             self.contractor = ""
 
-        self.cost = 0
-        for worker in self.workers:
-            self.cost += worker.get_cost() * self.duration.value
+        self.cost = sum([worker.get_cost() * self.duration.value for worker in self.workers])
 
     def __str__(self):
         return f'ScheduledWork[work_unit={self.work_unit}, start_end_time={self.start_end_time}, ' \
@@ -63,6 +66,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         return self.__str__()
 
     @custom_serializer('workers')
+    @custom_serializer('zones_pre')
+    @custom_serializer('zones_post')
     @custom_serializer('start_end_time')
     def serialize_serializable_list(self, value):
         return [t._serialize() for t in value]
@@ -74,6 +79,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
     @classmethod
     @custom_serializer('workers', deserializer=True)
+    @custom_serializer('zones_pre', deserializer=True)
+    @custom_serializer('zones_post', deserializer=True)
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
@@ -92,13 +99,13 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def finish_time(self) -> Time:
         return self.start_end_time[1]
 
-    @property
-    def min_child_start_time(self) -> Time:
-        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
-
     @finish_time.setter
     def finish_time(self, val: Time):
         self.start_end_time = (self.start_end_time[0], val)
+
+    @property
+    def min_child_start_time(self) -> Time:
+        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
 
     @staticmethod
     def start_time_getter():
@@ -112,7 +119,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def duration(self) -> Time:
         start, end = self.start_end_time
         return end - start
-    
+
     def is_overlapped(self, time: int) -> bool:
         start, end = self.start_end_time
         return start <= time < end
@@ -126,9 +133,3 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             'contractor_id': self.contractor,
             'workers': {worker.name: worker.count for worker in self.workers},
         }
-
-    def __deepcopy__(self, memodict={}):
-        return ScheduledWork(deepcopy(self.work_unit, memodict),
-                             deepcopy(self.start_end_time, memodict),
-                             deepcopy(self.workers, memodict),
-                             self.contractor)

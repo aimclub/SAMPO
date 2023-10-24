@@ -1,11 +1,11 @@
 import pytest
+import math
 
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.genetic.operators import DeadlineResourcesFitness
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
-from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.time import Time
 from sampo.utilities.resource_cost import schedule_cost
 
@@ -35,19 +35,20 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
-    scheduler = GeneticScheduler(number_of_generation=50,
+    scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=50,
-                                 fitness_constructor=DeadlineResourcesFitness.prepare(deadline))
+                                 fitness_constructor=DeadlineResourcesFitness.prepare(deadline),
+                                 optimize_resources=True,
+                                 verbose=False)
+
     scheduler.set_deadline(deadline)
 
-    try:
-        schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
+    schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
 
-        print(f'Planning for deadline time: {schedule.execution_time}, cost: {schedule_cost(schedule)}')
-    except NoSufficientContractorError:
-        pytest.skip("Given contractors can't satisfy given work graph")
+    print(f'Planning for deadline time: {schedule.execution_time}, ' +
+          f'peaks: {get_absolute_peak_resource_usage(schedule)}, cost: {schedule_cost(schedule)}')
 
 
 def test_true_deadline_planning(setup_scheduler_parameters):
@@ -72,3 +73,48 @@ def test_true_deadline_planning(setup_scheduler_parameters):
 
     print(f'Peak with    deadline: {peak_deadlined}, time: {deadlined_schedule.execution_time}')
     print(f'Peak without deadline: {peak_not_deadlined}, time: {not_deadlined_schedule.execution_time}')
+
+
+def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
+    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+
+    scheduler = HEFTScheduler()
+    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)
+
+    # assigning deadline to the time-10^(order_of_magnitude(time) - 1)
+    # time - time of schedule from HEFT
+    deadline = schedule.execution_time
+    deadline -= 10 ** max(0, int(math.log10(deadline.value) - 1))
+
+    print(f'Deadline time: {deadline}')
+
+    scheduler_combined = GeneticScheduler(number_of_generation=10,
+                                          mutate_order=0.05,
+                                          mutate_resources=0.005,
+                                          size_of_population=50,
+                                          fitness_constructor=DeadlineResourcesFitness.prepare(deadline),
+                                          optimize_resources=True,
+                                          verbose=False)
+
+    scheduler_combined.set_deadline(deadline)
+
+    scheduler_lexicographic = GeneticScheduler(number_of_generation=10,
+                                               mutate_order=0.05,
+                                               mutate_resources=0.005,
+                                               size_of_population=50,
+                                               verbose=False)
+
+    scheduler_lexicographic.set_deadline(deadline)
+
+    schedule = scheduler_combined.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    time_combined = schedule.execution_time
+
+    print(f'\tCombined genetic: time = {time_combined}, ' +
+          f'peak = {get_absolute_peak_resource_usage(schedule)}')
+
+    schedule = scheduler_lexicographic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    time_lexicographic = schedule.execution_time
+
+    print(f'\tLexicographic genetic: time = {time_lexicographic}, ' +
+          f'peak = {get_absolute_peak_resource_usage(schedule)}')
+    print()

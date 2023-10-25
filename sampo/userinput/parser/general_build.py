@@ -77,14 +77,16 @@ class Graph:
             v = cycle[i + 1]
 
             for neighbor, weight in self.graph[u]:
-                if neighbor == v and weight < min_weight:
+                if weight is None:
+                    weight = 1
+                if neighbor == v and weight <= min_weight:
                     min_weight = weight
                     min_edge = (u, v)
 
         u, v = min_edge
         self.graph[u] = [(neighbor, weight) for neighbor, weight in self.graph[u] if neighbor != v]
 
-    def eliminate_cycles(self, eliminate_cycle: bool = True) -> list | None:
+    def eliminate_cycles(self, is_eliminate_cycle: bool = True) -> list | None:
         cycle = self.find_cycle()
         cycles = []
 
@@ -93,13 +95,14 @@ class Graph:
                 if cycle[i] == cycle[-1]:
                     cycle = cycle[i:]
                     break
-            if not eliminate_cycle:
+            if not is_eliminate_cycle:
                 cycles.append(cycle)
+                self.eliminate_cycle(cycle)
             else:
                 self.eliminate_cycle(cycle)
             cycle = self.find_cycle()
-        if not eliminate_cycle:
-            if not cycles:
+        if not is_eliminate_cycle:
+            if cycles:
                 return cycles
             return None
         for v in self.graph:

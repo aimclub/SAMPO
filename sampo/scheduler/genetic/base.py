@@ -4,6 +4,7 @@ from typing import Optional, Callable
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
+from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -38,7 +39,7 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: list[int] = None,
-                 fitness_constructor: Callable[[Time | None], FitnessFunction] = TimeFitness,
+                 fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -214,7 +215,6 @@ class GeneticScheduler(Scheduler):
 
         mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
-        fitness_object = self.fitness_constructor(self._deadline)
         deadline = None if self._optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
@@ -229,7 +229,7 @@ class GeneticScheduler(Scheduler):
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
-                                                                                     fitness_object,
+                                                                                     self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      self._n_cpu,
                                                                                      assigned_parent_time,

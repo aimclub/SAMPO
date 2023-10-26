@@ -1,3 +1,4 @@
+from collections import defaultdict
 from math import ceil
 
 import numpy as np
@@ -27,22 +28,14 @@ def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
     :param wg: Work graph
     :return: List of RC coefficients for each resource type
     """
-    rc_coefs = []
-    resource_dict = {}
+    resource_dict = defaultdict(lambda: [0, 0])
 
     for node in wg.nodes:
         for req in node.work_unit.worker_reqs:
-            resource_dict[req.kind] = {'activity_amount': 1, 'volume': 0}
+            resource_dict[req.kind][0] += 1
+            resource_dict[req.kind][1] += req.volume
 
-    for node in wg.nodes:
-        for req in node.work_unit.worker_reqs:
-            resource_dict[req.kind]['activity_amount'] += 1
-            resource_dict[req.kind]['volume'] += req.volume
-
-    for name, value in resource_dict.items():
-        rc_coefs.append(value['activity_amount'] / value['volume'])
-
-    return rc_coefs
+    return [value[0] / value[1] for name, value in resource_dict.items()]
 
 
 def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
@@ -84,7 +77,7 @@ def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
 
 def metric_longest_path(wg: WorkGraph) -> float:
     scheduler = TopologicalScheduler()
-    stack = scheduler._topological_sort(wg, None)
+    stack = scheduler.prioritization(wg, None)
 
     dist = {}
     for node in stack:

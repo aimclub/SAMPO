@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import cached_property, cache
 from typing import Optional
 
 import numpy as np
@@ -53,11 +54,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._parent_edges = []
         self.add_parents(parent_works)
         self._children_edges = []
-
-    def __del__(self):
-        # print(f'Deleted node: {self.id}')
-        for k in list(self.__dict__):
-            del self.__dict__[k]
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -135,9 +131,6 @@ class GraphNode(JSONSerializable['GraphNode']):
     def is_inseparable_son(self) -> bool:
         return self.inseparable_parent is not None
 
-    def is_service(self) -> bool:
-        return len(self.parents) == 0
-
     def traverse_children(self, topologically: bool = False):
         """
         DFS from current vertex to down
@@ -156,8 +149,7 @@ class GraphNode(JSONSerializable['GraphNode']):
                 vertexes_to_visit.extend([p.finish for p in v._children_edges])
                 yield v
 
-    # @cached_property
-    @property
+    @cached_property
     def inseparable_son(self) -> Optional['GraphNode']:
         """
         Return inseparable son (amount of inseparable sons at most 1)
@@ -167,8 +159,7 @@ class GraphNode(JSONSerializable['GraphNode']):
                                 if x.type == EdgeType.InseparableFinishStart]
         return inseparable_children[0] if inseparable_children else None
 
-    # @cached_property
-    @property
+    @cached_property
     def inseparable_parent(self) -> Optional['GraphNode']:
         """
         Return predecessor of current vertex in inseparable chain
@@ -177,8 +168,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         inseparable_parents = [x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart]
         return inseparable_parents[0] if inseparable_parents else None
 
-    # @cached_property
-    @property
+    @cached_property
     def parents(self) -> list['GraphNode']:
         """
         Return list of predecessors of current vertex
@@ -186,8 +176,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
-    # @cached_property
-    @property
+    @cached_property
     def parents_set(self) -> set['GraphNode']:
         """
         Return unique predecessors of current vertex
@@ -195,8 +184,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return set(self.parents)
 
-    # @cached_property
-    @property
+    @cached_property
     def children(self) -> list['GraphNode']:
         """
         Return list of successors of current vertex
@@ -204,8 +192,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
-    # @cached_property
-    @property
+    @cached_property
     def children_set(self) -> set['GraphNode']:
         """
         Return unique successors of current vertex
@@ -213,8 +200,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         """
         return set(self.children)
 
-    # @cached_property
-    @property
+    @cached_property
     def neighbors(self):
         """
         Get all edges that have types SS with current vertex
@@ -242,7 +228,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def id(self) -> str:
         return self.work_unit.id
 
-    # @cache
+    @cache
     def get_inseparable_chain(self) -> Optional[list['GraphNode']]:
         """
         Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
@@ -342,9 +328,12 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def __del__(self):
-        # print(f'Deleting graph with {self.vertex_count} nodes')
-        for k in list(self.__dict__):
-            del self.__dict__[k]
+        self.dict_nodes = None
+        self.start = None
+        self.finish = None
+        for node in self.nodes:
+            node._parent_edges = None
+            node._children_edges = None
 
     def _serialize(self) -> T:
         return {

@@ -105,8 +105,6 @@ def run_interation(iter: int, blocks_num: int = 10, graph_size: int = 200) -> No
     print(f'Neural Multi-agency res: {max(sblock.end_time for sblock in scheduled_blocks.values())}')
     print(f'Times of systems:')
     print(f'Multi-agency time is {ma_time} and neural network is {net_time}')
-    del bg1
-    del bg
 
 
 if __name__ == '__main__':

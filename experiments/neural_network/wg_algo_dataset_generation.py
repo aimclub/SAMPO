@@ -28,6 +28,9 @@ def argmin(array) -> int:
 
 
 def display_top(snapshot, key_type='lineno', limit=3):
+    """
+    For tracking the volume of RAM used
+    """
     snapshot = snapshot.filter_traces((
         tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
         tracemalloc.Filter(False, "<unknown>"),
@@ -44,7 +47,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
     print("Total allocated size: %.1f KiB" % (total / 1024))
 
 
-def generate():
+def generate() -> tuple:
     wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
     encoding = encode_graph(wg)
     schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
@@ -55,13 +58,15 @@ def generate():
     return generated_label, encoding
 
 
-def generate_graph(label: int):
+def generate_graph(label: int) -> tuple:
     while True:
-        tracemalloc.start()
+        # Uncomment for tracking the volume of RAM used
+        # tracemalloc.start()
         generated_label, encoding = generate()
         if generated_label == label:
-            snapshot = tracemalloc.take_snapshot()
-            display_top(snapshot)
+            # Uncomment for tracking the volume of RAM used
+            # snapshot = tracemalloc.take_snapshot()
+            # display_top(snapshot)
             print(f'{generated_label} processed')
             return tuple([encoding, generated_label])
 
@@ -70,6 +75,7 @@ if __name__ == '__main__':
     result = []
     with Pool() as pool:
         for i_scheduler in range(len(schedulers)):
+            # int(CRAPH_COUNT / 4) - number of parallel processes
             tasks = [[i_scheduler] * int(GRAPHS_COUNT / 4)] * 4
             for task in tasks:
                 result.extend(pool.map(generate_graph, task))

@@ -31,18 +31,13 @@ def cross_val_score(X: pd.DataFrame,
     scores = 0
     best_loss = 0
     best_trainer: NeuralNetTrainer | None = None
+    transform_data = lambda x: one_hot_encode(x, 2) if type_task == NeuralNetType.CLASSIFICATION else x
 
     for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
-        if type_task == NeuralNetType.CLASSIFICATION:
-            train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
-            train_target_tensor = torch.stack([torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[train_idx].values])
-            test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])
-            test_target_tensor = torch.stack([torch.Tensor(one_hot_encode(v, 2)) for v in y.iloc[test_idx].values])
-        else:
-            train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
-            train_target_tensor = torch.stack([torch.Tensor(v) for v in y.iloc[train_idx].values])
-            test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])
-            test_target_tensor = torch.stack([torch.Tensor(v) for v in y.iloc[test_idx].values])
+        train_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[train_idx, :].values])
+        train_target_tensor = torch.stack([torch.Tensor(transform_data(v)) for v in y.iloc[train_idx].values])
+        test_tensor = torch.stack([torch.Tensor(v) for v in X.iloc[test_idx, :].values])
+        test_target_tensor = torch.stack([torch.Tensor(transform_data(v)) for v in y.iloc[test_idx].values])
 
         model.fit(train_tensor, train_target_tensor, epochs)
         tmp_score, loss = model.validate(test_tensor, test_target_tensor)

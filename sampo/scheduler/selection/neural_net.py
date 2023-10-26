@@ -25,20 +25,16 @@ class NeuralNet(nn.Module):
         self._linear0 = torch.nn.Linear(input_size, layer_size)
         self.model = nn.Sequential(self._linear0)
         for i in range(layer_count):
-            self.__dict__[f'_linear{i + 1}'] = torch.nn.Linear(layer_size, layer_size)
+            self.model.add_module(name=f'_relu',
+                                  module=torch.nn.ReLU())
             self.model.add_module(name=f'_linear{i + 1}',
-                                  module=self.__dict__[f'_linear{i + 1}'])
-        self.__dict__[f'_linear{layer_count + 1}'] = torch.nn.Linear(layer_size, out_size)
+                                  module=torch.nn.Linear(layer_size, layer_size))
         self.model.add_module(name=f'_linear{layer_count + 1}',
-                              module=self.__dict__[f'_linear{layer_count + 1}'])
+                              module=torch.nn.Linear(layer_size, out_size))
 
     def forward(self, X):
-        X = self._linear0(X)
-        for i in range(1, self._layers_count + 2):
-            linear = self.__dict__[f'_linear{i}']
-            X = F.relu(X)
-            X = linear(X)
-        if self.task_type is NeuralNetType.CLASSIFICATION:
+        X = self.model(X)
+        if self.task_type == NeuralNetType.CLASSIFICATION:
             X = F.softmax(X, dim=0)
         else:
             X = X

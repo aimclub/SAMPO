@@ -45,6 +45,8 @@ class ZoneTimeline:
 
         i = 0
         while len(queue) > 0:
+            # This should be uncommented when there are problems with performance
+
             # if i > 0 and i % 50 == 0:
             #     print(f'Warning! Probably cycle in looking for time slot for all reqs: {i} iteration')
             #     print(f'Current queue size: {len(queue)}')
@@ -75,8 +77,9 @@ class ZoneTimeline:
                 scheduled_wreqs.append(wreq)
                 start = max(start, found_start)
 
-        for w in zones:
-            self._validate(start, exec_time, self._timeline[w.kind], w.required_status)
+        # This should be uncommented when there are problems with zone scheduling correctness
+        # for w in zones:
+        #     self._validate(start, exec_time, self._timeline[w.kind], w.required_status)
 
         return start
 
@@ -130,51 +133,39 @@ class ZoneTimeline:
                 print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
                 print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
             i += 1
+
+            current_start_status = state[current_start_idx].available_workers_count
             end_idx = state.bisect_right(current_start_time + exec_time)
 
-            # if we are inside the interval with wrong status
-            # we should go right and search the best begin
-            # if state[current_start_idx].event_type == EventType.START \
-            #         and not self._match_status(state[current_start_idx].available_workers_count, required_status):
-            #     current_start_idx += 1
-            #     # if self._match_status(state[current_start_idx].available_workers_count, required_status)
-            #     current_start_time = state[current_start_idx].time
-            #     continue
+            if not self._match_status(current_start_status, required_status):
+                if current_start_idx == len(state) - 1:
+                    current_start_time += max(0, self._config.time_costs[current_start_status, required_status]
+                                              - (current_start_time - state[-1].time))
+                    break  # if we are in the very end, break
 
-            # here we are outside the all intervals or inside the interval with right status
-            # if we are outside intervals, we can be in right or wrong status, so let's check it
-            # else we are inside the interval with right status so let
+                # if we are inside the interval with wrong status
+                # we should go right and search the better begin
+                if state[current_start_idx].event_type == EventType.START \
+                        and not self._match_status(current_start_status, required_status):
+                    current_start_idx += 1
+                    current_start_time = state[current_start_idx].time
+                    continue
 
-            # we should count starts and ends on timeline prefix before the start_time
-            # if starts_count is equal to ends_count, start_time is out of all the zone usage intervals
-            # so we can change its status
-            # starts_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.START])
-            # ends_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.END])
-            # if starts_count == ends_count \
-            #         and not self._match_status(state[current_start_idx].available_workers_count, required_status):
-            #     # we are outside all intervals, so let's decide should
-            #     # we change zone status or go to the next checkpoint
-            #     old_status = state[current_start_idx].available_workers_count
-            #     # TODO Make this time calculation better: search the time slot for zone change before the start time
-            #     change_cost = self._config.time_costs[old_status, required_status]
-            #     prev_cpkt_idx = state.bisect_right(current_start_time - change_cost)
-            #     if prev_cpkt_idx == current_start_idx or prev_cpkt_idx >= len(state):
-            #         # we can change status before current_start_time
-            #         start_time_changed = current_start_time
-            #     else:
-            #         start_time_changed = state[prev_cpkt_idx].time + 1 + change_cost # current_start_time + change_cost
-            #
-            #     next_cpkt_idx = min(current_start_idx + 1, len(state) - 1)
-            #     next_cpkt_time = state[next_cpkt_idx].time
-            #     if (parent_time <= next_cpkt_time <= start_time_changed
-            #             and self._match_status(state[next_cpkt_idx].available_workers_count, required_status)):
-            #         # waiting until the next checkpoint is faster that change zone status
-            #         current_start_time = next_cpkt_time
-            #         current_start_idx += 1
-            #     else:
-            #         current_start_time = start_time_changed
-            #     # renewing the end index
-            #     end_idx = state.bisect_right(current_start_time + exec_time)
+                # here we are outside the all intervals or inside the interval with right status
+                # if we are outside intervals, we can be in right or wrong status, so let's check it
+                # else we are inside the interval with right status so let
+
+                if self._is_inside_interval(state, current_start_idx):
+                    if not self._match_status(current_start_status, required_status):
+                        # we are inside the interval with wrong status, so we can't change it, go next
+                        current_start_idx += 1
+                        current_start_time = state[current_start_idx].time
+                        continue
+                else:
+                    # we are outside the interval, should change status
+                    # check that we can do it
+                    current_start_time += self._config.time_costs[current_start_status, required_status]
+                    end_idx = state.bisect_right(current_start_time + exec_time)
 
             # here we are guaranteed that current_start_time is in right status
             # so go right and check matching statuses
@@ -196,6 +187,8 @@ class ZoneTimeline:
                 break
 
             if current_start_idx >= len(state):
+                # This should be uncommented when there are problems with zone scheduling correctness
+
                 # cur_cpkt = state[-1]
                 # if cur_cpkt.time == current_start_time and not self._match_status(cur_cpkt.available_workers_count,
                 #                                                                   required_status):
@@ -206,86 +199,48 @@ class ZoneTimeline:
 
             current_start_time = state[current_start_idx].time
 
+        # This should be uncommented when there are problems with zone scheduling correctness
         self._validate(current_start_time, exec_time, state, required_status)
 
         return current_start_time
+
+    # noinspection PyMethodMayBeStatic
+    def _is_inside_interval(self, state: SortedList[ScheduleEvent], idx: int) -> bool:
+        # TODO Make better algorithms to check that we can change status in point `start_time - change_cost`
+        starts_count = 0
+        ends_count = 0
+        # checking from end because it's more realistic to call this function at the almost end of timeline
+        for cpkt in state[idx:]:
+            if cpkt.event_type == EventType.START:
+                starts_count += 1
+            else:
+                ends_count += 1
+        # we are inside the interval with incompatible status, break
+        return starts_count == ends_count
 
     def can_schedule_at_the_moment(self, zones: list[ZoneReq], start_time: Time, exec_time: Time):
         for zone in zones:
             state = self._timeline[zone.kind]
 
-            # if we are inside the interval with wrong status
-            # we should go right and search the best begin
-            # if state[current_start_idx].event_type == EventType.START \
-            #         and not self._match_status(state[current_start_idx].available_workers_count, required_status):
-            #     current_start_idx += 1
-            #     # if self._match_status(state[current_start_idx].available_workers_count, required_status)
-            #     current_start_time = state[current_start_idx].time
-            #     continue
-
-            # here we are outside the all intervals or inside the interval with right status
-            # if we are outside intervals, we can be in right or wrong status, so let's check it
-            # else we are inside the interval with right status so let
-
-            # we should count starts and ends on timeline prefix before the start_time
-            # if starts_count is equal to ends_count, start_time is out of all the zone usage intervals
-            # so we can change its status
-            # starts_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.START])
-            # ends_count = len([v for v in state[:current_start_idx + 1] if v.event_type == EventType.END])
-            # if starts_count == ends_count \
-            #         and not self._match_status(state[current_start_idx].available_workers_count, required_status):
-            #     # we are outside all intervals, so let's decide should
-            #     # we change zone status or go to the next checkpoint
-            #     old_status = state[current_start_idx].available_workers_count
-            #     # TODO Make this time calculation better: search the time slot for zone change before the start time
-            #     change_cost = self._config.time_costs[old_status, required_status]
-            #     prev_cpkt_idx = state.bisect_right(current_start_time - change_cost)
-            #     if prev_cpkt_idx == current_start_idx or prev_cpkt_idx >= len(state):
-            #         # we can change status before current_start_time
-            #         start_time_changed = current_start_time
-            #     else:
-            #         start_time_changed = state[prev_cpkt_idx].time + 1 + change_cost # current_start_time + change_cost
-            #
-            #     next_cpkt_idx = min(current_start_idx + 1, len(state) - 1)
-            #     next_cpkt_time = state[next_cpkt_idx].time
-            #     if (parent_time <= next_cpkt_time <= start_time_changed
-            #             and self._match_status(state[next_cpkt_idx].available_workers_count, required_status)):
-            #         # waiting until the next checkpoint is faster that change zone status
-            #         current_start_time = next_cpkt_time
-            #         current_start_idx += 1
-            #     else:
-            #         current_start_time = start_time_changed
-            #     # renewing the end index
-            #     end_idx = state.bisect_right(current_start_time + exec_time)
-
-            # here we are guaranteed that current_start_time is in right status
-            # so go right and check matching statuses
-            # this step performed like in MomentumTimeline
-            # not_compatible_status_found = False
-            # for idx in range(end_idx - 1, start_idx - 1, -1):
-            #     if not self._match_status(state[idx].available_workers_count, zone.required_status):
-            #         # we're trying to find a new slot that would start with
-            #         # either the last index passing the quantity check
-            #         # or the index after the execution interval
-            #         return False
-            #
-            # current_start_time = state[current_start_idx].time
-
             start_idx = state.bisect_right(start_time)
             end_idx = state.bisect_right(start_time + exec_time)
             start_status = state[start_idx - 1].available_workers_count
 
-            # updating all events in between the start and the end of our current task
-            for event in state[start_idx: end_idx]:
-                # TODO Check that we shouldn't change the between statuses
-                if not self._config.statuses.match_status(event.available_workers_count, zone.required_status):
+            if not self._match_status(start_status, zone.required_status):
+                # starting status don't match, trying to change status
+                change_cost = self._config.time_costs[start_status, zone.required_status]
+                new_start_idx = state.bisect_right(start_time - change_cost)
+                if new_start_idx != start_idx:
+                    # we have incompatible status inside our interval, break
                     return False
 
-            if not (state[start_idx - 1].event_type == EventType.END
-                    or (state[start_idx - 1].event_type == EventType.START
-                        and self._config.statuses.match_status(start_status, zone.required_status))
-                    or state[start_idx - 1].event_type == EventType.INITIAL):
-                return False
+                if not self._is_inside_interval(state, start_idx):
+                    return False
+
+            # checking all events in between the start and the end of our current task
+            for event in state[start_idx: end_idx]:
+                if not self._match_status(event.available_workers_count, zone.required_status):
+                    return False
 
         return True
 
@@ -295,13 +250,13 @@ class ZoneTimeline:
         for zone in zones:
             state = self._timeline[zone.name]
             start_idx = state.bisect_right(start_time)
-            end_idx = state.bisect_right(start_time + exec_time)
             start_status = state[start_idx - 1].available_workers_count
 
+            # This should be uncommented when there are problems with zone scheduling correctness
             self._validate(start_time, exec_time, state, zone.status)
 
             change_cost = self._config.time_costs[start_status, zone.status] \
-                if not self._config.statuses.match_status(zone.status, start_status) \
+                if not self._config.statuses.match_status(start_status, zone.status) \
                 else 0
 
             state.add(ScheduleEvent(index, EventType.START, start_time - change_cost, None, zone.status))

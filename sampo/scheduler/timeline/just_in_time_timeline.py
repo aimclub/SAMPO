@@ -113,10 +113,6 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(c_st, max_material_time, max_zone_time)
 
-        # max_zone_time_new = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
-        # if max_zone_time_new != c_st:
-        #     print('ERROR!!!')
-
         c_ft = c_st + exec_time
         return c_st, c_ft, None
 
@@ -305,9 +301,6 @@ class JustInTimeTimeline(Timeline):
             c_ft = new_finish_time
 
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
-        # zone_st = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, c_ft - start_time)
-        # if zone_st != start_time:
-        #     raise AssertionError(f'The Very Big Problems; start time: {start_time}, zone time: {zone_st}, exec_time: {c_ft - start_time}')
         self.update_timeline(c_ft, c_ft - start_time, node, workers, spec)
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         c_ft - start_time)

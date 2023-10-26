@@ -28,10 +28,7 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
 
     assert not schedule.execution_time.is_inf()
 
-    try:
-        validate_schedule(schedule, setup_wg, setup_contractors)
-    except:
-        print()
+    validate_schedule(schedule, setup_wg, setup_contractors)
 
 
 def test_converter_with_borders_contractor_accounting(setup_toolbox):

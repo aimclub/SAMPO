@@ -35,6 +35,7 @@ def generate_schedule(scheduling_algorithm_type: SchedulerType,
     scheduler = get_scheduler_ctor(scheduling_algorithm_type)(work_estimator=work_time_estimator)
     start_time = time.time()
     if isinstance(scheduler, GeneticScheduler):
+        scheduler.number_of_generation = 2
         scheduler.set_use_multiprocessing(n_cpu=4)
 
     schedule = scheduler.schedule(work_graph,

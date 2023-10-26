@@ -142,6 +142,37 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     # declare current checkpoint index
     cpkt_idx = 0
     start_time = Time(-1)
+
+    def work_scheduled(args) -> bool:
+        idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
+
+        if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
+            # apply worker spec
+            Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
+
+            st = start_time
+            if idx == 0:  # we are scheduling the work `start of the project`
+                st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
+
+            # finish using time spec
+            ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
+                                   st, exec_time, assigned_parent_time, work_estimator)
+
+            work_timeline.update_timeline(st, exec_time, None)
+
+            # process zones
+            zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
+            zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
+
+            # we should deny scheduling
+            # if zone status change can be scheduled only in delayed manner
+            if zone_start_time != ft:
+                node2swork[node].zones_post = timeline.zone_timeline.update_timeline(idx,
+                                                                                     [z.to_zone() for z in zone_reqs],
+                                                                                     zone_start_time, 0)
+            return True
+        return False
+
     # while there are unprocessed checkpoints
     while len(enumerated_works_remaining) > 0:
         if cpkt_idx < len(work_timeline):
@@ -151,40 +182,6 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                 break
         else:
             start_time += 1
-        # if new_start_time == start_time:
-        #     continue
-        # start_time = new_start_time
-        # print(f'Start time: {start_time}')
-
-        def work_scheduled(args) -> bool:
-            idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
-
-            if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
-                # apply worker spec
-                Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
-
-                st = start_time
-                if idx == 0:  # we are scheduling the work `start of the project`
-                    st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
-
-                # finish using time spec
-                ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
-                                       st, exec_time, assigned_parent_time, work_estimator)
-
-                work_timeline.update_timeline(st, exec_time, None)
-
-                # process zones
-                zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
-                zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
-
-                # we should deny scheduling
-                # if zone status change can be scheduled only in delayed manner
-                if zone_start_time != ft:
-                    node2swork[node].zones_post = timeline.zone_timeline.update_timeline(idx,
-                                                                                         [z.to_zone() for z in zone_reqs],
-                                                                                         zone_start_time, 0)
-                return True
-            return False
 
         # find all works that can start at start_time moment
         enumerated_works_remaining.remove_if(work_scheduled)

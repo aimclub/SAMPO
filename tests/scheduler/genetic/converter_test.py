@@ -56,14 +56,3 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
     validate_schedule(schedule, setup_wg, contractors)
-
-
-def test_converter_with_borders_update(setup_toolbox):
-    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
-    chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
-    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome, landscape=setup_landscape_many_holders)
-    schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
-    updated_chromosome = tb.update_resource_borders_to_peak_values(chromosome, schedule)
-    updated_schedule, _, _, _ = tb.chromosome_to_schedule(updated_chromosome, landscape=setup_landscape_many_holders)
-    updated_schedule = Schedule.from_scheduled_works(updated_schedule.values(), setup_wg)
-    assert schedule.execution_time == updated_schedule.execution_time

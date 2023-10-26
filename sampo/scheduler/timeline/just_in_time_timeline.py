@@ -1,9 +1,10 @@
 from typing import Optional, Iterable
 
-from sampo.scheduler.heft.time_computaion import calculate_working_time, calculate_working_time_cascade
+from sampo.scheduler.heft.time_computaion import calculate_working_time
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
+from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -21,15 +22,16 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, tasks: Iterable[GraphNode], contractors: Iterable[Contractor],
-                 worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
+    def __init__(self, contractors: Iterable[Contractor], landscape: LandscapeConfiguration):
         self._timeline = {}
+        worker_pool = get_worker_contractor_pool(contractors)
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
         self._material_timeline = SupplyTimeline(landscape)
+        self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self, node: GraphNode,
                                             worker_team: list[Worker],
@@ -55,7 +57,13 @@ class JustInTimeTimeline(Timeline):
         """
         # if current job is the first
         if not node2swork:
-            return assigned_parent_time, assigned_parent_time, None
+            max_material_time = self._material_timeline.find_min_material_time(node.id, assigned_parent_time,
+                                                                               node.work_unit.need_materials(),
+                                                                               node.work_unit.workground_size)
+
+            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, Time(0))
+
+            return max_zone_time, max_zone_time, None
         # define the max end time of all parent tasks
         max_parent_time = max(node.min_start_time(node2swork), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
@@ -85,13 +93,30 @@ class JustInTimeTimeline(Timeline):
 
         c_st = max(max_agent_time, max_parent_time)
 
+        new_finish_time = c_st
+        for dep_node in node.get_inseparable_chain_with_self():
+            # set start time as finish time of original work
+            # set finish time as finish time + working time of current node with identical resources
+            # (the same as in original work)
+            # set the same workers on it
+            # TODO Decide where this should be
+            dep_parent_time = dep_node.min_start_time(node2swork)
+
+            dep_st = max(new_finish_time, dep_parent_time)
+            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
+            new_finish_time = dep_st + working_time
+
+        exec_time = new_finish_time - c_st
+
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,
                                                                            node.work_unit.need_materials(),
                                                                            node.work_unit.workground_size)
 
-        c_st = max(c_st, max_material_time)
+        max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
 
-        c_ft = c_st + calculate_working_time_cascade(node, worker_team, work_estimator)
+        c_st = max(c_st, max_material_time, max_zone_time)
+
+        c_ft = c_st + exec_time
         return c_st, c_ft, None
 
     def update_timeline(self,
@@ -152,14 +177,14 @@ class JustInTimeTimeline(Timeline):
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
-        
+
         start_time = assigned_start_time if assigned_start_time is not None \
             else self.find_min_start_time(node, workers,
                                           node2swork,
                                           spec,
                                           assigned_parent_time,
                                           work_estimator)
-        
+
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
                           for n in inseparable_chain}
@@ -211,22 +236,26 @@ class JustInTimeTimeline(Timeline):
                 assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
             working_time = exec_times.get(dep_node, None)
-            start_time = max(c_ft, max_parent_time)
+            c_st = max(c_ft, max_parent_time)
             if working_time is None:
                 working_time = calculate_working_time(dep_node.work_unit, workers, work_estimator)
-            new_finish_time = start_time + working_time
+            new_finish_time = c_st + working_time
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, start_time,
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
                                                                                        new_finish_time,
                                                                                        dep_node.work_unit.need_materials(),
                                                                                        dep_node.work_unit.workground_size)
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
-                                                 start_end_time=(start_time, new_finish_time),
+                                                 start_end_time=(c_st, new_finish_time),
                                                  workers=workers,
                                                  contractor=contractor,
                                                  materials=deliveries)
             # change finish time for using workers
             c_ft = new_finish_time
 
+        zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
         self.update_timeline(c_ft, node, node2swork, workers, spec)
+        node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
+                                                                        c_ft - start_time)
+        return c_ft

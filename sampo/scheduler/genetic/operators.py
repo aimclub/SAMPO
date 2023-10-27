@@ -2,14 +2,13 @@ import math
 import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
-from enum import Enum
+from functools import partial
 from operator import attrgetter
-from typing import Iterable, Callable
+from typing import Callable
 from typing import Iterable
 
 import numpy as np
 from deap import creator, base
-from sortedcontainers import SortedList
 
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType

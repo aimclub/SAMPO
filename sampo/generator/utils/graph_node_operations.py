@@ -1,4 +1,5 @@
 from sampo.schemas.graph import GraphNode
+from collections import deque
 
 
 def count_ancestors(first_ancestors: list[GraphNode], root: GraphNode) -> int:
@@ -9,7 +10,7 @@ def count_ancestors(first_ancestors: list[GraphNode], root: GraphNode) -> int:
     :param root: The root node of the graph.
     :return:
     """
-    q = list(first_ancestors)
+    q = deque(first_ancestors)
     count = len(first_ancestors)
     used = set()
     used.add(root)
@@ -19,7 +20,7 @@ def count_ancestors(first_ancestors: list[GraphNode], root: GraphNode) -> int:
             if parent in used:
                 continue
             used.add(parent)
-            q.insert(0, parent)
+            q.appendleft(parent)
             count += 1
 
     return count

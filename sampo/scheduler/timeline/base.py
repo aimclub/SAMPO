@@ -75,6 +75,9 @@ class Timeline(ABC):
                                    node2swork: dict[GraphNode, ScheduledWork],
                                    start_time: Time,
                                    exec_time: Time) -> bool:
+        """
+        Returns the ability of scheduling given `node` at the `start_time` moment
+        """
         ...
 
     @abstractmethod

@@ -548,6 +548,7 @@ def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, r
     """
     child1, child2 = mate_scheduling_order(ind1, ind2, rand, copy=True)
     child1, child2 = mate_resources(child1, child2, rand, optimize_resources, copy=False)
+    # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
     return child1, child2
@@ -574,6 +575,7 @@ def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int,
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
+    # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 
     return mutant

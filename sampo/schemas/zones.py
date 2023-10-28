@@ -40,7 +40,7 @@ class DefaultZoneStatuses(ZoneStatuses):
         return 3
 
     def match_status(self, status_to_check: int, required_status: int) -> bool:
-        return required_status == 0 or status_to_check == 0 or status_to_check == required_status
+        return required_status == 0 or status_to_check == required_status
 
 
 @dataclass

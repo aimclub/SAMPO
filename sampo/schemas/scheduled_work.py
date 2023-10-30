@@ -27,7 +27,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     * object - variable, that is used in landscape
     """
 
-    ignored_fields = ['equipments', 'materials', 'object']
+    ignored_fields = ['equipments', 'materials', 'object', 'work_unit']
 
     def __init__(self,
                  work_unit: WorkUnit,
@@ -39,6 +39,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  zones_post: list[ZoneTransition] | None = None,
                  materials: list[MaterialDelivery] | None = None,
                  object: ConstructionObject | None = None):
+        self.id = work_unit.id
         self.work_unit = work_unit
         self.start_end_time = start_end_time
         self.workers = workers if workers is not None else []

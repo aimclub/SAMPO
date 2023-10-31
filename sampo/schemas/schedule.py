@@ -106,7 +106,7 @@ class Schedule(JSONSerializable['Schedule']):
         :param offset: Start of schedule, to add as an offset.
         :return: Shifted schedule DataFrame with merged tasks.
         """
-        result = fix_split_tasks(self.offset_schedule(offset))
+        result = self.offset_schedule(offset)
         return result
 
     def offset_schedule(self, offset: Union[datetime, str]) -> DataFrame:
@@ -160,7 +160,7 @@ class Schedule(JSONSerializable['Schedule']):
                        ) for i, w in enumerate(works)]
         data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
-        data_frame = data_frame.set_index('idx')
+        data_frame = data_frame.set_index('idx', drop=False)
 
         if ordered_task_ids:
             data_frame.task_id = data_frame.task_id.astype('category')

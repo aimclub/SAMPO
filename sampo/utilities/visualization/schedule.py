@@ -39,7 +39,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                 'volume': 0,
                 'duration': 0,
                 'measurement': 'unit',
-                'successors': [],
                 'workers_dict': '',
                 'workers': '',
                 'task_name_mapped': zone_names,
@@ -52,7 +51,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     idx = schedule_dataframe['idx'].copy()
 
     def get_zone_usage_info(swork) -> str:
-        return '<br>' + '<br>'.join([f'{zone.kind}: {zone.required_status}' for zone in swork.work_unit.zone_reqs])
+        return '<br>' + '<br>'.join([f'{zone.name}: {zone.to_status}' for zone in swork.zones_pre])
 
     schedule_dataframe['zone_information'] = sworks.apply(get_zone_usage_info)
 
@@ -67,7 +66,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
         for zone in swork.zones_post:
             access_cards.append(create_zone_row(i, zone_names, zone))
 
-    schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards)], ignore_index=True)
+    schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards)])
 
     schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
         .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)

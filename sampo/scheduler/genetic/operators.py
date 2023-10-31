@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial
 from operator import attrgetter
-from typing import Iterable, Callable
+from typing import Callable
+from typing import Iterable
 
 import numpy as np
 from deap import creator, base
@@ -357,10 +358,15 @@ def is_chromosome_contractors_correct(chromosome: ChromosomeType, work_indices: 
     if not work_indices:
         return True
     resources = chromosome[1][work_indices]
+    # sort resource part of chromosome by contractor ids
     resources = resources[resources[:, -1].argsort()]
+    # get unique contractors and indexes where they start
     contractors, indexes = np.unique(resources[:, -1], return_index=True)
+    # get borders of received contractors from chromosome
     chromosome_borders = chromosome[2][contractors]
+    # split resources to get parts grouped by contractor parts
     res_grouped_by_contractor = np.split(resources[:, :-1], indexes[1:])
+    # for each grouped parts take maximum for each resource
     max_of_res_by_contractor = np.array([r.max(axis=0) for r in res_grouped_by_contractor])
     return (max_of_res_by_contractor <= chromosome_borders).all() and \
         (chromosome_borders <= contractor_borders[contractors]).all()
@@ -390,30 +396,41 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     child1, child2 = (Individual(copy_chromosome(ind1)), Individual(copy_chromosome(ind2))) if copy else (ind1, ind2)
 
     order1, order2 = child1[0], child2[0]
+    parent1 = ind1[0].copy()
 
     min_mating_amount = len(order1) // 4
 
-    # randomly select the points where the crossover will take place
-    mating_amount = rand.randint(min_mating_amount, 3 * min_mating_amount)
-    if mating_amount > 1:
-        crossover_head_point = rand.randint(1, mating_amount - 1)
-        crossover_tail_point = mating_amount - crossover_head_point
-
-        ind_new_part = get_order_part(np.concatenate((order1[:crossover_head_point], order1[-crossover_tail_point:])),
-                                      order2)
-        order1[crossover_head_point:-crossover_tail_point] = ind_new_part
-
-    # randomly select the points where the crossover will take place
-    mating_amount = rand.randint(min_mating_amount, 3 * min_mating_amount)
-    if mating_amount > 1:
-        crossover_head_point = rand.randint(1, mating_amount - 1)
-        crossover_tail_point = mating_amount - crossover_head_point
-
-        ind_new_part = get_order_part(np.concatenate((order2[:crossover_head_point], order2[-crossover_tail_point:])),
-                                      order1)
-        order2[crossover_head_point:-crossover_tail_point] = ind_new_part
+    two_point_order_crossover(order1, order2, min_mating_amount, rand)
+    two_point_order_crossover(order2, parent1, min_mating_amount, rand)
 
     return child1, child2
+
+
+def two_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_mating_amount: int, rand: random.Random):
+    """
+    This faction realizes Two-Point crossover for order.
+
+    :param child: order to which implements crossover, it is equal to order of first parent.
+    :param other_parent: order of second parent from which mating part will be taken.
+    :param min_mating_amount: minimum amount of mating part
+    :param rand: the rand object used for randomized operations
+
+    :return: child mated with other parent
+    """
+    # randomly select mating amount for child
+    mating_amount = rand.randint(min_mating_amount, 3 * min_mating_amount)
+    if mating_amount > 1:
+        # based on received mating amount randomly select the points between which the crossover will take place
+        crossover_head_point = rand.randint(1, mating_amount - 1)
+        crossover_tail_point = mating_amount - crossover_head_point
+
+        # get mating order part from parent
+        ind_new_part = get_order_part(np.concatenate((child[:crossover_head_point], child[-crossover_tail_point:])),
+                                      other_parent)
+        # update mating part to received values
+        child[crossover_head_point:-crossover_tail_point] = ind_new_part
+
+    return child
 
 
 def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Random,
@@ -430,24 +447,46 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
     :return: mutated individual
     """
     order = ind[0]
+    # number of possible mutations = number of works except start and finish works
     num_possible_muts = len(order) - 2
+    # generate mask of works to mutate based on mutation probability
     mask = np.array([rand.random() < mutpb for _ in range(num_possible_muts)])
     if mask.any():
+        # get indexes of works to mutate based on generated mask
+        # +1 because start work was not taken into account in mask generation
         indexes_of_works_to_mutate = np.where(mask)[0] + 1
+        # shuffle order of mutations
         rand.shuffle(indexes_of_works_to_mutate)
+        # get works to mutate based on shuffled indexes
         works_to_mutate = order[indexes_of_works_to_mutate]
         for work in works_to_mutate:
+            # pop index of the current work
             i, indexes_of_works_to_mutate = indexes_of_works_to_mutate[0], indexes_of_works_to_mutate[1:]
+            # find max index of parent of the current work
+            # +1 because insertion should be righter
             i_parent = np.max(np.where(np.isin(order[:i], list(parents[work]), assume_unique=True))[0]) + 1
+            # find min index of child of the current work
+            # +i because the slice [i + 1:] was taken, and +1 is not needed because these indexes will be shifted left
+            # after current work deletion
             i_children = np.min(np.where(np.isin(order[i + 1:], list(children[work]), assume_unique=True))[0]) + i
             if i_parent == i_children:
+                # if child and parent indexes are equal then no mutation can be done
                 continue
             else:
+                # shift work indexes (which are to the right of the current index) to the left
+                # after the current work deletion
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate > i] -= 1
+                # range potential indexes to insert the current work
                 choices = np.concatenate((np.arange(i_parent, i), np.arange(i + 1, i_children + 1)))
+                # set weights to potential indexes based on their distance from the current one
                 weights = 1 / np.abs(choices - i)
+                # generate new index for the current work
                 new_i = rand.choices(choices, weights=weights)[0]
+                # delete current work from current index, insert in new generated index and update scheduling order
+                # in chromosome
                 order[:] = np.insert(np.delete(order, i), new_i, work)
+                # shift work indexes (which are to the right or equal to the new index) to the right
+                # after the current work insertion in new generated index
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
 
     return ind
@@ -479,7 +518,10 @@ def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
     if optimize_resources:
         for res, child in zip([res1, res2], [child1, child2]):
             mated_resources = res[mate_positions]
+            # take contractors from mated positions
             contractors = np.unique(mated_resources[:, -1])
+            # take maximum from borders of these contractors in two chromosomes to maintain validity
+            # and update current child borders on received maximum
             child[2][contractors] = np.stack((child1[2][contractors], child2[2][contractors]), axis=0).max(axis=0)
 
     return child1, child2
@@ -505,27 +547,43 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
     if num_contractors > 1:
         mask = np.array([rand.random() < mutpb for _ in range(num_works)])
         if mask.any():
+            # generate new contractors in the number of received True values of mask
             new_contractors = np.array([rand.randint(0, num_contractors - 1) for _ in range(mask.sum())])
+            # obtain a new mask of correspondence
+            # between the borders of the received contractors and the assigned resources
             contractor_mask = (res[mask, :-1] <= ind[2][new_contractors]).all(axis=1)
+            # update contractors by received mask
             new_contractors = new_contractors[contractor_mask]
+            # update mask by new mask
             mask[mask] &= contractor_mask
+            # mutate contractors
             res[mask, -1] = new_contractors
 
     num_res = len(res[0, :-1])
     res_indexes = np.arange(0, num_res)
     works_indexes = np.arange(0, num_works)
     masks = np.array([[rand.random() < mutpb for _ in range(num_res)] for _ in range(num_works)])
+    # mask of works where at least one resource should be mutated
     mask = masks.any(axis=1)
 
     if not mask.any():
+        # if no True value in mask then no mutation can be done
         return ind
 
+    # get works indexes where mutation should be done and their masks of resources to be mutated
     works_indexes, masks = works_indexes[mask], masks[mask]
+    # get up borders of resources of works where mutation should be done
+    # by taking minimum (borders of the contractors assigned to them) and (maximum values of resources for these works)
     res_up_borders = np.stack((resources_border[1].T[mask], ind[2][res[mask, -1]]), axis=0).min(axis=0)
+    # get minimum values of resources for these works
     res_low_borders = resources_border[0].T[mask]
+    # if low border and up border are equal then no mutation can be done
+    # update masks by checking this condition
     masks &= res_up_borders != res_low_borders
+    # update mask of works where mutation should be done
     mask = masks.any(axis=1)
 
+    # make mutation of resources
     mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask], res_up_borders[mask], masks[mask], -1,
                   rand)
 
@@ -547,7 +605,8 @@ def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, r
     """
     child1, child2 = mate_scheduling_order(ind1, ind2, rand, copy=True)
     child1, child2 = mate_resources(child1, child2, rand, optimize_resources, copy=False)
-    child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
+    # TODO Make better crossover for zones and uncomment this
+    # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
     return child1, child2
 
@@ -573,7 +632,8 @@ def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int,
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
-    mutant = mutate_for_zones(mutant, zone_mutpb, rand, statuses_available)
+    # TODO Make better mutation for zones and uncomment this
+    # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 
     return mutant
 
@@ -594,21 +654,34 @@ def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Rand
     res = ind[1]
     num_res = len(res[0, :-1])
     res_indexes = np.arange(0, num_res)
+    # sort resource part of chromosome by contractor ids
     resources = res[res[:, -1].argsort()]
+    # get unique contractors and indexes where they start
     contractors, indexes = np.unique(resources[:, -1], return_index=True)
+    # split resources to get parts grouped by contractor parts
     res_grouped_by_contractor = np.split(resources[:, :-1], indexes[1:])
     masks = np.array([[rand.random() < mutpb for _ in range(num_res)] for _ in contractors])
+    # mask of contractors where at least one resource border should be mutated
     mask = masks.any(axis=1)
 
     if not mask.any():
+        # if no True value in mask then no mutation can be done
         return ind
 
+    # get contractors where mutation should be done and their masks of resource borders to be mutated
     contractors, masks = contractors[mask], masks[mask]
+    # get maximum values of resource borders for received contractors
     contractor_up_borders = contractor_borders[contractors]
+    # get minimum values of resource borders of contractors where mutation should be done
+    # by taking maximum of assigned resources for works which have contractor that should be mutated
     contractor_low_borders = np.array([r.max(axis=0) for r, is_mut in zip(res_grouped_by_contractor, mask) if is_mut])
+    # if minimum and maximum values are equal then no mutation can be done
+    # update masks by checking this condition
     masks &= contractor_up_borders != contractor_low_borders
+    # update mask of contractors where mutation should be done
     mask = masks.any(axis=1)
 
+    # make mutation of resource borders
     mutate_values(borders, contractors[mask], res_indexes, contractor_low_borders[mask], contractor_up_borders[mask],
                   masks[mask], len(res_indexes), rand)
 
@@ -626,8 +699,10 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
         cur_row = chromosome_part[row_index]
         for col_index, current_amount, l_border, u_border in zip(col_indexes[row_mask], cur_row[:mut_part][row_mask],
                                                                  l_borders[row_mask], u_borders[row_mask]):
+            # range new potential amount except current amount
             choices = np.concatenate((np.arange(l_border, current_amount),
                                       np.arange(current_amount + 1, u_border + 1)))
+            # set weights to potential amounts based on their distance from the current one
             weights = 1 / np.abs(choices - current_amount)
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]
 

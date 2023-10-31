@@ -68,14 +68,23 @@ class Timeline(ABC):
         ...
 
     @abstractmethod
-    def update_timeline(self,
-                        finish_time: Time,
-                        node: GraphNode,
-                        node2swork: dict[GraphNode, ScheduledWork],
-                        worker_team: list[Worker],
-                        spec: WorkSpec):
+    def can_schedule_at_the_moment(self,
+                                   node: GraphNode,
+                                   worker_team: list[Worker],
+                                   spec: WorkSpec,
+                                   node2swork: dict[GraphNode, ScheduledWork],
+                                   start_time: Time,
+                                   exec_time: Time) -> bool:
+        """
+        Returns the ability of scheduling given `node` at the `start_time` moment
+        """
         ...
 
     @abstractmethod
-    def __getitem__(self, item):
+    def update_timeline(self,
+                        finish_time: Time,
+                        exec_time: Time,
+                        node: GraphNode,
+                        worker_team: list[Worker],
+                        spec: WorkSpec):
         ...

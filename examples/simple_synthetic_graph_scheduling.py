@@ -1,12 +1,13 @@
 from itertools import chain
 
+from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg
 from sampo.utilities.visualization.base import VisualizationMode
 
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
 
 from sampo.utilities.schedule import remove_service_tasks
 
-from sampo.generator import SimpleSynthetic, get_contractor_by_wg
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.time import Time
 
@@ -16,7 +17,7 @@ synth_unique_works = 300
 synth_resources = 100
 
 # Set up scheduling algorithm and project's start date
-scheduler_type = HEFTScheduler()
+scheduler = HEFTScheduler()
 start_date = "2023-01-01"
 
 # Set up visualization mode (ShowFig or SaveFig) and the gant chart file's name (if SaveFig mode is chosen)
@@ -45,7 +46,7 @@ assert (res_kind_count <= synth_works_top_border)
 contractors = [get_contractor_by_wg(wg)]
 
 # Schedule works
-schedule = scheduler_type.schedule(wg, contractors)
+schedule = scheduler.schedule(wg, contractors)
 schedule_df = remove_service_tasks(schedule.merged_stages_datetime_df(start_date))
 # Schedule's gant chart visualization
 gant_fig = schedule_gant_chart_fig(schedule_df,
@@ -55,5 +56,5 @@ gant_fig = schedule_gant_chart_fig(schedule_df,
 print(schedule.execution_time)
 
 # Check the validity of the schedule's time
-assert schedule.execution_time != Time.inf(), f'Scheduling failed on {scheduler_type.name}'
+assert schedule.execution_time != Time.inf(), f'Scheduling failed on {scheduler.scheduler_type.name}'
 

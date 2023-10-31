@@ -9,6 +9,7 @@ from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.project import ScheduledProject
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -246,7 +247,7 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
         self._scheduled_works = {wg[swork.work_unit.id]:
-                                     swork for swork in schedule.to_schedule_work_dict.values()}
+                                 swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
@@ -258,6 +259,7 @@ class DefaultSchedulePipeline(SchedulePipeline):
                                            self._input._assigned_parent_time, area))
         return self
 
-    def finish(self) -> Schedule:
+    def finish(self) -> ScheduledProject:
         processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
-        return Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
+        schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
+        return ScheduledProject(self._wg, self._input._contractors, schedule)

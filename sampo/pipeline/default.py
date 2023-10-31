@@ -246,7 +246,7 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._wg = wg
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
-        self._scheduled_works = {wg[swork.work_unit.id]:
+        self._scheduled_works = {wg[swork.id]:
                                  swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
 

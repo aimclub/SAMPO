@@ -23,7 +23,7 @@ class Schedule(JSONSerializable['Schedule']):
     """
 
     _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
-                                'volume', 'measurement', 'successors', 'start',
+                                'volume', 'measurement', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
 
@@ -46,7 +46,7 @@ class Schedule(JSONSerializable['Schedule']):
         :return: Pure schedule DataFrame.
         """
         return self._schedule[~self._schedule.apply(
-            lambda row: row[self._scheduled_work_column].work_unit.is_service_unit,
+            lambda row: row[self._scheduled_work_column].is_service_unit,
             axis=1
         )][self._data_columns]
 
@@ -80,7 +80,7 @@ class Schedule(JSONSerializable['Schedule']):
     def __init__(self, schedule: DataFrame) -> None:
         """
         Initializes new `Schedule` object as a wrapper around `DataFrame` with specific structure.
-        Don't use manually. Create Schedule `objects` via `from_scheduled_works` factory method.
+        Do not use manually. Create Schedule `objects` via `from_scheduled_works` factory method.
 
         :param schedule: Prepared schedule `DataFrame`.
         """
@@ -136,13 +136,6 @@ class Schedule(JSONSerializable['Schedule']):
         """
         ordered_task_ids = order_nodes_by_start_time(works, wg) if wg else None
 
-        def info(work_unit: WorkUnit) -> tuple[float, str, list[tuple[str, str]]]:
-            if wg is None:
-                return 0, "", []
-            # noinspection PyTypeChecker
-            return work_unit.volume, work_unit.volume_type, \
-                   [(edge.finish.id, edge.type.value) for edge in wg[work_unit.id].edges_from]
-
         def sed(time1, time2) -> tuple:
             """
             Sorts times and calculates difference.
@@ -154,16 +147,17 @@ class Schedule(JSONSerializable['Schedule']):
             return start, end, end - start
 
         data_frame = [(i,                                                 # idx
-               w.work_unit.id,                                    # task_id
-               w.work_unit.display_name,                          # task_name
-               w.work_unit.name,                                  # task_name_mapped
-               w.contractor,                                      # contractor info
-               w.cost,                                            # work cost
-               *info(w.work_unit),                                # volume, measurement, successors
-               *sed(*(t.value for t in w.start_end_time)),        # start, end, duration
-               repr(dict((i.name, i.count) for i in w.workers)),  # workers
-               w  # full ScheduledWork info
-               ) for i, w in enumerate(works)]
+                       w.id,                                              # task_id
+                       w.display_name,                                    # task_name
+                       w.name,                                            # task_name_mapped
+                       w.contractor,                                      # contractor info
+                       w.cost,                                            # work cost
+                       w.volume,                                          # work volume
+                       w.volume_type,                                     # work volume type
+                       *sed(*(t.value for t in w.start_end_time)),        # start, end, duration
+                       repr(dict((i.name, i.count) for i in w.workers)),  # workers
+                       w  # full ScheduledWork info
+                       ) for i, w in enumerate(works)]
         data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
         data_frame = data_frame.set_index('idx')
@@ -191,7 +185,7 @@ def order_nodes_by_start_time(works: Iterable[ScheduledWork], wg: WorkGraph) -> 
     :return:
     """
     res = []
-    order_by_start_time = [(item.start_time, item.work_unit.id) for item in
+    order_by_start_time = [(item.start_time, item.id) for item in
                            sorted(works, key=lambda item: item.start_time)]
 
     cur_time = 0

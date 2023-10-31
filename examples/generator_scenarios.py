@@ -1,7 +1,10 @@
 import random
 from itertools import chain
 
-from sampo.generator import SimpleSynthetic, get_contractor_by_wg
+from matplotlib import pyplot as plt
+
+from sampo.generator.base import SimpleSynthetic
+from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg
 from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.graph import WorkGraph

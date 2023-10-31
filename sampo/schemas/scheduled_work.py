@@ -27,7 +27,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     * object - variable, that is used in landscape
     """
 
-    ignored_fields = ['equipments', 'materials', 'object']
+    ignored_fields = ['equipments', 'materials', 'object', 'work_unit']
 
     def __init__(self,
                  work_unit: WorkUnit,
@@ -38,15 +38,20 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  zones_pre: list[ZoneTransition] | None = None,
                  zones_post: list[ZoneTransition] | None = None,
                  materials: list[MaterialDelivery] | None = None,
-                 object: ConstructionObject | None = None):
-        self.work_unit = work_unit
+                 c_object: ConstructionObject | None = None):
+        self.id = work_unit.id
+        self.name = work_unit.name
+        self.display_name = work_unit.display_name
+        self.is_service_unit = work_unit.is_service_unit
+        self.volume = work_unit.volume
+        self.volume_type = work_unit.volume_type
         self.start_end_time = start_end_time
         self.workers = workers if workers is not None else []
         self.equipments = equipments if equipments is not None else []
         self.zones_pre = zones_pre if zones_pre is not None else []
         self.zones_post = zones_post if zones_post is not None else []
         self.materials = materials if materials is not None else []
-        self.object = object if object is not None else []
+        self.object = c_object if c_object is not None else []
 
         if contractor is not None:
             if isinstance(contractor, str):
@@ -59,7 +64,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.cost = sum([worker.get_cost() * self.duration.value for worker in self.workers])
 
     def __str__(self):
-        return f'ScheduledWork[work_unit={self.work_unit}, start_end_time={self.start_end_time}, ' \
+        return f'ScheduledWork[work_unit={self.id}, start_end_time={self.start_end_time}, ' \
                f'workers={self.workers}, contractor={self.contractor}]'
 
     def __repr__(self):
@@ -84,9 +89,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def deserialize_workers(cls, value):
         return [Worker._deserialize(t) for t in value]
 
-    def get_actual_duration(self, work_estimator: WorkTimeEstimator) -> Time:
-        return work_estimator.estimate_time(self.work_unit, self.workers)
-
     @property
     def start_time(self) -> Time:
         return self.start_end_time[0]
@@ -105,7 +107,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
     @property
     def min_child_start_time(self) -> Time:
-        return self.finish_time if self.work_unit.is_service_unit else self.finish_time + 1
+        return self.finish_time if self.is_service_unit else self.finish_time + 1
 
     @staticmethod
     def start_time_getter():
@@ -126,8 +128,8 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            'task_id': self.work_unit.id,
-            'task_name': self.work_unit.name,
+            'task_id': self.id,
+            'task_name': self.name,
             'start': self.start_time.value,
             'finish': self.finish_time.value,
             'contractor_id': self.contractor,

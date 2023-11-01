@@ -9,8 +9,8 @@ matplotlib~=3.6.2
 plotly~=5.11.0
 pytest~=7.2.0
 pytest-xdist~=3.1.0
-pathos
-networkx
+pathos~=0.3.0
+networkx~=3.1
 
 # Requirements to build the Python documentation
 
@@ -30,3 +30,9 @@ furo>=2023.5.20
 # to install that as well.
 python-docs-theme>=2022.1
 sphinx-rtd-theme
+
+torch==2.0.1
+torchmetrics
+
+setuptools~=60.2.0
+scikit-learn~=1.1.3

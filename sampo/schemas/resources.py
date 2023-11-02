@@ -15,7 +15,7 @@ class WorkerProductivityMode(Enum):
 
 
 @dataclass
-class Resource(AutoJSONSerializable['Equipment'], Identifiable):
+class Resource(AutoJSONSerializable['Resource'], Identifiable):
     """
     A class summarizing the different resources used in the work: Human resources, equipment, materials, etc.
     """

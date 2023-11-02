@@ -42,11 +42,11 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     :return:
     """
 
-    order: list[GraphNode] = order if order is not None else [work for work in schedule.works
-                                                              if work.work_unit.id in work_id2index]
+    order: list[ScheduledWork] = order if order is not None else [work for work in schedule.works
+                                                                  if work.id in work_id2index]
 
     # order works part of chromosome
-    order_chromosome: np.ndarray = np.array([work_id2index[work.work_unit.id] for work in order])
+    order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in order])
 
     # convert to convenient form
     schedule = schedule.to_schedule_work_dict
@@ -59,7 +59,7 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=int)
 
     for node in order:
-        node_id = node.work_unit.id
+        node_id = node.id
         index = work_id2index[node_id]
         for resource in schedule[node_id].workers:
             res_count = resource.count
@@ -105,7 +105,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     for worker_index in worker_pool:
         for contractor_index in worker_pool[worker_index]:
             worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
-                                                                          worker_name2index[worker_index]])
+            worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(worker_pool, landscape)
@@ -139,7 +139,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
 
     # declare current checkpoint index
     cpkt_idx = 0
-    start_time = Time(-1)
+    start_time = assigned_parent_time - 1
 
     def work_scheduled(args) -> bool:
         idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
@@ -185,7 +185,4 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         enumerated_works_remaining.remove_if(work_scheduled)
         cpkt_idx = min(cpkt_idx + 1, len(work_timeline))
 
-    schedule_start_time = min((swork.start_time for swork in node2swork.values() if
-                               len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)
-
-    return node2swork, schedule_start_time, timeline, order_nodes
+    return node2swork, assigned_parent_time, timeline, order_nodes

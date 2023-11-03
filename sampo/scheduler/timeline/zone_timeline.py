@@ -264,9 +264,28 @@ class ZoneTimeline:
 
             if start_status != zone.status and zone.status != 0:
                 # if we need to change status, record it
-                sworks.append(ZoneTransition(name=f'Access card {zone.name} status: {start_status} -> {zone.status}',
+                sworks.append(ZoneTransition(name=zone.name,
                                              from_status=start_status,
                                              to_status=zone.status,
                                              start_time=start_time - change_cost,
                                              end_time=start_time))
         return sworks
+
+    def append_statuses(self, zones: list[Zone]) -> Time:
+        global_finish_time = Time(0)
+
+        for zone in zones:
+            state = self._timeline[zone.name]
+            latest_time = state[-1].time + 1
+            latest_status = state[-1].available_workers_time
+            change_cost = self._config.time_costs[latest_status, zone.status] \
+                if not self._config.statuses.match_status(latest_status, zone.status) \
+                else 0
+            finish_time = latest_time + change_cost
+
+            state.add(ScheduleEvent(Time.inf().value, EventType.START, latest_time, None, zone.status))
+            state.add(ScheduleEvent(Time.inf().value, EventType.END, finish_time, None, zone.status))
+
+            global_finish_time = max(global_finish_time, finish_time)
+
+        return global_finish_time

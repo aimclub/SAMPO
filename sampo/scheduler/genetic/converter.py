@@ -15,6 +15,7 @@ from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.schemas.zones import Zone
 from sampo.utilities.linked_list import LinkedList
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
@@ -105,7 +106,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     for worker_index in worker_pool:
         for contractor_index in worker_pool[worker_index]:
             worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
-            worker_name2index[worker_index]])
+                                                                   worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(worker_pool, landscape)
@@ -157,17 +158,6 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    st, exec_time, assigned_parent_time, work_estimator)
 
             work_timeline.update_timeline(st, exec_time, None)
-
-            # process zones
-            zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_idx])]
-            zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
-
-            # we should deny scheduling
-            # if zone status change can be scheduled only in delayed manner
-            if zone_start_time != ft:
-                node2swork[node].zones_post = timeline.zone_timeline.update_timeline(idx,
-                                                                                     [z.to_zone() for z in zone_reqs],
-                                                                                     zone_start_time, 0)
             return True
         return False
 

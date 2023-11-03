@@ -44,8 +44,8 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                 'task_name_mapped': zone_names,
                 'task_name': '',
                 'zone_information': '',
-                'start': timedelta(int(zone.start_time)) + schedule_start - visualization_start_delta + timedelta(1),
-                'finish': timedelta(int(zone.end_time)) + schedule_start  - visualization_start_delta + timedelta(1)}
+                'start': timedelta(int(zone.start_time)) + schedule_start,
+                'finish': timedelta(int(zone.end_time)) + schedule_start}
 
     sworks = schedule_dataframe['scheduled_work_object'].copy()
     idx = schedule_dataframe['idx'].copy()

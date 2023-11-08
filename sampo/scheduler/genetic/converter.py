@@ -142,10 +142,17 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     cpkt_idx = 0
     start_time = assigned_parent_time - 1
 
+    works_ready_to_start_count = 1
+    works_ready_to_start_next = 0
+    works_processed_on_round = 0
+
     def work_scheduled(args) -> bool:
+        nonlocal works_ready_to_start_count, works_ready_to_start_next, works_processed_on_round
+
         idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
 
-        if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
+        if (works_ready_to_start_count > 0 and
+                timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time)):
             # apply worker spec
             Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
@@ -161,8 +168,19 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    st, exec_time, assigned_parent_time, work_estimator)
 
             work_timeline.update_timeline(st, exec_time, None)
+            # after scheduling `node` we can schedule all it's children (constrained by resources, zones, etc.)
+            # minus one is the `node` exactly, it's already scheduled
+            works_ready_to_start_count -= 1
+            if st == ft:
+                # children probably can start at the same moment, so add it to the current time moment
+                works_ready_to_start_count += len(node.children)
+            else:
+                works_ready_to_start_next += len(node.children)
             return True
         return False
+
+    def breakout(v) -> bool:
+        return works_ready_to_start_count == 0
 
     # while there are unprocessed checkpoints
     while len(enumerated_works_remaining) > 0:
@@ -174,8 +192,13 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         else:
             start_time += 1
 
-        # find all works that can start at start_time moment
-        enumerated_works_remaining.remove_if(work_scheduled)
+        works_ready_to_start_next = 0
+
+        # find all works that can start at start_time moment and remove it if scheduled
+        enumerated_works_remaining.remove_if(work_scheduled, breakout)
+
+        works_ready_to_start_count += works_ready_to_start_next
+
         cpkt_idx = min(cpkt_idx + 1, len(work_timeline))
 
     return node2swork, assigned_parent_time, timeline, order_nodes

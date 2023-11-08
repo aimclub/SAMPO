@@ -70,11 +70,13 @@ class LinkedList(Generic[T]):
             old_tail.next = self._tail
         self._len += 1
 
-    def remove_if(self, condition: Callable[[T], bool]):
+    def remove_if(self, condition: Callable[[T], bool], break_condition: Callable[[T], bool]):
         it = self.iterator()
 
         while it.has_next():
             v = it.get()
+            if break_condition(v):
+                break
             if condition(v.value):
                 it.remove()
             else:

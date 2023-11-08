@@ -144,15 +144,13 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
 
     works_ready_to_start_count = 1
     works_ready_to_start_next = 0
-    works_processed_on_round = 0
 
     def work_scheduled(args) -> bool:
-        nonlocal works_ready_to_start_count, works_ready_to_start_next, works_processed_on_round
+        nonlocal works_ready_to_start_count, works_ready_to_start_next
 
         idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
 
-        if (works_ready_to_start_count > 0 and
-                timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time)):
+        if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
             # apply worker spec
             Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 

@@ -5,8 +5,6 @@ from sampo.utilities.visualization.base import VisualizationMode
 
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
 
-from sampo.utilities.schedule import remove_service_tasks
-
 from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.time import Time
@@ -47,7 +45,7 @@ contractors = [get_contractor_by_wg(wg)]
 
 # Schedule works
 schedule = scheduler.schedule(wg, contractors)
-schedule_df = remove_service_tasks(schedule.merged_stages_datetime_df(start_date))
+schedule_df = schedule.merged_stages_datetime_df(start_date)
 # Schedule's gant chart visualization
 gant_fig = schedule_gant_chart_fig(schedule_df,
                                    fig_file_name=gant_chart_filename,

@@ -125,7 +125,8 @@ class CSVParser:
             works_info.activity_name = works_info.activity_name.apply(lambda name: unique_work_names_mapper[name])
 
         if contractor_info is None:
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
+            resources = [dict((worker_req.name, int(worker_req.volume))
+                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
                          for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
             contractors = [get_contractor_for_resources_schedule(resources,
                                                                  contractor_capacity=contractor_types[i],
@@ -134,7 +135,8 @@ class CSVParser:
                            for i in range(contractors_number)]
         elif isinstance(contractor_info, list):
             contractors = contractor_info
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
+            resources = [dict((worker_req.name, int(worker_req.volume))
+                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
                          for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
         else:
             # if contractor info is given or contractor info and work resource estimator are received simultaneously
@@ -152,11 +154,8 @@ class CSVParser:
                                equipments=dict())
                 )
             resource_names = contractor_df.columns[1:].to_list()
-            if len(contractors) == 0 and isinstance(work_resource_estimator, DefaultWorkEstimator):
-                raise InputDataException(
-                    'you have neither info about contractors nor work resource estimator.'
-                )
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]), resource_names)
+            resources = [dict((worker_req.name, int(worker_req.volume))
+                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1]), resource_names))
                          for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
 
         unique_res = list(set(chain(*[r.keys() for r in resources])))

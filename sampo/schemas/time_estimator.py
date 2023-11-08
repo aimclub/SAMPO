@@ -6,6 +6,7 @@ from typing import Optional
 
 import numpy.random
 
+from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.resources import WorkerProductivityMode
 from sampo.schemas.time import Time
@@ -33,7 +34,8 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] = None) -> dict[str, int]:
+    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
+            -> list[WorkerReq]:
         ...
 
     @abstractmethod
@@ -51,10 +53,14 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._productivity_mode = WorkerProductivityMode.Static
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
-            -> dict[str, int]:
+            -> list[WorkerReq]:
         if resource_name is None:
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
-        return dict((name, numpy.random.poisson(work_volume ** 0.5, 1)[0]) for name in resource_name)
+        return [WorkerReq(kind=name,
+                          volume=work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0],
+                          min_count=numpy.random.poisson(work_volume ** 0.2, 1)[0],
+                          max_count=numpy.random.poisson(work_volume * 3, 1)[0])
+                for name in resource_name]
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle

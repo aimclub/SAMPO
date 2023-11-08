@@ -4,7 +4,7 @@ from typing import IO
 
 from pathos.multiprocessing import ProcessingPool
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph

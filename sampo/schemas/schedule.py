@@ -99,14 +99,14 @@ class Schedule(JSONSerializable['Schedule']):
         dict_representation['works'] = [ScheduledWork._deserialize(sw) for sw in dict_representation['works']]
         return Schedule.from_scheduled_works(**dict_representation)
 
-    # @lru_cache
+    @lru_cache
     def merged_stages_datetime_df(self, offset: Union[datetime, str]) -> DataFrame:
         """
         Merges split stages of same works after lag optimization and returns schedule DataFrame shifted to start.
         :param offset: Start of schedule, to add as an offset.
         :return: Shifted schedule DataFrame with merged tasks.
         """
-        result = self.offset_schedule(offset)
+        result = fix_split_tasks(self.offset_schedule(offset))
         return result
 
     def offset_schedule(self, offset: Union[datetime, str]) -> DataFrame:

@@ -2,7 +2,7 @@ from functools import partial
 from random import Random
 from typing import IO
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTBetweenScheduler

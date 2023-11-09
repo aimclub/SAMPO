@@ -2,7 +2,7 @@ import time
 
 from pathos.multiprocessing import ProcessingPool
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.generator.types import SyntheticGraphType
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule

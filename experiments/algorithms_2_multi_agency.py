@@ -2,7 +2,7 @@ from functools import partial
 from random import Random
 from typing import IO
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager

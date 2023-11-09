@@ -37,9 +37,9 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
             ])
         case 1:
             time_costs = np.array([
-                [0, 0, 0],
-                [0, 1, 1],
-                [0, 1, 1]
+                [0, 1000, 1000],
+                [0, 1000, 1000],
+                [0, 1000, 1000]
             ])
         case _:
             raise ValueError('Illegal costs mode')
@@ -59,7 +59,7 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
     return LandscapeConfiguration(zone_config=zone_config)
 
 
-@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(5)],
+@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
          ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
 def setup_scheduler(request) -> Scheduler:
     return request.param

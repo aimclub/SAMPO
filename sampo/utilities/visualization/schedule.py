@@ -32,37 +32,41 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     visualization_start_delta = timedelta(days=2)
     visualization_finish_delta = timedelta(days=(schedule_finish - schedule_start).days // 3)
 
-    def create_zone_row(i, work_name, zone_names, zone) -> dict:
+    def create_zone_row(i, zone_names, zone) -> dict:
         return {'idx': i,
                 'contractor': 'Access cards',
                 'cost': 0,
                 'volume': 0,
                 'duration': 0,
                 'measurement': 'unit',
-                'successors': [],
                 'workers_dict': '',
                 'workers': '',
                 'task_name_mapped': zone_names,
                 'task_name': '',
-                'start': timedelta(int(zone.start_time)) + schedule_start - visualization_start_delta + timedelta(1),
-                'finish': timedelta(int(zone.end_time)) + schedule_start  - visualization_start_delta + timedelta(1)}
+                'zone_information': '',
+                'start': timedelta(int(zone.start_time)) + schedule_start,
+                'finish': timedelta(int(zone.end_time)) + schedule_start}
 
     sworks = schedule_dataframe['scheduled_work_object'].copy()
     idx = schedule_dataframe['idx'].copy()
 
     def get_zone_usage_info(swork) -> str:
-        return '<br>' + '<br>'.join([f'{zone.kind}: {zone.required_status}' for zone in swork.work_unit.zone_reqs])
+        return '<br>' + '<br>'.join([f'{zone.name}: {zone.to_status}' for zone in swork.zones_pre])
 
     schedule_dataframe['zone_information'] = sworks.apply(get_zone_usage_info)
+
+    access_cards = []
 
     # create zone information
     for i, swork in zip(idx, sworks):
         zone_names = '<br>' + '<br>'.join([zone.name for zone in swork.zones_pre])
         for zone in swork.zones_pre:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(i, swork.work_unit.name, zone_names, zone), ignore_index=True)
+            access_cards.append(create_zone_row(i, zone_names, zone))
         zone_names = '<br>' + '<br>'.join([zone.name for zone in swork.zones_post])
         for zone in swork.zones_post:
-            schedule_dataframe = schedule_dataframe.append(create_zone_row(i, swork.work_unit.name, zone_names, zone), ignore_index=True)
+            access_cards.append(create_zone_row(i, zone_names, zone))
+
+    schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards)])
 
     schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
         .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)

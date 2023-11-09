@@ -95,7 +95,7 @@ class GenericScheduler(Scheduler):
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator,
+            self.build_scheduler(wg, ordered_nodes, contractors, landscape, spec, self.work_estimator,
                                  assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
@@ -108,6 +108,7 @@ class GenericScheduler(Scheduler):
         return schedule, schedule_start_time, timeline, ordered_nodes
 
     def build_scheduler(self,
+                        wg: WorkGraph,
                         ordered_nodes: list[GraphNode],
                         contractors: list[Contractor],
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
@@ -135,7 +136,7 @@ class GenericScheduler(Scheduler):
         node2swork: dict[GraphNode, ScheduledWork] = {}
         # list for support the queue of workers
         if not isinstance(timeline, self._timeline_type):
-            timeline = self._timeline_type(contractors, landscape)
+            timeline = self._timeline_type(worker_pool, landscape)
 
         for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
             work_unit = node.work_unit
@@ -157,7 +158,4 @@ class GenericScheduler(Scheduler):
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
-        schedule_start_time = min((swork.start_time for swork in node2swork.values() if
-                                   len(swork.work_unit.worker_reqs) != 0), default=assigned_parent_time)
-
-        return node2swork.values(), schedule_start_time, timeline
+        return node2swork.values(), assigned_parent_time, timeline

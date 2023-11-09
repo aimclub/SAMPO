@@ -27,7 +27,34 @@ class TopologicalScheduler(GenericScheduler):
                          optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
                          work_estimator=work_estimator)
 
-    # noinspection PyMethodMayBeStatic
+    @staticmethod
+    def _get_node_dependencies(wg: WorkGraph) -> dict[str, set[str]]:
+        """
+        Sort 'WorkGraph' in topological order.
+
+        :param wg: WorkGraph
+        :return: dict that maps node id with set of parent nodes ids
+        """
+        nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+
+        node_id2inseparable_parents = {}
+        for node in nodes:
+            for child in node.get_inseparable_chain_with_self():
+                node_id2inseparable_parents[child.id] = node.id
+
+        # here we aggregate information about relationships from the whole inseparable chain
+        node_id2children = {node.id: set([node_id2inseparable_parents[child.id]
+                                          for inseparable in node.get_inseparable_chain_with_self()
+                                          for child in inseparable.children]) - {node.id}
+                            for node in nodes}
+
+        node_id2parents = {node.id: set() for node in nodes}
+        for node_id, children_nodes in node_id2children.items():
+            for child_id in children_nodes:
+                node_id2parents[child_id].add(node_id)
+
+        return node_id2parents
+
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
         """
         Sort 'WorkGraph' in topological order.
@@ -36,15 +63,11 @@ class TopologicalScheduler(GenericScheduler):
         :param work_estimator: function that calculates execution time of the work
         :return: list of sorted nodes in graph
         """
-        node2ind = {node: i for i, node in enumerate(wg.nodes)}
+        dependencies = self._get_node_dependencies(wg)
 
-        dependents: dict[int, set[int]] = {
-            node2ind[v]: {node2ind[node] for node in v.parents}
-            for v in wg.nodes
-        }
+        tsorted_nodes_ids = toposort_flatten(dependencies, sort=True)
+        tsorted_nodes = [wg.dict_nodes[node_id] for node_id in tsorted_nodes_ids]
 
-        tsorted_nodes_indices: list[int] = toposort_flatten(dependents, sort=True)
-        tsorted_nodes = [wg.nodes[i] for i in tsorted_nodes_indices]
         return list(reversed(tsorted_nodes))
 
 
@@ -52,6 +75,7 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
     """
     Scheduler, that represent 'WorkGraph' in topological order with random.
     """
+
     def __init__(self,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  random_seed: Optional[int] = None):
@@ -59,7 +83,7 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
         self._random_state = np.random.RandomState(random_seed)
 
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
-        def shuffle(nodes: set[GraphNode]) -> list[GraphNode]:
+        def shuffle(nodes: set[str]) -> list[str]:
             """
             Shuffle nodes that are on the same level.
 
@@ -71,11 +95,10 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
             self._random_state.shuffle(indices)
             return [nds[ind] for ind in indices]
 
-        dependents: dict[GraphNode, set[GraphNode]] = {v: v.parents_set for v in wg.nodes}
+        dependencies = self._get_node_dependencies(wg)
         tsorted_nodes: list[GraphNode] = [
-            node for level in toposort(dependents)
-            for node in shuffle(level)
+            wg.dict_nodes[node_id] for level in toposort(dependencies)
+            for node_id in shuffle(level)
         ]
 
-        # print([node.work_unit.id for node in tsorted_nodes])
         return list(reversed(tsorted_nodes))

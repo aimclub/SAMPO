@@ -55,10 +55,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         self.add_parents(parent_works)
         self._children_edges = []
 
-    def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
-
     def __hash__(self) -> int:
         return hash(self.id)
 
@@ -154,7 +150,6 @@ class GraphNode(JSONSerializable['GraphNode']):
                 yield v
 
     @cached_property
-    # @property
     def inseparable_son(self) -> Optional['GraphNode']:
         """
         Return inseparable son (amount of inseparable sons at most 1)
@@ -165,7 +160,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return inseparable_children[0] if inseparable_children else None
 
     @cached_property
-    # @property
     def inseparable_parent(self) -> Optional['GraphNode']:
         """
         Return predecessor of current vertex in inseparable chain
@@ -175,7 +169,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return inseparable_parents[0] if inseparable_parents else None
 
     @cached_property
-    # @property
     def parents(self) -> list['GraphNode']:
         """
         Return list of predecessors of current vertex
@@ -184,7 +177,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
     @cached_property
-    # @property
     def parents_set(self) -> set['GraphNode']:
         """
         Return unique predecessors of current vertex
@@ -193,7 +185,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return set(self.parents)
 
     @cached_property
-    # @property
     def children(self) -> list['GraphNode']:
         """
         Return list of successors of current vertex
@@ -202,7 +193,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
     @cached_property
-    # @property
     def children_set(self) -> set['GraphNode']:
         """
         Return unique successors of current vertex
@@ -338,8 +328,12 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
+        self.dict_nodes = None
+        self.start = None
+        self.finish = None
+        for node in self.nodes:
+            node._parent_edges = None
+            node._children_edges = None
 
     def _serialize(self) -> T:
         return {

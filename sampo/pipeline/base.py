@@ -8,6 +8,7 @@ from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, Schedu
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.project import ScheduledProject
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -88,5 +89,5 @@ class SchedulePipeline(ABC):
         ...
 
     @abstractmethod
-    def finish(self) -> Schedule:
+    def finish(self) -> ScheduledProject:
         ...

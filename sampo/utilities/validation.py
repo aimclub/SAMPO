@@ -28,13 +28,13 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contr
     _check_all_tasks_scheduled(schedule, wg)
     _check_parent_dependencies(schedule, wg)
     _check_all_tasks_have_valid_duration(schedule)
-    _check_all_workers_correspond_to_worker_reqs(schedule)
+    _check_all_workers_correspond_to_worker_reqs(wg, schedule)
     _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, contractors)
 
 
 def _check_all_tasks_scheduled(schedule: Schedule, wg: WorkGraph) -> None:
     # 1. each task of the graph is scheduled
-    scheduled_works = {work.work_unit.id: work for work in schedule.works}
+    scheduled_works = {work.id: work for work in schedule.works}
     absent_works = [node for node in wg.nodes if node.work_unit.id not in scheduled_works]
 
     assert len(absent_works) == 0, \
@@ -43,7 +43,7 @@ def _check_all_tasks_scheduled(schedule: Schedule, wg: WorkGraph) -> None:
 
 
 def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
-    scheduled_works: dict[str, ScheduledWork] = {work.work_unit.id: work for work in schedule.works}
+    scheduled_works: dict[str, ScheduledWork] = {work.id: work for work in schedule.works}
 
     for node in wg.nodes:
         start, end = scheduled_works[node.work_unit.id].start_end_time
@@ -56,12 +56,12 @@ def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:
     # 3. check if all tasks have duration appropriate for their working hours
     service_works_with_incorrect_duration = [
         work for work in schedule.works
-        if work.work_unit.is_service_unit and work.duration != 0
+        if work.is_service_unit and work.duration != 0
     ]
 
     assert len(service_works_with_incorrect_duration) == 0, \
         f'Found service works that have non-zero duration:\n' \
-        f'\t{[work.work_unit.id for work in service_works_with_incorrect_duration]}'
+        f'\t{[work.id for work in service_works_with_incorrect_duration]}'
 
     # # TODO: make correct duration calculation
     # works_with_incorrect_duration = [
@@ -153,32 +153,9 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
     return cur_worker_pool
 
 
-def _check_all_workers_correspond_to_worker_reqs(schedule: Schedule):
+def _check_all_workers_correspond_to_worker_reqs(wg: WorkGraph, schedule: Schedule):
     for swork in schedule.works:
-        worker2req = build_index(swork.work_unit.worker_reqs, attrgetter('kind'))
+        worker2req = build_index(wg[swork.id].work_unit.worker_reqs, attrgetter('kind'))
         for worker in swork.workers:
             req = worker2req[worker.name]
             assert req.min_count <= worker.count <= req.max_count
-
-
-def _check_all_workers_have_same_qualification(wg: WorkGraph, contractors: list[Contractor]):
-    # 1. all workers of the same category belonging to the same contractor should have the same characteristics
-    for c in contractors:
-        assert all(ws.count >= 1 for _, ws in c.workers.items()), \
-            'There should be only one worker for the same worker category'
-
-    # добавляем агентов в словарь
-    agents = {}
-    for contractor in contractors:
-        for name, val in contractor.workers.items():
-            if name[0] not in agents:
-                agents[name[0]] = 0
-            agents[name[0]] += val.count
-    # 2. all tasks should have worker reqs that can be satisfied by at least one contractor
-    for v in wg.nodes:
-        assert any(
-            all(c.worker_types[wreq.kind][0].count
-                >= (wreq.min_count + min(agents[wreq.kind], wreq.max_count)) // 2
-                for wreq in v.work_unit.worker_reqs)
-            for c in contractors
-        ), f'The work unit with id {v.work_unit.id} cannot be satisfied by any contractors'

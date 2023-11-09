@@ -12,7 +12,7 @@ from sampo.schemas.graph import WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.resource_cost import schedule_cost
+from sampo.utilities.resource_usage import resources_costs_sum
 
 
 def get_scheduler_ctor(scheduling_algorithm_type: SchedulerType) \
@@ -43,5 +43,5 @@ def generate_schedule(scheduling_algorithm_type: SchedulerType,
                                   validate=validate_schedule, landscape=landscape)
 
     print(f'Time: {(time.time() - start_time) * 1000} ms')
-    print(f'Cost: {schedule_cost(schedule)}')
+    print(f'Cost: {resources_costs_sum(schedule)}')
     return schedule

@@ -1,22 +1,25 @@
 import random
 import time
+from typing import Callable
 
 import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, IndividualType, FitnessFunction, TimeFitness
+from sampo.scheduler.genetic.operators import (init_toolbox, ChromosomeType, FitnessFunction, TimeFitness,
+                                               ResourcesFitness)
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
+from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
 from sampo.schemas.resources import Worker
 
 
@@ -26,7 +29,9 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        population_size: int,
                                        mutate_order: float,
                                        mutate_resources: float,
-                                       init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
+                                       mutate_zones: float,
+                                       init_schedules: dict[
+                                           str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
                                        work_estimator: WorkTimeEstimator = None,
@@ -43,6 +48,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
+    index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
     contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
     worker_pool_indices = {worker_name2index[worker_name]: {
         contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
@@ -56,9 +62,9 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
             inseparable_parents[child] = node
 
     # here we aggregate information about relationships from the whole inseparable chain
-    children = {work_id2index[node.id]: [work_id2index[inseparable_parents[child].id]
-                                         for inseparable in node.get_inseparable_chain_with_self()
-                                         for child in inseparable.children]
+    children = {work_id2index[node.id]: set([work_id2index[inseparable_parents[child].id]
+                                             for inseparable in node.get_inseparable_chain_with_self()
+                                             for child in inseparable.children])
                 for node in nodes}
 
     parents = {work_id2index[node.id]: set() for node in nodes}
@@ -79,8 +85,9 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
             contractor_borders[ind, ind_worker] = worker.count
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
-        {name: (convert_schedule_to_chromosome(wg, work_id2index, worker_name2index,
-                                               contractor2index, contractor_borders, schedule, chromosome_spec, order),
+        {name: (convert_schedule_to_chromosome(work_id2index, worker_name2index,
+                                               contractor2index, contractor_borders, schedule, chromosome_spec,
+                                               landscape, order),
                 importance, chromosome_spec)
          if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
@@ -96,9 +103,12 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         work_id2index,
                         worker_name2index,
                         index2contractor_obj,
+                        index2zone,
                         init_chromosomes,
                         mutate_order,
                         mutate_resources,
+                        mutate_zones,
+                        landscape.zone_config.statuses.statuses_available(),
                         population_size,
                         rand,
                         spec,
@@ -107,6 +117,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         contractor_borders,
                         node_indices,
                         parents,
+                        children,
                         resources_border,
                         assigned_parent_time,
                         work_estimator), worker_name2index, worker_pool_indices, parents
@@ -119,11 +130,13 @@ def build_schedule(wg: WorkGraph,
                    generation_number: int,
                    mutpb_order: float,
                    mutpb_res: float,
+                   mutpb_zones: float,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_object: FitnessFunction = TimeFitness(),
+                   fitness_constructor: Callable[
+                       [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
@@ -151,9 +164,9 @@ def build_schedule(wg: WorkGraph,
     global_start = start = time.time()
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
-                                                                   mutpb_order, mutpb_res, init_schedules, rand, spec,
-                                                                   work_estimator, assigned_parent_time, landscape,
-                                                                   verbose)
+                                                                   mutpb_order, mutpb_res, mutpb_zones, init_schedules,
+                                                                   rand, spec, work_estimator, assigned_parent_time,
+                                                                   landscape, verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 
@@ -176,20 +189,18 @@ def build_schedule(wg: WorkGraph,
         # save best individuals
         hof = tools.HallOfFame(1, similar=compare_individuals)
 
+        fitness_f = fitness_constructor(native.evaluate)
+
         evaluation_start = time.time()
 
         # map to each individual fitness function
         pop = [ind for ind in pop if toolbox.validate(ind)]
-        schedules = native.evaluate(pop)
-        fitness = fitness_object.evaluate(schedules)
+        fitness = fitness_f.evaluate(pop)
 
         evaluation_time = time.time() - evaluation_start
 
-        for ind, fit, schedule in zip(pop, fitness, schedules):
+        for ind, fit in zip(pop, fitness):
             ind.fitness.values = [fit]
-            if optimize_resources:
-                toolbox.update_resource_borders_to_peak_values(ind, schedule)
-                ind.type = IndividualType.Population
 
         hof.update(pop)
         best_fitness = hof[0].fitness.values[0]
@@ -226,26 +237,16 @@ def build_schedule(wg: WorkGraph,
 
             evaluation_start = time.time()
 
-            schedules = native.evaluate(offspring)
-            offspring_fitness = fitness_object.evaluate(schedules)
+            offspring_fitness = fitness_f.evaluate(offspring)
 
-            for ind, fit, schedule in zip(offspring, offspring_fitness, schedules):
+            for ind, fit in zip(offspring, offspring_fitness):
                 ind.fitness.values = [fit]
-                if optimize_resources:
-                    ind.schedule = schedule
-                    ind.type = IndividualType.Offspring
 
             evaluation_time += time.time() - evaluation_start
 
             # renewing population
             pop += offspring
             pop = toolbox.select(pop)
-            if optimize_resources:
-                for ind in pop:
-                    if ind.type is IndividualType.Offspring:
-                        toolbox.update_resource_borders_to_peak_values(ind, ind.schedule)
-                        del ind.schedule
-                        ind.type = IndividualType.Population
             hof.update([pop[0]])
 
             prev_best_fitness = best_fitness
@@ -264,6 +265,9 @@ def build_schedule(wg: WorkGraph,
         # Second stage to optimize resources if deadline is assigned
 
         if have_deadline:
+
+            fitness_resource = ResourcesFitness(native.evaluate)
+
             if best_fitness > deadline:
                 print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
                 # save best individuals
@@ -272,10 +276,10 @@ def build_schedule(wg: WorkGraph,
 
                 evaluation_start = time.time()
 
-                fitness = [get_absolute_peak_resource_usage(schedule) for schedule in native.evaluate(pop)]
-                for ind, fit, schedule in zip(pop, fitness, schedules):
+                fitness = fitness_resource.evaluate(pop)
+                for ind, res_peak in zip(pop, fitness):
                     ind.time = ind.fitness.values[0]
-                    ind.fitness.values = [fit]
+                    ind.fitness.values = [res_peak]
 
                 evaluation_time += time.time() - evaluation_start
 
@@ -289,13 +293,10 @@ def build_schedule(wg: WorkGraph,
 
                 evaluation_start = time.time()
 
-                schedules = native.evaluate(pop)
-                fitness = [get_absolute_peak_resource_usage(schedule) for schedule in schedules]
-                for ind, fit, schedule in zip(pop, fitness, schedules):
+                fitness = fitness_resource.evaluate(pop)
+                for ind, res_peak in zip(pop, fitness):
                     ind.time = ind.fitness.values[0]
-                    ind.fitness.values = [fit]
-                    toolbox.update_resource_borders_to_peak_values(ind, schedule)
-                    ind.type = IndividualType.Population
+                    ind.fitness.values = [res_peak]
 
                 evaluation_time += time.time() - evaluation_start
 
@@ -312,7 +313,6 @@ def build_schedule(wg: WorkGraph,
                     for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
                         copied_ind.fitness.values = [ind.fitness.values[0]]
                         copied_ind.time = ind.time
-                        copied_ind.type = ind.type
                     pop += copied_individuals
 
                 while generation <= generation_number and plateau_steps < max_plateau_steps \
@@ -335,27 +335,23 @@ def build_schedule(wg: WorkGraph,
 
                     evaluation_start = time.time()
 
-                    schedules = [schedule for schedule in native.evaluate(offspring)]
+                    fitness = fitness_f.evaluate(offspring)
 
-                    for ind, schedule in zip(offspring, schedules):
-                        ind.time = schedule.execution_time.value
-                        if ind.time <= deadline:
-                            ind.fitness.values = [get_absolute_peak_resource_usage(schedule)]
-                            ind.type = IndividualType.Offspring
-                            ind.schedule = schedule
+                    for ind, t in zip(offspring, fitness):
+                        ind.time = t
 
                     offspring = [ind for ind in offspring if ind.time <= deadline]
+
+                    fitness_res = fitness_resource.evaluate(offspring)
+
+                    for ind, res_peak in zip(offspring, fitness_res):
+                        ind.fitness.values = [res_peak]
 
                     evaluation_time += time.time() - evaluation_start
 
                     # renewing population
                     pop += offspring
                     pop = toolbox.select(pop)
-                    for ind in pop:
-                        if ind.type is IndividualType.Offspring:
-                            toolbox.update_resource_borders_to_peak_values(ind, ind.schedule)
-                            del ind.schedule
-                            ind.type = IndividualType.Population
                     hof.update([pop[0]])
 
                     prev_best_fitness = best_fitness
@@ -372,6 +368,7 @@ def build_schedule(wg: WorkGraph,
         if verbose:
             print(f'Final time: {best_fitness}')
             print(f'Generations processing took {(time.time() - start) * 1000} ms')
+            print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
             print(f'Evaluation time: {evaluation_time * 1000}')
 
         best_chromosome = hof[0]

@@ -4,6 +4,7 @@ from typing import Optional, Callable
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
+from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -32,12 +33,13 @@ class GeneticScheduler(Scheduler):
                  number_of_generation: Optional[int] = 50,
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
+                 mutate_zones: Optional[float or None] = None,
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: list[int] = None,
-                 fitness_constructor: Callable[[Time | None], FitnessFunction] = TimeFitness,
+                 fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -49,6 +51,7 @@ class GeneticScheduler(Scheduler):
         self.number_of_generation = number_of_generation
         self.mutate_order = mutate_order
         self.mutate_resources = mutate_resources
+        self.mutate_zones = mutate_zones
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
@@ -69,7 +72,7 @@ class GeneticScheduler(Scheduler):
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> tuple[float, float, int]:
+    def get_params(self, works_count: int) -> tuple[float, float, float, int]:
         """
         Return base parameters for model to make new population
 
@@ -84,6 +87,10 @@ class GeneticScheduler(Scheduler):
         if mutate_resources is None:
             mutate_resources = 0.005
 
+        mutate_zones = self.mutate_zones
+        if mutate_zones is None:
+            mutate_zones = 0.05
+
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
@@ -92,11 +99,12 @@ class GeneticScheduler(Scheduler):
                 size_of_population = 100
             else:
                 size_of_population = works_count // 25
-        return mutate_order, mutate_resources, size_of_population
+        return mutate_order, mutate_resources, mutate_zones, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
         """
-        Set the number of CPU cores
+        Set the number of CPU cores.
+        DEPRECATED, NOT WORKING
 
         :param n_cpu:
         """
@@ -205,9 +213,8 @@ class GeneticScheduler(Scheduler):
         init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, spec,
                                                                     self.work_estimator, self._deadline, self._weights)
 
-        mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
+        mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
-        fitness_object = self.fitness_constructor(self._deadline)
         deadline = None if self._optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
@@ -217,11 +224,12 @@ class GeneticScheduler(Scheduler):
                                                                                      self.number_of_generation,
                                                                                      mutate_order,
                                                                                      mutate_resources,
+                                                                                     mutate_zones,
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
-                                                                                     fitness_object,
+                                                                                     self.fitness_constructor,
                                                                                      self.work_estimator,
                                                                                      self._n_cpu,
                                                                                      assigned_parent_time,

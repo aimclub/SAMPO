@@ -175,7 +175,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
         :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
         """
 
-        timeline = self._timeline_type(node_order, contractors, worker_pool, landscape_config)
+        timeline = self._timeline_type(worker_pool, landscape_config)
         node2swork_new: dict[GraphNode, ScheduledWork] = {}
 
         id2contractor = build_index(contractors, attrgetter('name'))
@@ -230,7 +230,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
 
             my_schedule: ScheduledWork = scheduled_works[node]
             my_workers: dict[str, Worker] = build_index(my_schedule.workers, attrgetter('name'))
-            my_schedule_reqs: dict[str, WorkerReq] = build_index(my_schedule.work_unit.worker_reqs, attrgetter('kind'))
+            my_schedule_reqs: dict[str, WorkerReq] = build_index(node.work_unit.worker_reqs, attrgetter('kind'))
 
             new_my_workers = {}
 
@@ -238,7 +238,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             for candidate in accepted_candidates:
                 candidate_schedule = scheduled_works[candidate]
 
-                candidate_schedule_reqs: dict[str, WorkerReq] = build_index(candidate_schedule.work_unit.worker_reqs,
+                candidate_schedule_reqs: dict[str, WorkerReq] = build_index(candidate.work_unit.worker_reqs,
                                                                             attrgetter('kind'))
 
                 new_candidate_workers: dict[str, int] = {}

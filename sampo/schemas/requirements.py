@@ -6,6 +6,7 @@ from uuid import uuid4
 from sampo.schemas.resources import Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
+from sampo.schemas.zones import Zone
 
 # Used for max_count in the demand, if it is not specified during initialization WorkerReq
 DEFAULT_MAX_COUNT = 100
@@ -111,3 +112,12 @@ class ConstructionObjectReq(BaseReq):
     count: int
     name: Optional[str] = None
 
+
+@dataclass(frozen=True)
+class ZoneReq(BaseReq):
+    kind: str
+    required_status: int
+    name: Optional[str] = None
+
+    def to_zone(self) -> Zone:
+        return Zone(self.kind, self.required_status)

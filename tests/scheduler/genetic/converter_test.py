@@ -1,11 +1,12 @@
 from uuid import uuid4
 
-from tests.scheduler.genetic.fixtures import *
-from sampo.schemas.schedule import Schedule
-from sampo.schemas.contractor import Contractor
 from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule import Schedule
 from sampo.utilities.validation import validate_schedule
+
+from tests.scheduler.genetic.fixtures import setup_toolbox
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
@@ -24,6 +25,8 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
     chromosome = tb.generate_chromosome()
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
+
+    assert not schedule.execution_time.is_inf()
 
     validate_schedule(schedule, setup_wg, setup_contractors)
 
@@ -53,14 +56,3 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
     validate_schedule(schedule, setup_wg, contractors)
-
-
-def test_converter_with_borders_update(setup_toolbox):
-    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
-    chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
-    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome, landscape=setup_landscape_many_holders)
-    schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
-    updated_chromosome = tb.update_resource_borders_to_peak_values(chromosome, schedule)
-    updated_schedule, _, _, _ = tb.chromosome_to_schedule(updated_chromosome, landscape=setup_landscape_many_holders)
-    updated_schedule = Schedule.from_scheduled_works(updated_schedule.values(), setup_wg)
-    assert schedule.execution_time == updated_schedule.execution_time

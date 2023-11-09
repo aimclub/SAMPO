@@ -17,10 +17,9 @@ class Iterator(Generic[T]):
         self._prev = None
 
     def __iter__(self):
-        yield self._node
-
-        while self._node is not None:
-            yield self.__next__()
+        while self._node.next is not None:
+            yield self._node
+            self.__next__()
 
     def __next__(self) -> Node[T]:
         return self.next()
@@ -70,13 +69,11 @@ class LinkedList(Generic[T]):
             old_tail.next = self._tail
         self._len += 1
 
-    def remove_if(self, condition: Callable[[T], bool], break_condition: Callable[[T], bool]):
+    def remove_if(self, condition: Callable[[T], bool]):
         it = self.iterator()
 
         while it.has_next():
             v = it.get()
-            if break_condition(v):
-                break
             if condition(v.value):
                 it.remove()
             else:

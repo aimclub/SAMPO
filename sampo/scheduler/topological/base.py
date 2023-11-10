@@ -12,6 +12,36 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
+def get_node_dependencies(wg: WorkGraph) -> dict[str, set[str]]:
+    """
+    Creates a mapper for nodes in Word Graph that matches each node id to its parents ids
+    and leaves only the first node in inseparable chains.
+
+    :param wg: WorkGraph
+
+    :return: dict that maps node id with set of parent nodes ids
+    """
+    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+
+    node_id2inseparable_parents = {}
+    for node in nodes:
+        for child in node.get_inseparable_chain_with_self():
+            node_id2inseparable_parents[child.id] = node.id
+
+    # here we aggregate information about relationships from the whole inseparable chain
+    node_id2children = {node.id: set([node_id2inseparable_parents[child.id]
+                                      for inseparable in node.get_inseparable_chain_with_self()
+                                      for child in inseparable.children]) - {node.id}
+                        for node in nodes}
+
+    node_id2parents = {node.id: set() for node in nodes}
+    for node_id, children_nodes in node_id2children.items():
+        for child_id in children_nodes:
+            node_id2parents[child_id].add(node_id)
+
+    return node_id2parents
+
+
 class TopologicalScheduler(GenericScheduler):
     """
     Scheduler, that represent 'WorkGraph' in topological order.
@@ -27,34 +57,7 @@ class TopologicalScheduler(GenericScheduler):
                          optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
                          work_estimator=work_estimator)
 
-    @staticmethod
-    def _get_node_dependencies(wg: WorkGraph) -> dict[str, set[str]]:
-        """
-        Sort 'WorkGraph' in topological order.
-
-        :param wg: WorkGraph
-        :return: dict that maps node id with set of parent nodes ids
-        """
-        nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
-
-        node_id2inseparable_parents = {}
-        for node in nodes:
-            for child in node.get_inseparable_chain_with_self():
-                node_id2inseparable_parents[child.id] = node.id
-
-        # here we aggregate information about relationships from the whole inseparable chain
-        node_id2children = {node.id: set([node_id2inseparable_parents[child.id]
-                                          for inseparable in node.get_inseparable_chain_with_self()
-                                          for child in inseparable.children]) - {node.id}
-                            for node in nodes}
-
-        node_id2parents = {node.id: set() for node in nodes}
-        for node_id, children_nodes in node_id2children.items():
-            for child_id in children_nodes:
-                node_id2parents[child_id].add(node_id)
-
-        return node_id2parents
-
+    # noinspection PyMethodMayBeStatic
     def _topological_sort(self, wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
         """
         Sort 'WorkGraph' in topological order.
@@ -63,10 +66,10 @@ class TopologicalScheduler(GenericScheduler):
         :param work_estimator: function that calculates execution time of the work
         :return: list of sorted nodes in graph
         """
-        dependencies = self._get_node_dependencies(wg)
+        dependencies = get_node_dependencies(wg)
 
         tsorted_nodes_ids = toposort_flatten(dependencies, sort=True)
-        tsorted_nodes = [wg.dict_nodes[node_id] for node_id in tsorted_nodes_ids]
+        tsorted_nodes = [wg[node_id] for node_id in tsorted_nodes_ids]
 
         return list(reversed(tsorted_nodes))
 
@@ -95,9 +98,9 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
             self._random_state.shuffle(indices)
             return [nds[ind] for ind in indices]
 
-        dependencies = self._get_node_dependencies(wg)
+        dependencies = get_node_dependencies(wg)
         tsorted_nodes: list[GraphNode] = [
-            wg.dict_nodes[node_id] for level in toposort(dependencies)
+            wg[node_id] for level in toposort(dependencies)
             for node_id in shuffle(level)
         ]
 

@@ -99,7 +99,7 @@ class Schedule(JSONSerializable['Schedule']):
         dict_representation['works'] = [ScheduledWork._deserialize(sw) for sw in dict_representation['works']]
         return Schedule.from_scheduled_works(**dict_representation)
 
-    # @lru_cache
+    @lru_cache
     def merged_stages_datetime_df(self, offset: Union[datetime, str]) -> DataFrame:
         """
         Merges split stages of same works after lag optimization and returns schedule DataFrame shifted to start.
@@ -160,7 +160,7 @@ class Schedule(JSONSerializable['Schedule']):
                        ) for i, w in enumerate(works)]
         data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
-        data_frame = data_frame.set_index('idx')
+        data_frame = data_frame.set_index('idx', drop=False)
 
         if ordered_task_ids:
             data_frame.task_id = data_frame.task_id.astype('category')

@@ -133,7 +133,7 @@ class PSPlibWorkTimeEstimator(WorkTimeEstimator):
         ...
 
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
-        return self.times[work_unit.time_exec]
+        return Time(work_unit.time_exec)
 
 
 def communication_coefficient(groups_count: int, max_groups: int) -> float:

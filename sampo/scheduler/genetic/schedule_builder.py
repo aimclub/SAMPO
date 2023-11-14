@@ -7,15 +7,12 @@ from deap import tools
 from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import (init_toolbox, ChromosomeType, FitnessFunction, TimeFitness,
-                                               ResourcesFitness)
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils.peaks import get_absolute_peak_resource_usage
 from sampo.schemas.contractor import Contractor, WorkerContractorPool
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
@@ -189,7 +186,7 @@ def build_schedule(wg: WorkGraph,
         # save best individuals
         hof = tools.HallOfFame(1, similar=compare_individuals)
 
-        fitness_f = fitness_constructor(native.evaluate)
+        fitness_f = fitness_constructor(native.evaluate) if not have_deadline else TimeFitness(native.evaluate)
 
         evaluation_start = time.time()
 
@@ -266,7 +263,7 @@ def build_schedule(wg: WorkGraph,
 
         if have_deadline:
 
-            fitness_resource = ResourcesFitness(native.evaluate)
+            fitness_resource = fitness_constructor(native.evaluate)
 
             if best_fitness > deadline:
                 print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')

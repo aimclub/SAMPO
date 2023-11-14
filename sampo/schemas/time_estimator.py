@@ -118,6 +118,24 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         return worker.get_productivity(rand, productivity_mode) * communication_coefficient(worker.count, max_groups)
 
 
+class PSPlibWorkTimeEstimator(WorkTimeEstimator):
+    def __init__(self, times: list[Time]):
+        self.times = times
+
+    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
+            -> dict[str, int]:
+        ...
+
+    def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
+        ...
+
+    def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
+        ...
+
+    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
+        return self.times[work_unit.time_exec]
+
+
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups

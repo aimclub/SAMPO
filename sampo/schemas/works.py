@@ -25,7 +25,8 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  volume: float = 0,
                  volume_type: str = 'unit',
                  display_name: str = "",
-                 workground_size: int = 100):
+                 workground_size: int = 100,
+                 time_exec: int = 0):
         """
         :param worker_reqs: list of required professions (i.e. workers)
         :param equipment_reqs: list of required equipment
@@ -37,6 +38,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param volume: scope of work
         :param volume_type: unit of scope of work
         :param display_name: name of work
+        :param time_exec: this necessary for psplib dataset
         """
         super(WorkUnit, self).__init__(id, name)
         if material_reqs is None:
@@ -60,6 +62,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
         self.workground_size = workground_size
+        self.time_exec = time_exec
 
     def __del__(self):
         for name, attr in self.__dict__.items():

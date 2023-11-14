@@ -1,30 +1,91 @@
+import time
 import uuid
+from multiprocessing import Pool
 
 import numpy as np
 
-from sampo.generator.pipeline.project import get_start_stage
+from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.requirements import WorkerReq
+from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
+from sampo.schemas.time_estimator import PSPlibWorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 
-instances = [30, 60, 90, 120]
+instances = [30]
 workers = ['R1', 'R2', 'R3', 'R4']
 
-for wg_size in instances:
-    dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
-    for wg_info in dataset:
-        adj_matrix, res_matrix, contractor_info = wg_info
+def run_scheduler(wg_info):
+    adj_matrix, res_matrix, contractor_info = wg_info
+    sum_of_time = 0
 
-        nodes = []
-        for i in range(wg_size):
-            for j in range(i, wg_size):
-                if adj_matrix[i][j] == 1:
+    nodes = []
+    for node_id in range(res_matrix.shape[0]):
+        worker_reqs = [WorkerReq(workers[idx_req - 1], Time(0), res_matrix[node_id][idx_req],
+                                 res_matrix[node_id][idx_req], workers[idx_req - 1]) for idx_req in range(1, 5)]
+        work_unit = WorkUnit(str(uuid.uuid4()), str(node_id), worker_reqs, time_exec=int(res_matrix[node_id][0]))
+        node = GraphNode(work_unit, [])
+        nodes.append(node)
+        sum_of_time += res_matrix[node_id][0]
 
-                    worker_reqs = [WorkerReq(workers[idx_req-1], Time(0), res_matrix[i][idx_req], res_matrix[i][idx_req], workers[idx_req-1]) for idx_req in range(1, 5)]
+    for child_id in range(len(adj_matrix)):
+        parents = []
+        for parent_id in range(len(adj_matrix)):
+            if child_id != parent_id and adj_matrix[parent_id][child_id] == 1:
+                parents.append(nodes[parent_id])
+        nodes[child_id].add_parents(parents)
 
-                    work_unit = WorkUnit(str(uuid.uuid4()), str(i), worker_reqs)
-                    node = GraphNode(work_unit, [])
+    contractor = [
+        Contractor(id=str(1),
+                   name="OOO Berezka",
+                   workers={name: Worker(str(uuid.uuid4()), name, count, contractor_id=str(1))
+                            for name, count in zip(workers, contractor_info)},
+                   equipments={})
+    ]
 
-        start_node = get_start_stage()
-        wg = WorkGraph()
+    wg = WorkGraph(nodes[0], nodes[-1])
+    times = []
+    for i in range(res_matrix.shape[0]):
+        times.append(res_matrix[i][0])
+    work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
+    # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
+    scheduler = GeneticScheduler(50, work_estimator=work_estimator)
+    start = time.time()
+    schedule = scheduler.schedule(wg, contractor)
+    finish = time.time()
+
+    return (finish - start), schedule.execution_time, sum_of_time
+
+
+if __name__ == '__main__':
+    result = []
+    makespans = []
+    exec_times = []
+    iterations = 10
+    for wg_size in instances:
+
+        with open(f'psplib_datasets/optimal_makespan/j{str(wg_size)}opt.sm', 'r') as f:
+            lines = f.readlines()
+            lines = lines[22:23]
+        true_val = []
+        for line in lines:
+            true_val.append(int(line.split()[2]))
+
+        dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
+        size = len(dataset[0:1])
+        tasks = []
+        for i in range(0, size // iterations * iterations, iterations):
+            tasks.append(dataset[i:i+iterations])
+        if size != size // iterations * iterations:
+            tasks.append(dataset[size // iterations * iterations:size])
+
+        with Pool() as pool:
+            for task in tasks:
+                result.extend(pool.map(run_scheduler, task))
+
+        gap_sum = 0.0
+        for i in range(len(result)):
+            gap_sum += (np.abs(true_val[i] - result[i][1].value) * 100. / true_val[i])
+
+        print(f'Average gap: {gap_sum / len(result)}')

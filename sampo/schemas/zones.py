@@ -46,6 +46,7 @@ class DefaultZoneStatuses(ZoneStatuses):
 @dataclass
 class ZoneConfiguration:
     start_statuses: dict[str, int] = field(default_factory=dict)
+    end_statuses: dict[str, int] = field(default_factory=dict)
     time_costs: np.ndarray = field(default_factory=lambda: np.array([[]]))
     statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
@@ -60,3 +61,6 @@ class ZoneTransition(AutoJSONSerializable['ZoneTransition']):
     to_status: int
     start_time: Time
     end_time: Time
+
+    def __str__(self):
+        return f'Access card {self.name} status {self.from_status} -> {self.to_status}'

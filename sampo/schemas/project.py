@@ -2,15 +2,18 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.utilities.schedule import fix_split_tasks, offset_schedule
 from sampo.utilities.serializers import custom_serializer
 
 
 class ScheduledProject(AutoJSONSerializable['ScheduledProject']):
-    def __init__(self, wg: WorkGraph, contractors: list[Contractor], schedule: Schedule):
-        self.schedule = schedule
-        self.schedule_df = fix_split_tasks(schedule.full_schedule_df)
+
+    ignored_fields = ['raw_schedule', 'raw_wg']
+
+    def __init__(self, wg: WorkGraph, raw_wg: WorkGraph, contractors: list[Contractor], schedule: Schedule):
+        self.schedule = schedule.unite_stages()
+        self.raw_schedule = schedule
         self.wg = wg
+        self.raw_wg = raw_wg
         self.contractors = contractors
 
     @custom_serializer('contractors')
@@ -21,7 +24,3 @@ class ScheduledProject(AutoJSONSerializable['ScheduledProject']):
     @custom_serializer('contractors', deserializer=True)
     def deserialize_equipment(cls, value):
         return [Contractor._deserialize(v) for v in value]
-
-    def set_start_date(self, start_date: str) -> 'ScheduledProject':
-        self.schedule_df = offset_schedule(self.schedule_df, start_date)
-        return self

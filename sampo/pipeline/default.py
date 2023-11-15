@@ -237,7 +237,7 @@ class DefaultInputPipeline(InputPipeline):
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
 
-        return DefaultSchedulePipeline(self, self._wg, schedule)
+        return DefaultSchedulePipeline(self, wg, schedule)
 
 
 # noinspection PyProtectedMember
@@ -265,4 +265,4 @@ class DefaultSchedulePipeline(SchedulePipeline):
     def finish(self) -> ScheduledProject:
         processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
         schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
-        return ScheduledProject(self._wg, self._input._contractors, schedule)
+        return ScheduledProject(self._input._wg, self._wg, self._input._contractors, schedule)

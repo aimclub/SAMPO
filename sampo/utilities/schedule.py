@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import partial
 
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
@@ -74,7 +75,10 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         # fix task's start time and duration
         df.loc[0, 'start'] = task_df.loc[0, 'start']
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
-        df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
+        if isinstance(df.loc[0, 'start'], np.int64) or isinstance(df.loc[0, 'start'], np.int32):
+            df.loc[0, 'duration'] = df.loc[0, 'finish'] - df.loc[0, 'start'] + 1
+        else:
+            df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
     else:
         df = task_df.copy()
 

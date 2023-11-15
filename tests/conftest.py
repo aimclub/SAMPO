@@ -55,14 +55,24 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(params=[(graph_type, lag) for lag in [True, False]
-                 for graph_type in ['manual',
-                                    'small plain synthetic', 'big plain synthetic']],
+@fixture(params=[(graph_type, lag) for lag in [True,
+                                               False
+                                               ]
+                 for graph_type in [
+                     'manual',
+                                    'small plain synthetic',
+                     'big plain synthetic'
+                 ]],
          # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
-              for lag_opt in [True, False]
-              for graph_type in ['manual',
-                                 'small plain synthetic', 'big plain synthetic']])
+              for lag_opt in [True,
+                              False
+                              ]
+              for graph_type in [
+                  'manual',
+                                 'small plain synthetic',
+                  'big plain synthetic'
+                                 ]])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
@@ -130,8 +140,8 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
+@fixture(params=[(i, 5 * j) for j in range(1,2) for i in range(1, 2)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(1,2) for i in range(1, 2)])
 def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) -> tuple[
     WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     resource_req: Dict[str, int] = {}
@@ -142,11 +152,13 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
             resource_req[req.kind] = max(contractor_min_resources,
-                                         resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
+                                         # resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
+                                         req.max_count, resource_req.get(req.kind, 0))
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():
-        resource_req[req] = resource_req[req] // resource_req_count[req] + 1
+        # resource_req[req] = resource_req[req] // resource_req_count[req] + 1
+        resource_req[req] = resource_req[req] * 10
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:

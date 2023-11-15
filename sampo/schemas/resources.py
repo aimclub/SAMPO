@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from random import Random
 from typing import Optional
 
@@ -8,8 +9,13 @@ from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.types import AgentId
 
 
+class WorkerProductivityMode(Enum):
+    Static = 'static',
+    Stochastic = 'stochastic'
+
+
 @dataclass
-class Resource(AutoJSONSerializable['Equipment'], Identifiable):
+class Resource(AutoJSONSerializable['Resource'], Identifiable):
     """
     A class summarizing the different resources used in the work: Human resources, equipment, materials, etc.
     """
@@ -17,6 +23,24 @@ class Resource(AutoJSONSerializable['Equipment'], Identifiable):
     name: str
     count: int
     contractor_id: Optional[str] = ""
+
+    def __init__(self,
+                 id: str,
+                 name: str,
+                 count: int,
+                 contractor_id: Optional[str] = ""):
+        self.id = id
+        self.name = name
+        self._count = count
+        self.contractor_id = contractor_id
+
+    @property
+    def count(self):
+        return self._count
+
+    @count.setter
+    def count(self, value):
+        self._count = int(value)
 
     # TODO: describe the function (description, return type)
     def get_agent_id(self) -> AgentId:
@@ -41,7 +65,7 @@ class Worker(Resource):
                  contractor_id: Optional[str] = "",
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
-        super(Worker, self).__init__(id, name, count, contractor_id)
+        super(Worker, self).__init__(id, name, int(count), contractor_id)
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
@@ -66,7 +90,7 @@ class Worker(Resource):
         :param count: amount of current type of worker
         :return: upgraded current object
         """
-        self.count = count
+        self.count = int(count)
         return self
 
     def get_cost(self) -> float:
@@ -75,18 +99,22 @@ class Worker(Resource):
 
     def get_agent_id(self) -> AgentId:
         """
-        Return contractor of current worker
+        Return the agent unique identifier in schedule
 
         :return: contractor's id and name
         """
         return self.contractor_id, self.name
 
-    def get_static_productivity(self) -> float:
-        """Return the average productivity of worker team"""
-        return self.productivity.mean * self.count
+    def get_productivity(self, rand: Random, productivity_mode: WorkerProductivityMode) -> float:
+        """
+        Return the productivity of the worker team.
+        It has 2 mods: stochastic and non-stochastic.
 
-    def get_stochastic_productivity(self, rand: Optional[Random] = None) -> float:
-        """Return the stochastic productivity of worker team"""
+        :param productivity_mode:
+        :param rand: parameter for stochastic part
+        """
+        if productivity_mode is WorkerProductivityMode.Static:
+            return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
 
     def __repr__(self):
@@ -96,26 +124,22 @@ class Worker(Resource):
         return self.__repr__()
 
 
-# TODO: describe the class (description)
 @dataclass
 class ConstructionObject(Resource):
     pass
 
 
-# TODO: describe the class (description, parameters)
 @dataclass(init=False)
 class EmptySpaceConstructionObject(ConstructionObject):
-    id: str = "00000000000000000"
-    name: str = "empty space construction object"
+    id: str = '00000000000000000'
+    name: str = 'empty space construction object'
 
 
-# TODO: describe the class (description)
 @dataclass
 class Equipment(Resource):
     pass
 
 
-# TODO: describe the class (description)
 @dataclass
 class Material(Resource):
 

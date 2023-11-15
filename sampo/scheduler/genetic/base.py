@@ -1,12 +1,10 @@
-import math
 import random
 from typing import Optional, Callable
-
-from deap.base import Toolbox
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
+from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -21,7 +19,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.validation import validate_schedule
 
 
@@ -33,29 +31,35 @@ class GeneticScheduler(Scheduler):
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
-                 size_selection: Optional[int or None] = None,
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
+                 mutate_zones: Optional[float or None] = None,
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
-                 fitness_constructor: Callable[[Toolbox], FitnessFunction] = TimeFitness,
+                 weights: list[int] = None,
+                 fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
-                 work_estimator: Optional[WorkTimeEstimator or None] = None):
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 optimize_resources: bool = False,
+                 verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
         self.number_of_generation = number_of_generation
-        self.size_selection = size_selection
         self.mutate_order = mutate_order
         self.mutate_resources = mutate_resources
+        self.mutate_zones = mutate_zones
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self._optimize_resources = optimize_resources
         self._n_cpu = n_cpu
+        self._weights = weights
+        self._verbose = verbose
 
         self._time_border = None
         self._deadline = None
@@ -63,52 +67,44 @@ class GeneticScheduler(Scheduler):
     def __str__(self) -> str:
         return f'GeneticScheduler[' \
                f'generations={self.number_of_generation},' \
-               f'size_selection={self.size_selection},' \
+               f'population_size={self.size_of_population},' \
                f'mutate_order={self.mutate_order},' \
                f'mutate_resources={self.mutate_resources}' \
                f']'
 
-    def get_params(self, works_count: int) -> tuple[int, float, float, int]:
+    def get_params(self, works_count: int) -> tuple[float, float, float, int]:
         """
         Return base parameters for model to make new population
 
         :param works_count:
         :return:
         """
-        size_selection = self.size_selection
-        if size_selection is None:
-            if works_count < 300:
-                size_selection = 20
-            else:
-                size_selection = works_count // 15
-
         mutate_order = self.mutate_order
         if mutate_order is None:
-            if works_count < 300:
-                mutate_order = 0.05
-            else:
-                mutate_order = 2 / math.sqrt(works_count)
+            mutate_order = 0.05
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
-            if works_count < 300:
-                mutate_resources = 0.1
-            else:
-                mutate_resources = 6 / math.sqrt(works_count)
+            mutate_resources = 0.005
+
+        mutate_zones = self.mutate_zones
+        if mutate_zones is None:
+            mutate_zones = 0.05
 
         size_of_population = self.size_of_population
         if size_of_population is None:
             if works_count < 300:
-                size_of_population = 20
-            elif 1500 > works_count >= 300:
                 size_of_population = 50
+            elif 1500 > works_count >= 300:
+                size_of_population = 100
             else:
-                size_of_population = works_count // 50
-        return size_selection, mutate_order, mutate_resources, size_of_population
+                size_of_population = works_count // 25
+        return mutate_order, mutate_resources, mutate_zones, size_of_population
 
     def set_use_multiprocessing(self, n_cpu: int):
         """
-        Set the number of CPU cores
+        Set the number of CPU cores.
+        DEPRECATED, NOT WORKING
 
         :param n_cpu:
         """
@@ -125,61 +121,72 @@ class GeneticScheduler(Scheduler):
         """
         self._deadline = deadline
 
-    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor],
-                                  landscape: LandscapeConfiguration = LandscapeConfiguration()):
+    def set_weights(self, weights: list[int]):
+        self._weights = weights
+
+    def set_optimize_resources(self, optimize_resources: bool):
+        self._optimize_resources = optimize_resources
+
+    def set_verbose(self, verbose: bool):
+        self._verbose = verbose
+
+    @staticmethod
+    def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
+                                  landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                  spec: ScheduleSpec = ScheduleSpec(),
+                                  work_estimator: WorkTimeEstimator = None,
+                                  deadline: Time = None,
+                                  weights=None):
         """
-        Heuristic algorithm, that generate first population
+        Algorithm, that generate first population
 
         :param landscape:
         :param wg: graph of works
         :param contractors:
+        :param spec:
         :return:
         """
 
+        if weights is None:
+            weights = [2, 2, 1, 1, 1, 1]
+
         def init_k_schedule(scheduler_class, k):
             try:
-                return (scheduler_class(work_estimator=self.work_estimator,
-                                        resource_optimizer=AverageReqResourceOptimizer(k)).schedule(wg, contractors,
-                                                                                                    landscape=landscape),
-                        list(reversed(prioritization(wg, self.work_estimator))))
+                return scheduler_class(work_estimator=work_estimator,
+                                       resource_optimizer=AverageReqResourceOptimizer(k)) \
+                    .schedule(wg, contractors,
+                              spec,
+                              landscape=landscape), list(reversed(prioritization(wg, work_estimator))), spec
             except NoSufficientContractorError:
-                return None, None
+                return None, None, None
 
-        if self._deadline is None:
+        if deadline is None:
             def init_schedule(scheduler_class):
                 try:
-                    return (scheduler_class(work_estimator=self.work_estimator).schedule(wg, contractors,
-                                                                                         landscape=landscape),
-                            list(reversed(prioritization(wg, self.work_estimator))))
+                    return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors,
+                                                                                   landscape=landscape), \
+                        list(reversed(prioritization(wg, work_estimator))), spec
                 except NoSufficientContractorError:
-                    return None, None
+                    return None, None, None
 
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
         else:
             def init_schedule(scheduler_class):
                 try:
-                    schedule = AverageBinarySearchResourceOptimizingScheduler(
-                        scheduler_class(work_estimator=self.work_estimator)
-                    ).schedule_with_cache(wg, contractors, self._deadline, landscape=landscape)[0]
-                    return schedule, list(reversed(prioritization(wg, self.work_estimator)))
+                    (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
+                        scheduler_class(work_estimator=work_estimator)
+                    ).schedule_with_cache(wg, contractors, deadline, spec, landscape=landscape)
+                    return schedule, list(reversed(prioritization(wg, work_estimator))), modified_spec
                 except NoSufficientContractorError:
-                    return None, None
+                    return None, None, None
 
-            return {
-                "heft_end": init_schedule(HEFTScheduler),
-                "heft_between": init_schedule(HEFTBetweenScheduler),
-                "12.5%": init_k_schedule(HEFTScheduler, 8),
-                "25%": init_k_schedule(HEFTScheduler, 4),
-                "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-                "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-            }
+        return {
+            "heft_end": (*init_schedule(HEFTScheduler), weights[0]),
+            "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[1]),
+            "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[2]),
+            "25%": (*init_k_schedule(HEFTScheduler, 4), weights[3]),
+            "75%": (*init_k_schedule(HEFTScheduler, 4 / 3), weights[4]),
+            "87.5%": (*init_k_schedule(HEFTScheduler, 8 / 7), weights[5])
+        }
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
@@ -203,29 +210,34 @@ class GeneticScheduler(Scheduler):
         :param timeline:
         :return:
         """
-        init_schedules = self.generate_first_population(wg, contractors, landscape)
+        init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, spec,
+                                                                    self.work_estimator, self._deadline, self._weights)
 
-        size_selection, mutate_order, mutate_resources, size_of_population = self.get_params(wg.vertex_count)
+        mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
         worker_pool = get_worker_contractor_pool(contractors)
+        deadline = None if self._optimize_resources else self._deadline
 
         scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
                                                                                      contractors,
                                                                                      worker_pool,
                                                                                      size_of_population,
                                                                                      self.number_of_generation,
-                                                                                     size_selection,
                                                                                      mutate_order,
                                                                                      mutate_resources,
+                                                                                     mutate_zones,
                                                                                      init_schedules,
                                                                                      self.rand,
                                                                                      spec,
                                                                                      landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
-                                                                                     n_cpu=self._n_cpu,
-                                                                                     assigned_parent_time=assigned_parent_time,
-                                                                                     timeline=timeline,
-                                                                                     time_border=self._time_border)
+                                                                                     self._n_cpu,
+                                                                                     assigned_parent_time,
+                                                                                     timeline,
+                                                                                     self._time_border,
+                                                                                     self._optimize_resources,
+                                                                                     deadline,
+                                                                                     self._verbose)
         schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
         if validate:

@@ -1,6 +1,6 @@
 from deap.base import Toolbox
 
-from sampo.schemas.time import Time
+from sampo.schemas.schedule import Schedule
 
 native = True
 try:
@@ -9,7 +9,7 @@ try:
     from native import freeEvaluationInfo
     from native import runGenetic
 except ImportError:
-    print("Can't find native module; switching to default")
+    print('Can not find native module; switching to default')
     decodeEvaluationInfo = lambda *args: args
     freeEvaluationInfo = lambda *args: args
     runGenetic = lambda *args: args
@@ -26,17 +26,22 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:
-    def __init__(self, toolbox: Toolbox, wg: WorkGraph, contractors: list[Contractor], worker_name2index: dict[str, int],
-                 worker_pool_indices: dict[int, dict[int, Worker]], parents: dict[int, list[int]],
+    def __init__(self,
+                 toolbox: Toolbox,
+                 wg: WorkGraph,
+                 contractors: list[Contractor],
+                 worker_name2index: dict[str, int],
+                 worker_pool_indices: dict[int, dict[int, Worker]],
+                 parents: dict[int, set[int]],
                  time_estimator: WorkTimeEstimator):
         self.native = native
         if not native:
-            def fit(chromosome: ChromosomeType) -> int:
+            def fit(chromosome: ChromosomeType) -> Schedule | None:
                 if toolbox.validate(chromosome):
                     sworks = toolbox.chromosome_to_schedule(chromosome)[0]
-                    return max([swork.finish_time for swork in sworks.values()]).value
+                    return Schedule.from_scheduled_works(sworks.values(), wg)
                 else:
-                    return Time.inf()
+                    return None
             self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
             self._cache = None
             return
@@ -54,7 +59,7 @@ class NativeWrapper:
         self.numeration = numeration
         # for each vertex index store list of parents' indices
         self.parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
-        head_parents = [parents[i] for i in range(len(parents))]
+        head_parents = [list(parents[i]) for i in range(len(parents))]
         # for each vertex index store list of whole it's inseparable chain indices
         self.inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain_with_self()]
                              for index in range(wg.vertex_count)]
@@ -78,6 +83,10 @@ class NativeWrapper:
 
         volume = [node.work_unit.volume for node in numeration.values()]
 
+        id2work = [numeration[i].work_unit.id for i in range(len(numeration))]
+        id2worker_name = reverse_dictionary(worker_name2index)
+        id2res = [id2worker_name[i] for i in range(len(id2worker_name))]
+
         self.totalWorksCount = wg.vertex_count
         self.time_estimator = time_estimator
         self.worker_pool_indices = worker_pool_indices
@@ -85,9 +94,19 @@ class NativeWrapper:
 
         self.evaluator = evaluator
 
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+        # os.add_dll_directory('C:\\Users\\Quarter\\PycharmProjects\\sampo')
+        # os.chdir('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests')
+
+        import ctypes.util
+
+        name = ctypes.util.find_library('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests\\native.dll')
+        lib = ctypes.WinDLL(name)
+        # lib = CDLL(r'C:\Users\Quarter\PycharmProjects\sampo\tests\native.dll')
+
         # preparing C++ cache
-        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers, self.totalWorksCount,
-                                           False, volume, min_req, max_req)
+        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
+                                           self.totalWorksCount, False, True, volume, min_req, max_req, id2work, id2res)
 
     def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
         team = self._current_chromosomes[chromosome_ind][1][team_target]
@@ -95,7 +114,7 @@ class NativeWrapper:
                    .copy().with_count(team[worker_index])
                    for worker_index in range(len(self.workers[0]))
                    if team[worker_index] > 0]
-        return self.numeration[work].work_unit.estimate_static(workers, self.time_estimator).value
+        return self.time_estimator.estimate_time(self.numeration[work].work_unit, workers).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
         self._current_chromosomes = chromosomes

@@ -1,7 +1,7 @@
 from random import Random
 from typing import Iterable
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
@@ -11,7 +11,7 @@ from sampo.scheduler.multi_agency.block_validation import validate_block_schedul
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.obstruction import OneInsertObstruction
-from sampo.schemas.contractor import Contractor, DefaultContractorCapacity
+from sampo.schemas.contractor import Contractor, DEFAULT_CONTRACTOR_CAPACITY
 
 
 def test_one_auction():
@@ -38,7 +38,7 @@ def manage_block_graph(contractors: list[Contractor]):
     agents = [Agent(f'Agent {i}', scheduler_constructors[i % len(scheduler_constructors)](), [contractor])
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
-    bg = generate_blocks(SyntheticBlockGraphType.Random, 10, [1, 1, 1], lambda x: (50, 60), 0.5, rand)
+    bg = generate_blocks(SyntheticBlockGraphType.RANDOM, 10, [1, 1, 1], lambda x: (50, 60), 0.5, rand)
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
@@ -58,7 +58,7 @@ def test_manage_block_graph_different_contractors():
 def test_manage_block_graph_same_contractors():
     r_seed = 231
     p_rand = SimpleSynthetic(rand=r_seed)
-    contractors = [p_rand.contractor(DefaultContractorCapacity) for _ in range(4)]
+    contractors = [p_rand.contractor(DEFAULT_CONTRACTOR_CAPACITY) for _ in range(4)]
     manage_block_graph(contractors)
 
 
@@ -75,13 +75,13 @@ def test_managing_with_obstruction():
     manager = Manager(agents)
 
     def obstruction_getter(i: int):
-        return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
+        return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
 
     for i in range(20):
         bg_without_obstructions = \
-            generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
+            generate_blocks(SyntheticBlockGraphType.RANDOM, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand)
         bg = \
-            generate_blocks(SyntheticBlockGraphType.Random, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand,
+            generate_blocks(SyntheticBlockGraphType.RANDOM, 1, [1, 1, 1], lambda x: (100, 200), 0.5, rand,
                             obstruction_getter)
 
         scheduled_blocks = manager.manage_blocks(bg, logger=print)
@@ -106,7 +106,7 @@ def test_managing_queues():
     rand = Random(r_seed)
 
     def obstruction_getter(i: int):
-        return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.Sequential, 10))
+        return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
 
     for i in range(5):
         contractors = [p_rand.contractor(10)]

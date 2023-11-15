@@ -5,6 +5,7 @@ from sampo.schemas.contractor import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType
 from sampo.schemas.works import WorkUnit
@@ -15,7 +16,7 @@ def setup_timeline_context(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
     worker_kinds = set([w_kind for contractor in setup_contractors for w_kind in contractor.workers.keys()])
-    return MomentumTimeline(setup_wg.nodes, setup_contractors, setup_worker_pool, landscape=landscape), \
+    return MomentumTimeline(setup_worker_pool, landscape=landscape), \
         setup_wg, setup_contractors, setup_worker_pool, worker_kinds
 
 
@@ -31,7 +32,7 @@ def test_init_resource_structure(setup_timeline_context):
 
             first_event: ScheduleEvent = worker_timeline[0]
             assert first_event.seq_id == -1
-            assert first_event.event_type == EventType.Initial
+            assert first_event.event_type == EventType.INITIAL
             assert first_event.time == Time(0)
 
 
@@ -55,7 +56,7 @@ def test_insert_works_with_one_worker_kind(setup_timeline_context):
     worker_count = contractor.workers[worker_kind].count
     for i, node in enumerate(nodes):
         worker_team = [Worker(id=str(i), name=worker_kind, count=worker_count // 2, contractor_id=contractor.id)]
-        timeline.schedule(node, node2swork, worker_team, contractor)
+        timeline.schedule(node, node2swork, worker_team, contractor, WorkSpec())
 #
 # TODO
 # def test_update_resource_structure(setup_timeline, setup_worker_pool):

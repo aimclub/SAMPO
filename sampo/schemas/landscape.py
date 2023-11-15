@@ -4,6 +4,7 @@ from copy import deepcopy
 from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.resources import Resource, Material
 from sampo.schemas.time import Time
+from sampo.schemas.zones import ZoneConfiguration
 
 
 class ResourceSupply(Resource, ABC):
@@ -49,9 +50,16 @@ class Road(ResourceSupply):
 
 
 class LandscapeConfiguration:
-    def __init__(self, roads: list[Road] = [], holders: list[ResourceHolder] = []):
+    def __init__(self, roads=None,
+                 holders=None,
+                 zone_config: ZoneConfiguration = ZoneConfiguration()):
+        if holders is None:
+            holders = []
+        if roads is None:
+            roads = []
         self._roads = roads
         self._holders = holders
+        self.zone_config = zone_config
 
     def get_all_resources(self) -> list[ResourceSupply]:
         return self._roads + self._holders
@@ -68,3 +76,10 @@ class MaterialDelivery:
             material_delivery = []
             self.delivery[name] = material_delivery
         material_delivery.append((time, count))
+
+    def add_deliveries(self, name: str, deliveries: list[tuple[Time, int]]):
+        material_delivery = self.delivery.get(name, None)
+        if material_delivery is None:
+            self.delivery[name] = deliveries
+        else:
+            material_delivery.extend(deliveries)

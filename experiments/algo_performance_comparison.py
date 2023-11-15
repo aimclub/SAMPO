@@ -2,18 +2,18 @@ import time
 
 from pathos.multiprocessing import ProcessingPool
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.generator.types import SyntheticGraphType
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
-from sampo.schemas.contractor import DefaultContractorCapacity
+from sampo.schemas.contractor import DEFAULT_CONTRACTOR_CAPACITY
 
 
 def run_iteration(args) -> int:
     algo_ind, graph_size = args
     ss = SimpleSynthetic(rand=231)
-    wg = ss.work_graph(SyntheticGraphType.Parallel, graph_size - 50, graph_size + 50)
-    contractors = [ss.contractor(DefaultContractorCapacity)]
+    wg = ss.work_graph(SyntheticGraphType.PARALLEL, graph_size - 50, graph_size + 50)
+    contractors = [ss.contractor(DEFAULT_CONTRACTOR_CAPACITY)]
 
     scheduler_type = list(SchedulerType)[algo_ind]
 

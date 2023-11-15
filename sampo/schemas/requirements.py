@@ -6,6 +6,7 @@ from uuid import uuid4
 from sampo.schemas.resources import Material
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
+from sampo.schemas.zones import Zone
 
 # Used for max_count in the demand, if it is not specified during initialization WorkerReq
 DEFAULT_MAX_COUNT = 100
@@ -21,6 +22,7 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
     def name(self) -> str:
         """
         Returns the name of the claim if it exists, e.g. 'dig work claim'.
+
         :return name: the name of req
         """
         ...
@@ -30,10 +32,11 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
 class WorkerReq(BaseReq):
     """
     Requirements related to renewable human resources
+
     :param kind: type of resource/profession
     :param volume: volume of work in time units
     :param min_count: minimum number of employees needed to perform the work
-    :param max_count: maximum allowable number of employees performing work
+    :param max_count: maximum allowable number of employees performing the work
     :param name: the name of this requirement
     """
     kind: str
@@ -46,6 +49,7 @@ class WorkerReq(BaseReq):
         """
         The function scales the requirement to the size of the work including the total
         volume and the maximum number of personnel involved.
+
         :param scalar: scalar for multiplication
         :param new_name: name for new req
         :return new_req: new object with new volume of the work and extended max_count_commands
@@ -57,6 +61,7 @@ class WorkerReq(BaseReq):
     def scale_volume(self, scalar: float, new_name: Optional[str] = None) -> 'WorkerReq':
         """
         The function scales only volume of the work for the requirement.
+
         :param scalar: scalar for multiplication
         :param new_name: name for new req
         :return new_req: new object with new volume of the work.
@@ -69,10 +74,12 @@ class WorkerReq(BaseReq):
 class EquipmentReq(BaseReq):
     """
     Requirements for renewable non-human resources: equipment, trucks, machines, etc
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """
     kind: str
+    count: int
     name: Optional[str] = None
 
 
@@ -80,6 +87,7 @@ class EquipmentReq(BaseReq):
 class MaterialReq(BaseReq):
     """
     Requirements for non-renewable materials: consumables, spare parts, construction materials
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """
@@ -96,8 +104,20 @@ class MaterialReq(BaseReq):
 class ConstructionObjectReq(BaseReq):
     """
     Requirements for infrastructure and the construction of other facilities: electricity, pipelines, roads, etc
+
     :param kind: type of resource/profession
     :param name: the name of this requirement
     """
     kind: str
+    count: int
     name: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class ZoneReq(BaseReq):
+    kind: str
+    required_status: int
+    name: Optional[str] = None
+
+    def to_zone(self) -> Zone:
+        return Zone(self.kind, self.required_status)

@@ -10,8 +10,8 @@ import pandas as pd
 
 from sampo.utilities.serializers import CUSTOM_FIELD_SERIALIZER, CUSTOM_FIELD_DESERIALIZER, CUSTOM_TYPE_SERIALIZER, \
     CUSTOM_TYPE_DESERIALIZER, default_ndarray_serializer, default_dataframe_serializer, default_ndarray_deserializer, \
-    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, default_np_long_serializer, \
-    default_np_long_deserializer
+    default_dataframe_deserializer, default_np_int_deserializer, default_np_int_serializer, \
+    default_np_long_serializer, default_np_long_deserializer
 
 # define type of result serialization
 T = TypeVar('T', str, dict, list, tuple, str, bool, None)
@@ -35,7 +35,7 @@ TYPE_HINTS = '_serializable_type_hints'
 
 class Serializable(ABC, Generic[T, S]):
     """
-    Parent class for (de-)serialization different data structures
+    Parent class for (de-)serialization different data structures.
 
     :param ABC: helper class to create custom abstract classes
     :param Generic[T, S]: base class to make Serializable as universal class, using user's types T, S
@@ -49,7 +49,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _serialize(self) -> T:
         """
-        Converts all the meaningful information from this instance to a generic representation
+        Converts all the meaningful information from this instance to a generic representation.
 
         :return: A generic representation
         """
@@ -59,7 +59,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def _deserialize(cls, representation: T) -> S:
         """
-        Creates class instance from a representation
+        Creates class instance from a representation.
         :param representation: Representation produced by _serialize method
         :return: New class instance
         """
@@ -69,7 +69,7 @@ class Serializable(ABC, Generic[T, S]):
     @abstractmethod
     def load(cls, folder_path: str, file_name: str) -> S:
         """
-        Factory method that produces a python object from the serialized version of it
+        Factory method that produces a python object from the serialized version of it.
         :param folder_path: Path to the folder, where the serialized file is saved
         :param file_name: File name without extension
         (the file extension should match with the one returned by serializer_extension method)
@@ -79,7 +79,7 @@ class Serializable(ABC, Generic[T, S]):
 
     def dump(self, folder_path: str, file_name: str):
         """
-        Serializes object and saves it to file
+        Serializes the object and saves it to file.
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
@@ -308,7 +308,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
         def serialize_field(name, value):
             """
-            Try to serialize value to and put it into resulting dict with key "name"
+            Try to serialize value to and put it into resulting dict with key 'name'
             :param name: key of value in resulting dict (JSON)
             :param value:
             :return: serialized value
@@ -347,6 +347,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
     def _deserialize(cls, dict_representation: dict) -> AJS:
         """
         Creates class instance from a dict representation
+
         :param dict_representation: Representation produced by _serialize method
         :return: New class instance
         """
@@ -364,7 +365,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
         def deserialize_field(name, value):
             """
-            Transform current value from JSON to element of resulting dict, having "name" as key
+            Transform current value from JSON to element of resulting dict, having 'name' as key
             :param name: key in dict
             :param value:
             :return: deserialize value

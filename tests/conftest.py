@@ -1,18 +1,15 @@
 from random import Random
-from typing import Dict, Optional, Any
+from typing import Dict, Any
 from uuid import uuid4
 
 import pytest
 from pytest import fixture
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generate import generate_schedule
-from sampo.scheduler.heft.base import HEFTBetweenScheduler
-from sampo.scheduler.heft.base import HEFTScheduler
-from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
-from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
+from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -21,19 +18,19 @@ from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
-from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ("tests.schema", "tests.models",)
+pytest_plugins = ('tests.schema', 'tests.models',)
 
 
-@fixture(scope='session')
+@fixture
 def setup_sampler(request):
     return Sampler(1e-1)
 
 
-@fixture(scope='session')
+@fixture
 def setup_rand() -> Random:
     return Random(231)
 
@@ -53,7 +50,7 @@ def setup_landscape_many_holders():
                                            ])
 
 
-@fixture(scope='session')
+@fixture
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
@@ -66,7 +63,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
               for lag_opt in [True, False]
               for graph_type in ['manual',
                                  'small plain synthetic', 'big plain synthetic']])
-        # 'small advanced synthetic', 'big advanced synthetic']])
+# 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
     BIG_GRAPH_SIZE = 300
@@ -160,7 +157,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
     for i in range(num_contractors):
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
-                                      name="OOO Berezka",
+                                      name='OOO Berezka',
                                       workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
@@ -168,34 +165,39 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 
 
 @fixture
+def setup_empty_contractors(setup_wg) -> list[Contractor]:
+    resource_req: set[str] = set()
+
+    num_contractors= 1
+
+    for node in setup_wg.nodes:
+        for req in node.work_unit.worker_reqs:
+            resource_req.add(req.kind)
+
+    contractors = []
+    for i in range(num_contractors):
+        contractor_id = str(uuid4())
+        contractors.append(Contractor(id=contractor_id,
+                                      name='OOO Berezka',
+                                      workers={name: Worker(str(uuid4()), name, 0, contractor_id=contractor_id)
+                                               for name in resource_req},
+                                      equipments={}))
+    return contractors
+
+
+@fixture
 def setup_default_schedules(setup_scheduler_parameters):
-    work_estimator: Optional[WorkTimeEstimator] = None
+    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
-    setup_wg, setup_contractors, setup_landscape_many_holders = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
-    def init_schedule(scheduler_class):
-        return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=FullScanResourceOptimizer()).schedule(setup_wg, setup_contractors,
-                                                                                        landscape=setup_landscape_many_holders)
-
-    def init_k_schedule(scheduler_class, k):
-        return scheduler_class(work_estimator=work_estimator,
-                               resource_optimizer=AverageReqResourceOptimizer(k)).schedule(setup_wg, setup_contractors,
-                                                                                           landscape=setup_landscape_many_holders)
-
-    return setup_scheduler_parameters, {
-        "heft_end": init_schedule(HEFTScheduler),
-        "heft_between": init_schedule(HEFTBetweenScheduler),
-        "12.5%": init_k_schedule(HEFTScheduler, 8),
-        "25%": init_k_schedule(HEFTScheduler, 4),
-        "75%": init_k_schedule(HEFTScheduler, 4 / 3),
-        "87.5%": init_k_schedule(HEFTScheduler, 8 / 7)
-    }
+    return setup_scheduler_parameters, GeneticScheduler.generate_first_population(setup_wg, setup_contractors,
+                                                                                  setup_landscape,
+                                                                                  work_estimator=work_estimator)
 
 
-@fixture(scope='session',
-         params=list(SchedulerType),
-         ids=[f'Scheduler: {scheduler}' for scheduler in list(SchedulerType)])
+@fixture(params=list(SchedulerType),
+         ids=[f'Scheduler: {scheduler.value}' for scheduler in list(SchedulerType)])
 def setup_scheduler_type(request):
     return request.param
 
@@ -206,7 +208,7 @@ def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_lands
 
     try:
         return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
-                                 work_time_estimator=None,
+                                 work_time_estimator=DefaultWorkEstimator(),
                                  work_graph=setup_wg,
                                  contractors=setup_contractors,
                                  validate_schedule=False,

@@ -50,14 +50,6 @@ def create_employment_fig(resources: Union[DataFrame, ResourceSchedule],
                           vis_mode: VisualizationMode,
                           file_name: Optional[str] = '') \
         -> Optional[Union[plt.Figure, plotly.graph_objects.Figure]]:
-    """
-
-    :param resources:
-    :param fig_type:
-    :param vis_mode:
-    :param file_name:
-    :return:
-    """
 
     if fig_type in [EmploymentFigType.WorkLabeled, EmploymentFigType.DateLabeled]:
         assert isinstance(resources, DataFrame), \

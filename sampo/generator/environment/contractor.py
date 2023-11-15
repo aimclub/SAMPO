@@ -11,6 +11,15 @@ def _get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: 
                            available_types: list | None = None, rand: Random | None = None) -> dict[str, int]:
     """
     Return random quantity of each type of resources. Random value is gotten from Gaussian distribution
+
+    :param pack_count: The number of resource sets
+    :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
+    transferred proportions
+    :param proportions: proportions of quantity for contractor resources to be scaled by pack_worker_count
+    :param available_types: Worker types for generation,
+    if a subset of worker_proportions is used, if None, all worker_proportions are used
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+
     """
     available_types = available_types or list(proportions.keys())
     counts = {name: prop * pack_count for name, prop in proportions.items() if name in available_types}
@@ -22,6 +31,13 @@ def _get_stochastic_counts(pack_count: float, sigma_scaler: float, proportions: 
 
 
 def _dict_subtract(d: dict[str, float], subtractor: float) -> dict[str, float]:
+    """
+
+    :param d: dict[str:
+    :param float]:
+    :param subtractor: float:
+
+    """
     for name in d.keys():
         d[name] -= subtractor
     return d
@@ -30,12 +46,13 @@ def _dict_subtract(d: dict[str, float], subtractor: float) -> dict[str, float]:
 def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int or list[int],
                                           number_of_contractors: int = 1) \
         -> list[Contractor]:
-    """
-    Generates a contractors list of specified length with specified capacities
+    """Generates a contractors list of specified length with specified capacities
+
     :param number_of_workers_in_contractors: How many workers of all each contractor contains in itself.
     One int for all or list[int] for each contractor. If list, its length should be equal to number_of_contractors
     :param number_of_contractors: Number of generated contractors.
-    :return: list with contractors
+    :returns: list with contractors
+
     """
     assert isinstance(number_of_workers_in_contractors, int) \
            or len(number_of_workers_in_contractors) == number_of_contractors, \
@@ -52,8 +69,7 @@ def get_contractor(pack_worker_count: float,
                    index: int = 0,
                    worker_proportions: dict[str, int] | None = WORKER_PROPORTIONS,
                    available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
-    """
-    Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
+    """Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
 
     :param pack_worker_count: The number of resource sets
     :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
@@ -63,7 +79,8 @@ def get_contractor(pack_worker_count: float,
     :param available_worker_types: Worker types for generation,
     if a subset of worker_proportions is used, if None, all worker_proportions are used
     :param rand: Number generator with a fixed seed, or None for no fixed seed
-    :return: the contractor
+    :returns: the contractor
+
     """
     contractor_id = uuid_str(rand)
 
@@ -79,6 +96,4 @@ def get_contractor(pack_worker_count: float,
                                contractor_id=contractor_id,
                                count=worker_counts[name])
 
-    return Contractor(contractor_id, f"Contractor {index}", workers, {})
-
-
+    return Contractor(contractor_id, f'Contractor {index}', workers, {})

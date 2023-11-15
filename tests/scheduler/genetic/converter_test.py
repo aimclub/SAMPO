@@ -1,32 +1,38 @@
 from uuid import uuid4
 
-from fixtures import *
 from sampo.scheduler.heft.base import HEFTScheduler
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule import Schedule
 from sampo.utilities.validation import validate_schedule
+
+from tests.scheduler.genetic.fixtures import setup_toolbox
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
-    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape_many_holders)
+    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True,
+                                        landscape=setup_landscape_many_holders)
 
     chromosome = tb.schedule_to_chromosome(schedule=schedule)
     assert tb.validate(chromosome)
 
 
 def test_convert_chromosome_to_schedule(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, _ = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
+    assert not schedule.execution_time.is_inf()
+
     validate_schedule(schedule, setup_wg, setup_contractors)
 
 
 def test_converter_with_borders_contractor_accounting(setup_toolbox):
-    (tb, _), setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
     chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
 
@@ -42,8 +48,9 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
     for i in range(len(chromosome[2])):
         contractors.append(Contractor(id=setup_contractors[i].id,
                                       name=setup_contractors[i].name,
-                                      workers={name: Worker(str(uuid4()), name, count, contractor_id=setup_contractors[i].id)
-                                               for name, count in zip(workers, chromosome[2][i])},
+                                      workers={
+                                          name: Worker(str(uuid4()), name, count, contractor_id=setup_contractors[i].id)
+                                          for name, count in zip(workers, chromosome[2][i])},
                                       equipments={}))
 
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)

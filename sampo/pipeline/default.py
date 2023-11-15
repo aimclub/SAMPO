@@ -21,6 +21,29 @@ from sampo.utilities.task_name import NameMapper
 import pandas as pd
 
 
+def contractors_can_perform_work_graph(contractors: list[Contractor], wg: WorkGraph) -> bool:
+    is_at_least_one_contractor_can_perform = True
+    num_contractors_can_perform_node = 0
+
+    for node in wg.nodes:
+        reqs = node.work_unit.worker_reqs
+        for contractor in contractors:
+            offers = contractor.workers
+            for req in reqs:
+                if req.min_count > offers[req.kind].count:
+                    is_at_least_one_contractor_can_perform = False
+                    break
+            if is_at_least_one_contractor_can_perform:
+                num_contractors_can_perform_node += 1
+                break
+            is_at_least_one_contractor_can_perform = True
+        if num_contractors_can_perform_node == 0:
+            return False
+        num_contractors_can_perform_node = 0
+
+    return True
+
+
 class DefaultInputPipeline(InputPipeline):
     """
     Default pipeline, that help to use the framework
@@ -64,8 +87,6 @@ class DefaultInputPipeline(InputPipeline):
         :param contractors: the contractors list for scheduling task
         :return: the pipeline object
         """
-        if not DefaultInputPipeline._check_is_contractors_can_perform_work_graph(contractors, self._wg):
-            raise NoSufficientContractorError('Contractors are not able to perform the graph of works')
         self._contractors = contractors
         return self
 
@@ -152,6 +173,10 @@ class DefaultInputPipeline(InputPipeline):
                     work_resource_estimator=self._work_estimator,
                     unique_work_names_mapper=self._name_mapper
                 )
+
+        if not contractors_can_perform_work_graph(self._contractors, self._wg):
+            raise NoSufficientContractorError('Contractors are not able to perform the graph of works')
+
         if isinstance(scheduler, GenericScheduler):
             # if scheduler is generic, it supports injecting local optimizations
             # cache upper-layer self to another variable to get it from inner class
@@ -205,37 +230,14 @@ class DefaultInputPipeline(InputPipeline):
                     schedule = schedule2
 
             case _:
-                wg = graph_restructuring(self._wg, self._lag_optimize)
+                wg = graph_restructuring(self._wg, self._lag_optimize.value)
                 schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
                                                                            self._landscape_config,
                                                                            self._spec,
                                                                            assigned_parent_time=self._assigned_parent_time)
                 self._node_order = node_order
 
-        return DefaultSchedulePipeline(self, wg, schedule)
-
-    @staticmethod
-    def _check_is_contractors_can_perform_work_graph(contractors: list[Contractor], wg: WorkGraph) -> bool:
-        is_at_least_one_contractor_can_perform = True
-        num_contractors_can_perform_node = 0
-
-        for node in wg.nodes:
-            reqs = node.work_unit.worker_reqs
-            for contractor in contractors:
-                offers = contractor.workers
-                for req in reqs:
-                    if req.min_count > offers[req.kind].count:
-                        is_at_least_one_contractor_can_perform = False
-                        break
-                if is_at_least_one_contractor_can_perform:
-                    num_contractors_can_perform_node += 1
-                    break
-                is_at_least_one_contractor_can_perform = True
-            if num_contractors_can_perform_node == 0:
-                return False
-            num_contractors_can_perform_node = 0
-
-        return True
+        return DefaultSchedulePipeline(self, self._wg, schedule)
 
 
 # noinspection PyProtectedMember
@@ -249,6 +251,7 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._scheduled_works = {wg[swork.id]:
                                  swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
+        self._start_date = None
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,

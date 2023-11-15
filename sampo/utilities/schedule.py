@@ -1,6 +1,27 @@
+from datetime import datetime
+from functools import partial
+
 import pandas as pd
+from pandas import DataFrame
 
 from sampo.structurator import STAGE_SEP
+from sampo.utilities.datetime_util import add_time_delta
+
+
+def offset_schedule(schedule: DataFrame, offset: datetime | str) -> DataFrame:
+    """
+    Returns full schedule object with `start` and `finish` columns pushed by date in `offset` argument.
+    :param schedule: the schedule itself
+    :param offset: Start of schedule, to add as an offset.
+    :return: Shifted schedule DataFrame.
+    """
+    r = schedule.loc[:, :]
+    r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
+    r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
+    r = r.rename({'start': 'start_', 'finish': 'finish_',
+                  'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
+        .drop(['start_', 'finish_'], axis=1)
+    return r
 
 
 def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:

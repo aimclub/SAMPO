@@ -10,7 +10,7 @@ from sampo.schemas.serializable import JSONSerializable, T
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.datetime_util import add_time_delta
-from sampo.utilities.schedule import fix_split_tasks
+from sampo.utilities.schedule import fix_split_tasks, offset_schedule
 
 ResourceSchedule = dict[str, list[tuple[Time, Time]]]
 ScheduleWorkDict = dict[str, ScheduledWork]
@@ -106,22 +106,8 @@ class Schedule(JSONSerializable['Schedule']):
         :param offset: Start of schedule, to add as an offset.
         :return: Shifted schedule DataFrame with merged tasks.
         """
-        result = fix_split_tasks(self.offset_schedule(offset))
+        result = fix_split_tasks(offset_schedule(self._schedule, offset))
         return result
-
-    def offset_schedule(self, offset: Union[datetime, str]) -> DataFrame:
-        """
-        Returns full schedule object with `start` and `finish` columns pushed by date in `offset` argument.
-        :param offset: Start of schedule, to add as an offset.
-        :return: Shifted schedule DataFrame.
-        """
-        r = self._schedule.loc[:, :]
-        r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
-        r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
-        r = r.rename({'start': 'start_', 'finish': 'finish_',
-                      'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
-            .drop(['start_', 'finish_'], axis=1)
-        return r
 
     @staticmethod
     def from_scheduled_works(works: Iterable[ScheduledWork],

@@ -65,7 +65,7 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         df = task_df.copy()
 
         df = df.iloc[-1:].reset_index(drop=True)
-        for column in ['task_id', 'task_name']:
+        for column in ['task_id', 'task_name', 'task_name_mapped']:
             df.loc[0, column] = df.loc[0, column].split(STAGE_SEP)[0]  # fix task id and name
 
         # sum up volumes through all stages

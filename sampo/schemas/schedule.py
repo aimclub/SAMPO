@@ -112,12 +112,17 @@ class Schedule(JSONSerializable['Schedule']):
 
     def unite_stages(self) -> 'Schedule':
         merged_df = fix_split_tasks(self._schedule)
-        for _, row in merged_df.iterrows():
+
+        def f(row):
             swork: ScheduledWork = deepcopy(row[self._scheduled_work_column])
             row[self._scheduled_work_column] = swork
-            swork.name = row['task_name']
+            swork.name = row['task_name_mapped']
+            swork.display_name = row['task_name']
             swork.volume = float(row['volume'])
             swork.start_end_time = Time(int(row['start'])), Time(int(row['finish']))
+            return row
+
+        merged_df = merged_df.apply(f, axis=1)
 
         return Schedule.from_scheduled_works(works=merged_df[self._scheduled_work_column])
 

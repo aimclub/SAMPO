@@ -154,11 +154,15 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                 st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
             if idx == len(works_order) - 1:  # we are scheduling the work `end of the project`
-                st = max(st, timeline.zone_timeline.finish_statuses())
+                finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                st = max(start_time, finish_time)
 
             # finish using time spec
             timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
                               st, exec_time, assigned_parent_time, work_estimator)
+
+            if idx == len(works_order) - 1:  # we are scheduling the work `end of the project`
+                node2swork[node].zones_pre = finalizing_zones
 
             work_timeline.update_timeline(st, exec_time, None)
             return True

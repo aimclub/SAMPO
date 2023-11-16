@@ -155,10 +155,14 @@ class GenericScheduler(Scheduler):
                 finish_time += start_time
 
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
-                start_time = max(start_time, timeline.zone_timeline.finish_statuses())
+                finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                start_time = max(start_time, finish_time)
 
             # apply work to scheduling
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
+
+            if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
+                node2swork[node].zones_pre = finalizing_zones
 
         return node2swork.values(), assigned_parent_time, timeline

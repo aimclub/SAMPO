@@ -111,6 +111,10 @@ class Schedule(JSONSerializable['Schedule']):
         return result
 
     def unite_stages(self) -> 'Schedule':
+        """
+        Merge stages and reconstruct the `Schedule`
+        :return: `Schedule` with inseparable chains united
+        """
         merged_df = fix_split_tasks(self._schedule)
 
         def f(row):

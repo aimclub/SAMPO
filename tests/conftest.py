@@ -1,3 +1,4 @@
+import uuid
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -13,8 +14,8 @@ from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
-from sampo.schemas.interval import IntervalGaussian
 from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
+from sampo.schemas.landscape_graph import LandGraph, LandGraphNode
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
@@ -23,7 +24,6 @@ from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
 pytest_plugins = ('tests.schema', 'tests.models',)
-
 
 @fixture
 def setup_sampler(request):
@@ -37,17 +37,35 @@ def setup_rand() -> Random:
 
 @fixture
 def setup_landscape_one_holder():
-    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
+    return LandscapeConfiguration(holders=[ResourceHolder('holder1',
                                                           materials=[Material('111', 'mat1', 100000)])])
 
 
 @fixture
 def setup_landscape_many_holders():
-    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
+    return LandscapeConfiguration(holders=[ResourceHolder('holder1',
                                                           materials=[Material('111', 'mat1', 100000)]),
-                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
+                                           ResourceHolder('holder2',
                                                           materials=[Material('222', 'mat2', 100000)])
                                            ])
+
+
+@fixture
+def setup_lg():
+    platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1')
+    platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2')
+    platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3')
+    platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4')
+    holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1')
+    holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2')
+    platform1.add_neighbours([(platform3, 1.0)])
+    platform2.add_neighbours([(platform4, 2.0)])
+    platform3.add_neighbours([(platform1, 1.0), (holder1, 4.0), (holder2, 3.0)])
+    platform4.add_neighbours([(holder1, 5.0), (holder2, 7.0), (platform2, 2.0)])
+    holder1.add_neighbours([(platform3, 4.0), (platform4, 5.0), (holder2, 6.0)])
+    holder2.add_neighbours([(holder1, 6.0), (platform3, 3.0), (platform4, 7.0)])
+
+    return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]
 
 
 @fixture

@@ -12,7 +12,7 @@ class SupplyTimeline:
     def __init__(self, landscape_config: LandscapeConfiguration):
         self._timeline = {}
         self._capacity = {}
-        # material -> list of depots, that can supply this type of resource
+        # material -> list of holders, that can supply this type of resource
         self._resource_sources: dict[str, dict[str, int]] = {}
         for landscape in landscape_config.get_all_resources():
             self._timeline[landscape.id] = ExtendedSortedList([(Time(0), landscape.count), (Time.inf(), 0)],

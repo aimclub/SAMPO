@@ -33,7 +33,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
         :param object_reqs: list of required objects (e.g. electricity, pipelines, roads)
         :param zone_reqs: list of required zone statuses (e.g. opened/closed doors, attached equipment, etc.)
-        :param description: the description
+        :param description: the description. It is useful, for example, to show it on visualization
         :param group: union block of works
         :param is_service_unit: service units are additional vertexes
         :param volume: scope of work

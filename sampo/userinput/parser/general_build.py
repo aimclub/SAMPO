@@ -237,9 +237,11 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
         zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
             if 'required_statuses' in frame.columns else []
 
+        description = row['description'] if 'description' in frame.columns else ''
+
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
-                             volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
-                             display_name=row['activity_name'], zone_reqs=zone_reqs)
+                             description=description, volume=row['volume'], volume_type=row['measurement'],
+                             is_service_unit=is_service_unit, display_name=row['activity_name'], zone_reqs=zone_reqs)
         has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)

@@ -20,6 +20,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  material_reqs: list[MaterialReq] = None,
                  object_reqs: list[ConstructionObjectReq] = None,
                  zone_reqs: list[ZoneReq] = None,
+                 description: str = '',
                  group: str = 'default',
                  is_service_unit: bool = False,
                  volume: float = 0,
@@ -54,6 +55,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.object_reqs = object_reqs
         self.material_reqs = material_reqs
         self.zone_reqs = zone_reqs
+        self.description = description
         self.group = group
         self.is_service_unit = is_service_unit
         self.volume = volume
@@ -62,7 +64,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.workground_size = workground_size
 
     def __del__(self):
-        for name, attr in self.__dict__.items():
+        for attr in self.__dict__.values():
             del attr
 
     def need_materials(self) -> list[Material]:

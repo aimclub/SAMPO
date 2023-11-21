@@ -454,6 +454,8 @@ class MomentumTimeline(Timeline):
             # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
+            # +1 because we think that work ends in the rest of the time unit
+            node_time += 1
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),

@@ -54,7 +54,7 @@ def test_lft_scheduling2(setup_scheduler_parameters):
     schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape)
     default_time = schedule.execution_time
 
-    schedule.pure_schedule_df.to_csv('C:\\Users\\Егор\\Desktop\\lft.csv', index=False)
+    # schedule.pure_schedule_df.to_csv('C:\\Users\\Егор\\Desktop\\lft.csv', index=False)
 
     try:
         validate_schedule(schedule, setup_wg, setup_contractors)

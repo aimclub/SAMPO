@@ -274,19 +274,16 @@ class MomentumTimeline(Timeline):
         # the condition means we have reached the end of schedule for this contractor subject to specialization (wreq)
         # as long as we assured that this contractor has enough capacity at all to handle the task
         # we can stop and put the task at the very end
-        i = 0
-        while len(state[current_start_idx:]) > 0:
+        last_time = state[-1].time
+
+        if spec.is_independent:
+            return max(parent_time, last_time)
+
+        while current_start_time < last_time:
             # if i > 0 and i % 50 == 0:
             #     print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
             #     print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
-            i += 1
             end_idx = state.bisect_right(current_start_time + exec_time)
-
-            if spec.is_independent:
-                if end_idx - current_start_idx > 1:
-                    # here we know that there are milestones within our time slot
-                    # so let's go to the end
-                    return state[len(state) - 1].time + 1
 
             # checking from the end of execution interval, i.e., end_idx - 1
             # up to (including) the event right prepending the start
@@ -294,26 +291,25 @@ class MomentumTimeline(Timeline):
             # we need to check the event current_start_idx - 1 cause it is the first event
             # that influence amount of available for us workers
             not_enough_workers_found = False
-            for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
+            for idx in range(end_idx - 1, current_start_idx - 1, -1):
+                if state[idx].available_workers_count < required_worker_count:
                     # we're trying to find a new slot that would start with
                     # either the last index passing the quantity check
                     # or the index after the execution interval
                     # we need max here to process a corner case when the problem arises
                     # on current_start_idx - 1
                     # without max it would get into infinite cycle
-                    current_start_idx = max(idx, current_start_idx) + 1
+                    current_start_idx = idx + 1
                     not_enough_workers_found = True
                     break
 
             if not not_enough_workers_found:
                 break
 
-            if current_start_idx >= len(state):
-                current_start_time = max(parent_time, state[-1].time + 1)
-                break
-
             current_start_time = state[current_start_idx].time
+
+            if current_start_time == last_time:
+                return max(parent_time, last_time)
 
         return current_start_time
 
@@ -388,7 +384,7 @@ class MomentumTimeline(Timeline):
         # experimental logics lightening. debugging showed its efficiency.
 
         start = finish_time - exec_time
-        end = finish_time
+        end = finish_time + 1
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)

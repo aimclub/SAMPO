@@ -7,8 +7,7 @@ from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
-from sampo.scheduler.base import SchedulerType
-from sampo.scheduler.generate import generate_schedule
+from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
@@ -202,16 +201,20 @@ def setup_scheduler_type(request):
     return request.param
 
 
+@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
+         ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
+def setup_scheduler(request) -> Scheduler:
+    return request.param
+
+
 @fixture
-def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_landscape_many_holders):
+def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_landscape_many_holders):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     try:
-        return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
-                                 work_time_estimator=DefaultWorkEstimator(),
-                                 work_graph=setup_wg,
-                                 contractors=setup_contractors,
-                                 validate_schedule=False,
-                                 landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
+        return setup_scheduler.schedule(setup_wg,
+                                        setup_contractors,
+                                        validate=False,
+                                        landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

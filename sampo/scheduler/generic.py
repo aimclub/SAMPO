@@ -1,7 +1,7 @@
 from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
-from sampo.scheduler.heft.time_computaion import calculate_working_time_cascade
+from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.multi_contractor import run_contractor_search, get_worker_borders

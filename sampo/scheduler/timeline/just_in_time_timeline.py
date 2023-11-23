@@ -286,7 +286,9 @@ class JustInTimeTimeline(Timeline):
                 lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
             # +1 because we think that work ends in the rest of the time unit
-            new_finish_time = c_st + working_time + 1
+            if working_time > 0:
+                working_time -= 1
+            new_finish_time = c_st + working_time
 
             deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
                                                                                        new_finish_time,

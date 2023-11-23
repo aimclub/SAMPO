@@ -1,12 +1,8 @@
 import numpy as np
 from pytest import fixture
 
+from sampo.generator import SyntheticGraphType
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg
-from sampo.generator.types import SyntheticGraphType
-from sampo.scheduler.base import Scheduler
-from sampo.scheduler.genetic.base import GeneticScheduler
-from sampo.scheduler.heft.base import HEFTBetweenScheduler, HEFTScheduler
-from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import ZoneReq
@@ -57,12 +53,6 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
     zone_config = ZoneConfiguration(start_statuses={'zone1': start_status},
                                     time_costs=time_costs)
     return LandscapeConfiguration(zone_config=zone_config)
-
-
-@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
-         ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
-def setup_scheduler(request) -> Scheduler:
-    return request.param
 
 
 def test_zoned_scheduling(setup_zoned_wg, setup_landscape_config, setup_scheduler):

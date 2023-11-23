@@ -8,7 +8,6 @@ from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.utilities.base_opt import dichotomy_int
 
 
 class HEFTScheduler(GenericScheduler):

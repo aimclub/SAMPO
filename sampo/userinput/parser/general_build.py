@@ -6,7 +6,6 @@ from uuid import uuid4
 import networkx as nx
 import pandas as pd
 
-from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -183,10 +182,6 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
                 predecessor_ids[-1].append(row['predecessor_ids'][index])
                 connection_types[-1].append(row['connection_types'][index])
                 lags[-1].append(row['lags'][index])
-        if len(predecessor_ids[-1]) == 0:
-            predecessor_ids[-1].append(NONE_ELEM)
-            connection_types[-1].append(EdgeType.FinishStart)
-            lags[-1].append(float(NONE_ELEM))
     frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
 
     frame['edges'] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
@@ -214,9 +209,7 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGraph:
-    start = get_start_stage()
-    has_succ = set()
-    id_to_node = {NONE_ELEM: start}
+    id_to_node = {}
 
     for _, row in frame.iterrows():
         if 'min_req' in frame.columns and 'max_req' in frame.columns:
@@ -236,16 +229,12 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
                              volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
                              display_name=row['activity_name'])
-        has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node
 
-    without_succ = list(set(id_to_node.keys()) - has_succ)
-    without_succ = [id_to_node[index] for index in without_succ]
-    end = get_finish_stage(without_succ)
-    graph = WorkGraph(start, end)
-    return graph
+    all_nodes = [id_to_node[index] for index in list(set(id_to_node.keys()))]
+    return WorkGraph.from_nodes(all_nodes)
 
 
 def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') -> (

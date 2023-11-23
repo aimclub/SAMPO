@@ -1,4 +1,5 @@
 from sampo.schemas.apply_queue import ApplyQueue
+from sampo.schemas.utils import uuid_str
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError, NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
@@ -15,6 +16,5 @@ from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, WorkEstimationMode
 from sampo.schemas.types import ScheduleEvent, EventType
-from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.zones import Zone, ZoneTransition, ZoneStatuses, ZoneConfiguration, DefaultZoneStatuses

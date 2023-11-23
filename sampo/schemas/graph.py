@@ -2,11 +2,13 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, cache
+from random import Random
 from typing import Optional
 
 import numpy as np
 from scipy.sparse import dok_matrix
 
+from sampo.schemas import uuid_str
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.time import Time
@@ -277,7 +279,32 @@ class GraphNode(JSONSerializable['GraphNode']):
                     for edge in self.edges_to if edge.start in node2swork), default=Time(0))
 
 
-GraphNodeDict = dict[str, GraphNode]
+def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without a parent in the graph
+    :param work_id: id for the start node
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(work_id, 'start of project', [], group='service_works', is_service_unit=True)
+    return GraphNode(work, [])
+
+
+def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = "",
+                     rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without children in the graph
+    :param parents: a list of all non-service nodes that do not have children
+    :param work_id: id for the start node
+    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works', is_service_unit=True)
+    return GraphNode(work, parents)
 
 
 # TODO Make property for list of GraphEdges??
@@ -293,7 +320,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     # list of works (i.e. GraphNode)
     nodes: list[GraphNode] = field(init=False)
     adj_matrix: dok_matrix = field(init=False)
-    dict_nodes: GraphNodeDict = field(init=False)
+    dict_nodes: dict[str, GraphNode] = field(init=False)
     vertex_count: int = field(init=False)
 
     def __post_init__(self) -> None:
@@ -306,6 +333,16 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
+
+    @classmethod
+    def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
+        start = get_start_stage(rand=rand)
+        for node in nodes:
+            if len(node.parents) == 0:
+                node.add_parents([(start, 0, EdgeType.FinishStart)])
+        without_successors = [node for node in nodes if len(node.children) == 0]
+        finish = get_finish_stage(parents=without_successors, rand=rand)
+        return WorkGraph(start, finish)
 
     def __hash__(self):
         return hash(self.start) + 17 * hash(self.finish)

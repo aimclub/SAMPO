@@ -6,7 +6,6 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
@@ -75,11 +74,10 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     match graph_type:
         case 'manual':
             sr = setup_sampler
-            s = get_start_stage()
 
-            l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
+            l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
             l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
+            l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
             l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
@@ -99,8 +97,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
             l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            f = get_finish_stage([l3n1, l3n2, l3n3])
-            wg = WorkGraph(s, f)
+            wg = WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
         case 'small plain synthetic':
             wg = setup_simple_synthetic.work_graph(bottom_border=SMALL_GRAPH_SIZE - BORDER_RADIUS,
                                                    top_border=SMALL_GRAPH_SIZE + BORDER_RADIUS)

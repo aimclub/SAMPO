@@ -384,7 +384,7 @@ class MomentumTimeline(Timeline):
         # experimental logics lightening. debugging showed its efficiency.
 
         start = finish_time - exec_time
-        end = finish_time + 1
+        end = finish_time
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)
@@ -392,21 +392,35 @@ class MomentumTimeline(Timeline):
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
+                if event.available_workers_count < w.count:
+                    print()
                 assert event.available_workers_count >= w.count
                 event.available_workers_count -= w.count
 
             assert available_workers_count >= w.count
 
-            if start_idx < end_idx:
-                event: ScheduleEvent = state[end_idx - 1]
-                assert state[0].available_workers_count >= event.available_workers_count + w.count
-                end_count = event.available_workers_count + w.count
+            if end_idx == len(state):
+                if end_idx == start_idx:
+                    end_count = state[-1].available_workers_count
+                else:
+                    end_count = state[-1].available_workers_count + w.count
             else:
-                assert state[0].available_workers_count >= available_workers_count
-                end_count = available_workers_count
+                end_idx = state.bisect_right(end + 1) - 1
+                if state[end_idx].time == end + 1:
+                    end_count = state[end_idx].available_workers_count
+                else:
+                    end_count = state[end_idx].available_workers_count + w.count
+
+            # if start_idx < end_idx:
+            #     event: ScheduleEvent = state[end_idx - 1]
+            #     assert state[0].available_workers_count >= event.available_workers_count + w.count
+            #     end_count = event.available_workers_count + w.count
+            # else:
+            #     assert state[0].available_workers_count >= available_workers_count
+            #     end_count = available_workers_count
 
             state.add(ScheduleEvent(task_index, EventType.START, start, None, available_workers_count - w.count))
-            state.add(ScheduleEvent(task_index, EventType.END, end, None, end_count))
+            state.add(ScheduleEvent(task_index, EventType.END, end + 1, None, end_count))
 
     def schedule(self,
                  node: GraphNode,
@@ -456,7 +470,7 @@ class MomentumTimeline(Timeline):
                 workers=worker_team,
                 contractor=contractor
             )
-            curr_time += node_time + node_lag
+            curr_time = start_work + node_time
             node2swork[chain_node] = swork
 
         self.update_timeline(curr_time, curr_time - start_time, node, worker_team, spec)

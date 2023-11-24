@@ -56,24 +56,24 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
 
 
 @fixture(params=[(graph_type, lag) for lag in [
-    # True,
+    True,
                                                False
                                                ]
                  for graph_type in [
                      'manual',
-                     #                'small plain synthetic',
-                     # 'big plain synthetic'
+                                    'small plain synthetic',
+                     'big plain synthetic'
                  ]],
          # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
               for lag_opt in [
-                  # True,
+                  True,
                               False
                               ]
               for graph_type in [
                   'manual',
-                  #                'small plain synthetic',
-                  # 'big plain synthetic'
+                                 'small plain synthetic',
+                  'big plain synthetic'
                                  ]])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
@@ -91,26 +91,26 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             s = get_start_stage()
 
             l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
-            l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
-            l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
-            l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                           (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-            l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
-            l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            l3n1 = sr.graph_node('l2n1', [(l2n1, 0, EdgeType.FinishStart),
+            l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
-            l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n2 = sr.graph_node('l2n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
-            l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n3 = sr.graph_node('l2n3', [(l2n3, 1, EdgeType.LagFinishStart),
+            # l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
+            # l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
-            l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            # l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             f = get_finish_stage([l3n1, l3n2, l3n3])
             wg = WorkGraph(s, f)
@@ -135,8 +135,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
         case _:
             raise ValueError(f'Unknown graph type: {graph_type}')
 
-    if lag_optimization:
-        wg = graph_restructuring(wg, use_lag_edge_optimization=True)
+    wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
     return wg
 
@@ -155,12 +154,10 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
         for req in node.work_unit.worker_reqs:
             resource_req[req.kind] = max(contractor_min_resources,
                                          resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
-                                         # req.max_count, resource_req.get(req.kind, 0))
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():
         resource_req[req] = resource_req[req] // resource_req_count[req] + 1
-        # resource_req[req] = resource_req[req] * 10
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:

@@ -1,6 +1,28 @@
+from datetime import datetime
+from functools import partial
+
+import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 from sampo.structurator import STAGE_SEP
+from sampo.utilities.datetime_util import add_time_delta
+
+
+def offset_schedule(schedule: DataFrame, offset: datetime | str) -> DataFrame:
+    """
+    Returns full schedule object with `start` and `finish` columns pushed by date in `offset` argument.
+    :param schedule: the schedule itself
+    :param offset: Start of schedule, to add as an offset.
+    :return: Shifted schedule DataFrame.
+    """
+    r = schedule.loc[:, :]
+    r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
+    r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
+    r = r.rename({'start': 'start_', 'finish': 'finish_',
+                  'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
+        .drop(['start_', 'finish_'], axis=1)
+    return r
 
 
 def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
@@ -43,7 +65,7 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         df = task_df.copy()
 
         df = df.iloc[-1:].reset_index(drop=True)
-        for column in ['task_id', 'task_name']:
+        for column in ['task_id', 'task_name', 'task_name_mapped']:
             df.loc[0, column] = df.loc[0, column].split(STAGE_SEP)[0]  # fix task id and name
 
         # sum up volumes through all stages
@@ -53,7 +75,10 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
         # fix task's start time and duration
         df.loc[0, 'start'] = task_df.loc[0, 'start']
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
-        df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
+        if isinstance(df.loc[0, 'start'], np.int64) or isinstance(df.loc[0, 'start'], np.int32):
+            df.loc[0, 'duration'] = df.loc[0, 'finish'] - df.loc[0, 'start'] + 1
+        else:
+            df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
     else:
         df = task_df.copy()
 

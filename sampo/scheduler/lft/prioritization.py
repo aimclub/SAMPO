@@ -35,23 +35,27 @@ def lft_prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list
     #              for node in nodes}
 
     ordered_nodes = sorted(nodes2lft.keys(), key=lambda id: nodes2lft[id], reverse=True)
-    ordered_nodes = [wg.dict_nodes[id] for id in ordered_nodes]
 
-    # inseparable_parents = {}
-    # for node in nodes:
-    #     for child in node.get_inseparable_chain_with_self():
-    #         inseparable_parents[child.id] = node.id
-    #
-    # # here we aggregate information about relationships from the whole inseparable chain
-    # children = {node.id: set([inseparable_parents[child.id]
-    #                           for inseparable in node.get_inseparable_chain_with_self()
-    #                           for child in inseparable.children]) - {node.id}
-    #             for node in nodes}
-    #
-    # parents = {node.id: set() for node in nodes}
-    # for node, node_children in children.items():
-    #     for child in node_children:
-    #         parents[child].add(node)
+    inseparable_parents = {}
+    for node in nodes:
+        for child in node.get_inseparable_chain_with_self():
+            inseparable_parents[child.id] = node.id
+
+    # here we aggregate information about relationships from the whole inseparable chain
+    children = {node.id: set([inseparable_parents[child.id]
+                              for inseparable in node.get_inseparable_chain_with_self()
+                              for child in inseparable.children]) - {node.id}
+                for node in nodes}
+
+    parents = {node.id: set() for node in nodes}
+    for node, node_children in children.items():
+        for child in node_children:
+            parents[child].add(node)
+
+    used = set()
+    for work_index in reversed(ordered_nodes):
+        used.add(work_index)
+        assert parents[work_index].issubset(used)
     #
     # selected_ids = []
     # candidates = {wg.start.id}
@@ -76,5 +80,7 @@ def lft_prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list
     # ordered_nodes = list(reversed([wg.dict_nodes[node_id] for node_id in selected_ids]))
 
     # ordered_nodes = list(reversed(nodes))
+
+    ordered_nodes = [wg.dict_nodes[id] for id in ordered_nodes]
 
     return ordered_nodes

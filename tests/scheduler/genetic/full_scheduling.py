@@ -3,7 +3,7 @@ from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.lft.prioritization import lft_prioritization
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.utilities.validation import validate_schedule
-from sampo.utilities.resource_usage import get_resources_peak_usage
+
 import pandas as pd
 
 
@@ -53,9 +53,8 @@ def test_lft_scheduling2(setup_scheduler_parameters):
 
     scheduler = HEFTBetweenScheduler()
     schedule = scheduler.schedule(setup_wg, setup_contractors,
-                                  # validate=True,
+                                  validate=True,
                                   landscape=setup_landscape)
-    peaks = get_resources_peak_usage(schedule)
     default_time = schedule.execution_time
 
     try:

@@ -110,11 +110,12 @@ class MomentumTimeline(Timeline):
 
         exec_time: Time = Time(0)
         exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
-        for _, chain_node in enumerate(inseparable_chain):
+        for i, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 work_estimator.estimate_time(chain_node.work_unit, worker_team)
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
-            lag = lag_req if lag_req > 0 else 0
+            # int(i > 0) because resources will be freed up on next day
+            lag = lag_req if lag_req > 0 else int(i > 0)
 
             exec_times[chain_node] = lag, node_exec_time
             exec_time += lag + node_exec_time
@@ -371,6 +372,8 @@ class MomentumTimeline(Timeline):
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
+                if event.available_workers_count < w.count:
+                    print()
                 assert event.available_workers_count >= w.count
                 event.available_workers_count -= w.count
 
@@ -448,8 +451,7 @@ class MomentumTimeline(Timeline):
             # lag_req = nodes_start_times[chain_node] - curr_time
             # node_lag = lag_req if lag_req > 0 else 0
 
-            # int(i > 0) because resources will be freed up on next day
-            start_work = curr_time + node_lag + int(i > 0)
+            start_work = curr_time + node_lag
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),

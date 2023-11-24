@@ -56,11 +56,12 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             -> list[WorkerReq]:
         if resource_name is None:
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
+        dist = numpy.random.poisson(work_volume * 3, len(resource_name))
         return [WorkerReq(kind=name,
                           volume=work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0],
-                          min_count=numpy.random.poisson(work_volume ** 0.2, 1)[0],
-                          max_count=numpy.random.poisson(work_volume * 3, 1)[0])
-                for name in resource_name]
+                          min_count=dist[i],
+                          max_count=dist[i] * 2)
+                for i, name in enumerate(resource_name)]
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle

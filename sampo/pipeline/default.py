@@ -1,3 +1,4 @@
+from sampo.generator.environment import ContractorGenerationMethod
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -51,7 +52,8 @@ class DefaultInputPipeline(InputPipeline):
 
     def __init__(self):
         self._wg: WorkGraph | pd.DataFrame | str | None = None
-        self._contractors: list[Contractor] | pd.DataFrame | str | None = None
+        self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int] | None \
+            = ContractorGenerationMethod.AVG, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_order: list[GraphNode] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
@@ -59,12 +61,15 @@ class DefaultInputPipeline(InputPipeline):
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
         self._landscape_config = LandscapeConfiguration()
-        self._history: pd.DataFrame | None = None
+        self._history: pd.DataFrame = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
+                                                            'upper_works', 'work_name_clear_old', 'smr_name',
+                                                            'work_name_clear', 'granular_smr_name'])
         self._is_wg_has_full_info_about_connections: bool = False
         self._change_base_on_history: bool = False
         self._name_mapper: NameMapper | None = None
 
-    def wg(self, wg: WorkGraph | pd.DataFrame | str,
+    def wg(self,
+           wg: WorkGraph | pd.DataFrame | str,
            is_wg_has_full_info_about_connections: bool = False,
            change_base_on_history: bool = False) -> 'InputPipeline':
         """
@@ -80,11 +85,14 @@ class DefaultInputPipeline(InputPipeline):
         self._change_base_on_history = change_base_on_history
         return self
 
-    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str) -> 'InputPipeline':
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
+            -> 'InputPipeline':
         """
         Mandatory argument.
 
-        :param contractors: the contractors list for scheduling task
+        :param contractors: the contractors list for scheduling task, or DataFrame with contractor info,
+                            or file with contractor info, of method for contractors generation with
+                            number of contractors to be generated
         :return: the pipeline object
         """
         self._contractors = contractors
@@ -249,7 +257,7 @@ class DefaultSchedulePipeline(SchedulePipeline):
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
         self._schedule = schedule
         self._scheduled_works = {wg[swork.id]:
-                                 swork for swork in schedule.to_schedule_work_dict.values()}
+                                     swork for swork in schedule.to_schedule_work_dict.values()}
         self._local_optimize_stack = ApplyQueue()
         self._start_date = None
 

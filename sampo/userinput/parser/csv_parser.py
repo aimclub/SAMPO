@@ -5,6 +5,7 @@ from uuid import uuid4
 import pandas as pd
 from pandas import DataFrame
 
+from sampo.generator.environment import ContractorGenerationMethod, get_contractor_by_wg
 from sampo.schemas.contractor import Contractor, get_contractor_for_resources_schedule
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
@@ -19,8 +20,8 @@ from sampo.utilities.task_name import NameMapper
 class CSVParser:
 
     @staticmethod
-    def read_graph_info(project_info: str,
-                        history_data: str | None = None,
+    def read_graph_info(project_info: str | pd.DataFrame,   # TODO Fix mutating input data
+                        history_data: str | pd.DataFrame,
                         full_connections: bool = False,
                         change_base_on_history: bool = False) -> pd.DataFrame:
         """
@@ -29,6 +30,7 @@ class CSVParser:
         Schema of WorkGraph .csv file:
             mandatory fields:
                 activity_id: str - Id of the current task,
+                activity_name: str - Name of the current task,
                 measurement: str - Measure of the size of the current task (e.g., km, pcs, lit),
                 volume: float - Volume of the current task
             optional fields:
@@ -36,13 +38,16 @@ class CSVParser:
                 predecessor_ids: list[str] - Ids of predecessors of the current task,
                 connection_types: list[str] - Types of links between the current task and its predecessors,
                 lags: float - Time lags,
-                min_req: dict[str: float] - A dictionary containing the minimum amount of each resource
+                min_req: dict[str, float] - A dictionary containing the minimum amount of each resource
                                             that is required to perform the current task
-                max_req: dict[str: float] - A dictionary containing the maximum amount of each resource
+                max_req: dict[str, float] - A dictionary containing the maximum amount of each resource
                                             that is required to perform the current task
                 description: str - A task description
-                required_status: dict[str: float] - A dictionary containing the zone statuses required
+                required_statuses: dict[str, int] - A dictionary containing the zone statuses required
                                                     to perform the current task
+
+        !NOTE! that length of predecessor_ids, connection_types and lags in each cell should be equal
+        for the correct predecessor resolution
 
         Schema of history .csv file (optional data):
             mandatory fields:
@@ -65,9 +70,7 @@ class CSVParser:
         """
         graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
                                                                               str) else project_info
-        history_df = None
-        if history_data is not None:
-            history_df = pd.read_csv(history_data)
+        history_df = pd.read_csv(history_data) if isinstance(history_data, str) else history_data
 
         if 'predecessor_ids' not in graph_df.columns and history_data is None:
             raise InputDataException(
@@ -91,11 +94,11 @@ class CSVParser:
 
     @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
-                                   contractor_info: str | list[Contractor] |  None = None,
+                                   contractor_info: str | list[Contractor] | tuple[ContractorGenerationMethod, int]
+                                                                              = (ContractorGenerationMethod.AVG, 1),
                                    contractor_types: list[int] | None = None,
                                    unique_work_names_mapper: NameMapper | None = None,
-                                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                                   contractors_number: int = 1) \
+                                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> (WorkGraph, Contractor):
         """
         Gets a info about WorkGraph and Contractors from file .csv.
@@ -129,21 +132,9 @@ class CSVParser:
         if unique_work_names_mapper:
             works_info.activity_name = works_info.activity_name.apply(lambda name: unique_work_names_mapper[name])
 
-        if contractor_info is None:
-            resources = [dict((worker_req.name, int(worker_req.volume))
-                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
-            contractors = [get_contractor_for_resources_schedule(resources,
-                                                                 contractor_capacity=contractor_types[i],
-                                                                 contractor_id=str(i),
-                                                                 contractor_name='Contractor' + ' ' + str(i + 1))
-                           for i in range(contractors_number)]
-        elif isinstance(contractor_info, list):
+        if isinstance(contractor_info, list):
             contractors = contractor_info
-            resources = [dict((worker_req.name, int(worker_req.volume))
-                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
-        else:
+        elif isinstance(contractor_info, str):
             # if contractor info is given or contractor info and work resource estimator are received simultaneously
             contractor_df = pd.read_csv(contractor_info, sep=';', header=0) if isinstance(contractor_info,
                                                                                           str) else contractor_info
@@ -158,23 +149,25 @@ class CSVParser:
                                         enumerate(row[column_lag:].items())},
                                equipments=dict())
                 )
-            resource_names = contractor_df.columns[1:].to_list()
-            resources = [dict((worker_req.name, int(worker_req.volume))
-                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1]), resource_names))
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
+
+        resources = [dict((worker_req.kind, int(worker_req.volume))
+                          for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
+                     for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
 
         unique_res = list(set(chain(*[r.keys() for r in resources])))
-        works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
+        # works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
 
         works_resources = add_graph_info(works_info)
         works_resources = topsort_graph_df(works_resources)
-        work_graph = build_work_graph(works_resources, unique_res)
+        work_graph = build_work_graph(works_resources, unique_res, work_resource_estimator)
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:
-            contractors = [get_contractor_for_resources_schedule(resources,
-                                                                 contractor_id=str(i),
-                                                                 contractor_name='Contractor' + ' ' + str(i + 1))
+            generation_method, contractors_number = contractor_info
+            contractors = [get_contractor_by_wg(work_graph,
+                                                method=generation_method,
+                                                contractor_id=str(i),
+                                                contractor_name='Contractor' + ' ' + str(i + 1))
                            for i in range(contractors_number)]
 
         return work_graph, contractors

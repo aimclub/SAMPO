@@ -11,6 +11,7 @@ from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq, ZoneReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.works import WorkUnit
+from sampo.schemas.time_estimator import WorkTimeEstimator
 
 UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
@@ -208,7 +209,7 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGraph:
+def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estimator: WorkTimeEstimator) -> WorkGraph:
     id_to_node = {}
 
     for _, row in frame.iterrows():
@@ -219,12 +220,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
                               ) for res_name in resource_names
                     if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
         else:
-            reqs = [WorkerReq(kind=res_name,
-                              volume=row[res_name],
-                              min_count=int(row[res_name] / 3),
-                              max_count=math.ceil(row[res_name] * 10))
-                    for res_name in resource_names
-                    if row[res_name] > 0]
+            reqs = work_estimator.find_work_resources(row['activity_name'], row['volume'])
         is_service_unit = len(reqs) == 0
 
         zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
@@ -234,7 +230,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
 
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
                              description=description, volume=row['volume'], volume_type=row['measurement'],
-                             is_service_unit=is_service_unit, display_name=row['activity_name'], zone_reqs=zone_reqs)
+                             is_service_unit=is_service_unit, display_name=row['activity_name_original'], zone_reqs=zone_reqs)
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node

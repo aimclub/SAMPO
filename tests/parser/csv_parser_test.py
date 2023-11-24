@@ -16,4 +16,4 @@ def test_work_graph_csv_parser():
     except Exception as e:
         raise WorkGraphBuildingException(f'There is no way to build work graph, {e}')
 
-
+    os.remove(os.path.join(sys.path[0], 'tests/parser/repaired.csv'))

@@ -87,7 +87,8 @@ def test_restructuring(setup_wg_for_restructuring):
     wg_restructured_nodes_id = [node.id for node in wg_restructured.nodes]
     assert all([node_id in wg_restructured_nodes_id for node_id in wg_nodes_id]), \
         "Not all nodes from original work graph are in restructured work graph"
-    assert all([edge.lag == 0 if edge.start.work_unit.is_service_unit else edge.lag == 1
+    assert all([edge.lag == 0 if edge.start.work_unit.is_service_unit or edge.finish.work_unit.is_service_unit
+                else edge.lag == 1
                 for node in wg_restructured.nodes
                 for edge in node.edges_to]), \
         "Not all lags in restructured work graph have correct lag amount"

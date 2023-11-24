@@ -100,7 +100,7 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
     # does not exceed capacity of this contractor
     ordered_start_end_events = sorted(
         (el for work in schedule.works
-         for el in [('start', work.start_time, work), ('end', work.finish_time, work)]),
+         for el in [('start', work.start_time, work), ('end', work.finish_time + 1, work)]),
         key=itemgetter(1)
     )
 

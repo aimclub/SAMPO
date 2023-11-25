@@ -379,16 +379,11 @@ class MomentumTimeline(Timeline):
 
             assert available_workers_count >= w.count
 
-            if end_idx == len(state):
+            state.add(ScheduleEvent(task_index, EventType.START, start, None, available_workers_count - w.count))
+
+            if end_idx == len(state) - 1:
                 # end time of the work is after last time in timeline
-                if end_idx == start_idx:
-                    # start time of the work is also after last time in timeline
-                    # so resources amount will be the same with current last time in timeline
-                    end_count = state[-1].available_workers_count
-                else:
-                    # there are milestones in timeline between end and start times of the work
-                    # so freeing up grabbed resources
-                    end_count = state[-1].available_workers_count + w.count
+                end_count = state[-1].available_workers_count + w.count
             else:
                 # move the index on time when resources of the work will be freed
                 end_idx = state.bisect_right(end + 1) - 1
@@ -398,16 +393,8 @@ class MomentumTimeline(Timeline):
                     end_count = state[end_idx].available_workers_count
                 else:
                     # time when resources will be freed is not in timeline
-                    if end_idx + 1 == start_idx:
-                        # there are no milestones in timeline between end and start times of the work
-                        # so resources amount will be the same
-                        end_count = state[end_idx].available_workers_count
-                    else:
-                        # there are milestones in timeline between end and start times of the work
-                        # so freeing up grabbed resources
-                        end_count = state[end_idx].available_workers_count + w.count
+                    end_count = state[end_idx].available_workers_count + w.count
 
-            state.add(ScheduleEvent(task_index, EventType.START, start, None, available_workers_count - w.count))
             state.add(ScheduleEvent(task_index, EventType.END, end + 1, None, end_count))
 
     def schedule(self,

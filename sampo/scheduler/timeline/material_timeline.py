@@ -14,16 +14,16 @@ class SupplyTimeline:
         self._capacity = {}
         # material -> list of holders, that can supply this type of resource
         self._resource_sources: dict[str, dict[str, int]] = {}
-        for landscape in landscape_config.get_all_resources():
-            self._timeline[landscape.id] = ExtendedSortedList([(Time(0), landscape.count), (Time.inf(), 0)],
+        for resource in landscape_config.get_all_resources():
+            self._timeline[resource.id] = ExtendedSortedList([(Time(0), resource.count), (Time.inf(), 0)],
                                                               itemgetter(0))
-            self._capacity[landscape.id] = landscape.count
-            for count, res in landscape.get_available_resources():
+            self._capacity[resource.id] = resource.count
+            for count, res in resource.get_available_resources():
                 res_source = self._resource_sources.get(res, None)
                 if res_source is None:
                     res_source = {}
                     self._resource_sources[res] = res_source
-                res_source[landscape.id] = count
+                res_source[resource.id] = count
 
     def can_schedule_at_the_moment(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> bool:
         return self.find_min_material_time(id, start_time, materials, batch_size) == start_time

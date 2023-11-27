@@ -66,7 +66,7 @@ class LandscapeConfiguration:
         self._build_routes()
 
     def get_all_resources(self) -> list[ResourceSupply]:
-        return self._holders + self.lg.nodes
+        return self._holders + self.lg.roads
 
     def _build_routes(self):
         def dijkstra(holder_id: int):

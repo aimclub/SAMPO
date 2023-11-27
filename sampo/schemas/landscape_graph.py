@@ -55,7 +55,7 @@ class LandGraphNode:
 
     @cached_property
     def neighbours(self) -> list['LandGraphNode']:
-        return [child for child, weight in self._roads]
+        return [neighbour for neighbour, weight in self._roads]
 
     @cached_property
     def roads(self) -> list[Road]:
@@ -87,6 +87,15 @@ class LandGraph:
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'node2ind', node2ind)
         object.__setattr__(self, 'vertex_count', len(node2ind))
+
+    @cached_property
+    def roads(self) -> list['Road']:
+        roads = []
+        for i in range(self.vertex_count):
+            for j in range(self.vertex_count):
+                if self.adj_matrix[i][j] > 0 and i != j:
+                    roads.append(Road(self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
+        return roads
 
     def _to_adj_matrix(self) -> tuple[dok_matrix, dict[LandGraphNode, int]]:
         node2ind: dict[LandGraphNode, int] = {

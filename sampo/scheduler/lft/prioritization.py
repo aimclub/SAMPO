@@ -41,29 +41,32 @@ def lft_randomized_prioritization(wg: WorkGraph, node_id2duration: dict[str, int
     """
 
     def is_eligible(node_id):
-        return all([pred_id in selected_ids for pred_id in parents[node_id]])
+        return parents[node_id].issubset(selected_ids_set)
 
     nodes2lft, nodes2lst = map_lft_lst(wg, node_id2duration)
 
     nodes = [wg[node_id] for node_id in nodes2lft.keys()]
 
+    # map nodes and inseparable chain's head
     inseparable_parents = {}
     for node in nodes:
         for child in node.get_inseparable_chain_with_self():
             inseparable_parents[child.id] = node.id
 
-    # here we aggregate information about relationships from the whole inseparable chain
+    # map nodes and their children using only inseparable chain heads
     children = {node.id: set([inseparable_parents[child.id]
                               for inseparable in node.get_inseparable_chain_with_self()
                               for child in inseparable.children]) - {node.id}
                 for node in nodes}
 
+    # map nodes and their parents using only inseparable chain heads
     parents = {node.id: set() for node in nodes}
     for node, node_children in children.items():
         for child in node_children:
             parents[child].add(node)
 
     selected_ids = []
+    selected_ids_set = set()
     candidates = {wg.start.id}
 
     while candidates:
@@ -78,6 +81,7 @@ def lft_randomized_prioritization(wg: WorkGraph, node_id2duration: dict[str, int
         selected_id = rand.choices(eligibles, weights=weights)[0]
 
         selected_ids.append(selected_id)
+        selected_ids_set.add(selected_id)
         candidates.remove(selected_id)
         candidates.update([child_id for child_id in children[selected_id]])
 

@@ -12,7 +12,7 @@ from sampo.schemas.project import ScheduledProject
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
 class InputPipeline(ABC):

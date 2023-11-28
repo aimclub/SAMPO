@@ -4,7 +4,7 @@ from typing import Callable
 from uuid import uuid4
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.pipeline.types import SyntheticGraphType
+from sampo.generator.pipeline import SyntheticGraphType
 from sampo.scheduler.multi_agency.block_graph import BlockGraph, BlockNode
 from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -49,6 +49,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
     :param edge_prob: edge existence probability
     :param rand: a random reference
     :param obstruction_getter: obstruction, that can be inserted in BlockGraph
+    :param logger: the log function that consumes log strings
     :return: generated block graph
     """
     ss = SimpleSynthetic(rand)
@@ -118,7 +119,7 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
     :param queues_num: number of queues in a block graph
     :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
-    :param logger: for logging
+    :param logger: the log function that consumes log strings
     :return: generated block graph
     """
     if graph_type == SyntheticBlockGraphType.QUEUES:
@@ -147,6 +148,7 @@ def generate_queues(type_prop: list[int],
     :param queues_num: number of queues in a block graph
     :param queues_blocks: list of queues. It contains the number of blocks in each queue
     :param queues_edges:
+    :param logger: the log function that consumes log strings
     :return: generated block graph
     """
     ss = SimpleSynthetic(rand)

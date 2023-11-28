@@ -17,7 +17,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
 from sampo.userinput.parser.csv_parser import CSVParser
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 import pandas as pd
 

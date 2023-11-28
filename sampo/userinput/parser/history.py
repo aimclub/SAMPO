@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from sampo.schemas.graph import EdgeType
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
 def get_all_connections(graph_df: pd.DataFrame, use_mapper: bool = False, mapper: NameMapper = None) \

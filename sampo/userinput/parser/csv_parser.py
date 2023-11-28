@@ -14,7 +14,7 @@ from sampo.userinput.parser.exception import InputDataException
 from sampo.userinput.parser.general_build import add_graph_info, topsort_graph_df, build_work_graph, \
     preprocess_graph_df, break_loops_in_input_graph
 from sampo.userinput.parser.history import set_connections_info
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
 class CSVParser:

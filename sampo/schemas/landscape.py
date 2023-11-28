@@ -4,9 +4,11 @@ from collections import defaultdict
 
 from sampo.schemas.landscape_graph import LandGraph, LandGraphNode
 from sampo.schemas.resources import Resource, Material
+from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
 from sampo.schemas.zones import ZoneConfiguration
 
+WAY_LENGTH = 10000000
 
 class ResourceSupply(Resource, ABC):
     def __init__(self, id: str, name: str, count: int):
@@ -35,17 +37,20 @@ class Vehicle(ResourceSupply):
 class ResourceHolder(ResourceSupply):
     def __init__(self,
                  name: str,
-                 materials: list[Material],
                  vehicles: list[Vehicle] = None,
                  node: LandGraphNode = None):
+        """
+        :param name:
+        :param vehicles:
+        :param node:
+        """
         # let ids of two objects will be similar to make simpler matching ResourceHolder to node in LandGraph
         super(ResourceHolder, self).__init__(node.id, name, 0)
-        self._materials = materials
         self.vehicles = vehicles
         self.node = node
 
     def get_available_resources(self) -> list[tuple[int, str]]:
-        return [(mat.count, mat.name) for mat in self._materials]
+        return [(mat.count, mat.name) for mat in self.node.resource_storage_unit.get_capacity()]
 
 
 class LandscapeConfiguration:
@@ -56,14 +61,28 @@ class LandscapeConfiguration:
         self.routing_mx = None
         if holders is None:
             holders = []
-        self._holders: list[ResourceHolder] = holders
         self.lg = lg
+        self._holders: list[ResourceHolder] = holders
+
+        # _ind2holder is required to match ResourceHolder to index in list of LangGraphNodes to work with routing_mx
+        self._ind2holder = {self.lg.node2ind[holder.node]: holder for holder in self._holders}
         self.zone_config = zone_config
 
     def build_landscape(self):
-        self.routing_mx = [[[10000000, defaultdict(set)] for j in range(self.lg.vertex_count)] for i in
+        self.routing_mx = [[[WAY_LENGTH, defaultdict(set)] for j in range(self.lg.vertex_count)] for i in
                            range(self.lg.vertex_count)]
         self._build_routes()
+
+    def get_sorted_holders(self, node_id: int) -> ExtendedSortedList[tuple[list[float, dict[set]], ResourceHolder]]:
+        """
+        :param node_id: id of node in LandGraph's list of nodes
+        :return: sorted list of holders by the length of way
+        """
+        holders = []
+        for i in range(len(self.routing_mx)):
+            if int(self.routing_mx[node_id][i][0]) != WAY_LENGTH:
+                holders.append((self.routing_mx[node_id][i], self._ind2holder[i]))
+        return ExtendedSortedList(holders, key=lambda x: x[0][0])
 
     def get_all_resources(self) -> list[ResourceSupply]:
         return self._holders + self.lg.roads

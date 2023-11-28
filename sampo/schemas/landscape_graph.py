@@ -4,7 +4,7 @@ from functools import cached_property
 import numpy as np
 from scipy.sparse import dok_matrix
 
-from sampo.schemas.graph import GraphNode
+from sampo.schemas.exceptions import NoAvailableResources
 from sampo.schemas.resources import Material
 
 
@@ -20,10 +20,10 @@ class Road:
 
 
 class ResourceStorageUnit:
-
     def __init__(self, capacity: list[Material]):
         """
-        :param capacity: list that contains the maximum value of each material
+        Represents the resource storage of a land graph node
+        :param capacity: list of the maximum values of each material
         """
         self._capacity = capacity
 
@@ -32,40 +32,43 @@ class ResourceStorageUnit:
 
 
 class LandGraphNode:
-    """
-    Represents the participant of landscape transport network
-    """
-
     def __init__(self,
                  id: str,
                  name: str,
                  resource_storage_unit: ResourceStorageUnit,
-                 neighbour_nodes: list[tuple['LandGraphNode', float]]):
+                 neighbour_nodes: list[tuple['LandGraphNode', float]] | None = None):
         """
+        Represents the participant of landscape transport network
+
         :param neighbour_nodes: parent nodes list that saves parent itself and the weight of edge
         :param resource_storage_unit: object that saves info about the resources in the current node
         (in other words platform)
         """
         self.id = id
         self.name = name
-        self.add_neighbours(neighbour_nodes)
+        if not (neighbour_nodes is None):
+            self.add_neighbours(neighbour_nodes)
         self._roads: list[Road] = []
-        self.nodes: list[GraphNode] = []
+        self.nodes: list['GraphNode'] = []
         self.resource_storage_unit = resource_storage_unit
 
     @cached_property
     def neighbours(self) -> list['LandGraphNode']:
-        return [neighbour for neighbour, weight in self._roads]
+        if self._roads:
+            return [neighbour for neighbour, weight in self._roads]
+        raise NoAvailableResources('There is no roads in land graph')
 
     @cached_property
     def roads(self) -> list[Road]:
-        return self._roads
+        if self._roads:
+            return self._roads
+        raise NoAvailableResources('There are no roads in land graph')
 
-    def add_works(self, nodes: list[GraphNode]):
+    def add_works(self, nodes: list['GraphNode']):
         self.nodes = nodes
 
     @cached_property
-    def works(self) -> list[GraphNode]:
+    def works(self) -> list['GraphNode']:
         return self.nodes
 
     def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float]]):

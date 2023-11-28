@@ -29,6 +29,7 @@ class JustInTimeTimeline(Timeline):
 
         self._material_timeline = SupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
+        self.landscape = landscape
 
     def find_min_start_time_with_additional(self, node: GraphNode,
                                             worker_team: list[Worker],
@@ -54,7 +55,8 @@ class JustInTimeTimeline(Timeline):
         """
         # if current job is the first
         if not node2swork:
-            max_material_time = self._material_timeline.find_min_material_time(node.id, assigned_parent_time,
+            max_material_time = self._material_timeline.find_min_material_time(node, self.landscape,
+                                                                               assigned_parent_time,
                                                                                node.work_unit.need_materials(),
                                                                                node.work_unit.workground_size)
 
@@ -105,7 +107,7 @@ class JustInTimeTimeline(Timeline):
 
         exec_time = new_finish_time - c_st
 
-        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,
+        max_material_time = self._material_timeline.find_min_material_time(node, self.landscape, c_st,
                                                                            node.work_unit.need_materials(),
                                                                            node.work_unit.workground_size)
 
@@ -158,7 +160,7 @@ class JustInTimeTimeline(Timeline):
             if not max_agent_time <= start_time:
                 return False
 
-            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
+            if not self._material_timeline.can_schedule_at_the_moment(node, self.landscape, start_time,
                                                                       node.work_unit.need_materials(),
                                                                       node.work_unit.workground_size):
                 return False
@@ -287,7 +289,7 @@ class JustInTimeTimeline(Timeline):
             c_st = max(c_ft + lag, max_parent_time)
             new_finish_time = c_st + working_time
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node, c_st,
                                                                                        new_finish_time,
                                                                                        dep_node.work_unit.need_materials(),
                                                                                        dep_node.work_unit.workground_size)

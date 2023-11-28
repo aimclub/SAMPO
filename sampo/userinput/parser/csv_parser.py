@@ -41,10 +41,14 @@ class CSVParser:
 
         Schema of history .csv file (optional data):
             mandatory fields:
-                granular_smr_name: str - Task name as in the document,
-                first_day: str - Date of commencement of the work,
+                marker_for_glue: int - Id of task
+                granular_smr_name: str - Task name as in the document
+                first_day: str - Date of commencement of the work
                 last_day: str - Date of completion
                 upper_works: list[str] - Names of predecessors of the current task
+            optional fields:
+                Whether there are optional fields, they are required additional preprocessing by user
+
 
         ATTENTION!
             1) If you send WorkGraph .csv file without data about connections between tasks, you need to provide .csv

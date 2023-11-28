@@ -2,7 +2,9 @@ import math
 from operator import itemgetter
 
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
+from sampo.schemas.landscape_graph import LandGraphNode
 from sampo.schemas.resources import Material
 from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
@@ -25,18 +27,18 @@ class SupplyTimeline:
                     self._resource_sources[res] = res_source
                 res_source[resource.id] = count
 
-    def can_schedule_at_the_moment(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> bool:
-        return self.find_min_material_time(id, start_time, materials, batch_size) == start_time
+    def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, materials: list[Material], batch_size: int) -> bool:
+        return self.find_min_material_time(node, landscape, start_time, materials, batch_size) == start_time
 
-    def find_min_material_time(self, id: str, start_time: Time, materials: list[Material], batch_size: int) -> Time:
+    def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, materials: list[Material], batch_size: int) -> Time:
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
         batches = max(1, math.ceil(ratio))
 
         first_batch = [material.copy().with_count(material.count // batches) for material in materials]
-        return self.supply_resources(id, start_time, first_batch, True)[1]
+        return self.supply_resources(node, landscape, start_time, first_batch, True)[1]
 
-    def deliver_materials(self, id: str, start_time: Time, finish_time: Time,
+    def deliver_materials(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, finish_time: Time,
                           materials: list[Material], batch_size: int) -> tuple[list[MaterialDelivery], Time, Time]:
         """
         Models material delivery.
@@ -56,17 +58,19 @@ class SupplyTimeline:
                                   for material, batch_material in zip(materials, first_batch)])
 
         deliveries = []
-        d, start_time = self.supply_resources(id, start_time, first_batch, False)
+        d, start_time = self.supply_resources(node, landscape, start_time, first_batch, False)
         deliveries.append(d)
         max_finish_time = finish_time
         for batch in other_batches:
-            d, finish_time = self.supply_resources(id, max_finish_time, batch, False, start_time)
+            d, finish_time = self.supply_resources(node, landscape, max_finish_time, batch, False, start_time)
             deliveries.append(d)
             max_finish_time = finish_time if finish_time > max_finish_time else max_finish_time
 
         return deliveries, start_time, max_finish_time
 
-    def _find_best_supply(self, material: str, count: int, deadline: Time) -> str:
+    def _find_best_supply(self, landscape: LandscapeConfiguration, node_id: int, material: str, count: int, deadline: Time) -> str:
+        holders = landscape.get_sorted_holders(node_id)
+
         # TODO Make better algorithm
         if self._resource_sources.get(material, None) is None:
             raise NoAvailableResources(
@@ -82,7 +86,8 @@ class SupplyTimeline:
 
         return depots[0][0]
 
-    def supply_resources(self, work_id: str, deadline: Time, materials: list[Material], simulate: bool,
+    def supply_resources(self, node: LandGraphNode, landscape: LandscapeConfiguration, deadline: Time,
+                         materials: list[Material], simulate: bool,
                          min_supply_start_time: Time = Time(0)) \
             -> tuple[MaterialDelivery, Time]:
         """
@@ -96,8 +101,9 @@ class SupplyTimeline:
         :return: material deliveries, the time when resources are ready
         """
         assert min_supply_start_time <= deadline
-        delivery = MaterialDelivery(work_id)
+        delivery = MaterialDelivery(node.id)
         min_work_start_time = deadline
+        node_id = landscape.lg.node2ind[node]
 
         def append_in_material_delivery_list(time: Time, count: int, delivery_list: list[tuple[Time, int]]):
             if not simulate:
@@ -134,7 +140,7 @@ class SupplyTimeline:
             if not material.count:
                 continue
             material_sources = self._resource_sources[material.name]
-            depot = self._find_best_supply(material.name, material.count, deadline)
+            depot = self._find_best_supply(landscape, node_id, material.name, material.count, deadline)
             material_timeline = self._timeline[depot]
             capacity = self._capacity[depot]
             need_count = material.count

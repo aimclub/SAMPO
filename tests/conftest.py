@@ -15,7 +15,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
-from sampo.schemas.landscape_graph import LandGraph, LandGraphNode
+from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, ResourceStorageUnit
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
@@ -24,6 +24,7 @@ from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
 pytest_plugins = ('tests.schema', 'tests.models',)
+
 
 @fixture
 def setup_sampler(request):
@@ -52,12 +53,42 @@ def setup_landscape_many_holders():
 
 @fixture
 def setup_lg():
-    platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1')
-    platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2')
-    platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3')
-    platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4')
-    holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1')
-    holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2')
+    platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
+                              ResourceStorageUnit([
+                                  Material('111', 'mat1', 10),
+                                  Material('222', 'mat2', 15),
+                                  Material('333', 'mat3', 12)
+                              ]))
+    platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
+                              ResourceStorageUnit([
+                                  Material('111', 'mat1', 7),
+                                  Material('222', 'mat2', 8),
+                                  Material('333', 'mat3', 9)
+                              ]))
+    platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
+                              ResourceStorageUnit([
+                                  Material('111', 'mat1', 11),
+                                  Material('222', 'mat2', 13),
+                                  Material('333', 'mat3', 17)
+                              ]))
+    platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
+                              ResourceStorageUnit([
+                                  Material('111', 'mat1', 18),
+                                  Material('222', 'mat2', 19),
+                                  Material('333', 'mat3', 20)
+                              ]))
+    holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
+                            ResourceStorageUnit([
+                                Material('111', 'mat1', 40),
+                                Material('222', 'mat2', 55),
+                                Material('333', 'mat3', 70)
+                            ]))
+    holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
+                            ResourceStorageUnit([
+                                Material('111', 'mat1', 60),
+                                Material('222', 'mat2', 45),
+                                Material('333', 'mat3', 65)
+                            ]))
     platform1.add_neighbours([(platform3, 1.0)])
     platform2.add_neighbours([(platform4, 2.0)])
     platform3.add_neighbours([(platform1, 1.0), (holder1, 4.0), (holder2, 3.0)])
@@ -186,7 +217,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
-    num_contractors= 1
+    num_contractors = 1
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:

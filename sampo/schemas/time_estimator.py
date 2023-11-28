@@ -128,4 +128,4 @@ class DefaultWorkEstimator(WorkTimeEstimator):
 def communication_coefficient(groups_count: int, max_groups: int) -> float:
     n = groups_count
     m = max_groups
-    return 1 / (6 * m ** 2) * (-2 * n ** 3 + 3 * n ** 2 + (6 * m ** 2 - 1) * n)
+    return 1.0 / (6 * m ** 2) * (-2 * n ** 3 + 3 * n ** 2 + (6 * m ** 2 - 1) * n)

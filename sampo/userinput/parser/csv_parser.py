@@ -22,6 +22,7 @@ class CSVParser:
     @staticmethod
     def read_graph_info(project_info: str | pd.DataFrame,   # TODO Fix mutating input data
                         history_data: str | pd.DataFrame,
+                        sep: str,
                         full_connections: bool = False,
                         change_base_on_history: bool = False) -> pd.DataFrame:
         """
@@ -61,18 +62,21 @@ class CSVParser:
             history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
             2) If you send WorkGraph .csv file with column 'predecessor_ids', 'lags' etc. and there is no info in these
             columns, so framework repair the info from history data
+            3) If you send WorkGraph .csv or HistoryData file path, use the same separating character in
+            work_info.csv as in history_data.csv and vice versa.
 
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file
         :param full_connections: does the project information contain full details of the works?
         :param change_base_on_history: whether it is necessary to change project information based on connection history data?
+        :param sep: separating character. It's mandatory, if you send the WorkGraph .csv or HistoryData .csv file path
         :return: preprocessed info about works
         """
-        graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
-                                                                              str) else project_info
-        history_df = pd.read_csv(history_data) if isinstance(history_data, str) else history_data
+        graph_df = pd.read_csv(project_info, sep=sep, header=0) if isinstance(project_info,
+                                                                              str) else project_info.copy()
+        history_df = pd.read_csv(history_data, sep=sep) if isinstance(history_data, str) else history_data.copy()
 
-        if 'predecessor_ids' not in graph_df.columns and history_data is None:
+        if 'predecessor_ids' not in graph_df.columns and history_data.shape[0] == 0:
             raise InputDataException(
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 

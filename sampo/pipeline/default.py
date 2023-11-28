@@ -67,22 +67,29 @@ class DefaultInputPipeline(InputPipeline):
         self._is_wg_has_full_info_about_connections: bool = False
         self._change_base_on_history: bool = False
         self._name_mapper: NameMapper | None = None
+        self.sep: str = ','
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
            is_wg_has_full_info_about_connections: bool = False,
-           change_base_on_history: bool = False) -> 'InputPipeline':
+           change_base_on_history: bool = False,
+           sep: str = ',') -> 'InputPipeline':
         """
         Mandatory argument.
 
         :param change_base_on_history: whether it is necessary to change project information based on connection history data
         :param is_wg_has_full_info_about_connections: does the project information contain full details of the works
         :param wg: the WorkGraph object for scheduling task
-        :return: the pipeline object
+        :param sep: separating character. It's mandatory, if you send the file path with work_info
+
+        ATTENTION!
+            If you send WorkGraph .csv or HistoryData file path, use the same separating character in
+            work_info.csv as in history_data.csv and vice versa.
         """
         self._wg = wg
         self._is_wg_has_full_info_about_connections = is_wg_has_full_info_about_connections
         self._change_base_on_history = change_base_on_history
+        self.sep = sep
         return self
 
     def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
@@ -117,13 +124,18 @@ class DefaultInputPipeline(InputPipeline):
         self._name_mapper = name_mapper
         return self
 
-    def history(self, history: pd.DataFrame | str) -> 'InputPipeline':
+    def history(self, history: pd.DataFrame | str, sep: str = ',') -> 'InputPipeline':
         """
         Set historical data. Mandatory method, if work graph hasn't info about links
         :param history:
-        :return:
+        :param sep: separating character. It's mandatory, if you send the file path with work_info
+
+        ATTENTION!
+            If you send WorkGraph .csv or HistoryData file path, use the same separating character in
+            work_info.csv as in history_data.csv and vice versa.
         """
         self._history = history
+        self.sep = sep
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -175,6 +187,7 @@ class DefaultInputPipeline(InputPipeline):
                 CSVParser.work_graph_and_contractors(
                     works_info=CSVParser.read_graph_info(self._wg,
                                                          self._history,
+                                                         self.sep,
                                                          self._is_wg_has_full_info_about_connections,
                                                          self._change_base_on_history),
                     contractor_info=self._contractors,

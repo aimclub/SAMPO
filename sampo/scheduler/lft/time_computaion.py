@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import numpy as np
+
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -7,16 +9,13 @@ from sampo.schemas.time_estimator import WorkTimeEstimator
 PRIORITY_DELTA = 1
 
 
-def work_min_max_duration(node: GraphNode, work_estimator: WorkTimeEstimator) -> tuple[int, int]:
+def work_duration(node: GraphNode, assigned_workers_amounts: np.ndarray, work_estimator: WorkTimeEstimator) -> list[int]:
     work_unit = node.work_unit
 
-    passed_workers_min = [Worker(str(uuid4()), req.kind, req.min_count)
-                          for req in work_unit.worker_reqs]
+    passed_workers = [Worker(str(uuid4()), req.kind, assigned_amount)
+                      for req, assigned_amount in zip(work_unit.worker_reqs, assigned_workers_amounts)]
 
-    passed_workers_max = [Worker(str(uuid4()), req.kind, req.max_count)
-                          for req in work_unit.worker_reqs]
+    duration = [work_estimator.estimate_time(dep_node.work_unit, passed_workers).value + PRIORITY_DELTA
+                for dep_node in node.get_inseparable_chain_with_self()]
 
-    min_duration = work_estimator.estimate_time(node.work_unit, passed_workers_max)
-    max_duration = work_estimator.estimate_time(node.work_unit, passed_workers_min)
-
-    return min_duration + PRIORITY_DELTA, max_duration + PRIORITY_DELTA
+    return duration

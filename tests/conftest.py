@@ -55,26 +55,14 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(params=[(graph_type, lag) for lag in [
-    True,
-                                               False
-                                               ]
-                 for graph_type in [
-                     'manual',
-                                    'small plain synthetic',
-                     'big plain synthetic'
-                 ]],
+@fixture(params=[(graph_type, lag) for lag in [True, False]
+                 for graph_type in ['manual',
+                                    'small plain synthetic', 'big plain synthetic']],
          # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
-              for lag_opt in [
-                  True,
-                              False
-                              ]
-              for graph_type in [
-                  'manual',
-                                 'small plain synthetic',
-                  'big plain synthetic'
-                                 ]])
+              for lag_opt in [True, False]
+              for graph_type in ['manual',
+                                 'small plain synthetic', 'big plain synthetic']])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
@@ -91,26 +79,26 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             s = get_start_stage()
 
             l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
-            # l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
-            # l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
-            # l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                           (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-            # l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
-            # l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
+            l3n1 = sr.graph_node('l2n1', [(l2n1, 0, EdgeType.FinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
-            # l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
-            # l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
+            l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l3n2 = sr.graph_node('l2n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
+            l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l3n3 = sr.graph_node('l2n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
-            # l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             f = get_finish_stage([l3n1, l3n2, l3n3])
             wg = WorkGraph(s, f)
@@ -141,8 +129,8 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(params=[(i, 5 * j) for j in range(0,2) for i in range(1, 2)],
-         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(0,2) for i in range(1, 2)])
+@fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
+         ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
 def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) -> tuple[
     WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     resource_req: Dict[str, int] = {}

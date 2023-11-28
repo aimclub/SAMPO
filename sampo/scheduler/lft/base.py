@@ -30,7 +30,7 @@ class LFTScheduler(Scheduler):
     """
 
     def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.HEFTAddEnd,
+                 scheduler_type: SchedulerType = SchedulerType.LFT,
                  timeline_type: Type = MomentumTimeline,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().__init__(scheduler_type, None, work_estimator)
@@ -204,7 +204,7 @@ class RandomizedLFTScheduler(LFTScheduler):
     """
 
     def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.HEFTAddEnd,
+                 scheduler_type: SchedulerType = SchedulerType.LFT,
                  timeline_type: Type = MomentumTimeline,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  rand: random.Random = random.Random()):

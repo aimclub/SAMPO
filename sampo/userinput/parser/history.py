@@ -253,7 +253,7 @@ def set_connections_info(graph_df: pd.DataFrame,
                     predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
                     predecessors_types_lst.append(tasks_df.loc[str(task_id), 'connection_types'])
                     predecessors_lags_lst.append(tasks_df.loc[str(task_id), 'lags'])
-                    predecessors_counts_lst.append(pred_counts_lst)
+                    predecessors_counts_lst.append(pred_counts_lst * len(predecessors_lags_lst[-1]))
                     continue
                 if change_connections_info:
                     predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])

@@ -5,7 +5,6 @@ from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER
     MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
 from sampo.generator.pipeline import SyntheticGraphType, StageType
 from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_work
-from sampo.generator.utils.graph_node_operations import count_ancestors
 from sampo.schemas.graph import GraphNode, WorkGraph
 
 
@@ -23,9 +22,9 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     light_masts_count = MIN_GRAPH_COUNTS['light_masts'].rand_int(rand)
     borehole_count = MIN_GRAPH_COUNTS['borehole'].rand_int(rand)
 
-    c1, c_nodes = get_cluster_works(cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
-                                    pipe_net_count=pipe_net_count, light_masts_count=light_masts_count,
-                                    borehole_counts=[borehole_count], rand=rand)
+    c1, c_nodes, _ = get_cluster_works(cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
+                                       pipe_net_count=pipe_net_count, light_masts_count=light_masts_count,
+                                       borehole_counts=[borehole_count], rand=rand)
     return WorkGraph.from_nodes(list(c_nodes.values()))
 
 
@@ -44,18 +43,23 @@ def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,
         else:
             borehole_counts = [MAX_BOREHOLES_PER_BLOCK, counts - MAX_BOREHOLES_PER_BLOCK]
 
-    c_master, roads = get_cluster_works(cluster_name=cluster_name,
-                                        pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
-                                        light_masts_count=light_masts_count, borehole_counts=borehole_counts, rand=rand)
+    # the whole count of nodes generated in this function
+    count_nodes = 0
+    c_master, roads, count_master = get_cluster_works(cluster_name=cluster_name,
+                                                      pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
+                                                      light_masts_count=light_masts_count,
+                                                      borehole_counts=borehole_counts, rand=rand)
+    count_nodes += count_master
 
     checkpoints = [c_master]
     if add_addition_cluster or _add_addition_work(addition_cluster_probability, rand):
-        c_slave, _ = get_cluster_works(cluster_name=cluster_name,
-                                       pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
-                                       light_masts_count=light_masts_count, borehole_counts=borehole_counts,
-                                       roads=roads, rand=rand)
+        c_slave, _, count_slave = get_cluster_works(cluster_name=cluster_name,
+                                                    pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
+                                                    light_masts_count=light_masts_count, borehole_counts=borehole_counts,
+                                                    roads=roads, rand=rand)
+        count_nodes += count_slave
         checkpoints.append(c_slave)
-    return checkpoints, roads, pipe_nodes_count + pipe_net_count + light_masts_count + borehole_counts[0]
+    return checkpoints, roads, count_nodes
 
 
 def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
@@ -135,12 +139,16 @@ def _graph_mode_to_callable(mode: SyntheticGraphType) -> \
 
 
 def _parallel_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
-                                  branching_probability: float, rand: Random) -> GraphNode:
+                                  branching_probability: float, rand: Random) -> GraphNode | None:
+    if len(stages) == 0:
+        return None
     return stages[0][0]
 
 
 def _sequence_graph_mode_get_root(stages: list[tuple[GraphNode, dict[str, GraphNode]]],
-                                  branching_probability: float, rand: Random) -> GraphNode:
+                                  branching_probability: float, rand: Random) -> GraphNode | None:
+    if len(stages) == 0:
+        return None
     return stages[-1][0]
 
 

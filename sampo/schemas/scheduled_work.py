@@ -105,10 +105,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def finish_time(self, val: Time):
         self.start_end_time = (self.start_end_time[0], val)
 
-    @property
-    def min_child_start_time(self) -> Time:
-        return self.finish_time if self.is_service_unit else self.finish_time + 1
-
     @staticmethod
     def start_time_getter():
         return lambda x: x.start_end_time[0]
@@ -120,11 +116,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     @property
     def duration(self) -> Time:
         start, end = self.start_end_time
-        return end - start
-
-    def is_overlapped(self, time: int) -> bool:
-        start, end = self.start_end_time
-        return start <= time < end
+        return end - start + 1
 
     def to_dict(self) -> dict[str, Any]:
         return {

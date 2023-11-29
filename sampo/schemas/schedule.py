@@ -149,7 +149,7 @@ class Schedule(JSONSerializable['Schedule']):
             :return: tuple: start, end, duration.
             """
             start, end = tuple(sorted((time1, time2)))
-            return start, end, end - start + 1
+            return start, end, end - start
 
         data_frame = [(i,                                                 # idx
                        w.id,                                              # task_id

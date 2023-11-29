@@ -113,6 +113,7 @@ class MomentumTimeline(Timeline):
         for _, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 work_estimator.estimate_time(chain_node.work_unit, worker_team)
+
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 
@@ -454,10 +455,6 @@ class MomentumTimeline(Timeline):
             # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
-            # +1 because we think that work ends in the rest of the time unit
-            # +1 because we think that work ends in the rest of the time unit
-            if node_time > 0:
-                node_time -= 1
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),

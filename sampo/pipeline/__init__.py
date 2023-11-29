@@ -2,7 +2,7 @@ from enum import Enum
 
 from sampo.pipeline.base import InputPipeline
 from sampo.pipeline.default import DefaultInputPipeline
-from sampo.pipeline.exception import SchedulingPipelineError
+from sampo.pipeline.exception import PipelineError
 
 
 class PipelineType(Enum):
@@ -16,4 +16,4 @@ class SchedulingPipeline:
             case PipelineType.DEFAULT:
                 return DefaultInputPipeline()
             case _:
-                raise SchedulingPipelineError('Unknown pipeline type')
+                raise PipelineError('Unknown pipeline type')

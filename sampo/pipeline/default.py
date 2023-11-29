@@ -21,6 +21,8 @@ from sampo.utilities.name_mapper import NameMapper
 
 import pandas as pd
 
+from sampo.utilities.visualization import Visualization
+
 
 def contractors_can_perform_work_graph(contractors: list[Contractor], wg: WorkGraph) -> bool:
     is_at_least_one_contractor_can_perform = True
@@ -287,3 +289,6 @@ class DefaultSchedulePipeline(SchedulePipeline):
         processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
         schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
         return ScheduledProject(self._input._wg, self._wg, self._input._contractors, schedule)
+
+    def visualization(self, start_date: str) -> Visualization:
+        return Visualization.from_project(self.finish(), start_date)

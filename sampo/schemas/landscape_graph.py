@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from functools import cached_property
 
@@ -9,11 +10,12 @@ from sampo.schemas.resources import Material
 
 
 @dataclass
-class Road:
+class LandEdge:
     """
     A representation of the connection between two vertices of a transport graph
     (e.x., the edge between platform and warehouse)
     """
+    id: str
     start: 'LandGraphNode'
     finish: 'LandGraphNode'
     weight: float
@@ -48,7 +50,7 @@ class LandGraphNode:
         self.name = name
         if not (neighbour_nodes is None):
             self.add_neighbours(neighbour_nodes)
-        self._roads: list[Road] = []
+        self._roads: list[LandEdge] = []
         self.nodes: list['GraphNode'] = []
         self.resource_storage_unit = resource_storage_unit
 
@@ -59,7 +61,7 @@ class LandGraphNode:
         raise NoAvailableResources('There is no roads in land graph')
 
     @cached_property
-    def roads(self) -> list[Road]:
+    def roads(self) -> list[LandEdge]:
         if self._roads:
             return self._roads
         raise NoAvailableResources('There are no roads in land graph')
@@ -72,7 +74,7 @@ class LandGraphNode:
         return self.nodes
 
     def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float]]):
-        [self._roads.append(Road(self, p, length)) for p, length in neighbour_nodes]
+        [self._roads.append(LandEdge(str(uuid.uuid4()), self, p, length)) for p, length in neighbour_nodes]
 
 
 @dataclass
@@ -92,12 +94,12 @@ class LandGraph:
         object.__setattr__(self, 'vertex_count', len(node2ind))
 
     @cached_property
-    def roads(self) -> list['Road']:
+    def roads(self) -> list['LandEdge']:
         roads = []
         for i in range(self.vertex_count):
             for j in range(self.vertex_count):
                 if self.adj_matrix[i][j] > 0 and i != j:
-                    roads.append(Road(self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
+                    roads.append(LandEdge(str(uuid.uuid4()), self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
         return roads
 
     def _to_adj_matrix(self) -> tuple[dok_matrix, dict[LandGraphNode, int]]:

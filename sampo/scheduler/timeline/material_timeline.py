@@ -16,9 +16,9 @@ class SupplyTimeline:
         self._capacity = {}
         # material -> list of holders, that can supply this type of resource
         self._resource_sources: dict[str, dict[str, int]] = {}
-        for resource in landscape_config.get_all_resources():
+        for resource in landscape_config.get_all_holders():
             self._timeline[resource.id] = ExtendedSortedList([(Time(0), resource.count), (Time.inf(), 0)],
-                                                              itemgetter(0))
+                                                             itemgetter(0))
             self._capacity[resource.id] = resource.count
             for count, res in resource.get_available_resources():
                 res_source = self._resource_sources.get(res, None)
@@ -27,10 +27,12 @@ class SupplyTimeline:
                     self._resource_sources[res] = res_source
                 res_source[resource.id] = count
 
-    def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, materials: list[Material], batch_size: int) -> bool:
+    def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
+                                   materials: list[Material], batch_size: int) -> bool:
         return self.find_min_material_time(node, landscape, start_time, materials, batch_size) == start_time
 
-    def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, materials: list[Material], batch_size: int) -> Time:
+    def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
+                               materials: list[Material], batch_size: int) -> Time:
         sum_materials = sum([material.count for material in materials])
         ratio = sum_materials / batch_size
         batches = max(1, math.ceil(ratio))
@@ -68,8 +70,9 @@ class SupplyTimeline:
 
         return deliveries, start_time, max_finish_time
 
-    def _find_best_supply(self, landscape: LandscapeConfiguration, node_id: int, material: str, count: int, deadline: Time) -> str:
-        holders = landscape.get_sorted_holders(node_id)
+    def _find_best_supply(self, landscape: LandscapeConfiguration, node_id: int, material: str, count: int,
+                          deadline: Time) -> str:
+        holders_id = landscape.get_sorted_holders(node_id)
 
         # TODO Make better algorithm
         if self._resource_sources.get(material, None) is None:

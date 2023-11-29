@@ -64,8 +64,9 @@ class LandscapeConfiguration:
         self.lg = lg
         self._holders: list[ResourceHolder] = holders
 
-        # _ind2holder is required to match ResourceHolder to index in list of LangGraphNodes to work with routing_mx
-        self._ind2holder = {self.lg.node2ind[holder.node]: holder for holder in self._holders}
+        # _ind2holder_id is required to match ResourceHolder's id to index in list of LangGraphNodes to work with routing_mx
+        self._ind2holder_id = {self.lg.node2ind[holder.node]: holder.node.id for holder in self._holders}
+        self.holder_id2resource_holder = {holder.node.id: holder for i, holder in enumerate(self._holders)}
         self.zone_config = zone_config
 
     def build_landscape(self):
@@ -73,19 +74,22 @@ class LandscapeConfiguration:
                            range(self.lg.vertex_count)]
         self._build_routes()
 
-    def get_sorted_holders(self, node_id: int) -> ExtendedSortedList[tuple[list[float, dict[set]], ResourceHolder]]:
+    def get_sorted_holders(self, node_id: int) -> ExtendedSortedList[tuple[list[float, dict[set]], str]]:
         """
         :param node_id: id of node in LandGraph's list of nodes
-        :return: sorted list of holders by the length of way
+        :return: sorted list of holders' id by the length of way
         """
         holders = []
         for i in range(len(self.routing_mx)):
             if int(self.routing_mx[node_id][i][0]) != WAY_LENGTH:
-                holders.append((self.routing_mx[node_id][i], self._ind2holder[i]))
+                holders.append((self.routing_mx[node_id][i], self._ind2holder_id[i]))
         return ExtendedSortedList(holders, key=lambda x: x[0][0])
 
-    def get_all_resources(self) -> list[ResourceSupply]:
-        return self._holders + self.lg.roads
+    def get_holders(self) -> list[ResourceSupply]:
+        return self._holders
+
+    def get_roads(self):
+        return self.lg.roads
 
     def _build_routes(self):
         def dijkstra(holder_id: int):

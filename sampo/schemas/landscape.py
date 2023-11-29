@@ -13,7 +13,8 @@ WAY_LENGTH = 10000000
 
 class ResourceSupply(ABC):
     def __init__(self, id: str, name: str):
-        super(ResourceSupply, self).__init__(id, name)
+        self.id = id
+        self.name = name
 
     @abstractmethod
     def get_resources(self) -> list[tuple[int, str]]:
@@ -93,6 +94,7 @@ class LandscapeConfiguration:
         self._ind2holder_id = {self.lg.node2ind[holder.node]: holder.node.id for holder in self._holders}
         self.holder_id2resource_holder = {holder.node.id: holder for i, holder in enumerate(self._holders)}
         self.zone_config = zone_config
+        self.roads = [Road('road', edge) for edge in self.lg.roads]
 
     def build_landscape(self):
         self.routing_mx = [[[WAY_LENGTH, defaultdict(set)] for j in range(self.lg.vertex_count)] for i in
@@ -110,11 +112,11 @@ class LandscapeConfiguration:
                 holders.append((self.routing_mx[node_id][i], self._ind2holder_id[i]))
         return ExtendedSortedList(holders, key=lambda x: x[0][0])
 
-    def get_holders(self) -> list[ResourceSupply]:
+    def get_holders(self) -> list[ResourceHolder]:
         return self._holders
 
-    def get_roads(self):
-        return self.lg.roads
+    def get_roads(self) -> list[Road]:
+        return self.roads
 
     def _build_routes(self):
         def dijkstra(holder_id: int):

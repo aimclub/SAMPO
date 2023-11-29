@@ -13,20 +13,28 @@ from sampo.schemas.time import Time
 class SupplyTimeline:
     def __init__(self, landscape_config: LandscapeConfiguration):
         self._timeline = {}
-        self._capacity = {}
-        # material -> list of holders, that can supply this type of resource
-        self._resource_sources: dict[str, dict[str, int]] = {}
-        for resource_callable in [landscape_config.get_holders(), landscape_config.get_roads()]:
-            for res_type in resource_callable:
-                self._timeline[res_type.id] = ExtendedSortedList([(Time(0), res_type.count), (Time.inf(), 0)],
-                                                                 itemgetter(0))
-                self._capacity[res_type.id] = res_type.count
-                for count, res in res_type.get_resources():
-                    res_source = self._resource_sources.get(res, None)
-                    if res_source is None:
-                        res_source = {}
-                        self._resource_sources[res] = res_source
-                    res_source[res_type.id] = count
+        for holder in landscape_config.get_holders():
+            self._timeline[holder.id] = [Time(0), {res_name: res_count for res_name, res_count in holder.get_resources()}]
+            self._timeline[holder.id]['vehicles'] = {vehicle.id: [Time(0), {res_name: res_count for res_name, res_count in vehicle.get_resources()}] for vehicle in holder.vehicles}
+            for road in landscape_config.get_roads():
+                self._timeline[road.id] = [Time[0], {res_name: res_count for res_name, res_count in road.get_resources()}]
+
+
+        # self._timeline = {}
+        # self._capacity = {}
+        # # material -> list of holders, that can supply this type of resource
+        # self._resource_sources: dict[str, dict[str, int]] = {}
+        # for resource_callable in [landscape_config.get_holders(), landscape_config.get_roads()]:
+        #     for res_type in resource_callable:
+        #         self._timeline[res_type.id] = ExtendedSortedList([(Time(0), res_type.count), (Time.inf(), 0)],
+        #                                                          itemgetter(0))
+        #         self._capacity[res_type.id] = res_type.count
+        #         for count, res in res_type.get_resources():
+        #             res_source = self._resource_sources.get(res, None)
+        #             if res_source is None:
+        #                 res_source = {}
+        #                 self._resource_sources[res] = res_source
+        #             res_source[res_type.id] = count
 
     def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
                                    materials: list[Material], batch_size: int) -> bool:

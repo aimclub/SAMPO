@@ -22,7 +22,7 @@ class CSVParser:
     @staticmethod
     def read_graph_info(project_info: str | pd.DataFrame,   # TODO Fix mutating input data
                         history_data: str | pd.DataFrame,
-                        sep: str,
+                        sep: str = ';',
                         full_connections: bool = False,
                         change_base_on_history: bool = False) -> pd.DataFrame:
         """

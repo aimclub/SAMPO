@@ -250,7 +250,8 @@ class GraphNode(JSONSerializable['GraphNode']):
 
         :return: list of `inseparable chain` with starting node
         """
-        return self.get_inseparable_chain() if self.get_inseparable_chain() else [self]
+        chain = self.get_inseparable_chain()
+        return chain if chain else [self]
 
     def _get_inseparable_children(self) -> list['GraphNode']:
         """

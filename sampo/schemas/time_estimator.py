@@ -106,7 +106,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
                                                                            self._productivity_mode) / worker_count
             if productivity == 0:
                 return Time.inf()
-            times.append(req.volume // productivity)
+            times.append(Time(req.volume // productivity))
         return max(max(times), Time(0))
 
     @staticmethod

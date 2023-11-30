@@ -55,7 +55,7 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 def test_plain_scheduling_with_parse_data():
     project = SchedulingPipeline.create() \
-        .wg(wg=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'), change_base_on_history=False) \
+        .wg(wg=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'), change_base_on_history=False, sep=';') \
         .schedule(HEFTScheduler()) \
         .finish()
 

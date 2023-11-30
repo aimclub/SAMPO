@@ -29,7 +29,8 @@ class ResourceStorageUnit:
         """
         self._capacity = capacity
 
-    def get_capacity(self) -> list[Material]:
+    @cached_property
+    def capacity(self) -> list[Material]:
         return self._capacity
 
 

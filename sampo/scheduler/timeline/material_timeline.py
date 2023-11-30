@@ -1,40 +1,45 @@
 import math
+from collections import defaultdict
 from operator import itemgetter
+
+from sortedcontainers import SortedList
 
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery
-from sampo.schemas.landscape_graph import LandGraphNode
 from sampo.schemas.resources import Material
 from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
+from sampo.schemas.types import ScheduleEvent, EventType
 
 
 class SupplyTimeline:
     def __init__(self, landscape_config: LandscapeConfiguration):
-        self._timeline = {}
-        for holder in landscape_config.get_holders():
-            self._timeline[holder.id] = [Time(0), {res_name: res_count for res_name, res_count in holder.get_resources()}]
-            self._timeline[holder.id]['vehicles'] = {vehicle.id: [Time(0), {res_name: res_count for res_name, res_count in vehicle.get_resources()}] for vehicle in holder.vehicles}
-            for road in landscape_config.get_roads():
-                self._timeline[road.id] = [Time[0], {res_name: res_count for res_name, res_count in road.get_resources()}]
 
+        def event_cmp(event: ScheduleEvent | Time | tuple[Time, int, int]) -> tuple[Time, int, int]:
+            if isinstance(event, ScheduleEvent):
+                if event.event_type is EventType.INITIAL:
+                    return Time(-1), -1, event.event_type.priority
 
-        # self._timeline = {}
-        # self._capacity = {}
-        # # material -> list of holders, that can supply this type of resource
-        # self._resource_sources: dict[str, dict[str, int]] = {}
-        # for resource_callable in [landscape_config.get_holders(), landscape_config.get_roads()]:
-        #     for res_type in resource_callable:
-        #         self._timeline[res_type.id] = ExtendedSortedList([(Time(0), res_type.count), (Time.inf(), 0)],
-        #                                                          itemgetter(0))
-        #         self._capacity[res_type.id] = res_type.count
-        #         for count, res in res_type.get_resources():
-        #             res_source = self._resource_sources.get(res, None)
-        #             if res_source is None:
-        #                 res_source = {}
-        #                 self._resource_sources[res] = res_source
-        #             res_source[res_type.id] = count
+                return event.time, event.seq_id, event.event_type.priority
+
+            if isinstance(event, Time):
+                # instances of Time must be greater than almost all ScheduleEvents with same time point
+                return event, Time.inf().value, 2
+
+            if isinstance(event, tuple):
+                return event
+
+            raise ValueError(f'Incorrect type of value: {type(event)}')
+
+        self._timeline = defaultdict(None)
+        for resource in landscape_config.get_all_resources():
+            for mat_name, mat_dict in resource.items():
+                self._timeline[mat_name] = {
+                    mat.name: SortedList(iterable=(ScheduleEvent(-1, EventType.INITIAL, Time(0), None, mat.count)),
+                                         key=event_cmp)
+                    for mat in mat_dict.items()
+                }
 
     def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
                                    materials: list[Material], batch_size: int) -> bool:
@@ -81,31 +86,50 @@ class SupplyTimeline:
 
     def _find_best_supply(self, landscape: LandscapeConfiguration, node_id: int, material: str, count: int,
                           deadline: Time) -> str:
-        holders_id = landscape.get_sorted_holders(node_id)
+        """
+        Get the best depot, that is the closest and the most early resource-supply available.
+        :param landscape: landscape
+        :param node_id: id of GraphNode, that initializes resource delivery
+        :param material: required material
+        :param count: the volume of required material
+        :param deadline: time-deadline for resource delivery
+        :return: id of the best depot
+        """
+        holders = landscape.get_sorted_holders(node_id)
 
-        # TODO Make better algorithm
-        if self._resource_sources.get(material, None) is None:
+        # has any holder resource 'material'
+        holders_available: bool = False
+        for info, id in holders:
+            if not self._timeline[id].get(material, None) is None:
+                holders_available = True
+
+        if not holders_available:
             raise NoAvailableResources(
                 f'Schedule can not be built. No available resource sources with material {material}')
-        depots = [depot_id for depot_id, depot_count in self._resource_sources[material].items()
-                  if depot_count >= count]
+
+        depots = [(info, id) for info, id in holders if self._timeline[id][material] >= count]
+
         if not depots:
             raise NotEnoughMaterialsInDepots(
                 f"Schedule can not be built. No one supplier has enough '{material}' material")
-        depots = [(depot_id, self._timeline[depot_id].bisect_key_left(deadline), -self._capacity[depot_id])
-                  for depot_id in depots]
+        depots = [(depot_id, self._timeline[depot_id].bisect_key_left(deadline), info[0])
+                  for info, depot_id in depots]
         depots.sort(key=itemgetter(1, 2))
 
         return depots[0][0]
 
-    def supply_resources(self, node: LandGraphNode, landscape: LandscapeConfiguration, deadline: Time,
-                         materials: list[Material], simulate: bool,
+    def supply_resources(self, node: GraphNode,
+                         landscape: LandscapeConfiguration,
+                         deadline: Time,
+                         materials: list[Material],
+                         simulate: bool,
                          min_supply_start_time: Time = Time(0)) \
             -> tuple[MaterialDelivery, Time]:
         """
         Finds minimal time that given materials can be supplied, greater than given start time
 
-        :param work_id: work id
+        :param node: GraphNode that initializes the resource-delivery
+        :param landscape: landscape
         :param deadline: the time work starts
         :param materials: material resources that are required to start
         :param simulate: should timeline only find minimum supply time and not change timeline
@@ -115,7 +139,8 @@ class SupplyTimeline:
         assert min_supply_start_time <= deadline
         delivery = MaterialDelivery(node.id)
         min_work_start_time = deadline
-        node_id = landscape.lg.node2ind[node]
+        # index of LangGraphNode
+        node_ind = landscape.lg.node2ind[node.platform]
 
         def append_in_material_delivery_list(time: Time, count: int, delivery_list: list[tuple[Time, int]]):
             if not simulate:
@@ -125,7 +150,7 @@ class SupplyTimeline:
 
         def update_material_timeline_and_res_sources(timeline: ExtendedSortedList, mat_sources: dict[str, int]):
             for time, count in material_delivery_list:
-                mat_sources[depot] -= count
+                mat_sources[depot_id] -= count
                 ind = timeline.bisect_key_left(time)
                 timeline_time, timeline_count = timeline[ind]
                 if timeline_time == time:
@@ -152,9 +177,9 @@ class SupplyTimeline:
             if not material.count:
                 continue
             material_sources = self._resource_sources[material.name]
-            depot = self._find_best_supply(landscape, node_id, material.name, material.count, deadline)
-            material_timeline = self._timeline[depot]
-            capacity = self._capacity[depot]
+            depot_id = self._find_best_supply(landscape, node_ind, material.name, material.count, deadline)
+            material_timeline = self._timeline[depot_id]
+            capacity = self._capacity[depot_id]
             need_count = material.count
             idx_left = idx_base = material_timeline.bisect_key_right(deadline) - 1
             cur_time = deadline - 1

@@ -59,7 +59,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = volume
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
-        self.workground_size = workground_size
 
     def __del__(self):
         for name, attr in self.__dict__.items():
@@ -128,4 +127,3 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
-        self.workground_size = new_work_unit.workground_size

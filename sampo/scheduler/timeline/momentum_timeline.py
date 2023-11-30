@@ -121,8 +121,7 @@ class MomentumTimeline(Timeline):
 
         if len(worker_team) == 0:
             max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
-                                                                               node.work_unit.need_materials(),
-                                                                               node.work_unit.workground_size)
+                                                                               node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
@@ -139,8 +138,7 @@ class MomentumTimeline(Timeline):
 
             max_material_time = self._material_timeline.find_min_material_time(node.id,
                                                                                start_time,
-                                                                               node.work_unit.need_materials(),
-                                                                               node.work_unit.workground_size)
+                                                                               node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time,
                                                                    exec_time)
 
@@ -160,8 +158,7 @@ class MomentumTimeline(Timeline):
 
                 max_material_time = self._material_timeline.find_min_material_time(node.id,
                                                                                    start_time,
-                                                                                   node.work_unit.need_materials(),
-                                                                                   node.work_unit.workground_size)
+                                                                                   node.work_unit.need_materials())
                 max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
 
                 prev_st = st
@@ -359,8 +356,7 @@ class MomentumTimeline(Timeline):
                         return False
 
             if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
-                                                                      node.work_unit.need_materials(),
-                                                                      node.work_unit.workground_size):
+                                                                      node.work_unit.need_materials()):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
                 return False

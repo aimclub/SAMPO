@@ -1,10 +1,12 @@
 import heapq
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from functools import cached_property
+
+from sortedcontainers import SortedList
 
 from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, LandEdge
 from sampo.schemas.resources import Material
-from sampo.schemas.sorted_list import ExtendedSortedList
 from sampo.schemas.time import Time
 from sampo.schemas.zones import ZoneConfiguration
 
@@ -56,6 +58,9 @@ class Vehicle(ResourceSupply):
     def get_resources(self) -> list[tuple[int, str]]:
         return [(mat.count, mat.name) for mat in self.capacity]
 
+    def get_sum_resources(self) -> int:
+        return sum([mat.count for mat in self.capacity])
+
 
 class ResourceHolder(ResourceSupply):
     def __init__(self,
@@ -76,7 +81,7 @@ class ResourceHolder(ResourceSupply):
         return [vehicle.get_resources() for vehicle in self.vehicles]
 
     def get_resources(self) -> list[tuple[int, str]]:
-        return [(mat.count, mat.name) for mat in self.node.resource_storage_unit.get_capacity()]
+        return [(mat.count, mat.name) for mat in self.node.resource_storage_unit.capacity]
 
 
 class LandscapeConfiguration:
@@ -84,24 +89,24 @@ class LandscapeConfiguration:
                  holders: list[ResourceHolder] = None,
                  lg: LandGraph = None,
                  zone_config: ZoneConfiguration = ZoneConfiguration()):
-        self.routing_mx = None
+        self.routing_mx: list[list[list[float | dict[int, set]]]] = None
         if holders is None:
             holders = []
-        self.lg = lg
+        self.lg: LandGraph = lg
         self._holders: list[ResourceHolder] = holders
 
         # _ind2holder_id is required to match ResourceHolder's id to index in list of LangGraphNodes to work with routing_mx
-        self._ind2holder_id = {self.lg.node2ind[holder.node]: holder.node.id for holder in self._holders}
-        self.holder_id2resource_holder = {holder.node.id: holder for i, holder in enumerate(self._holders)}
+        self._ind2holder_id: dict[int, str] = {self.lg.node2ind[holder.node]: holder.node.id for holder in self._holders}
+        self.holder_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
         self.zone_config = zone_config
-        self.roads = [Road('road', edge) for edge in self.lg.roads]
+        self.roads: list[Road] = [Road('road', edge) for edge in self.lg.roads]
 
     def build_landscape(self):
         self.routing_mx = [[[WAY_LENGTH, defaultdict(set)] for j in range(self.lg.vertex_count)] for i in
                            range(self.lg.vertex_count)]
         self._build_routes()
 
-    def get_sorted_holders(self, node_id: int) -> ExtendedSortedList[tuple[list[float, dict[set]], str]]:
+    def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[tuple[float, dict[set]], str]]]:
         """
         :param node_id: id of node in LandGraph's list of nodes
         :return: sorted list of holders' id by the length of way
@@ -110,13 +115,26 @@ class LandscapeConfiguration:
         for i in range(len(self.routing_mx)):
             if int(self.routing_mx[node_id][i][0]) != WAY_LENGTH:
                 holders.append((self.routing_mx[node_id][i], self._ind2holder_id[i]))
-        return ExtendedSortedList(holders, key=lambda x: x[0][0])
+        return SortedList(holders, key=lambda x: x[0][0])
 
+    @cached_property
     def get_holders(self) -> list[ResourceHolder]:
         return self._holders
 
     def get_roads(self) -> list[Road]:
         return self.roads
+
+    def get_all_resources(self) -> list[dict]:
+        holders = {holder.id: {mat.name: mat.count for mat in holder.node.resource_storage_unit.capacity}.update(
+                              {vehicle.id: vehicle.get_sum_resources() for vehicle in holder.vehicles})
+                   for holder in self._holders}
+        roads = {road.id: {'vehicles': road.vehicles}
+                 for road in self.roads}
+        platforms = {node.id: {mat.name: mat.count for mat in node.resource_storage_unit.capacity}
+                     for node in self.lg.nodes}
+
+        resources = [holders, roads, platforms]
+        return resources
 
     def _build_routes(self):
         def dijkstra(holder_id: int):

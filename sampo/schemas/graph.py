@@ -7,6 +7,7 @@ from typing import Optional
 import numpy as np
 from scipy.sparse import dok_matrix
 
+from sampo.schemas.landscape_graph import LandGraphNode
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.time import Time
@@ -48,9 +49,9 @@ class GraphNode(JSONSerializable['GraphNode']):
     Class to describe Node in graph
     """
 
-    def __init__(self, work_unit: WorkUnit, platform_ind: int,
+    def __init__(self, work_unit: WorkUnit, platform: LandGraphNode,
                  parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
-        self.platform_ind = platform_ind
+        self.platform = platform
         self._work_unit = work_unit
         self._parent_edges = []
         self.add_parents(parent_works)

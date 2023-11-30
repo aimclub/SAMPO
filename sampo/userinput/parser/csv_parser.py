@@ -76,7 +76,7 @@ class CSVParser:
                                                                               str) else project_info.copy()
         history_df = pd.read_csv(history_data, sep=sep) if isinstance(history_data, str) else history_data.copy()
 
-        if 'predecessor_ids' not in graph_df.columns and history_data.shape[0] == 0:
+        if 'predecessor_ids' not in graph_df.columns and history_df.shape[0] == 0:
             raise InputDataException(
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 

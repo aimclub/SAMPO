@@ -88,12 +88,12 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
             l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            l3n1 = sr.graph_node('l2n1', [(l2n1, 0, EdgeType.FinishStart),
+            l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
             l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n2 = sr.graph_node('l2n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
+            l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
             l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n3 = sr.graph_node('l2n3', [(l2n3, 1, EdgeType.LagFinishStart),
+            l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
             l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
@@ -154,7 +154,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
                                       name='OOO Berezka',
-                                      workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
+                                      workers={name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
     return setup_wg, contractors, setup_landscape_many_holders

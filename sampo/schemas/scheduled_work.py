@@ -116,7 +116,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     @property
     def duration(self) -> Time:
         start, end = self.start_end_time
-        return end - start + 1
+        return end - start
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -58,7 +58,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
         dist = numpy.random.poisson(work_volume * 3, len(resource_name))
         return [WorkerReq(kind=name,
-                          volume=work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0],
+                          volume=Time(int(work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0])),
                           min_count=dist[i],
                           max_count=dist[i] * 2)
                 for i, name in enumerate(resource_name)]

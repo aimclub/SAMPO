@@ -95,7 +95,6 @@ class ZoneTimeline:
 
         # updating all events in between the start and the end of our current task
         for event in state[start_idx: end_idx]:
-            # TODO Check that we shouldn't change the between statuses
             assert self._config.statuses.match_status(event.available_workers_count, required_status)
 
         assert state[start_idx - 1].event_type == EventType.END \

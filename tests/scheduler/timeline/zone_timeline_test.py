@@ -14,7 +14,7 @@ def setup_zoned_wg(setup_rand, setup_simple_synthetic) -> WorkGraph:
     wg = setup_simple_synthetic.work_graph(mode=SyntheticGraphType.PARALLEL, top_border=100)
 
     for node in wg.nodes:
-        node.work_unit.zone_reqs.append(ZoneReq(kind='zone1', required_status=setup_rand.randint(0, 2)))
+        node.work_unit.zone_reqs.append(ZoneReq(kind='zone1', required_status=setup_rand.randint(1, 2)))
 
     return wg
 

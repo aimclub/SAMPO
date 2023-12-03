@@ -5,6 +5,7 @@ from random import Random
 from typing import Optional
 
 import numpy.random
+import math
 
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
@@ -58,9 +59,9 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
         dist = numpy.random.poisson(work_volume * 3, len(resource_name))
         return [WorkerReq(kind=name,
-                          volume=work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0],
-                          min_count=dist[i],
-                          max_count=dist[i] * 2)
+                          volume=Time(int(work_volume * numpy.random.poisson(work_volume ** 0.5, 1)[0])),
+                          min_count=int(dist[i]),
+                          max_count=int(dist[i] * 2))
                 for i, name in enumerate(resource_name)]
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
@@ -69,23 +70,6 @@ class DefaultWorkEstimator(WorkTimeEstimator):
 
     def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
         self._productivity_mode = mode
-
-    def estimate_static(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
-        """
-        Calculate summary time of task execution (without stochastic part)
-
-        :param work_unit:
-        :param worker_list:
-        :return: time of task execution
-        """
-        # TODO Is it should be here, not in preprocessing???
-        # TODO Move it to ksg_scheduling
-        # workers = {w.name.replace('_res_fact', ""): w.count for w in worker_list}
-        # work_time = self.estimate_time(work_unit.name.split('_stage_')[0], work_unit.volume, workers)
-        # if work_time > 0:
-        #     return work_time
-
-        return self.estimate_time(work_unit, worker_list)
 
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
         if not worker_list:
@@ -106,7 +90,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
                                                                            self._productivity_mode) / worker_count
             if productivity == 0:
                 return Time.inf()
-            times.append(Time(req.volume // productivity))
+            times.append(Time(math.ceil(req.volume / productivity)))
         return max(max(times), Time(0))
 
     @staticmethod

@@ -6,6 +6,7 @@ from uuid import uuid4
 import networkx as nx
 import pandas as pd
 
+from sampo.schemas import Time
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq, ZoneReq
@@ -214,13 +215,13 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
 
     for _, row in frame.iterrows():
         if 'min_req' in frame.columns and 'max_req' in frame.columns:
-            reqs = [WorkerReq(res_name, row[res_name],
+            reqs = [WorkerReq(res_name, Time(int(row[res_name])),
                               row['min_req'][res_name],
                               row['max_req'][res_name]
                               ) for res_name in resource_names
                     if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
         else:
-            reqs = work_estimator.find_work_resources(row['activity_name'], row['volume'])
+            reqs = work_estimator.find_work_resources(row['activity_name'], float(row['volume']))
         is_service_unit = len(reqs) == 0
 
         zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
@@ -230,7 +231,8 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
 
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
                              description=description, volume=row['volume'], volume_type=row['measurement'],
-                             is_service_unit=is_service_unit, display_name=row['activity_name_original'], zone_reqs=zone_reqs)
+                             is_service_unit=is_service_unit, display_name=row['activity_name_original'],
+                             zone_reqs=zone_reqs)
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node

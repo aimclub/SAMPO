@@ -241,12 +241,6 @@ def set_connections_info(graph_df: pd.DataFrame,
     :return: repaired DataFrame
     """
     tasks_df = graph_df.copy().set_index('activity_id', drop=False)
-    # TODO: improve the code
-    # | ---------------------------------- |
-    if 'granular_name' in history_data.columns:
-        history_data.drop(columns=['granular_name'], inplace=True)
-    history_data['granular_name'] = [mapper[activity_name] for activity_name in history_data['work_name']]
-    # | ---------------------------------- |
     if not change_connections_info and expert_connections_info:
         predecessor_counts_lst = [[0] * len(tasks_df['predecessor_ids'][i]) for i in range(tasks_df.shape[0])]
         tasks_df['counts'] = predecessor_counts_lst

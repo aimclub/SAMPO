@@ -6,6 +6,7 @@ from random import Random
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 from scipy.sparse import dok_matrix
 
 from sampo.schemas import uuid_str
@@ -344,6 +345,47 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         without_successors = [node for node in nodes if len(node.children) == 0]
         finish = get_finish_stage(parents=without_successors, rand=rand)
         return WorkGraph(start, finish)
+
+    def to_frame(self) -> pd.DataFrame:
+        # Define the format of the output DataFrame
+        graph_df_structure = {'activity_id': [],
+                              'activity_name': [],
+                              'granular_name': [],
+                              'volume': [],
+                              'measurement': [],
+                              'predecessor_ids': [],
+                              'connection_types': [],
+                              'lags': []}
+
+        # List of service 'start' and 'finish' nodes, which will not be included to the project's DataFrame
+        start_finish_service_nodes = [self.start.id, self.finish.id]
+
+        for node in self.nodes:
+            if node.id not in start_finish_service_nodes:
+                node_info_dict = node.dumpd()
+
+                # Get information about tasks from graph nodes (work units)
+                graph_df_structure['activity_id'].append(node_info_dict['work_unit']['id'])
+                graph_df_structure['activity_name'].append(node_info_dict['work_unit']['display_name'])
+                graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
+                graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
+                graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
+
+                # Get information about connections between tasks from parent edges
+                predecessors_lst = []
+                connection_types_lst = []
+                lags_lst = []
+                for predecessor_info in node_info_dict['parent_edges']:
+                    if predecessor_info[0] not in start_finish_service_nodes:
+                        predecessors_lst.append(str(predecessor_info[0]))
+                        lags_lst.append(str(predecessor_info[1]))
+                        connection_types_lst.append(str(predecessor_info[2]))
+
+                graph_df_structure['predecessor_ids'].append(','.join(predecessors_lst))
+                graph_df_structure['lags'].append(','.join(lags_lst))
+                graph_df_structure['connection_types'].append(','.join(connection_types_lst))
+
+        return pd.DataFrame.from_dict(graph_df_structure)
 
     def __hash__(self):
         return hash(self.start) + 17 * hash(self.finish)

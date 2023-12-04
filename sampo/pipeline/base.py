@@ -32,7 +32,7 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
-    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+    def name_mapper(self, name_mapper: NameMapper | str) -> 'InputPipeline':
         ...
 
     @abstractmethod

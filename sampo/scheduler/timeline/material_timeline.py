@@ -145,7 +145,7 @@ class SupplyTimeline:
             going_right = False
 
             while need_count > 0:
-                # find current period
+                # find current period 
                 time_left = material_timeline[idx_left][0]
                 time_right = material_timeline[idx_left + 1][0]
 

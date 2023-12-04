@@ -3,10 +3,9 @@ from itertools import chain
 from uuid import uuid4
 
 import pandas as pd
-from pandas import DataFrame
 
 from sampo.generator.environment import ContractorGenerationMethod, get_contractor_by_wg
-from sampo.schemas.contractor import Contractor, get_contractor_for_resources_schedule
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import DefaultWorkEstimator, WorkTimeEstimator
@@ -20,10 +19,12 @@ from sampo.utilities.name_mapper import NameMapper
 class CSVParser:
 
     @staticmethod
-    def read_graph_info(project_info: str | pd.DataFrame,   # TODO Fix mutating input data
+    def read_graph_info(project_info: str | pd.DataFrame,
                         history_data: str | pd.DataFrame,
-                        sep: str = ';',
+                        sep_wg: str = ';',
+                        sep_history: str = ';',
                         full_connections: bool = False,
+                        name_mapper: NameMapper | None = None,
                         change_base_on_history: bool = False) -> pd.DataFrame:
         """
         Read the input data about work graph and preprocess it.
@@ -52,7 +53,7 @@ class CSVParser:
 
         Schema of history .csv file (optional data):
             mandatory fields:
-                granular_smr_name: str - Task name as in the document,
+                granular_name: str - Task name as in the document,
                 first_day: str - Date of commencement of the work,
                 last_day: str - Date of completion
                 upper_works: list[str] - Names of predecessors of the current task
@@ -62,19 +63,22 @@ class CSVParser:
             history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
             2) If you send WorkGraph .csv file with column 'predecessor_ids', 'lags' etc. and there is no info in these
             columns, so framework repair the info from history data
-            3) If you send WorkGraph .csv or HistoryData file path, use the same separating character in
-            work_info.csv as in history_data.csv and vice versa.
+            3) If you don't put 'granular_name' and don't receive name_mapper to WorkGraph .csv file, thus you need to
+            be sure that activity_name is correct and correlate to 'granular_name' in history .csv file
 
+        :param name_mapper: name mapper that translates 'activity_name' to the name, as from a document
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file
         :param full_connections: does the project information contain full details of the works?
         :param change_base_on_history: whether it is necessary to change project information based on connection history data?
-        :param sep: separating character. It's mandatory, if you send the WorkGraph .csv or HistoryData .csv file path
+        :param sep_wg: separating character. It's mandatory if you send the WorkGraph .csv
+        :param sep_history: separating character. It's mandatory if you send the HistoryData .csv file path
         :return: preprocessed info about works
         """
-        graph_df = pd.read_csv(project_info, sep=sep, header=0) if isinstance(project_info,
-                                                                              str) else project_info.copy()
-        history_df = pd.read_csv(history_data, sep=sep) if isinstance(history_data, str) else history_data.copy()
+        graph_df = pd.read_csv(project_info, sep=sep_wg, header=0) if isinstance(project_info,
+                                                                                 str) else project_info.copy()
+        history_df = pd.read_csv(history_data, sep=sep_history) if isinstance(history_data,
+                                                                              str) else history_data.copy()
 
         if 'predecessor_ids' not in graph_df.columns and history_df.shape[0] == 0:
             raise InputDataException(
@@ -85,23 +89,23 @@ class CSVParser:
             temp_lst = [math.nan] * graph_df.shape[0]
             for col in ['predecessor_ids', 'connection_types', 'lags']:
                 graph_df[col] = temp_lst
-            graph_df = preprocess_graph_df(graph_df)
-            works_info = set_connections_info(graph_df, history_df)
+            graph_df = preprocess_graph_df(graph_df, name_mapper)
+            works_info = set_connections_info(graph_df, history_df, mapper=name_mapper)
         else:
-            graph_df = preprocess_graph_df(graph_df)
+            graph_df = preprocess_graph_df(graph_df, name_mapper)
             if full_connections or change_base_on_history:
-                works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
+                works_info = set_connections_info(graph_df, history_df, change_connections_info=True, mapper=name_mapper)
             else:
-                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
+                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True, mapper=name_mapper)
 
         return break_loops_in_input_graph(works_info)
 
     @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
                                    contractor_info: str | list[Contractor] | tuple[ContractorGenerationMethod, int]
-                                                                              = (ContractorGenerationMethod.AVG, 1),
+                                   = (ContractorGenerationMethod.AVG, 1),
                                    contractor_types: list[int] | None = None,
-                                   unique_work_names_mapper: NameMapper | None = None,
+                                   name_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> (WorkGraph, Contractor):
         """
@@ -133,8 +137,8 @@ class CSVParser:
         # gather resources and contractors based on work resource estimator or contractor info .csv file
         contractors = []
         works_info['activity_name_original'] = works_info.activity_name
-        if unique_work_names_mapper:
-            works_info.activity_name = works_info.activity_name.apply(lambda name: unique_work_names_mapper[name])
+        if name_mapper:
+            works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
 
         if isinstance(contractor_info, list):
             contractors = contractor_info

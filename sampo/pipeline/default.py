@@ -1,3 +1,5 @@
+import pandas as pd
+
 from sampo.generator.environment import ContractorGenerationMethod
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
@@ -17,10 +19,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
 from sampo.userinput.parser.csv_parser import CSVParser
-from sampo.utilities.name_mapper import NameMapper
-
-import pandas as pd
-
+from sampo.utilities.name_mapper import NameMapper, read_json
 from sampo.utilities.visualization import Visualization
 
 
@@ -69,13 +68,14 @@ class DefaultInputPipeline(InputPipeline):
         self._is_wg_has_full_info_about_connections: bool = False
         self._change_base_on_history: bool = False
         self._name_mapper: NameMapper | None = None
-        self.sep: str = ','
+        self.sep_wg = ';'
+        self.sep_history = ';'
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
            is_wg_has_full_info_about_connections: bool = False,
            change_base_on_history: bool = False,
-           sep: str = ',') -> 'InputPipeline':
+           sep: str = ';') -> 'InputPipeline':
         """
         Mandatory argument.
 
@@ -91,7 +91,7 @@ class DefaultInputPipeline(InputPipeline):
         self._wg = wg
         self._is_wg_has_full_info_about_connections = is_wg_has_full_info_about_connections
         self._change_base_on_history = change_base_on_history
-        self.sep = sep
+        self.sep_wg = sep
         return self
 
     def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
@@ -117,12 +117,14 @@ class DefaultInputPipeline(InputPipeline):
         self._landscape_config = landscape_config
         return self
 
-    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+    def name_mapper(self, name_mapper: NameMapper | str) -> 'InputPipeline':
         """
         Set works' name mapper
         :param name_mapper:
         :return:
         """
+        if isinstance(name_mapper, str):
+            name_mapper = read_json(name_mapper)
         self._name_mapper = name_mapper
         return self
 
@@ -137,7 +139,7 @@ class DefaultInputPipeline(InputPipeline):
             work_info.csv as in history_data.csv and vice versa.
         """
         self._history = history
-        self.sep = sep
+        self.sep_history = sep
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -187,14 +189,15 @@ class DefaultInputPipeline(InputPipeline):
         if isinstance(self._wg, pd.DataFrame) or isinstance(self._wg, str):
             self._wg, self._contractors = \
                 CSVParser.work_graph_and_contractors(
-                    works_info=CSVParser.read_graph_info(self._wg,
-                                                         self._history,
-                                                         self.sep,
-                                                         self._is_wg_has_full_info_about_connections,
-                                                         self._change_base_on_history),
+                    works_info=CSVParser.read_graph_info(project_info=self._wg,
+                                                         history_data=self._history,
+                                                         sep_wg=self.sep_wg,
+                                                         sep_history=self.sep_history,
+                                                         full_connections=self._is_wg_has_full_info_about_connections,
+                                                         name_mapper=self._name_mapper,
+                                                         change_base_on_history=self._change_base_on_history),
                     contractor_info=self._contractors,
-                    work_resource_estimator=self._work_estimator,
-                    unique_work_names_mapper=self._name_mapper
+                    work_resource_estimator=self._work_estimator
                 )
 
         if not contractors_can_perform_work_graph(self._contractors, self._wg):

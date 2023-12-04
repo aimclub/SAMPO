@@ -11,8 +11,9 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq, ZoneReq
 from sampo.schemas.resources import Worker
-from sampo.schemas.works import WorkUnit
 from sampo.schemas.time_estimator import WorkTimeEstimator
+from sampo.schemas.works import WorkUnit
+from sampo.utilities.name_mapper import NameMapper
 
 UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
@@ -151,11 +152,15 @@ def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | No
     return new_column
 
 
-def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
+def preprocess_graph_df(frame: pd.DataFrame,
+                        name_mapper: NameMapper | None = None) -> pd.DataFrame:
     def normalize_if_number(s):
         return str(int(float(s))) \
             if s.replace('.', '', 1).isdigit() \
             else s
+
+    if 'granular_name' not in frame.columns:
+        frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
 
     frame['activity_id'] = frame['activity_id'].astype(str)
     frame['volume'] = frame['volume'].astype(float)

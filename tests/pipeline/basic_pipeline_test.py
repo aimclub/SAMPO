@@ -6,6 +6,7 @@ from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
 from sampo.schemas.exceptions import NoSufficientContractorError
+from sampo.utilities.visualization import schedule_gant_chart_fig, VisualizationMode
 
 
 def test_plain_scheduling(setup_scheduler_parameters):
@@ -54,9 +55,19 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 
 def test_plain_scheduling_with_parse_data():
+    wg = os.path.join(sys.path[0], 'tests/parser/data/test_wg_no_connections.csv')
+    history = os.path.join(sys.path[0], 'tests/parser/data/history.csv')
+    name_mapper = os.path.join(sys.path[0], 'tests/parser/data/name_mapper.json')
+
     project = SchedulingPipeline.create() \
-        .wg(wg=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'), change_base_on_history=False, sep=';') \
+        .wg(wg=wg, change_base_on_history=True, sep=',') \
+        .history(history=history,  sep=',') \
+        .name_mapper(name_mapper=name_mapper) \
         .schedule(HEFTScheduler()) \
         .finish()
 
-    print(f'Scheduled {len(project.schedule.to_schedule_work_dict)} works')
+    schedule = project.schedule
+    schedule = schedule.merged_stages_datetime_df('2022-01-01')
+    fig = schedule_gant_chart_fig(schedule_dataframe=schedule,
+                                  visualization=VisualizationMode.ShowFig,
+                                  remove_service_tasks=True)

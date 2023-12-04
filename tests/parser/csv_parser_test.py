@@ -12,7 +12,7 @@ def test_work_graph_csv_parser():
         history = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
                                                             'upper_works', 'work_name_clear_old', 'smr_name',
                                                             'work_name_clear', 'granular_smr_name'])
-        works_info = CSVParser.read_graph_info(project_info=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'),
+        works_info = CSVParser.read_graph_info(project_info=os.path.join(sys.path[0], 'tests/parser/test_wg_no_connections.csv'),
                                                history_data=history,
                                                full_connections=True)
         works_info.to_csv(os.path.join(sys.path[0], 'tests/parser/repaired.csv'), sep=';')

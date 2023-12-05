@@ -2,6 +2,7 @@ import os
 import sys
 
 from sampo.pipeline import SchedulingPipeline
+from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
@@ -55,13 +56,15 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 
 def test_plain_scheduling_with_parse_data():
-    wg = os.path.join(sys.path[0], 'tests/parser/data/electroline_works_info_omitted_info.csv')
-    history = os.path.join(sys.path[0], 'tests/parser/data/history_preprocessed.csv')
+    wg = os.path.join(sys.path[0], 'tests/parser/data/dormitory_only_service_connections.csv')
+    history = os.path.join(sys.path[0], 'tests/parser/tt/historical_projects_data.csv')
     name_mapper = os.path.join(sys.path[0], 'tests/parser/data/name_mapper.json')
 
     project = SchedulingPipeline.create() \
-        .wg(wg=wg, sep=';', change_all_info_and_connections=True) \
+        .wg(wg=wg, sep=',', all_connections=False,
+            change_connections_info=True) \
         .history(history=history, sep=',') \
+        .lag_optimize(LagOptimizationStrategy.TRUE) \
         .name_mapper(name_mapper=name_mapper) \
         .schedule(HEFTScheduler()) \
         .finish()

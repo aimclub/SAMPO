@@ -24,9 +24,8 @@ class CSVParser:
                         sep_wg: str = ';',
                         sep_history: str = ';',
                         name_mapper: NameMapper | None = None,
-                        change_all_info: bool = False,
-                        change_only_omitted_info_and_connections: bool = False,
-                        change_all_info_and_connections: bool = False) -> pd.DataFrame:
+                        all_connections: bool = False,
+                        change_connections_info: bool = False) -> pd.DataFrame:
         """
         Read the input data about work graph and preprocess it.
 
@@ -86,29 +85,14 @@ class CSVParser:
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 
         temp_lst = [math.nan] * graph_df.shape[0]
-        if 'predecessor_ids' not in graph_df.columns:
-            for col in ['predecessor_ids', 'connection_types', 'lags']:
+
+        for col in ['predecessor_ids', 'connection_types', 'lags']:
+            if col not in graph_df.columns:
                 graph_df[col] = temp_lst
-            # if we ought to restore predecessor info from history data
-            graph_df = preprocess_graph_df(graph_df, name_mapper)
-            works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
-                                              change_connections_info=True)
-        else:
-            for col in ['connection_types', 'lags']:
-                if col not in graph_df.columns:
-                    graph_df[col] = temp_lst
-            graph_df = preprocess_graph_df(graph_df, name_mapper)
-            if change_all_info:
-                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper)
-            elif change_only_omitted_info_and_connections:
-                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
-                                                  change_connections_info=True,
-                                                  expert_connections_info=True)
-            elif change_all_info_and_connections:
-                works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
-            else:
-                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
-                                                  expert_connections_info=True)
+        graph_df = preprocess_graph_df(graph_df, name_mapper)
+        works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
+                                          all_connections=all_connections,
+                                          change_connections_info=change_connections_info)
 
         return break_loops_in_input_graph(works_info)
 

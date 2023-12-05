@@ -65,9 +65,8 @@ class DefaultInputPipeline(InputPipeline):
         self._history: pd.DataFrame = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
                                                             'upper_works', 'work_name_clear_old', 'smr_name',
                                                             'work_name_clear', 'granular_smr_name'])
-        self._change_only_omitted_info_and_connections: bool = False
-        self._change_all_info: bool = False
-        self._change_all_info_and_connections: bool = False
+        self._all_connections: bool = False
+        self._change_connections_info: bool = False
         self._name_mapper: NameMapper | None = None
         self.sep_wg = ';'
         self.sep_history = ';'
@@ -76,9 +75,8 @@ class DefaultInputPipeline(InputPipeline):
            wg: WorkGraph | pd.DataFrame | str,
            change_base_on_history: bool = False,
            sep: str = ';',
-           change_only_omitted_info_and_connections: bool = False,
-           change_all_info: bool = False,
-           change_all_info_and_connections: bool = False) -> 'InputPipeline':
+           all_connections: bool = False,
+           change_connections_info: bool = False) -> 'InputPipeline':
         """
         Mandatory argument.
 
@@ -92,9 +90,8 @@ class DefaultInputPipeline(InputPipeline):
             work_info.csv as in history_data.csv and vice versa.
         """
         self._wg = wg
-        self._change_only_omitted_info_and_connections = change_only_omitted_info_and_connections
-        self._change_all_info = change_all_info
-        self._change_all_info_and_connections = change_all_info_and_connections
+        self._all_connections = all_connections
+        self._change_connections_info = change_connections_info
         self.sep_wg = sep
         return self
 
@@ -132,7 +129,7 @@ class DefaultInputPipeline(InputPipeline):
         self._name_mapper = name_mapper
         return self
 
-    def history(self, history: pd.DataFrame | str, sep: str = ',') -> 'InputPipeline':
+    def history(self, history: pd.DataFrame | str, sep: str = ';') -> 'InputPipeline':
         """
         Set historical data. Mandatory method, if work graph hasn't info about links
         :param history:
@@ -198,9 +195,8 @@ class DefaultInputPipeline(InputPipeline):
                                                          sep_wg=self.sep_wg,
                                                          sep_history=self.sep_history,
                                                          name_mapper=self._name_mapper,
-                                                         change_all_info_and_connections=self._change_all_info_and_connections,
-                                                         change_all_info=self._change_all_info,
-                                                         change_only_omitted_info_and_connections=self._change_only_omitted_info_and_connections),
+                                                         all_connections=self._all_connections,
+                                                         change_connections_info=self._change_connections_info),
                     contractor_info=self._contractors,
                     work_resource_estimator=self._work_estimator
                 )

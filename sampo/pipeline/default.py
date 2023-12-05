@@ -65,17 +65,20 @@ class DefaultInputPipeline(InputPipeline):
         self._history: pd.DataFrame = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
                                                             'upper_works', 'work_name_clear_old', 'smr_name',
                                                             'work_name_clear', 'granular_smr_name'])
-        self._is_wg_has_full_info_about_connections: bool = False
-        self._change_base_on_history: bool = False
+        self._change_only_omitted_info_and_connections: bool = False
+        self._change_all_info: bool = False
+        self._change_all_info_and_connections: bool = False
         self._name_mapper: NameMapper | None = None
         self.sep_wg = ';'
         self.sep_history = ';'
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
-           is_wg_has_full_info_about_connections: bool = False,
            change_base_on_history: bool = False,
-           sep: str = ';') -> 'InputPipeline':
+           sep: str = ';',
+           change_only_omitted_info_and_connections: bool = False,
+           change_all_info: bool = False,
+           change_all_info_and_connections: bool = False) -> 'InputPipeline':
         """
         Mandatory argument.
 
@@ -89,8 +92,9 @@ class DefaultInputPipeline(InputPipeline):
             work_info.csv as in history_data.csv and vice versa.
         """
         self._wg = wg
-        self._is_wg_has_full_info_about_connections = is_wg_has_full_info_about_connections
-        self._change_base_on_history = change_base_on_history
+        self._change_only_omitted_info_and_connections = change_only_omitted_info_and_connections
+        self._change_all_info = change_all_info
+        self._change_all_info_and_connections = change_all_info_and_connections
         self.sep_wg = sep
         return self
 
@@ -193,9 +197,10 @@ class DefaultInputPipeline(InputPipeline):
                                                          history_data=self._history,
                                                          sep_wg=self.sep_wg,
                                                          sep_history=self.sep_history,
-                                                         full_connections=self._is_wg_has_full_info_about_connections,
                                                          name_mapper=self._name_mapper,
-                                                         change_base_on_history=self._change_base_on_history),
+                                                         change_all_info_and_connections=self._change_all_info_and_connections,
+                                                         change_all_info=self._change_all_info,
+                                                         change_only_omitted_info_and_connections=self._change_only_omitted_info_and_connections),
                     contractor_info=self._contractors,
                     work_resource_estimator=self._work_estimator
                 )

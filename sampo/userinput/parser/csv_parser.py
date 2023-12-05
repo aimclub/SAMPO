@@ -23,9 +23,10 @@ class CSVParser:
                         history_data: str | pd.DataFrame,
                         sep_wg: str = ';',
                         sep_history: str = ';',
-                        full_connections: bool = False,
                         name_mapper: NameMapper | None = None,
-                        change_base_on_history: bool = False) -> pd.DataFrame:
+                        change_all_info: bool = False,
+                        change_only_omitted_info_and_connections: bool = False,
+                        change_all_info_and_connections: bool = False) -> pd.DataFrame:
         """
         Read the input data about work graph and preprocess it.
 
@@ -69,8 +70,8 @@ class CSVParser:
         :param name_mapper: name mapper that translates 'activity_name' to the name, as from a document
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file
-        :param full_connections: does the project information contain full details of the works?
-        :param change_base_on_history: whether it is necessary to change project information based on connection history data?
+        :param change_connections: whether it is necessary to change connections
+        :param change_connections_info: whether it is necessary to change connections' information based on history data?
         :param sep_wg: separating character. It's mandatory if you send the WorkGraph .csv
         :param sep_history: separating character. It's mandatory if you send the HistoryData .csv file path
         :return: preprocessed info about works
@@ -84,19 +85,30 @@ class CSVParser:
             raise InputDataException(
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 
+        temp_lst = [math.nan] * graph_df.shape[0]
         if 'predecessor_ids' not in graph_df.columns:
-            # if we ought to restore predecessor info from history data
-            temp_lst = [math.nan] * graph_df.shape[0]
             for col in ['predecessor_ids', 'connection_types', 'lags']:
                 graph_df[col] = temp_lst
+            # if we ought to restore predecessor info from history data
             graph_df = preprocess_graph_df(graph_df, name_mapper)
-            works_info = set_connections_info(graph_df, history_df, mapper=name_mapper)
+            works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
+                                              change_connections_info=True)
         else:
+            for col in ['connection_types', 'lags']:
+                if col not in graph_df.columns:
+                    graph_df[col] = temp_lst
             graph_df = preprocess_graph_df(graph_df, name_mapper)
-            if full_connections or change_base_on_history:
-                works_info = set_connections_info(graph_df, history_df, change_connections_info=True, mapper=name_mapper)
+            if change_all_info:
+                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper)
+            elif change_only_omitted_info_and_connections:
+                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
+                                                  change_connections_info=True,
+                                                  expert_connections_info=True)
+            elif change_all_info_and_connections:
+                works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
             else:
-                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True, mapper=name_mapper)
+                works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
+                                                  expert_connections_info=True)
 
         return break_loops_in_input_graph(works_info)
 

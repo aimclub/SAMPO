@@ -22,8 +22,9 @@ class InputPipeline(ABC):
 
     @abstractmethod
     def wg(self, wg: WorkGraph | pd.DataFrame | str,
-           is_wg_has_full_info_about_connections: bool = False,
-           change_base_on_history: bool = False,
+           change_only_omitted_info_and_connections: bool = False,
+           change_all_info: bool = False,
+           change_all_info_and_connections: bool = False,
            sep: str = ',') -> 'InputPipeline':
         ...
 

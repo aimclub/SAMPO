@@ -55,13 +55,13 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 
 def test_plain_scheduling_with_parse_data():
-    wg = os.path.join(sys.path[0], 'tests/parser/data/test_wg_no_connections.csv')
-    history = os.path.join(sys.path[0], 'tests/parser/data/history.csv')
+    wg = os.path.join(sys.path[0], 'tests/parser/data/electroline_works_info_omitted_info.csv')
+    history = os.path.join(sys.path[0], 'tests/parser/data/history_preprocessed.csv')
     name_mapper = os.path.join(sys.path[0], 'tests/parser/data/name_mapper.json')
 
     project = SchedulingPipeline.create() \
-        .wg(wg=wg, change_base_on_history=True, sep=',') \
-        .history(history=history,  sep=',') \
+        .wg(wg=wg, sep=';', change_all_info_and_connections=True) \
+        .history(history=history, sep=',') \
         .name_mapper(name_mapper=name_mapper) \
         .schedule(HEFTScheduler()) \
         .finish()

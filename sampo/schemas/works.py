@@ -21,7 +21,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  object_reqs: list[ConstructionObjectReq] = None,
                  zone_reqs: list[ZoneReq] = None,
                  description: str = '',
-                 group: str = 'default',
+                 group: str = 'main project',
                  is_service_unit: bool = False,
                  volume: float = 0,
                  volume_type: str = 'unit',

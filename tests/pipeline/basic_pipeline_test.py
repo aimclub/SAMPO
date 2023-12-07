@@ -56,7 +56,7 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 
 def test_plain_scheduling_with_parse_data():
-    wg = os.path.join(sys.path[0], 'tests/parser/data/dormitory_only_service_connections.csv')
+    wg = os.path.join(sys.path[0], 'tests/parser/data/dormitory_works_info.csv')
     history = os.path.join(sys.path[0], 'tests/parser/tt/historical_projects_data.csv')
     name_mapper = os.path.join(sys.path[0], 'tests/parser/data/name_mapper.json')
 

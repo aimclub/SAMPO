@@ -163,7 +163,7 @@ def preprocess_graph_df(frame: pd.DataFrame,
         frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
 
     frame['activity_id'] = frame['activity_id'].astype(str)
-    frame['volume'] = frame['volume'].astype(float)
+    frame['volume'] = frame['volume'].apply(lambda x: float(x.replace(',', '.')) if isinstance(x, str) else float(x))
 
     frame['predecessor_ids'] = fix_df_column_with_arrays(frame['predecessor_ids'], cast=normalize_if_number)
     frame['connection_types'] = fix_df_column_with_arrays(frame['connection_types'],

@@ -4,6 +4,7 @@ from typing import Callable, Any
 from uuid import uuid4
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
 from sampo.schemas import Time
@@ -159,6 +160,12 @@ def preprocess_graph_df(frame: pd.DataFrame,
             if s.replace('.', '', 1).isdigit() \
             else s
 
+    temp_lst = [math.nan] * frame.shape[0]
+
+    for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
+        if col not in frame.columns:
+            frame[col] = temp_lst
+
     if 'granular_name' not in frame.columns:
         frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
 
@@ -172,6 +179,11 @@ def preprocess_graph_df(frame: pd.DataFrame,
     if 'lags' not in frame.columns:
         frame['lags'] = [NONE_ELEM] * len(frame)
     frame['lags'] = fix_df_column_with_arrays(frame['lags'], float)
+    for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
+        frame[col] = frame[col].astype(object)
+
+    for _, row in frame.iterrows():
+        frame.at[_, 'counts'] = [np.iinfo(np.int64).max] * len(frame.at[_, 'lags'])
 
     return frame
 

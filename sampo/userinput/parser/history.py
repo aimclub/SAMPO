@@ -232,7 +232,8 @@ def set_connections_info(graph_df: pd.DataFrame,
                          use_model_name: bool = False,
                          mapper: NameMapper | None = None,
                          change_connections_info: bool = False,
-                         all_connections: bool = False) \
+                         all_connections: bool = False,
+                         id2ind: dict[str, int] = None) \
         -> pd.DataFrame:
     """
     Restore tasks' connection based on history data
@@ -255,18 +256,20 @@ def set_connections_info(graph_df: pd.DataFrame,
     def append_new_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst):
         """Appends new connections to the existing lists."""
         for i, pred_id in enumerate(pred_ids_lst):
-            if pred_id not in pred_ids_lst_tmp and pred_id != '-1':
+            if pred_id not in pred_ids_lst_tmp and pred_id != '-1' and pred_id in all_works:
                 pred_ids_lst_tmp.append(pred_id)
                 pred_types_lst_tmp.append(pred_types_lst[i])
                 pred_lags_lst_tmp.append(pred_lags_lst[i])
                 pred_counts_lst_tmp.append(pred_counts_lst[i])
         return pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp
 
-    tasks_df = graph_df.copy().set_index('activity_id', drop=False)
+    tasks_df = graph_df.copy()
+
+    INF = np.iinfo(np.int64).max
 
     # | ------ no changes ------- |
     if not change_connections_info and all_connections:
-        tasks_df['counts'] = [[0] * len(tasks_df['predecessor_ids'][i]) for i in range(tasks_df.shape[0])]
+        tasks_df['counts'] = [[INF] * len(tasks_df['predecessor_ids'][i]) for i in range(tasks_df.shape[0])]
 
         tasks_df['connection_types'] = tasks_df['connection_types'].apply(
             lambda x: [EdgeType(elem) if elem != '-1' else EdgeType.FinishStart for elem in x]
@@ -286,25 +289,24 @@ def set_connections_info(graph_df: pd.DataFrame,
     gas_network.update(electroline)
     gas_network.update(dormitory)
     connections_dict = gas_network
-
-    predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst, predecessors_counts_lst = [], [], [], []
+    all_works = tasks_df['activity_id'].values
 
     for task_id, pred_info_lst in connections_dict.items():
-        if str(task_id) not in tasks_df.index:
+        if str(task_id) not in all_works:
             continue
 
-        row = tasks_df.loc[str(task_id)]
+        row = tasks_df.loc[id2ind[str(task_id)]]
 
         # | ------ change links and info about them ------ |
         # by default, the links and their information change
         if len(pred_info_lst) > 0:
             pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
         else:
-            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], [1.0], [0]
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], [1.0], [INF]
 
         if not all_connections:
             pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
-                row['predecessor_ids'].copy(), row['connection_types'].copy(), row['lags'].copy(), [math.nan] * len(row['lags']))
+                row['predecessor_ids'].copy(), row['connection_types'].copy(), row['lags'].copy(), [INF] * len(row['lags']))
             if change_connections_info:
                 pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
                     update_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst))
@@ -319,22 +321,14 @@ def set_connections_info(graph_df: pd.DataFrame,
                 if len(pred_info_lst) > 0:
                     pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
                 else:
-                    pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], [1.0], [0]
+                    pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], [1.0], [INF]
 
-        predecessors_ids_lst.append(pred_ids_lst)
-        predecessors_types_lst.append(pred_types_lst)
-        predecessors_lags_lst.append(pred_lags_lst)
-        predecessors_counts_lst.append(pred_counts_lst)
-        while len(predecessors_types_lst[-1]) != len(predecessors_ids_lst[-1]):
-            predecessors_types_lst[-1].append('FS')
-            predecessors_lags_lst[-1].append(1.0)
-            predecessors_counts_lst[-1].append(0)
-
-    # Convert strings to arrays
-    tasks_df['predecessor_ids'] = predecessors_ids_lst
-    tasks_df['connection_types'] = predecessors_types_lst
-    tasks_df['lags'] = predecessors_lags_lst
-    tasks_df['counts'] = predecessors_counts_lst
+        while len(pred_ids_lst) != len(pred_types_lst):
+            pred_types_lst.append('FS')
+            pred_lags_lst.append(1.0)
+            pred_counts_lst.append(0)
+        for col, val in zip(['predecessor_ids', 'connection_types', 'lags', 'counts'], [pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst]):
+            tasks_df.at[id2ind[str(task_id)], col] = val
 
     tasks_df['connection_types'] = tasks_df['connection_types'].apply(
         lambda x: [EdgeType(elem) if elem != '-1' else EdgeType.FinishStart for elem in x]

@@ -84,15 +84,11 @@ class CSVParser:
             raise InputDataException(
                 'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 
-        temp_lst = [math.nan] * graph_df.shape[0]
-
-        for col in ['predecessor_ids', 'connection_types', 'lags']:
-            if col not in graph_df.columns:
-                graph_df[col] = temp_lst
         graph_df = preprocess_graph_df(graph_df, name_mapper)
+        id2ind = {graph_df.loc[i, 'activity_id']: i for i in range(len(graph_df.index))}
         works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
                                           all_connections=all_connections,
-                                          change_connections_info=change_connections_info)
+                                          change_connections_info=change_connections_info, id2ind=id2ind)
 
         return break_loops_in_input_graph(works_info)
 
@@ -103,7 +99,7 @@ class CSVParser:
                                    contractor_types: list[int] | None = None,
                                    name_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
-            -> (WorkGraph, Contractor):
+            -> (WorkGraph, list[Contractor]):
         """
         Gets a info about WorkGraph and Contractors from file .csv.
 

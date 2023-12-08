@@ -103,7 +103,6 @@ class JustInTimeTimeline(Timeline):
             working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
             new_finish_time = dep_st + working_time
 
-        new_finish_time -= 1
         exec_time = new_finish_time - c_st
 
         max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,

@@ -59,7 +59,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.description = description
         self.group = group
         self.is_service_unit = is_service_unit
-        self.volume = volume
+        self.volume = float(volume)
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
         self.workground_size = workground_size

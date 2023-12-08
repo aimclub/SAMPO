@@ -7,8 +7,8 @@ pandas~=2.0.0
 scipy~=1.9.3
 scikit-learn~=1.1.3
 
-torch==2.0.1
-torchmetrics
+# torch==2.0.1
+# torchmetrics
 
 toposort~=1.7
 deap~=1.3.3

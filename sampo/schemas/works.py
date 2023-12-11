@@ -20,6 +20,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  material_reqs: list[MaterialReq] = None,
                  object_reqs: list[ConstructionObjectReq] = None,
                  zone_reqs: list[ZoneReq] = None,
+                 description: str = '',
                  group: str = 'default',
                  is_service_unit: bool = False,
                  volume: float = 0,
@@ -32,6 +33,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
         :param object_reqs: list of required objects (e.g. electricity, pipelines, roads)
         :param zone_reqs: list of required zone statuses (e.g. opened/closed doors, attached equipment, etc.)
+        :param description: the description. It is useful, for example, to show it on visualization
         :param group: union block of works
         :param is_service_unit: service units are additional vertexes
         :param volume: scope of work
@@ -54,6 +56,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.object_reqs = object_reqs
         self.material_reqs = material_reqs
         self.zone_reqs = zone_reqs
+        self.description = description
         self.group = group
         self.is_service_unit = is_service_unit
         self.volume = volume
@@ -61,7 +64,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.display_name = display_name if display_name else name
 
     def __del__(self):
-        for name, attr in self.__dict__.items():
+        for attr in self.__dict__.values():
             del attr
 
     def need_materials(self) -> list[Material]:

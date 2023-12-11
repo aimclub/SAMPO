@@ -36,8 +36,13 @@ class CSVParser:
                 predecessor_ids: list[str] - Ids of predecessors of the current task,
                 connection_types: list[str] - Types of links between the current task and its predecessors,
                 lags: float - Time lags,
-                min_req: dict[str: float] - A dictionary containing the minimum amount of each resource that is required to perform the current task
-                max_req: dict[str: float] - A dictionary containing the maximum amount of each resource that is required to perform the current task
+                min_req: dict[str: float] - A dictionary containing the minimum amount of each resource
+                                            that is required to perform the current task
+                max_req: dict[str: float] - A dictionary containing the maximum amount of each resource
+                                            that is required to perform the current task
+                description: str - A task description
+                required_status: dict[str: float] - A dictionary containing the zone statuses required
+                                                    to perform the current task
 
         Schema of history .csv file (optional data):
             mandatory fields:

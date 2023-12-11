@@ -109,6 +109,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                      title_text='Date')
 
     fig.update_layout(autosize=True, font_size=12)
-    fig.update_layout(height=1000)
+    # fig.update_layout(height=1000)
 
     return visualize(fig, mode=visualization, file_name=fig_file_name)

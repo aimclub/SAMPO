@@ -9,7 +9,7 @@ import pandas as pd
 from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
-from sampo.schemas.requirements import WorkerReq
+from sampo.schemas.requirements import WorkerReq, ZoneReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.works import WorkUnit
 
@@ -21,7 +21,7 @@ class Graph:
     def __init__(self):
         self.graph = defaultdict(list)
 
-    def add_edge(self, u, v, weight = None):
+    def add_edge(self, u, v, weight=None):
         self.graph[u].append((v, weight))
 
     def dfs_cycle(self, u, visited):
@@ -233,9 +233,15 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGrap
                     for res_name in resource_names
                     if row[res_name] > 0]
         is_service_unit = len(reqs) == 0
+
+        zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
+            if 'required_statuses' in frame.columns else []
+
+        description = row['description'] if 'description' in frame.columns else ''
+
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
-                             volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
-                             display_name=row['activity_name'])
+                             description=description, volume=row['volume'], volume_type=row['measurement'],
+                             is_service_unit=is_service_unit, display_name=row['activity_name'], zone_reqs=zone_reqs)
         has_succ |= set(row['edges'][0])
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)

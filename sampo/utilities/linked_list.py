@@ -17,10 +17,9 @@ class Iterator(Generic[T]):
         self._prev = None
 
     def __iter__(self):
-        yield self._node
-
-        while self._node is not None:
-            yield self.__next__()
+        while self._node.next is not None:
+            yield self._node
+            self.__next__()
 
     def __next__(self) -> Node[T]:
         return self.next()

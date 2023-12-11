@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from functools import partial, lru_cache
 from typing import Iterable, Union
@@ -10,7 +11,7 @@ from sampo.schemas.serializable import JSONSerializable, T
 from sampo.schemas.time import Time
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.datetime_util import add_time_delta
-from sampo.utilities.schedule import fix_split_tasks
+from sampo.utilities.schedule import fix_split_tasks, offset_schedule
 
 ResourceSchedule = dict[str, list[tuple[Time, Time]]]
 ScheduleWorkDict = dict[str, ScheduledWork]
@@ -99,29 +100,35 @@ class Schedule(JSONSerializable['Schedule']):
         dict_representation['works'] = [ScheduledWork._deserialize(sw) for sw in dict_representation['works']]
         return Schedule.from_scheduled_works(**dict_representation)
 
-    # @lru_cache
+    @lru_cache
     def merged_stages_datetime_df(self, offset: Union[datetime, str]) -> DataFrame:
         """
         Merges split stages of same works after lag optimization and returns schedule DataFrame shifted to start.
         :param offset: Start of schedule, to add as an offset.
         :return: Shifted schedule DataFrame with merged tasks.
         """
-        result = self.offset_schedule(offset)
+        result = fix_split_tasks(offset_schedule(self._schedule, offset))
         return result
 
-    def offset_schedule(self, offset: Union[datetime, str]) -> DataFrame:
+    def unite_stages(self) -> 'Schedule':
         """
-        Returns full schedule object with `start` and `finish` columns pushed by date in `offset` argument.
-        :param offset: Start of schedule, to add as an offset.
-        :return: Shifted schedule DataFrame.
+        Merge stages and reconstruct the `Schedule`
+        :return: `Schedule` with inseparable chains united
         """
-        r = self._schedule.loc[:, :]
-        r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
-        r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
-        r = r.rename({'start': 'start_', 'finish': 'finish_',
-                      'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
-            .drop(['start_', 'finish_'], axis=1)
-        return r
+        merged_df = fix_split_tasks(self._schedule)
+
+        def f(row):
+            swork: ScheduledWork = deepcopy(row[self._scheduled_work_column])
+            row[self._scheduled_work_column] = swork
+            swork.name = row['task_name_mapped']
+            swork.display_name = row['task_name']
+            swork.volume = float(row['volume'])
+            swork.start_end_time = Time(int(row['start'])), Time(int(row['finish']))
+            return row
+
+        merged_df = merged_df.apply(f, axis=1)
+
+        return Schedule.from_scheduled_works(works=merged_df[self._scheduled_work_column])
 
     @staticmethod
     def from_scheduled_works(works: Iterable[ScheduledWork],

@@ -2,6 +2,7 @@ import math
 from collections import defaultdict
 from typing import Callable, Any
 from uuid import uuid4
+from ast import literal_eval
 
 import networkx as nx
 import numpy as np
@@ -170,7 +171,11 @@ def preprocess_graph_df(frame: pd.DataFrame,
         frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
 
     frame['activity_id'] = frame['activity_id'].astype(str)
-    frame['volume'] = frame['volume'].apply(lambda x: float(x.replace(',', '.')) if isinstance(x, str) else float(x))
+    frame['volume'] = [float(x.replace(',', '.')) if isinstance(x, str) else float(x) for x in frame['volume']]
+
+    if 'min_req' in frame.columns and 'max_req' in frame.columns:
+        frame['min_req'] = [literal_eval(x) if isinstance(x, str) else x for x in frame['min_req']]
+        frame['max_req'] = [literal_eval(x) if isinstance(x, str) else x for x in frame['max_req']]
 
     frame['predecessor_ids'] = fix_df_column_with_arrays(frame['predecessor_ids'], cast=normalize_if_number)
     frame['connection_types'] = fix_df_column_with_arrays(frame['connection_types'],
@@ -231,12 +236,14 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
     id_to_node = {}
 
     for _, row in frame.iterrows():
-        if 'min_req' in frame.columns and 'max_req' in frame.columns:
-            reqs = [WorkerReq(res_name, Time(int(row[res_name])),
-                              row['min_req'][res_name],
-                              row['max_req'][res_name]
-                              ) for res_name in resource_names
-                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
+        if 'min_req' in frame.columns and 'max_req' in frame.columns and 'req_volume' in frame.columns:
+            reqs = []
+            for res_name in resource_names:
+                if res_name in row['min_req'] and res_name in row['max_req']:
+                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]:
+                        reqs.append(WorkerReq(res_name, Time(int(row['req_volume'][res_name])),
+                                              row['min_req'][res_name],
+                                              row['max_req'][res_name]))
         else:
             reqs = work_estimator.find_work_resources(row['activity_name'], float(row['volume']))
         is_service_unit = len(reqs) == 0

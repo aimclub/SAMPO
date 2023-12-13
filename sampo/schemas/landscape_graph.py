@@ -6,7 +6,6 @@ import numpy as np
 from scipy.sparse import dok_matrix
 
 from sampo.schemas.exceptions import NoAvailableResources
-from sampo.schemas.resources import Material
 
 
 @dataclass
@@ -22,7 +21,7 @@ class LandEdge:
 
 
 class ResourceStorageUnit:
-    def __init__(self, capacity: list[Material]):
+    def __init__(self, capacity: dict[str, int]):
         """
         Represents the resource storage of a land graph node
         :param capacity: list of the maximum values of each material
@@ -30,7 +29,7 @@ class ResourceStorageUnit:
         self._capacity = capacity
 
     @cached_property
-    def capacity(self) -> list[Material]:
+    def capacity(self) -> dict[str, int]:
         return self._capacity
 
 
@@ -83,15 +82,17 @@ class LandGraph:
     nodes: list[LandGraphNode] = None
     adj_matrix: dok_matrix = None
     node2ind: dict[LandGraphNode, int] = None
+    id2ind: dict[str, int] = None
     vertex_count: int = None
 
     def __post_init__(self) -> None:
         self.reinit()
 
     def reinit(self):
-        adj_matrix, node2ind = self._to_adj_matrix()
+        adj_matrix, node2ind, id2ind = self._to_adj_matrix()
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'node2ind', node2ind)
+        object.__setattr__(self, 'id2ind', id2ind)
         object.__setattr__(self, 'vertex_count', len(node2ind))
 
     @cached_property
@@ -103,9 +104,12 @@ class LandGraph:
                     roads.append(LandEdge(str(uuid.uuid4()), self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
         return roads
 
-    def _to_adj_matrix(self) -> tuple[dok_matrix, dict[LandGraphNode, int]]:
+    def _to_adj_matrix(self) -> tuple[dok_matrix, dict[LandGraphNode, int], dict[str, int]]:
         node2ind: dict[LandGraphNode, int] = {
             v: i for i, v in enumerate(self.nodes)
+        }
+        id2ind = {
+            v.id: i for i, v in enumerate(self.nodes)
         }
         adj_mtrx = dok_matrix((len(node2ind), len(node2ind)), dtype=np.short)
         for v, i in node2ind.items():
@@ -113,4 +117,4 @@ class LandGraph:
                 c_i = node2ind[child.finish]
                 adj_mtrx[i, c_i] = child.weight
 
-        return adj_mtrx, node2ind
+        return adj_mtrx, node2ind, id2ind

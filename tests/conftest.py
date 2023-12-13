@@ -54,41 +54,41 @@ def setup_landscape_many_holders():
 @fixture
 def setup_lg():
     platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
-                              ResourceStorageUnit([
-                                  Material('111', 'mat1', 10),
-                                  Material('222', 'mat2', 15),
-                                  Material('333', 'mat3', 12)
-                              ]))
+                              ResourceStorageUnit({
+                                  'mat1': 10,
+                                  'mat2': 15,
+                                  'mat3': 12
+                              }))
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
-                              ResourceStorageUnit([
-                                  Material('111', 'mat1', 7),
-                                  Material('222', 'mat2', 8),
-                                  Material('333', 'mat3', 9)
-                              ]))
+                              ResourceStorageUnit({
+                                  'mat1': 7,
+                                  'mat2': 8,
+                                  'mat3': 9
+                              }))
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
-                              ResourceStorageUnit([
-                                  Material('111', 'mat1', 11),
-                                  Material('222', 'mat2', 13),
-                                  Material('333', 'mat3', 17)
-                              ]))
+                              ResourceStorageUnit({
+                                  'mat1': 11,
+                                  'mat2': 13,
+                                  'mat3': 17
+                              }))
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
-                              ResourceStorageUnit([
-                                  Material('111', 'mat1', 18),
-                                  Material('222', 'mat2', 19),
-                                  Material('333', 'mat3', 20)
-                              ]))
+                              ResourceStorageUnit({
+                                  'mat1': 18,
+                                  'mat2': 19,
+                                  'mat3': 20
+                              }))
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
-                            ResourceStorageUnit([
-                                Material('111', 'mat1', 40),
-                                Material('222', 'mat2', 55),
-                                Material('333', 'mat3', 70)
-                            ]))
+                            ResourceStorageUnit({
+                                  'mat1': 40,
+                                  'mat2': 55,
+                                  'mat3': 70
+                              }))
     holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
-                            ResourceStorageUnit([
-                                Material('111', 'mat1', 60),
-                                Material('222', 'mat2', 45),
-                                Material('333', 'mat3', 65)
-                            ]))
+                            ResourceStorageUnit({
+                                  'mat1': 40,
+                                  'mat2': 60,
+                                  'mat3': 65
+                              }))
     platform1.add_neighbours([(platform3, 1.0)])
     platform2.add_neighbours([(platform4, 2.0)])
     platform3.add_neighbours([(platform1, 1.0), (holder1, 4.0), (holder2, 3.0)])

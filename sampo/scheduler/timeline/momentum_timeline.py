@@ -97,7 +97,7 @@ class MomentumTimeline(Timeline):
 
         # 1. identify earliest possible start time by max parent's end time
 
-        def apply_time_spec(time: Time):
+        def apply_time_spec(time: Time) -> Time:
             return max(time, assigned_start_time) if assigned_start_time is not None else time
 
         max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)), assigned_parent_time)

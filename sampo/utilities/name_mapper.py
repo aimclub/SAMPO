@@ -56,14 +56,14 @@ class NameMapper(ABC):
 
 
 class DummyNameMapper(NameMapper):
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> str:
         return item
 
     def get(self, item):
         self.__getitem__(item)
 
     @property
-    def _source(self):
+    def _source(self) -> NameMapper:
         return self
 
 
@@ -74,7 +74,7 @@ class DictNameMapper(NameMapper):
     def get(self, item):
         self.__getitem__(item)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> str:
         return self._source[item] if item in self._source else item
 
 

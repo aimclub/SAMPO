@@ -387,13 +387,13 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
         return pd.DataFrame.from_dict(graph_df_structure)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.start) + 17 * hash(self.finish)
 
     def __getitem__(self, item: str) -> GraphNode:
         return self.dict_nodes[item]
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         # custom method to avoid calling __hash__() on GraphNode objects
         representation = self._serialize()
         representation['start'] = self.start.id

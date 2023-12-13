@@ -6,5 +6,5 @@ class ContractorType(Enum):
     Average = 75
     Maximal = 200
 
-    def command_capacity(self):
+    def command_capacity(self) -> int:
         return self.value

@@ -1,6 +1,6 @@
 from functools import partial
 from io import StringIO
-from typing import Union
+from typing import Union, Callable
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ CUSTOM_TYPE_SERIALIZER = '_serializer_for_types'
 CUSTOM_TYPE_DESERIALIZER = '_deserializer_for_types'
 
 
-def custom_serializer(type_or_field: Union[type, str], deserializer: bool = False):
+def custom_serializer(type_or_field: Union[type, str], deserializer: bool = False) -> Callable:
     """
     Meta-decorator for marking custom serializers or deserializers methods.<br/>
     This decorator can stack with other serializer/deserializer decorators.
@@ -48,64 +48,64 @@ def custom_serializer(type_or_field: Union[type, str], deserializer: bool = Fals
     raise TypeError(f'Unexpected type of param type_or_field: {type(type_or_field)} instead of Union[type, str]')
 
 
-def custom_field_serializer(field_name: str):
+def custom_field_serializer(field_name: str) -> Callable:
     return partial(_decorate_serializer,
                    collection_name=CUSTOM_FIELD_SERIALIZER,
                    new_element=field_name)
 
 
-def custom_field_deserializer(field_name: str):
+def custom_field_deserializer(field_name: str) -> Callable:
     return partial(_decorate_serializer,
                    collection_name=CUSTOM_FIELD_DESERIALIZER,
                    new_element=field_name)
 
 
-def custom_type_serializer(__type: type or str):
+def custom_type_serializer(__type: type or str) -> Callable:
     return partial(_decorate_serializer,
                    collection_name=CUSTOM_TYPE_SERIALIZER,
                    new_element=__type)
 
 
-def custom_type_deserializer(__type: type or str):
+def custom_type_deserializer(__type: type or str) -> Callable:
     return partial(_decorate_serializer,
                    collection_name=CUSTOM_TYPE_DESERIALIZER,
                    new_element=__type)
 
 
-def _decorate_serializer(func, collection_name, new_element):
+def _decorate_serializer(func, collection_name, new_element) -> Callable:
     if not hasattr(func, collection_name):
         setattr(func, collection_name, [])
     getattr(func, collection_name).append(new_element)
     return func
 
 
-def default_ndarray_serializer(array: np.ndarray):
+def default_ndarray_serializer(array: np.ndarray) -> list:
     return array.tolist()
 
 
-def default_ndarray_deserializer(__list: list):
+def default_ndarray_deserializer(__list: list) -> np.ndarray:
     return np.array(__list)
 
 
-def default_dataframe_serializer(df: pd.DataFrame):
+def default_dataframe_serializer(df: pd.DataFrame) -> str:
     return df.to_csv(encoding='utf-8')
 
 
-def default_dataframe_deserializer(str_repr: str):
+def default_dataframe_deserializer(str_repr: str) -> pd.DataFrame:
     return pd.read_csv(StringIO(str_repr), encoding='utf-8')
 
 
-def default_np_int_serializer(n):
+def default_np_int_serializer(n) -> int:
     return int(n)
 
 
-def default_np_int_deserializer(n):
+def default_np_int_deserializer(n) -> np.int32:
     return np.int32(n)
 
 
-def default_np_long_serializer(n):
+def default_np_long_serializer(n) -> int:
     return int(n)
 
 
-def default_np_long_deserializer(n):
+def default_np_long_deserializer(n) -> np.int64:
     return np.int64(n)

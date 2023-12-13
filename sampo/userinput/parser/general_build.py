@@ -155,7 +155,7 @@ def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | No
 
 def preprocess_graph_df(frame: pd.DataFrame,
                         name_mapper: NameMapper | None = None) -> pd.DataFrame:
-    def normalize_if_number(s):
+    def normalize_if_number(s) -> str:
         return str(int(float(s))) \
             if s.replace('.', '', 1).isdigit() \
             else s

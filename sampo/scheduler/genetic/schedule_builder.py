@@ -10,7 +10,8 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
@@ -377,5 +378,5 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
+def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]) -> bool:
     return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()

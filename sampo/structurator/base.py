@@ -203,7 +203,8 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
         new_work_graph: WorkGraph - restructured graph
     """
 
-    def get_restructuring_edges(edges: list[GraphEdge], edge_type: EdgeType, is_edge_to_node: bool):
+    def get_restructuring_edges(edges: list[GraphEdge], edge_type: EdgeType, is_edge_to_node: bool) \
+            -> list[tuple[GraphEdge, bool]]:
         return [(edge, is_edge_to_node) for edge in edges if edge.type is edge_type]
 
     id2new_nodes: dict[str, GraphNode] = dict()

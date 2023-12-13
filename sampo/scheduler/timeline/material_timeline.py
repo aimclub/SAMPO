@@ -189,5 +189,5 @@ class SupplyTimeline:
         return delivery, min_work_start_time
 
     @property
-    def resource_sources(self):
+    def resource_sources(self) -> dict[str, dict[str, int]]:
         return self._resource_sources

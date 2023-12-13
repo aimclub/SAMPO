@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypeVar, Iterable, Generic, Callable
+from typing import TypeVar, Iterable, Generic, Callable, Generator
 
 T = TypeVar('T')
 
@@ -82,14 +82,14 @@ class LinkedList(Generic[T]):
     def __add__(self, other: T):
         self.append(other)
 
-    def iterator(self):
+    def iterator(self) -> Iterator:
         return Iterator(self)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[T]:
         return (node.value for node in self.iterator())
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         return len(self) == 0

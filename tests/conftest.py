@@ -22,7 +22,7 @@ from sampo.utilities.sampler import Sampler
 
 
 @fixture
-def setup_sampler(request):
+def setup_sampler(request) -> Sampler:
     return Sampler(1e-1)
 
 
@@ -32,13 +32,13 @@ def setup_rand() -> Random:
 
 
 @fixture
-def setup_landscape_one_holder():
+def setup_landscape_one_holder() -> LandscapeConfiguration:
     return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
                                                           materials=[Material('111', 'mat1', 100000)])])
 
 
 @fixture
-def setup_landscape_many_holders():
+def setup_landscape_many_holders() -> LandscapeConfiguration:
     return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
                                                           materials=[Material('111', 'mat1', 100000)]),
                                            ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
@@ -192,7 +192,7 @@ def setup_default_schedules(setup_scheduler_parameters):
 
 @fixture(params=list(SchedulerType),
          ids=[f'Scheduler: {scheduler.value}' for scheduler in list(SchedulerType)])
-def setup_scheduler_type(request):
+def setup_scheduler_type(request) -> SchedulerType:
     return request.param
 
 

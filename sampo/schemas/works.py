@@ -72,18 +72,20 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         return [req.material() for req in self.material_reqs]
 
     @custom_serializer('worker_reqs')
-    def worker_reqs_serializer(self, value: list[WorkerReq]):
+    @custom_serializer('zone_reqs')
+    def serialize_serializable_list(self, value) -> list:
         """
-        Return serialized list of worker requirements
+        Return serialized list of values.
+        Values should be serializable.
 
-        :param value: list of worker requirements
-        :return: list of worker requirements
+        :param value: list of values
+        :return: list of serialized values
         """
-        return [wr._serialize() for wr in value]
+        return [t._serialize() for t in value]
 
     @classmethod
     @custom_serializer('worker_reqs', deserializer=True)
-    def worker_reqs_deserializer(cls, value):
+    def worker_reqs_deserializer(cls, value) -> list[WorkerReq]:
         """
         Get list of worker requirements
 
@@ -91,27 +93,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :return: list of worker requirements
         """
         return [WorkerReq._deserialize(wr) for wr in value]
-
-    @custom_serializer('zone_reqs')
-    def zone_reqs_serializer(self, value: list[WorkerReq]):
-        """
-        Return serialized list of worker requirements
-
-        :param value: list of worker requirements
-        :return: list of worker requirements
-        """
-        return [wr._serialize() for wr in value]
 
     @classmethod
     @custom_serializer('zone_reqs', deserializer=True)
-    def zone_reqs_deserializer(cls, value):
+    def zone_reqs_deserializer(cls, value) -> list[ZoneReq]:
         """
         Get list of worker requirements
 
         :param value: serialized list of work requirements
         :return: list of worker requirements
         """
-        return [WorkerReq._deserialize(wr) for wr in value]
+        return [ZoneReq._deserialize(wr) for wr in value]
 
     def __getstate__(self):
         # custom method to avoid calling __hash__() on GraphNode objects

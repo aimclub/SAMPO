@@ -10,7 +10,8 @@ from sampo.scheduler.multi_agency.block_generator import generate_blocks, Synthe
 from sampo.scheduler.multi_agency.block_validation import validate_block_schedule
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.topological.base import TopologicalScheduler
-from sampo.scheduler.utils.obstruction import OneInsertObstruction
+from sampo.scheduler.utils.obstruction import OneInsertObstruction, Obstruction
+from sampo.schemas import Time
 from sampo.schemas.contractor import Contractor, DEFAULT_CONTRACTOR_CAPACITY
 
 
@@ -74,7 +75,7 @@ def test_managing_with_obstruction():
               for i, contractor in enumerate(contractors)]
     manager = Manager(agents)
 
-    def obstruction_getter(i: int):
+    def obstruction_getter(i: int) -> Obstruction:
         return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
 
     for i in range(20):
@@ -90,7 +91,7 @@ def test_managing_with_obstruction():
         scheduled_blocks_without_obstructions = manager.manage_blocks(bg_without_obstructions, logger=print)
         validate_block_schedule(bg_without_obstructions, scheduled_blocks_without_obstructions, agents)
 
-        def finish_time(schedule: Iterable[ScheduledBlock]):
+        def finish_time(schedule: Iterable[ScheduledBlock]) -> Time:
             return max([sblock.end_time for sblock in schedule])
 
         assert finish_time(scheduled_blocks_without_obstructions.values()) \
@@ -105,7 +106,7 @@ def test_managing_queues():
     p_rand = SimpleSynthetic(rand=r_seed)
     rand = Random(r_seed)
 
-    def obstruction_getter(i: int):
+    def obstruction_getter(i: int) -> Obstruction:
         return OneInsertObstruction.from_static_graph(1, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
 
     for i in range(5):

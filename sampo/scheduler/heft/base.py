@@ -7,6 +7,7 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.full_scan import FullScanResourceOptimizer
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.schemas import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
@@ -45,6 +46,6 @@ class HEFTBetweenScheduler(HEFTScheduler):
                          work_estimator=work_estimator)
 
     @staticmethod
-    def get_finish_time(node, worker_team, node2swork, spec, assigned_parent_time, timeline, work_estimator):
+    def get_finish_time(node, worker_team, node2swork, spec, assigned_parent_time, timeline, work_estimator) -> Time:
         return timeline.find_min_start_time_with_additional(node, worker_team, node2swork, spec, None,
                                                             assigned_parent_time, work_estimator)[1]

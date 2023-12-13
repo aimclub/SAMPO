@@ -50,7 +50,7 @@ class ZoneConfiguration:
     time_costs: np.ndarray = field(default_factory=lambda: np.array([[]]))
     statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
-    def change_cost(self, from_status: int, to_status: int):
+    def change_cost(self, from_status: int, to_status: int) -> int:
         return self.time_costs[from_status, to_status]
 
 
@@ -62,5 +62,5 @@ class ZoneTransition(AutoJSONSerializable['ZoneTransition']):
     start_time: Time
     end_time: Time
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Access card {self.name} status {self.from_status} -> {self.to_status}'

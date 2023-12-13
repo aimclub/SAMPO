@@ -16,7 +16,7 @@ p_rand = SimpleSynthetic(rand=r_seed)
 rand = Random(r_seed)
 
 
-def obstruction_getter(i: int):
+def obstruction_getter(i: int) -> Obstruction | None:
     # return OneInsertObstruction.from_static_graph(0.5, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
     return None
 

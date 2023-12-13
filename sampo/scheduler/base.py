@@ -41,7 +41,7 @@ class Scheduler(ABC):
         self.resource_optimizer = resource_optimizer
         self.work_estimator = work_estimator
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.scheduler_type.name)
 
     def schedule(self,

@@ -62,7 +62,7 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -84,7 +84,7 @@ class SumOfResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -106,7 +106,7 @@ class TimeWithResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -130,7 +130,8 @@ class DeadlineResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(deadline: Time, resources_names: Iterable[str] | None = None):
+    def prepare(deadline: Time, resources_names: Iterable[str] | None = None) \
+            -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -155,7 +156,8 @@ class DeadlineCostFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(deadline: Time, resources_names: Iterable[str] | None = None):
+    def prepare(deadline: Time, resources_names: Iterable[str] | None = None) \
+            -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """

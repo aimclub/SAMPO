@@ -1,6 +1,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.landscape import MaterialDelivery
@@ -63,31 +63,34 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
 
         self.cost = sum([worker.get_cost() * self.duration.value for worker in self.workers])
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'ScheduledWork[work_unit={self.id}, start_end_time={self.start_end_time}, ' \
                f'workers={self.workers}, contractor={self.contractor}]'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     @custom_serializer('workers')
     @custom_serializer('zones_pre')
     @custom_serializer('zones_post')
     @custom_serializer('start_end_time')
-    def serialize_serializable_list(self, value):
+    def serialize_serializable_list(self, value) -> list:
         return [t._serialize() for t in value]
 
     @classmethod
     @custom_serializer('start_end_time', deserializer=True)
-    def deserialize_time(cls, value):
-        return [Time._deserialize(t) for t in value]
+    def deserialize_time(cls, value) -> tuple[Time, Time]:
+        return Time._deserialize(value[0]), Time._deserialize(value[1])
 
     @classmethod
     @custom_serializer('workers', deserializer=True)
+    def deserialize_workers(cls, value) -> list[Worker]:
+        return [Worker._deserialize(t) for t in value]
+
     @custom_serializer('zones_pre', deserializer=True)
     @custom_serializer('zones_post', deserializer=True)
-    def deserialize_workers(cls, value):
-        return [Worker._deserialize(t) for t in value]
+    def deserialize_workers(cls, value) -> list[ZoneTransition]:
+        return [ZoneTransition._deserialize(t) for t in value]
 
     @property
     def start_time(self) -> Time:
@@ -106,11 +109,11 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.start_end_time = (self.start_end_time[0], val)
 
     @staticmethod
-    def start_time_getter():
+    def start_time_getter() -> Callable[[], Time]:
         return lambda x: x.start_end_time[0]
 
     @staticmethod
-    def finish_time_getter():
+    def finish_time_getter() -> Callable[[], Time]:
         return lambda x: x.start_end_time[1]
 
     @property

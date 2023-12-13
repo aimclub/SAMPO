@@ -165,7 +165,7 @@ class Manager:
             obstruction.generate(wg)
         return self.run_auction(wg, parent_time)
 
-    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
         """
         Runs the auction on the given `WorkGraph`.
 
@@ -260,7 +260,7 @@ class NeuralManager:
             obstruction.generate(wg)
         return self.run_auction(wg, index, parent_time)
 
-    def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
         """
         Runs the auction on the given `WorkGraph`.
 

@@ -76,7 +76,7 @@ def prepare_work_graph_copy(wg: WorkGraph, excluded_nodes: list[GraphNode] = [],
 
 
 def new_start_finish(original_wg: WorkGraph, copied_nodes: dict[str, GraphNode],
-                     old_to_new_ids: dict[str, str]) -> (GraphNode, GraphNode):
+                     old_to_new_ids: dict[str, str]) -> tuple[GraphNode, GraphNode]:
     """
     Prepares new start and finish to create WorkGraph after copying it
     :param original_wg: WorkGraph, on which base prepare_work_graph_copy was run

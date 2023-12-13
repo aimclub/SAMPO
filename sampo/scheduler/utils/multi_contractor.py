@@ -10,7 +10,7 @@ from sampo.schemas.time import Time
 
 
 def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, work_reqs: list[WorkerReq]) \
-        -> (np.ndarray, np.ndarray, list[Worker]):
+        -> tuple[np.ndarray, np.ndarray, list[Worker]]:
     """
     Define for each job each type of workers the min and max possible number of workers.
     For max number of workers, max is defined as a minimum from max possible numbers

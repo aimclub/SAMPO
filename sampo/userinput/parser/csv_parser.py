@@ -99,7 +99,7 @@ class CSVParser:
                                    contractor_types: list[int] | None = None,
                                    name_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
-            -> (WorkGraph, list[Contractor]):
+            -> tuple[WorkGraph, list[Contractor]]:
         """
         Gets a info about WorkGraph and Contractors from file .csv.
 

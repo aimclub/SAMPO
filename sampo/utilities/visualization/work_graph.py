@@ -80,7 +80,7 @@ def calculate_work_volume(work_unit: WorkUnit) -> float:
     return sum((req.volume for req in work_unit.worker_reqs))
 
 
-def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> (list[dict], dict[str, int], dict[str, str]):
+def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> tuple[list[dict], dict[str, int], dict[str, str]]:
     max_deep = max_deep or INF_INT
     q = queue.Queue()
     q.put((0, start))

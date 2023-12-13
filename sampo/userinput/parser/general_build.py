@@ -266,8 +266,8 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
     return WorkGraph.from_nodes(all_nodes)
 
 
-def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') -> (
-        list[Contractor], dict[str, float]):
+def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') \
+        -> tuple[list[Contractor], dict[str, float]]:
     contractor_id = str(uuid4())
     workers_df = pd.read_csv(path, index_col='name')
     workers = {(name, 0): Worker(str(uuid4()), name, count * 2, contractor_id)

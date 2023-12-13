@@ -50,22 +50,31 @@ class GenericScheduler(Scheduler):
             -> Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                          dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
                          tuple[Time, Time, Contractor, list[Worker]]]:
+        """
+        Here is default resource optimization getter function.
+
+        Constructs function that receives node with necessary scheduling inner info and
+        returns start time, finish time and assigned workers for that node.
+
+        :param get_finish_time: function that
+        :return: resource optimization function that can be passed as argument when constructing `GenericScheduler`.
+        """
 
         def optimize_resources_def(node: GraphNode, contractors: list[Contractor], spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator):
+            def ft_getter(worker_team):
+                return get_finish_time(node, worker_team, node2swork, spec,
+                                       assigned_parent_time, timeline, work_estimator)
+
             def run_with_contractor(contractor: Contractor) -> tuple[Time, Time, list[Worker]]:
                 min_count_worker_team, max_count_worker_team, workers \
                     = get_worker_borders(worker_pool, contractor, node.work_unit.worker_reqs)
 
                 if len(workers) != len(node.work_unit.worker_reqs):
-                    return Time(0), Time.inf(), []
+                    return assigned_parent_time, Time.inf(), []
 
                 workers = [worker.copy() for worker in workers]
-
-                def ft_getter(worker_team):
-                    return get_finish_time(node, worker_team, node2swork, spec,
-                                           assigned_parent_time, timeline, work_estimator)
 
                 # apply worker team spec
                 self.optimize_resources_using_spec(node.work_unit, workers, spec,
@@ -95,7 +104,7 @@ class GenericScheduler(Scheduler):
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
-            self.build_scheduler(wg, ordered_nodes, contractors, landscape, spec, self.work_estimator,
+            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator,
                                  assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
             schedule,
@@ -108,7 +117,6 @@ class GenericScheduler(Scheduler):
         return schedule, schedule_start_time, timeline, ordered_nodes
 
     def build_scheduler(self,
-                        wg: WorkGraph,
                         ordered_nodes: list[GraphNode],
                         contractors: list[Contractor],
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),

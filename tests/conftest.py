@@ -20,8 +20,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ('tests.schema', 'tests.models',)
-
 
 @fixture
 def setup_sampler(request):

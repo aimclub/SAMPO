@@ -7,8 +7,6 @@ from sampo.structurator.base import make_new_node_id
 
 import numpy as np
 
-pytest_plugins = ("tests.schema", "tests.models",)
-
 
 @fixture(params=[graph_type for graph_type in ['manual', 'manual with negative lag',
                                                'manual with negative volume', 'manual with lag > volume']],

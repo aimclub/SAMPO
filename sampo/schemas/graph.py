@@ -346,7 +346,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         finish = get_finish_stage(parents=without_successors, rand=rand)
         return WorkGraph(start, finish)
 
-    def to_frame(self) -> pd.DataFrame:
+    def to_frame(self, save_req=False) -> pd.DataFrame:
         # Define the format of the output DataFrame
         graph_df_structure = {'activity_id': [],
                               'activity_name': [],
@@ -356,6 +356,11 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                               'predecessor_ids': [],
                               'connection_types': [],
                               'lags': []}
+
+        if save_req:
+            graph_df_structure['min_req'] = []
+            graph_df_structure['max_req'] = []
+            graph_df_structure['req_volume'] = []
 
         # List of service 'start' and 'finish' nodes, which will not be included to the project's DataFrame
         start_finish_service_nodes = [self.start.id, self.finish.id]
@@ -370,6 +375,20 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
                 graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
                 graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
+
+                if save_req:
+                    min_req_dict = dict()
+                    max_req_dict = dict()
+                    req_volume_dict = dict()
+
+                    for req in node_info_dict['work_unit']['worker_reqs']:
+                        min_req_dict[req['kind']] = req['min_count']
+                        max_req_dict[req['kind']] = req['max_count']
+                        req_volume_dict[req['kind']] = req['volume']['value']
+
+                    graph_df_structure['min_req'].append(min_req_dict)
+                    graph_df_structure['max_req'].append(max_req_dict)
+                    graph_df_structure['req_volume'].append(req_volume_dict)
 
                 # Get information about connections between tasks from parent edges
                 predecessors_lst = []

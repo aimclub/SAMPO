@@ -85,7 +85,7 @@ class LinkedList(Generic[T]):
     def iterator(self) -> Iterator:
         return Iterator(self)
 
-    def __iter__(self) -> Generator[T]:
+    def __iter__(self) -> Generator[T, None, None]:
         return (node.value for node in self.iterator())
 
     def __len__(self) -> int:

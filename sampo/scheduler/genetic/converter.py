@@ -6,16 +6,15 @@ from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
-from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.requirements import ZoneReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.zones import Zone
 from sampo.utilities.linked_list import LinkedList
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]

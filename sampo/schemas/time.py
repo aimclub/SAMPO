@@ -20,7 +20,7 @@ class Time(AutoJSONSerializable['Time']):
         self.set_time(value)
 
     @staticmethod
-    def inf() -> Time:
+    def inf() -> 'Time':
         """
         Return time, that is obviously longer
         """

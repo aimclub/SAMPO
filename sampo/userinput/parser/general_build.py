@@ -156,7 +156,7 @@ def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | No
 
 def preprocess_graph_df(frame: pd.DataFrame,
                         name_mapper: NameMapper | None = None) -> pd.DataFrame:
-    def normalize_if_number(s) -> str:
+    def normalize_if_number(s):
         return str(int(float(s))) \
             if s.replace('.', '', 1).isdigit() \
             else s
@@ -245,7 +245,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
                                               row['min_req'][res_name],
                                               row['max_req'][res_name]))
         else:
-            reqs = work_estimator.find_work_resources(row['activity_name'], float(row['volume']))
+            reqs = work_estimator.find_work_resources(row['granular_name'], float(row['volume']))
         is_service_unit = len(reqs) == 0
 
         zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
@@ -266,8 +266,8 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
     return WorkGraph.from_nodes(all_nodes)
 
 
-def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') \
-        -> tuple[list[Contractor], dict[str, float]]:
+def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') -> (
+        list[Contractor], dict[str, float]):
     contractor_id = str(uuid4())
     workers_df = pd.read_csv(path, index_col='name')
     workers = {(name, 0): Worker(str(uuid4()), name, count * 2, contractor_id)

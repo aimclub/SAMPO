@@ -3,7 +3,7 @@ from enum import Enum
 from operator import attrgetter
 from typing import Optional
 
-from sampo.schemas.contractor import WorkerContractorPool, get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool, WorkerContractorPool
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
 from sampo.utilities.collections_util import build_index

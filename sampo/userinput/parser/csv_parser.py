@@ -69,7 +69,7 @@ class CSVParser:
         :param name_mapper: name mapper that translates 'activity_name' to the name, as from a document
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file
-        :param change_connections: whether it is necessary to change connections
+        :param all_connections: whether it is necessary to change connections
         :param change_connections_info: whether it is necessary to change connections' information based on history data?
         :param sep_wg: separating character. It's mandatory if you send the WorkGraph .csv
         :param sep_history: separating character. It's mandatory if you send the HistoryData .csv file path
@@ -91,6 +91,50 @@ class CSVParser:
                                           change_connections_info=change_connections_info, id2ind=id2ind)
 
         return break_loops_in_input_graph(works_info)
+
+    @staticmethod
+    def work_graph(works_info: pd.DataFrame,
+                   name_mapper: NameMapper | None = None,
+                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> WorkGraph:
+        """
+        Gets a info about WorkGraph and Contractors from file .csv.
+
+        Schema of Contractors .csv file (optional data):
+            mandatory fields:
+                contractor_id: str - Id of the current contractor,
+                name: str - Contractor name as in the document
+            optional fields:
+                {names of resources}: float - each resource is a separate column
+
+        ATTENTION!
+            1) If you do not provide work resource estimator, framework uses built-in estimator
+
+
+        :param works_info: dataFrame that contains preprocessed info about work graph structure
+        :param contractor_types:
+        :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
+        for a generation
+        :param contractor_info: path to contractor info .csv file or list of Contractors
+        :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
+        :return: WorkGraph and list of Contractors
+        """
+
+        works_info['activity_name_original'] = works_info.activity_name
+        if name_mapper:
+            works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
+
+        resources = [dict((worker_req.kind, int(worker_req.volume))
+                          for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
+                     for w in works_info.loc[:, ['granular_name', 'volume']].to_numpy()]
+
+        unique_res = list(set(chain(*[r.keys() for r in resources])))
+        # works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
+
+        works_resources = add_graph_info(works_info)
+        works_resources = topsort_graph_df(works_resources)
+        work_graph = build_work_graph(works_resources, unique_res, work_resource_estimator)
+
+        return work_graph
 
     @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
@@ -128,9 +172,6 @@ class CSVParser:
 
         # gather resources and contractors based on work resource estimator or contractor info .csv file
         contractors = []
-        works_info['activity_name_original'] = works_info.activity_name
-        if name_mapper:
-            works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
 
         if isinstance(contractor_info, list):
             contractors = contractor_info
@@ -150,16 +191,7 @@ class CSVParser:
                                equipments=dict())
                 )
 
-        resources = [dict((worker_req.kind, int(worker_req.volume))
-                          for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
-                     for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
-
-        unique_res = list(set(chain(*[r.keys() for r in resources])))
-        # works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
-
-        works_resources = add_graph_info(works_info)
-        works_resources = topsort_graph_df(works_resources)
-        work_graph = build_work_graph(works_resources, unique_res, work_resource_estimator)
+        work_graph = CSVParser.work_graph(works_info, name_mapper, work_resource_estimator)
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:

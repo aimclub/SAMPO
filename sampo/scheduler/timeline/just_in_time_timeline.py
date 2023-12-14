@@ -3,7 +3,8 @@ from typing import Optional
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker

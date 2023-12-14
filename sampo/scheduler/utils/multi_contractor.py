@@ -2,7 +2,8 @@ from typing import Callable
 
 import numpy as np
 
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker

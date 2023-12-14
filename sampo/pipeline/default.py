@@ -4,11 +4,13 @@ from sampo.generator.environment import ContractorGenerationMethod
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
+from sampo.pipeline.preparation import PreparationPipeline
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
+from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
 from sampo.schemas.apply_queue import ApplyQueue
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -20,7 +22,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
 from sampo.userinput.parser.csv_parser import CSVParser
 from sampo.utilities.name_mapper import NameMapper, read_json
-from sampo.utilities.visualization import Visualization
 
 
 def contractors_can_perform_work_graph(contractors: list[Contractor], wg: WorkGraph) -> bool:
@@ -62,6 +63,7 @@ class DefaultInputPipeline(InputPipeline):
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
         self._landscape_config = LandscapeConfiguration()
+        self._preparation = PreparationPipeline()
         self._history: pd.DataFrame = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
                                                             'upper_works', 'work_name_clear_old', 'smr_name',
                                                             'work_name_clear', 'granular_smr_name'])
@@ -294,5 +296,6 @@ class DefaultSchedulePipeline(SchedulePipeline):
         schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
         return ScheduledProject(self._input._wg, self._wg, self._input._contractors, schedule)
 
-    def visualization(self, start_date: str) -> Visualization:
+    def visualization(self, start_date: str) -> 'Visualization':
+        from sampo.utilities.visualization import Visualization
         return Visualization.from_project(self.finish(), start_date)

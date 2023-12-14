@@ -71,7 +71,7 @@ class Worker(Resource):
 
     ignored_fields = ['productivity']
 
-    def copy(self) -> Worker:
+    def copy(self) -> 'Worker':
         """
         Return copied current object
 
@@ -152,7 +152,7 @@ class Material(Resource):
         self.cost_one_unit = cost_one_unit
 
     # TODO: describe the function (description, return type)
-    def copy(self) -> Material:
+    def copy(self) -> 'Material':
         return Material(id=self.id,
                         name=self.name,
                         count=self.count)

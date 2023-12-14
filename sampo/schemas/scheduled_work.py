@@ -1,4 +1,3 @@
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -7,7 +6,6 @@ from sampo.schemas.landscape import MaterialDelivery
 from sampo.schemas.resources import Equipment, ConstructionObject, Worker
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.serializers import custom_serializer
@@ -87,9 +85,10 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def deserialize_workers(cls, value) -> list[Worker]:
         return [Worker._deserialize(t) for t in value]
 
+    @classmethod
     @custom_serializer('zones_pre', deserializer=True)
     @custom_serializer('zones_post', deserializer=True)
-    def deserialize_workers(cls, value) -> list[ZoneTransition]:
+    def deserialize_zone_transitions(cls, value) -> list[ZoneTransition]:
         return [ZoneTransition._deserialize(t) for t in value]
 
     @property

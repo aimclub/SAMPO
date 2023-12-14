@@ -89,7 +89,7 @@ class Visualization:
         self.wg_vis.work_graph_chart(VisualizationMode.ShowFig)
         return self
 
-    def get_all_figs(self) -> dict[str, Figure]:
+    def get_all_figs(self):
         return {
             'date_labeled_resource_chart': self.schedule_vis.date_labeled_resource_chart(VisualizationMode.ReturnFig),
             'work_labeled_resource_chart': self.schedule_vis.work_labeled_resource_chart(VisualizationMode.ReturnFig),

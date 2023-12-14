@@ -4,7 +4,7 @@ import numpy as np
 from pytest import fixture
 
 from sampo.scheduler.genetic.schedule_builder import create_toolbox_and_mapping_objects
-from sampo.schemas.contractor import get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 

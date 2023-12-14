@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from functools import cached_property
 
 import numpy as np
-from scipy.sparse import dok_matrix
 
 from sampo.schemas.exceptions import NoAvailableResources
 
@@ -80,7 +79,7 @@ class LandGraphNode:
 @dataclass
 class LandGraph:
     nodes: list[LandGraphNode] = None
-    adj_matrix: dok_matrix = None
+    adj_matrix: np.array = None
     node2ind: dict[LandGraphNode, int] = None
     id2ind: dict[str, int] = None
     vertex_count: int = None
@@ -104,14 +103,14 @@ class LandGraph:
                     roads.append(LandEdge(str(uuid.uuid4()), self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
         return roads
 
-    def _to_adj_matrix(self) -> tuple[dok_matrix, dict[LandGraphNode, int], dict[str, int]]:
+    def _to_adj_matrix(self) -> tuple[np.array, dict[LandGraphNode, int], dict[str, int]]:
         node2ind: dict[LandGraphNode, int] = {
             v: i for i, v in enumerate(self.nodes)
         }
         id2ind = {
             v.id: i for i, v in enumerate(self.nodes)
         }
-        adj_mtrx = dok_matrix((len(node2ind), len(node2ind)), dtype=np.short)
+        adj_mtrx = np.full((len(node2ind), len(node2ind)), 10000000)
         for v, i in node2ind.items():
             for child in v.roads:
                 c_i = node2ind[child.finish]

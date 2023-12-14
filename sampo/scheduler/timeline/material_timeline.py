@@ -37,8 +37,8 @@ class SupplyTimeline:
         for resource in landscape_config.get_all_resources():
             for mat_id, mat_dict in resource.items():
                 self._timeline[mat_id] = {
-                    mat.name: SortedList(iterable=(ScheduleEvent(-1, EventType.INITIAL, Time(0), None, mat.count)),
-                                         key=event_cmp)
+                    mat[0]: SortedList(iterable=(ScheduleEvent(-1, EventType.INITIAL, Time(0), None, mat[1]),),
+                                       key=event_cmp)
                     for mat in mat_dict.items()
                 }
 
@@ -107,7 +107,7 @@ class SupplyTimeline:
 
         # has any holder 'materials'
         material_available = [False] * len(materials)
-        for info, holder_id in holders:
+        for holder_id in holders:
             for mat_ind in range(len(materials)):
                 if not self._timeline[holder_id].get(materials[mat_ind].name, None) is None:
                     material_available[mat_ind] = True
@@ -117,7 +117,7 @@ class SupplyTimeline:
                 f'Schedule can not be built. No available resource sources with materials '
                 f'{[materials[mat_ind] for mat_ind in range(len(materials)) if not material_available[mat_ind]]}')
 
-        depots = [(info, id) for info, id in holders for mat in materials if self._timeline[id][mat.name] >= mat.count]
+        depots = [id for id in holders for mat in materials if self._timeline[id][mat.name] >= mat.count]
 
         if not depots:
             raise NotEnoughMaterialsInDepots(
@@ -125,14 +125,14 @@ class SupplyTimeline:
 
         depots_result = []
 
-        for info, depot_id in depots:
+        for depot_id in depots:
             material_time = Time(0)
             for material in materials:
                 material_time = max(material_time, self._timeline[depot_id][material.name].bisect_left(deadline).time)
-            depots_result.append((depot_id, material_time, info))
+            depots_result.append((depot_id, material_time))
 
-        depots = [(depot_id, time, info[0])
-                  for info, time, depot_id in depots_result]
+        depots = [(depot_id, time)
+                  for time, depot_id in depots_result]
         depots.sort(key=itemgetter(1, 2))
 
         return depots[0]
@@ -194,12 +194,29 @@ class SupplyTimeline:
 
     def _get_route_time(self, holder_ind: int, node_ind: int, vehicles: list[Vehicle], landscape: LandscapeConfiguration,
                         start_holder_time: Time) -> Time:
-        # get routing execution time (relative value)
-        # route = landscape.routing_mx[holder_ind][node_ind][1]
+        def get_path(v, u):
+            if landscape.path_mx[v][u] == v:
+                return
+            get_path(v, landscape.path_mx[v][u][v][u])
+            path.append(landscape.path_mx[v][u])
+
+        _id2road = {road.id: road for road in landscape.roads}
+
+        path = [holder_ind]
+        get_path(holder_ind, node_ind)
+        path.append(node_ind)
+
+        route = [landscape.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
+        final_road_time = Time(0)
+        start_road_time = start_holder_time
+
+        # check time availability of each part of 'route'
         # for road in route:
 
 
-        pass
+
+
+
 
     def update_timeline(self):
         # 1) establish the number of available resources in holder at the moment 'depot_time'

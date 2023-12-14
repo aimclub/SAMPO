@@ -1,7 +1,7 @@
-import heapq
 from abc import ABC, abstractmethod
 from functools import cached_property
 
+import numpy as np
 from sortedcontainers import SortedList
 
 from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, LandEdge
@@ -16,29 +16,31 @@ class ResourceSupply(ABC):
         self.name = name
 
     @abstractmethod
-    def get_resources(self) -> list[tuple[int, str]]:
+    def get_resources(self) -> list[tuple[str, int]]:
         ...
 
 
 class Road(ResourceSupply):
     def __init__(self, name: str,
                  edge: LandEdge,
+                 bandwidth: float = 10,
                  speed: float = 50,
                  vehicles: int = 0):
         """
         :param name: name of road
-        :param count: road capacity
         :param edge: the edge in LandGraph
+        :poram bandwidth: the number of vehicles that road can pass per hour
         :param speed: the maximum value of speed on the road
         :param vehicles: the number of vehicles that are on the road at the current moment
         """
-        super(Road).__init__(edge.id, name)
+        super(Road, self).__init__(edge.id, name)
         self.vehicles = vehicles
         self.speed = speed
         self.edge = edge
+        self.length = edge.weight
 
-    def get_resources(self) -> list[tuple[int, str]]:
-        return [(self.speed, 'speed'), (self.edge.weight, 'length'), (self.vehicles, 'vehicles')]
+    def get_resources(self) -> list[tuple[str, int]]:
+        return [('speed', self.speed), ('length', self.edge.weight), ('vehicles', self.vehicles)]
 
 
 class Vehicle(ResourceSupply):
@@ -57,8 +59,8 @@ class Vehicle(ResourceSupply):
     def resources(self) -> dict[str, int]:
         return {mat.name: mat.count for mat in self.capacity}
 
-    def get_resources(self) -> list[tuple[int, str]]:
-        return [(mat.count, mat.name) for mat in self.capacity]
+    def get_resources(self) -> list[tuple[str, int]]:
+        return [(mat.name, mat.count) for mat in self.capacity]
 
     def get_sum_resources(self) -> int:
         return sum([mat.count for mat in self.capacity])
@@ -81,11 +83,11 @@ class ResourceHolder(ResourceSupply):
         self.vehicles = vehicles
         self.node = node
 
-    def get_vehicles_resources(self) -> list[list[tuple[int, str]]]:
+    def get_vehicles_resources(self) -> list[list[tuple[str, int]]]:
         return [vehicle.get_resources() for vehicle in self.vehicles]
 
-    def get_resources(self) -> list[tuple[int, str]]:
-        return [(count, name) for name, count in self.node.resource_storage_unit.capacity.items()]
+    def get_resources(self) -> list[tuple[str, int]]:
+        return [(name, count) for name, count in self.node.resource_storage_unit.capacity.items()]
 
 
 class LandscapeConfiguration:
@@ -95,21 +97,21 @@ class LandscapeConfiguration:
                  zone_config: ZoneConfiguration = ZoneConfiguration()):
         # TODO: change value of WAY_LENGTH
         self.WAY_LENGTH = 10000000.0
-        self.routing_mx: list[list[list[float, int, str]]] = None
+        self.dist_mx: list[list[float]] = None
+        self.path_mx: np.array = None
+        self.road_mx: list[list[str]] = None
         if holders is None:
             holders = []
         self.lg: LandGraph = lg
         self._holders: list[ResourceHolder] = holders
 
         # _ind2holder_id is required to match ResourceHolder's id to index in list of LangGraphNodes to work with routing_mx
-        self._ind2holder_id: dict[int, str] = {self.lg.node2ind[holder.node]: holder.node.id for holder in
-                                               self._holders}
+        self.ind2holder_id: dict[int, str] = {self.lg.node2ind[holder.node]: holder.node.id for holder in
+                                              self._holders}
         self.holder_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
         self.zone_config = zone_config
 
     def build_landscape(self):
-        self.routing_mx = [[[self.WAY_LENGTH, -1, '0'] for j in range(self.lg.vertex_count)] for i in
-                           range(self.lg.vertex_count)]
         self._build_routes()
 
     def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[tuple[float, int, str] | str]]]:
@@ -118,10 +120,10 @@ class LandscapeConfiguration:
         :return: sorted list of holders' id by the length of way
         """
         holders = []
-        for i in range(len(self.routing_mx)):
-            if int(self.routing_mx[node_id][i][0]) != self.WAY_LENGTH:
-                holders.append((self.routing_mx[node_id][i], self._ind2holder_id[i]))
-        return SortedList(holders, key=lambda x: x[0][0])
+        for i in range(len(self.road_mx)):
+            if int(self.dist_mx[node_id][i]) != self.WAY_LENGTH:
+                holders.append((self.dist_mx[node_id][i], self.ind2holder_id[i]))
+        return SortedList(holders, key=lambda x: x[0])
 
     @cached_property
     def holders(self) -> list[ResourceHolder]:
@@ -138,9 +140,14 @@ class LandscapeConfiguration:
         return [Road('road', edge) for edge in self.lg.roads]
 
     def get_all_resources(self) -> list[dict]:
+        def merge_dicts(a, b):
+            c = a.copy()
+            c.update(b)
+            return c
+
         holders = {
-            holder.id: {name: count for name, count in holder.node.resource_storage_unit.capacity.items()}.update(
-                {vehicle.id: vehicle.get_sum_resources() for vehicle in holder.vehicles})
+            holder.id: merge_dicts({name: count for name, count in holder.node.resource_storage_unit.capacity.items()},
+                                   {vehicle.id: vehicle.get_resources() for vehicle in holder.vehicles})
             for holder in self.holders}
         roads = {road.id: {'vehicles': road.vehicles}
                  for road in self.roads}
@@ -151,34 +158,34 @@ class LandscapeConfiguration:
         return resources
 
     def _build_routes(self):
+        count = self.lg.vertex_count
+        dist_mx = self.lg.adj_matrix.copy()
+        path_mx: np.array = np.full((count, count), -1)
+        road_mx: list[list[str]] = [['-1' for j in range(count)] for i in range(count)]
 
-        def dijkstra(node_ind: int):
-            priority_queue = [(0.0, node_ind)]
-            visited = [False] * len(self.lg.nodes)
+        for v in range(count):
+            for u in range(count):
+                if v == u:
+                    path_mx[v][u] = 0
+                elif dist_mx[v][u] != 10000000:
+                    path_mx[v][u] = v
+                    for road in self.lg.nodes[v].roads:
+                        if self.lg.node2ind[road.finish] == u:
+                            road_mx[v][u] = road.id
+                else:
+                    path_mx[v][u] = -1
 
-            while len(priority_queue) > 0:
-                current_dist, current_v = heapq.heappop(priority_queue)
-                visited[current_v] = True
+        for i in range(self.lg.vertex_count):
+            for u in range(self.lg.vertex_count):
+                for v in range(self.lg.vertex_count):
+                    if (dist_mx[u][i] != 10000000 and dist_mx[u][i] != 0 and dist_mx[i][v] != 10000000 and dist_mx[i][v] != 0
+                            and dist_mx[u][i] + dist_mx[i][v] < dist_mx[u][v]):
+                        dist_mx[u][v] = dist_mx[u][i] + dist_mx[i][v]
+                        path_mx[u][v] = path_mx[i][v]
 
-                if current_dist > self.routing_mx[current_v][node_ind][0]:
-                    continue
-
-                for road in self.lg.nodes[current_v].roads:
-                    dist: float = current_dist + road.weight
-                    to_v = self.lg.node2ind[road.finish]
-                    if visited[to_v]:
-                        continue
-                    if dist < self.routing_mx[node_ind][to_v][0]:
-                        self.routing_mx[node_ind][to_v][0] = dist
-                        self.routing_mx[node_ind][to_v][1] = \
-                            self.routing_mx[current_v][node_ind][1]
-                        self.routing_mx[node_ind][to_v][1] = current_v
-                        self.routing_mx[node_ind][to_v][2] = road.id
-                        heapq.heappush(priority_queue, (dist, to_v))
-
-        node_indices = [self.lg.node2ind[node] for node in self.lg.nodes]
-        for i in node_indices:
-            dijkstra(i)
+        self.dist_mx = dist_mx
+        self.path_mx = path_mx
+        self.road_mx = road_mx
 
 
 # TODO: delete

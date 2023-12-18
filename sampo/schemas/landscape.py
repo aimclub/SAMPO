@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 from functools import cached_property
 
@@ -35,9 +36,11 @@ class Road(ResourceSupply):
         """
         super(Road, self).__init__(edge.id, name)
         self.vehicles = vehicles
-        self.speed = speed
-        self.edge = edge
         self.length = edge.weight
+        self.speed = speed
+        self.overcome_time = math.ceil(self.length / self.speed)
+        self.edge = edge
+        self.bandwidth = bandwidth
 
     def get_resources(self) -> list[tuple[str, int]]:
         return [('speed', self.speed), ('length', self.edge.weight), ('vehicles', self.vehicles)]

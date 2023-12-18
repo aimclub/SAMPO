@@ -7,7 +7,7 @@ from sortedcontainers import SortedList
 
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery, ResourceHolder, Vehicle
+from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery, ResourceHolder, Vehicle, Road
 from sampo.schemas.resources import Material
 from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType
@@ -54,7 +54,8 @@ class SupplyTimeline:
             available_count_material = \
                 self._timeline[node.platform.id][need_mat.name].bisect_right(start_time).available_workers_count
             if available_count_material < need_mat.count:
-                mat_request.append(Material(str(uuid.uuid4()), need_mat.name, available_count_material - need_mat.count))
+                mat_request.append(
+                    Material(str(uuid.uuid4()), need_mat.name, available_count_material - need_mat.count))
 
         if not mat_request:
             return start_time
@@ -93,7 +94,7 @@ class SupplyTimeline:
         return deliveries, start_time, max_finish_time
 
     def _find_best_holder_time(self, landscape: LandscapeConfiguration, node_id: int, materials: list[Material],
-                               deadline: Time) -> tuple[float | dict[set] | str]:
+                               deadline: Time) -> tuple[str, Time]:
         """
         Get the best depot, that is the closest and the most early resource-supply available.
         :param landscape: landscape
@@ -141,7 +142,6 @@ class SupplyTimeline:
                          landscape: LandscapeConfiguration,
                          deadline: Time,
                          materials: list[Material],
-                         simulate: bool,
                          min_supply_start_time: Time = Time(0)) \
             -> tuple[MaterialDelivery, Time]:
         """
@@ -155,18 +155,24 @@ class SupplyTimeline:
         :param min_supply_start_time:
         :return: material deliveries, the time when resources are ready
         """
+        def merge_dicts(a, b):
+            c = a.copy()
+            c.update(b)
+            return c
+
         assert min_supply_start_time <= deadline
         min_work_start_time = deadline
         # index of LangGraphNode
         node_ind = landscape.lg.node2ind[node.platform]
 
         # get the best depot that has enough materials and get its access start time (absolute value)
-        depot = self._find_best_holder_time(landscape, node_ind, materials, min_work_start_time)
+        depot_id, depot_time = self._find_best_holder_time(landscape, node_ind, materials, min_work_start_time)
 
         # get vehicles from the depot
-        sorted_vehicles = SortedList(iterable=self._id2holder[depot[0]].vehicles,
+        sorted_vehicles = SortedList(iterable=self._id2holder[depot_id].vehicles,
                                      key=lambda v: -v.volume)
         need_mat = {mat.name: mat.count for mat in materials}
+        dict_mat = need_mat.copy()
         need_volume = sum([count for mat, count in need_mat.items()])
         vehicles: list[Vehicle] = []
 
@@ -175,7 +181,7 @@ class SupplyTimeline:
             if need_volume > 0:
                 vehicles.append(vehicle)
                 for name, count in vehicle.resources.items():
-                    need_mat[name] -= count
+                    need_mat[name] -= min(count, need_mat[name])
                 need_volume = sum([count for mat, count in need_mat.items()])
 
         # calculate materials, that are gotten from holder
@@ -184,44 +190,109 @@ class SupplyTimeline:
             for mat in vehicle.capacity:
                 load_resources[mat.name] += mat.count
 
-        route_time = self._get_route_time(landscape.lg.id2ind[depot[0]], node_ind, vehicles, landscape, depot[1])
+        finish_time, deliveries = self._get_route_time(landscape.lg.id2ind[depot_id], node_ind, vehicles, landscape, depot_time)
 
-        self.update_timeline()
+        update_timeline_info = {depot_id: {'start_time': depot_time,
+                                           'exec_time': Time(1),
+                                           'resource': dict_mat}}
 
-        finish_time = depot[1] + route_time
+        for delivery_dict in deliveries:
+            update_timeline_info = merge_dicts(update_timeline_info, delivery_dict)
+
+        self.update_timeline(update_timeline_info)
 
         return finish_time
 
-    def _get_route_time(self, holder_ind: int, node_ind: int, vehicles: list[Vehicle], landscape: LandscapeConfiguration,
-                        start_holder_time: Time) -> Time:
-        def get_path(v, u):
+    @staticmethod
+    def _find_earliest_start_time(state: SortedList[ScheduleEvent],
+                                  required_resources: int,
+                                  parent_time: Time,
+                                  exec_time: Time):
+        current_state_time = parent_time
+        base_ind = state.bisect_right(parent_time) - 1
+
+        i = 0
+        while state[base_ind:]:
+            i += 1
+            end_ind = state.bisect_right(current_state_time + exec_time)
+
+            not_enough_resources = False
+            for idx in range(end_ind - 1, base_ind - 2, -1):
+                if state[idx].available_workers_count < required_resources or state[idx].time < parent_time:
+                    base_ind = max(idx, base_ind) - 1
+                    not_enough_resources = True
+                    break
+
+            if not not_enough_resources:
+                break
+
+            if base_ind >= len(state):
+                current_state_time = max(parent_time, state[-1].time + 1)
+                break
+
+            current_state_time = state[base_ind].time
+
+        return current_state_time
+
+    def _get_route_time(self, holder_ind: int, node_ind: int, vehicles: list[Vehicle],
+                        landscape: LandscapeConfiguration,
+                        start_holder_time: Time) -> tuple[Time, list[dict[str, dict[str, Time | int]]]]:
+
+        def get_path(path, v, u):
             if landscape.path_mx[v][u] == v:
                 return
-            get_path(v, landscape.path_mx[v][u][v][u])
+            get_path(path, v, landscape.path_mx[v][u][v][u])
             path.append(landscape.path_mx[v][u])
 
-        _id2road = {road.id: road for road in landscape.roads}
+        def move_vehicles(from_node: int,
+                          to_node: int,
+                          _parent_time: Time,
+                          batch_size: int):
+            road_delivery: dict[str, dict[str, Time | int]] = {}
+            parent_time = _parent_time
 
-        path = [holder_ind]
-        get_path(holder_ind, node_ind)
-        path.append(node_ind)
+            path = [from_node]
+            get_path(path, from_node, to_node)
+            path.append(to_node)
 
-        route = [landscape.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
-        final_road_time = Time(0)
-        start_road_time = start_holder_time
+            route = [landscape.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 
-        # check time availability of each part of 'route'
-        # for road in route:
+            # check time availability of each part of 'route'
+            for road_id in route:
+                for i in range(len(vehicles) // batch_size):
+                    start_time = self._find_earliest_start_time(state=self._timeline[road_id]['vehicles'],
+                                                                required_resources=batch_size,
+                                                                parent_time=parent_time,
+                                                                exec_time=_id2road[road_id].overcome_time)
+                    road_delivery[road_id] = {'start_time': start_time,
+                                              'exec_time': Time(_id2road[road_id].overcome_time),
+                                              'resource': {'vehicles': batch_size}
+                                              }
+                    parent_time = start_time + _id2road[road_id].overcome_time
 
+            return parent_time, road_delivery
 
+        _id2road: dict[str, Road] = {road.id: road for road in landscape.roads}
 
+        # | ------------ from holder to platform ------------ |
+        finish_delivery_time, delivery = move_vehicles(holder_ind, node_ind, start_holder_time, len(vehicles))
 
+        # | ------------ from platform to holder ------------ |
+        # compute the return time for vehicles
+        return_time, return_delivery = move_vehicles(node_ind, holder_ind, finish_delivery_time, 1)
 
+        return finish_delivery_time, [delivery, return_delivery]
 
-    def update_timeline(self):
+    def update_timeline(self, update_timeline_info: dict[str, dict[str, Time | dict[str, int]]]):
         # 1) establish the number of available resources in holder at the moment 'depot_time'
         # 2) replenish resources in 'platform'
         # 3) occupy chosen vehicles on route time
         # 4) occupy roads of found route on supplying time
 
-        pass
+        for res_holder_id, res_holder_info in update_timeline_info.items():
+            res_holder_state = self._timeline[res_holder_id]
+            start_time = res_holder_info['start_info']
+            exec_time = res_holder_info['exec_time']
+
+            for res_name, res_count in res_holder_info['resource'].items():
+                start_id

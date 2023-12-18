@@ -5,6 +5,7 @@ from functools import cached_property, cache
 from random import Random
 from typing import Optional
 
+import dill
 import numpy as np
 import pandas as pd
 from scipy.sparse import dok_matrix
@@ -472,3 +473,13 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 adj_mx[i, c_i] = weight
 
         return ordered_nodes, adj_mx, id2node
+
+
+def recreate(state):
+    # custom method to avoid calling __hash__() on GraphNode objects
+    return WorkGraph._deserialize(state)
+
+
+@dill.register(WorkGraph)
+def serialize_wg(pickler, obj):
+    pickler.save_reduce(recreate, (obj._serialize(),), obj=obj)

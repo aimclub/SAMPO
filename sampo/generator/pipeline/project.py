@@ -104,7 +104,6 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
         if cluster_counts > 0 and cluster_counts == len(stages) - 1:
             addition_cluster_probability = 0
 
-        # TODO Check this implementation!
         checkpoints, roads, count_works = _get_cluster_graph(f'{cluster_name_prefix}{masters_clusters_ind}',
                                                              addition_cluster_probability=addition_cluster_probability,
                                                              rand=rand)

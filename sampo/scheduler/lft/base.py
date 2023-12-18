@@ -1,9 +1,10 @@
 import random
 import numpy as np
 from functools import partial
-from typing import Type, Iterable
+from typing import Type, Callable
 
-from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.base import SchedulerType
+from sampo.scheduler.generic import GenericScheduler, get_finish_time_default
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
@@ -15,7 +16,7 @@ from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
-from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.utilities.validation import validate_schedule
@@ -23,7 +24,7 @@ from sampo.utilities.validation import validate_schedule
 from sampo.schemas.exceptions import IncorrectAmountOfWorker, NoSufficientContractorError
 
 
-class LFTScheduler(Scheduler):
+class LFTScheduler(GenericScheduler):
     """
     Scheduler, which assigns contractors evenly, allocates maximum resources
     and schedules works in MIN-LFT priority rule order
@@ -33,9 +34,25 @@ class LFTScheduler(Scheduler):
                  scheduler_type: SchedulerType = SchedulerType.LFT,
                  timeline_type: Type = MomentumTimeline,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
-        super().__init__(scheduler_type, None, work_estimator)
-        self._timeline_type = timeline_type
+        super().__init__(scheduler_type, None, timeline_type, None, self.get_default_res_opt_function(),
+                         work_estimator)
         self.prioritization = lft_prioritization
+
+    def get_default_res_opt_function(self, get_finish_time=get_finish_time_default) \
+            -> Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
+                         dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
+                        tuple[Time, Time, Contractor, list[Worker]]]:
+        def optimize_resources_def(node: GraphNode, contractors: list[Contractor], spec: WorkSpec,
+                                   worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
+                                   assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator) \
+                -> tuple[Time, Time, Contractor, list[Worker]]:
+            contractor, workers = self._node_id2workers[node.id]
+            start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork,
+                                                                                      spec, None, assigned_parent_time,
+                                                                                      work_estimator)
+            return start_time, finish_time, contractor, workers
+
+        return optimize_resources_def
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
@@ -48,16 +65,17 @@ class LFTScheduler(Scheduler):
             -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
         worker_pool = get_worker_contractor_pool(contractors)
 
-        node_id2workers, node_id2duration = self._contractor_workers_assignment(wg, contractors, worker_pool, spec)
+        node_id2duration = self._contractor_workers_assignment(wg, contractors, worker_pool, spec)
 
         ordered_nodes = self.prioritization(wg, node_id2duration)
 
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
-        schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, worker_pool, node_id2workers,
-                                                                       landscape, spec, self.work_estimator,
-                                                                       assigned_parent_time, timeline)
+        schedule, schedule_start_time, timeline = self.build_scheduler(wg, ordered_nodes, contractors, landscape, spec,
+                                                                       self.work_estimator, assigned_parent_time,
+                                                                       timeline)
+        del self._node_id2workers
         schedule = Schedule.from_scheduled_works(
             schedule,
             wg
@@ -70,10 +88,10 @@ class LFTScheduler(Scheduler):
 
     def _contractor_workers_assignment(self, wg: WorkGraph, contractors: list[Contractor],
                                        worker_pool: WorkerContractorPool, spec: ScheduleSpec = ScheduleSpec()
-                                       ) -> tuple[dict[str, tuple[Contractor, list[Worker]]], dict[str, int]]:
+                                       ) -> dict[str, int]:
         nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
         contractors_assignments_count = np.zeros_like(contractors)
-        node_id2workers = {}
+        self._node_id2workers = {}
         node_id2duration = {}
         for node in nodes:
             work_unit = node.work_unit
@@ -130,71 +148,15 @@ class LFTScheduler(Scheduler):
 
             workers = [worker_pool[req.kind][assigned_contractor.id].copy().with_count(amount)
                        for req, amount in zip(work_reqs, assigned_amount)]
-            node_id2workers[node.id] = (assigned_contractor, workers)
-            for duration, dep_node in zip(durations_for_chain[contractor_index], node.get_inseparable_chain_with_self()):
+            self._node_id2workers[node.id] = (assigned_contractor, workers)
+            for duration, dep_node in zip(durations_for_chain[contractor_index],
+                                          node.get_inseparable_chain_with_self()):
                 node_id2duration[dep_node.id] = duration
 
-        return node_id2workers, node_id2duration
+        return node_id2duration
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return np.argmin(scores)
-
-    def build_scheduler(self,
-                        ordered_nodes: list[GraphNode],
-                        worker_pool: WorkerContractorPool,
-                        node_id2workers: dict[str, tuple[Contractor, list[Worker]]],
-                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                        spec: ScheduleSpec = ScheduleSpec(),
-                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                        assigned_parent_time: Time = Time(0),
-                        timeline: Timeline | None = None) \
-            -> tuple[Iterable[ScheduledWork], Time, Timeline]:
-        """
-        Schedule works with assigned order, contractors and workers
-
-        :param landscape: landscape
-        :param worker_pool: mapper of workers and amount at the contractor
-        :param node_id2workers: mapper of node and assigned contractor, workers
-        :param spec: spec for current scheduling
-        :param ordered_nodes: sequence of nodes in scheduling order
-        :param timeline: the previous used timeline can be specified to handle previously scheduled works
-        :param assigned_parent_time: start time of the whole schedule(time shift)
-        :param work_estimator: estimate time of work with assigned workers
-        :return:
-        """
-        # dict for writing parameters of completed_jobs
-        node2swork: dict[GraphNode, ScheduledWork] = {}
-        # list for support the queue of workers
-        if not isinstance(timeline, self._timeline_type):
-            timeline = self._timeline_type(worker_pool, landscape)
-
-        for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
-            contractor, workers = node_id2workers[node.id]
-            work_spec = spec.get_work_spec(node.id)
-
-            start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork,
-                                                                                      work_spec,
-                                                                                      None, assigned_parent_time,
-                                                                                      work_estimator)
-
-            # we are scheduling the work `start of the project`
-            if index == 0:
-                # this work should always have start_time = 0, so we just re-assign it
-                start_time = assigned_parent_time
-                finish_time += start_time
-
-            if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
-                finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
-                start_time = max(start_time, finish_time)
-
-            # apply work to scheduling
-            timeline.schedule(node, node2swork, workers, contractor, work_spec,
-                              start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
-
-            if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
-                node2swork[node].zones_pre = finalizing_zones
-
-        return node2swork.values(), assigned_parent_time, timeline
 
 
 class RandomizedLFTScheduler(LFTScheduler):

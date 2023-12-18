@@ -479,7 +479,7 @@ def recreate(state):
     # custom method to avoid calling __hash__() on GraphNode objects
     return WorkGraph._deserialize(state)
 
-
+# TODO Check all types for dill-serializability and make dedicated file with serializers
 @dill.register(WorkGraph)
 def serialize_wg(pickler, obj):
     pickler.save_reduce(recreate, (obj._serialize(),), obj=obj)

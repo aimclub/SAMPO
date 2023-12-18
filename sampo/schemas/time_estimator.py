@@ -7,6 +7,7 @@ from typing import Optional
 import numpy.random
 import math
 
+from sampo.schemas import Interval, IntervalGaussian
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.resources import WorkerProductivityMode
@@ -52,6 +53,8 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._estimation_mode = WorkEstimationMode.Realistic
         self.rand = rand
         self._productivity_mode = WorkerProductivityMode.Static
+        self._productivity = {worker: IntervalGaussian(1, 0, 1, 0)
+                              for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']}
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
             -> list[WorkerReq]:
@@ -86,27 +89,28 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             worker_count = 0 if worker is None else worker.count
             if worker_count < req.min_count:
                 return Time.inf()
-            productivity = DefaultWorkEstimator.get_productivity_of_worker(worker, self.rand, req.max_count,
-                                                                           self._productivity_mode) / worker_count
+            productivity = self._get_productivity(worker, req.max_count)
             if productivity == 0:
                 return Time.inf()
             times.append(Time(math.ceil(req.volume / productivity)))
         return max(max(times), Time(0))
 
-    @staticmethod
-    def get_productivity_of_worker(worker: Worker, rand: Optional[Random] = None, max_groups: int = 0,
-                                   productivity_mode: WorkerProductivityMode = WorkerProductivityMode.Static):
+    def _get_productivity(self, worker: Worker, max_count_workers: int) -> float:
         """
         Calculate the productivity of the Worker
-        It has 2 mods: stochastic and non-stochastic, depending on the value of rand
-
-        :param productivity_mode:
-        :param max_groups:
+        It has 2 modes: stochastic and non-stochastic, depending on the value of rand
         :param worker: the worker
-        :param rand: parameter for stochastic part
-        :return: productivity of received worker
+        :param max_count_workers: maximum workers count according to worker reqs
+        :return:
         """
-        return worker.get_productivity(rand, productivity_mode) * communication_coefficient(worker.count, max_groups)
+        productivity_interval = self._productivity[worker.name]
+        productivity = productivity_interval.mean \
+            if self._productivity_mode is WorkerProductivityMode.Static \
+            else productivity_interval.rand_float(self.rand)
+        return productivity * worker.count * communication_coefficient(worker.count, max_count_workers)
+
+    def set_worker_productivity(self, name: str, productivity: Interval):
+        self._productivity[name] = productivity
 
 
 def communication_coefficient(groups_count: int, max_groups: int) -> float:

@@ -4,7 +4,7 @@ from typing import Dict
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
-from sampo.scheduler.utils.obstruction import OneInsertObstruction
+from sampo.scheduler.utils.obstruction import OneInsertObstruction, Obstruction
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 
@@ -13,7 +13,7 @@ def load_queues_bg(queues: list[list[(WorkGraph, WorkGraph)]], obstruction_prob:
     wgs: list[WorkGraph] = [wg for queue in queues for wg, _ in queue]
     obstructions: list[WorkGraph] = [obstruction for queue in queues for _, obstruction in queue]
 
-    def obstruction_getter(i: int):
+    def obstruction_getter(i: int) -> Obstruction | None:
         return OneInsertObstruction.from_static_graph(obstruction_prob, rand, obstructions[i])
 
     bg = BlockGraph.pure(wgs, obstruction_getter)

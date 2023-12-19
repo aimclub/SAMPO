@@ -13,7 +13,7 @@ from tests.models.serialization import TestSimpleSerialization, TestAutoJSONSeri
 STORAGE = './tmp_storage'  # Test files tmp storage
 
 
-def stored_file(name):
+def stored_file(name) -> str:
     return os.path.join(STORAGE, name)
 
 

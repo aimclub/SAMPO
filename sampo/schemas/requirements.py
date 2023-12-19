@@ -96,7 +96,7 @@ class MaterialReq(BaseReq):
     # need_start: int TODO Implement handling this
     name: Optional[str] = None
 
-    def material(self):
+    def material(self) -> Material:
         return Material(str(uuid4()), self.kind, self.count)
 
 

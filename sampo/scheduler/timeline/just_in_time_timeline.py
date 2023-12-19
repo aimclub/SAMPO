@@ -3,7 +3,8 @@ from typing import Optional
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -188,7 +189,7 @@ class JustInTimeTimeline(Timeline):
                 worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
                 count_workers = sum([count for _, count in worker_timeline])
                 worker_timeline.clear()
-                worker_timeline.append((finish_time + 1, count_workers))
+                worker_timeline.append((finish_time, count_workers))
         else:
             # For each worker type consume the nearest available needed worker amount
             # and re-add it to the time when current work should be finished.
@@ -205,9 +206,7 @@ class JustInTimeTimeline(Timeline):
                     needed_count -= next_count
 
                 # Add to the right place
-                # worker_timeline.append((finish + 1, worker.count))
-                # worker_timeline.sort(reverse=True)
-                worker_timeline.append((finish_time + 1, worker.count))
+                worker_timeline.append((finish_time, worker.count))
                 ind = len(worker_timeline) - 1
                 while ind > 0 and worker_timeline[ind][0] > worker_timeline[ind - 1][0]:
                     worker_timeline[ind], worker_timeline[ind - 1] = worker_timeline[ind - 1], worker_timeline[ind]
@@ -284,6 +283,7 @@ class JustInTimeTimeline(Timeline):
             else:
                 lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
+
             new_finish_time = c_st + working_time
 
             new_finish_time = self._material_timeline.find_min_material_time(dep_node,

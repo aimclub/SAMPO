@@ -35,7 +35,7 @@ class Resource(AutoJSONSerializable['Resource'], Identifiable):
         self.contractor_id = contractor_id
 
     @property
-    def count(self):
+    def count(self) -> int:
         return self._count
 
     @count.setter
@@ -71,7 +71,7 @@ class Worker(Resource):
 
     ignored_fields = ['productivity']
 
-    def copy(self):
+    def copy(self) -> 'Worker':
         """
         Return copied current object
 
@@ -117,10 +117,10 @@ class Worker(Resource):
             return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.count} {self.name}'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 
@@ -152,7 +152,7 @@ class Material(Resource):
         self.cost_one_unit = cost_one_unit
 
     # TODO: describe the function (description, return type)
-    def copy(self):
+    def copy(self) -> 'Material':
         return Material(id=self.id,
                         name=self.name,
                         count=self.count)

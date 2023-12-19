@@ -28,10 +28,10 @@ class ScheduledProject(AutoJSONSerializable['ScheduledProject']):
         self.contractors = contractors
 
     @custom_serializer('contractors')
-    def serialize_contractors(self, value):
+    def serialize_contractors(self, value) -> list:
         return [v._serialize() for v in value]
 
     @classmethod
     @custom_serializer('contractors', deserializer=True)
-    def deserialize_equipment(cls, value):
+    def deserialize_equipment(cls, value) -> list[Contractor]:
         return [Contractor._deserialize(v) for v in value]

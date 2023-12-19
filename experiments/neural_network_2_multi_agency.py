@@ -14,6 +14,7 @@ from sampo.scheduler.multi_agency.block_generator import generate_block_graph, S
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, NeuralManager
 from sampo.scheduler.selection.metrics import encode_graph
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer, NeuralNet, NeuralNetType
+from sampo.scheduler.utils.obstruction import Obstruction
 
 p_rand = SimpleSynthetic()
 rand = Random()
@@ -22,7 +23,7 @@ ma_time = 0.0
 net_time = 0.0
 
 
-def obstruction_getter(i: int):
+def obstruction_getter(i: int) -> Obstruction | None:
     return None
 
 

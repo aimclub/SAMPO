@@ -3,7 +3,8 @@ from operator import attrgetter
 from typing import Iterable
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import WorkerContractorPool, Contractor
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq

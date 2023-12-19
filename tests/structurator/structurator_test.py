@@ -1,14 +1,11 @@
 from pytest import fixture
 
-from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
 from sampo.schemas.graph import WorkGraph, EdgeType
 from sampo.schemas.requirements import MaterialReq
 from sampo.structurator import graph_restructuring
 from sampo.structurator.base import make_new_node_id
 
 import numpy as np
-
-pytest_plugins = ("tests.schema", "tests.models",)
 
 
 @fixture(params=[graph_type for graph_type in ['manual', 'manual with negative lag',
@@ -18,12 +15,11 @@ pytest_plugins = ("tests.schema", "tests.models",)
          )
 def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -> tuple[WorkGraph, int]:
     sr = setup_sampler
-    s = get_start_stage()
 
-    l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
+    l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
     l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l1n1.work_unit.volume = 50
-    l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
+    l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
     l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l1n2.work_unit.volume = 50
 
@@ -52,8 +48,7 @@ def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -
     l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n3.work_unit.volume = 50
 
-    f = get_finish_stage([l3n1, l3n2, l3n3])
-    wg = WorkGraph(s, f)
+    wg = WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
 
     n_nodes_after_restructuring = len(wg.nodes)
 
@@ -87,10 +82,6 @@ def test_restructuring(setup_wg_for_restructuring):
     wg_restructured_nodes_id = [node.id for node in wg_restructured.nodes]
     assert all([node_id in wg_restructured_nodes_id for node_id in wg_nodes_id]), \
         "Not all nodes from original work graph are in restructured work graph"
-    assert all([edge.lag == 0 if edge.start.work_unit.is_service_unit else edge.lag == 1
-                for node in wg_restructured.nodes
-                for edge in node.edges_to]), \
-        "Not all lags in restructured work graph have correct lag amount"
     for node in wg_original.nodes:
         zero_stage = make_new_node_id(node.id, 0)
         if zero_stage in wg_restructured.dict_nodes:

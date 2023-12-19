@@ -70,10 +70,10 @@ class Agent:
         """
         self._downtime += max(Time(0), start - self._last_task_executed)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'Agent(name={self.name}, scheduler={self._scheduler}, downtime={self._downtime})'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
     @property
@@ -81,7 +81,7 @@ class Agent:
         return self._downtime
 
     @property
-    def contractors(self):
+    def contractors(self) -> list[Contractor]:
         return self._contractors
 
     @property
@@ -89,7 +89,7 @@ class Agent:
         return self._last_task_executed
 
     @property
-    def scheduler(self):
+    def scheduler(self) -> Scheduler:
         return self._scheduler
 
 
@@ -107,17 +107,17 @@ class ScheduledBlock:
     end_time: Time
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self.wg.start.id
 
     @property
-    def duration(self):
+    def duration(self) -> Time:
         return self.end_time - self.start_time
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'ScheduledBlock(start_time={self.start_time}, end_time={self.end_time}, agent={self.agent})'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
 
@@ -165,7 +165,7 @@ class Manager:
             obstruction.generate(wg)
         return self.run_auction(wg, parent_time)
 
-    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
         """
         Runs the auction on the given `WorkGraph`.
 
@@ -260,7 +260,7 @@ class NeuralManager:
             obstruction.generate(wg)
         return self.run_auction(wg, index, parent_time)
 
-    def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> (Time, Time, Schedule, Agent):
+    def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
         """
         Runs the auction on the given `WorkGraph`.
 

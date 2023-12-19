@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import pytest
+
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
@@ -38,7 +40,8 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
 
     for contractor_index in range(len(chromosome[2])):
         for resource_index in range(len(chromosome[2][contractor_index])):
-            chromosome[1][:, resource_index] = chromosome[1][:, resource_index] / 2
+            # FIXME This line corrupting chromosomes: it cannot match the works' minimum requirements
+            # chromosome[1][:, resource_index] = chromosome[1][:, resource_index] // 2
             chromosome[2][contractor_index, resource_index] = max(chromosome[1][:, resource_index])
 
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome, landscape=setup_landscape_many_holders)

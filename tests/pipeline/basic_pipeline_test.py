@@ -2,10 +2,13 @@ import os
 import sys
 
 from sampo.pipeline import SchedulingPipeline
+from sampo.pipeline.lag_optimization import LagOptimizationStrategy
+from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
 from sampo.schemas.exceptions import NoSufficientContractorError
+from sampo.utilities.visualization import schedule_gant_chart_fig, VisualizationMode
 
 
 def test_plain_scheduling(setup_scheduler_parameters):
@@ -54,10 +57,31 @@ def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, set
 
 
 def test_plain_scheduling_with_parse_data():
+    wg = os.path.join(sys.path[0], 'tests/parser/temprorary/dormitory_project.csv')
+    history = os.path.join(sys.path[0], 'tests/parser/temprorary/historical_projects_data.csv')
+
+    # ДЕБАГ
+    # custom_number_of_generation = 4  # генерируем его случайно равномерно из интервала 10-25
+    # custom_mutate_order = 0.05  # заданная константа
+    # custom_mutate_resources = 0.005  # заданная константа
+    # custom_size_of_population = 50  # заданная константа
+    #
+    # genetic_scheduler = GeneticScheduler(number_of_generation=custom_number_of_generation,
+    #                                      mutate_order=custom_mutate_order,
+    #                                      mutate_resources=custom_mutate_resources,
+    #                                      size_of_population=custom_size_of_population,
+    #                                      optimize_resources=False)
+
     project = SchedulingPipeline.create() \
-        .wg(wg=os.path.join(sys.path[0], 'tests/parser/test_wg.csv'), change_base_on_history=True) \
-        .history(history=os.path.join(sys.path[0], 'tests/parser/test_history_data.csv')) \
+        .wg(wg=wg, sep=',', all_connections=False,
+            change_connections_info=True) \
+        .history(history=history, sep=',') \
+        .lag_optimize(LagOptimizationStrategy.TRUE) \
         .schedule(HEFTScheduler()) \
         .finish()
 
-    print(f'Scheduled {len(project.schedule.to_schedule_work_dict)} works')
+    schedule = project.schedule
+    schedule = schedule.merged_stages_datetime_df('2022-01-01')
+    fig = schedule_gant_chart_fig(schedule_dataframe=schedule,
+                                  visualization=VisualizationMode.ShowFig,
+                                  remove_service_tasks=False)

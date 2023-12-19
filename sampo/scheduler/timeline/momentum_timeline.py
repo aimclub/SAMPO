@@ -6,7 +6,8 @@ from sortedcontainers import SortedList
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.material_timeline import SupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import WorkerReq
@@ -97,7 +98,7 @@ class MomentumTimeline(Timeline):
 
         # 1. identify earliest possible start time by max parent's end time
 
-        def apply_time_spec(time: Time):
+        def apply_time_spec(time: Time) -> Time:
             return max(time, assigned_start_time) if assigned_start_time is not None else time
 
         max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)), assigned_parent_time)
@@ -113,6 +114,7 @@ class MomentumTimeline(Timeline):
         for _, chain_node in enumerate(inseparable_chain):
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 work_estimator.estimate_time(chain_node.work_unit, worker_team)
+
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
 

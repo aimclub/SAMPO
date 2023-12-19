@@ -1,4 +1,5 @@
 import uuid
+import uuid
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -7,9 +8,7 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
-from sampo.scheduler.base import SchedulerType
-from sampo.scheduler.generate import generate_schedule
+from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
@@ -23,11 +22,9 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
-pytest_plugins = ('tests.schema', 'tests.models',)
-
 
 @fixture
-def setup_sampler(request):
+def setup_sampler(request) -> Sampler:
     return Sampler(1e-1)
 
 
@@ -150,11 +147,10 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     match graph_type:
         case 'manual':
             sr = setup_sampler
-            s = get_start_stage()
 
-            l1n1 = sr.graph_node('l1n1', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000001')
+            l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
             l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l1n2 = sr.graph_node('l1n2', [(s, 0, EdgeType.FinishStart)], group='0', work_id='000002')
+            l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
             l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
@@ -165,17 +161,16 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
             l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            l3n1 = sr.graph_node('l2n1', [(l2n1, 0, EdgeType.FinishStart),
+            l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
             l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n2 = sr.graph_node('l2n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
+            l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
             l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-            l3n3 = sr.graph_node('l2n3', [(l2n3, 1, EdgeType.LagFinishStart),
+            l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
             l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-            f = get_finish_stage([l3n1, l3n2, l3n3])
-            wg = WorkGraph(s, f)
+            wg = WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
         case 'small plain synthetic':
             wg = setup_simple_synthetic.work_graph(bottom_border=SMALL_GRAPH_SIZE - BORDER_RADIUS,
                                                    top_border=SMALL_GRAPH_SIZE + BORDER_RADIUS)
@@ -232,7 +227,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
                                       name='OOO Berezka',
-                                      workers={name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
+                                      workers={name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
     return setup_wg, contractors, setup_landscape_many_holders
@@ -272,20 +267,24 @@ def setup_default_schedules(setup_scheduler_parameters):
 
 @fixture(params=list(SchedulerType),
          ids=[f'Scheduler: {scheduler.value}' for scheduler in list(SchedulerType)])
-def setup_scheduler_type(request):
+def setup_scheduler_type(request) -> SchedulerType:
+    return request.param
+
+
+@fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
+         ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
+def setup_scheduler(request) -> Scheduler:
     return request.param
 
 
 @fixture
-def setup_schedule(setup_scheduler_type, setup_scheduler_parameters, setup_landscape_many_holders):
+def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_landscape_many_holders):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     try:
-        return generate_schedule(scheduling_algorithm_type=setup_scheduler_type,
-                                 work_time_estimator=DefaultWorkEstimator(),
-                                 work_graph=setup_wg,
-                                 contractors=setup_contractors,
-                                 validate_schedule=False,
-                                 landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
+        return setup_scheduler.schedule(setup_wg,
+                                        setup_contractors,
+                                        validate=False,
+                                        landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

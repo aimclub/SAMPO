@@ -15,7 +15,7 @@ from sampo.schemas.time import Time
 class AverageBinarySearchResourceOptimizingScheduler:
     """
     The scheduler optimizes resources to deadline.
-    Scheduler uses binary search to optimize resources.
+    Scheduler uses binary search over the resources to optimize it.
     """
 
     def __init__(self, base_scheduler: Scheduler):
@@ -55,12 +55,12 @@ class AverageBinarySearchResourceOptimizingScheduler:
 
         best = k_max
 
+        # steps that we should go further while failing to link the work independent
         try_count = 0
         max_try_count = 3
 
         result_min_resources = fitness(k_max, copied_spec)
         if result_min_resources < deadline:
-            # print('Can keep deadline at minimum resources')
             # we can keep the deadline if pass minimum resources,
             # so let's go preventing the works going in parallel
             for node in wg.nodes:

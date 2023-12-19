@@ -53,7 +53,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._estimation_mode = WorkEstimationMode.Realistic
         self.rand = rand
         self._productivity_mode = WorkerProductivityMode.Static
-        self._productivity = {worker: IntervalGaussian(1, 0, 1, 0)
+        self._productivity = {worker: IntervalGaussian(1, 0.2, 1, 0)
                               for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']}
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \

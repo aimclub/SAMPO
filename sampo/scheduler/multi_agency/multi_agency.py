@@ -188,12 +188,14 @@ class Manager:
                 best_schedule = offered_schedule
                 best_timeline = offered_timeline
                 best_agent = offered_agent
+        # To simulate stochastic behaviour
+        best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
         best_agent.confirm(best_timeline, best_start_time, best_end_time)
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
-        print(best_agent.name)
+        # print(best_agent.name)
         return best_start_time, best_end_time, best_schedule, best_agent
 
 
@@ -224,8 +226,8 @@ class StochasticManager(Manager):
 
         offers = [get_offer(agent) for agent in self._agents]
 
-        for offered_agent, (_, offered_end_time, _, _) in offers:
-            offered_end_time *= self._confidence[offered_agent.name]
+        for offered_agent, (offered_start_time, offered_end_time, _, _) in offers:
+            offered_end_time = offered_start_time + (offered_end_time - offered_start_time) * self._confidence[offered_agent.name]
             if offered_end_time < best_end_time:
                 best_end_time = offered_end_time
                 best_agent = offered_agent
@@ -234,11 +236,13 @@ class StochasticManager(Manager):
 
         old_best_end_time = best_end_time
         best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
+        modified_end_time = best_start_time + (best_end_time - best_start_time) * self._confidence[
+            best_agent.name]
         best_agent.confirm(best_timeline, best_start_time, best_end_time)
 
-        if best_end_time > old_best_end_time:
+        if modified_end_time > old_best_end_time:
             # agent supplied worse time than predicted, lower its confidence
-            self._confidence[best_agent.name] *= 1.1
+            self._confidence[best_agent.name] += 0.1
 
         for agent in self._agents:
             if agent.name != best_agent.name:

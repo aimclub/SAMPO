@@ -17,6 +17,7 @@ class LandEdge:
     start: 'LandGraphNode'
     finish: 'LandGraphNode'
     weight: float
+    bandwidth: int
 
 
 class ResourceStorageUnit:
@@ -37,7 +38,7 @@ class LandGraphNode:
                  id: str,
                  name: str,
                  resource_storage_unit: ResourceStorageUnit,
-                 neighbour_nodes: list[tuple['LandGraphNode', float]] | None = None):
+                 neighbour_nodes: list[tuple['LandGraphNode', float, int]] | None = None):
         """
         Represents the participant of landscape transport network
 
@@ -72,8 +73,11 @@ class LandGraphNode:
     def works(self) -> list['GraphNode']:
         return self.nodes
 
-    def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float]]):
-        [self._roads.append(LandEdge(str(uuid.uuid4()), self, p, length)) for p, length in neighbour_nodes]
+    def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float, int]]):
+        for neighbour, length, bandwidth in neighbour_nodes:
+            road_id = str(uuid.uuid4())
+            self._roads.append(LandEdge(road_id, self, neighbour, length, bandwidth))
+            neighbour._roads.append(LandEdge(road_id, neighbour, self, length, bandwidth))
 
 
 @dataclass
@@ -95,12 +99,17 @@ class LandGraph:
         object.__setattr__(self, 'vertex_count', len(node2ind))
 
     @cached_property
-    def roads(self) -> list['LandEdge']:
+    def edges(self) -> list['LandEdge']:
+        # TODO: to do
+        road_ids = set()
         roads = []
-        for i in range(self.vertex_count):
-            for j in range(self.vertex_count):
-                if self.adj_matrix[i][j] > 0 and i != j:
-                    roads.append(LandEdge(str(uuid.uuid4()), self.nodes[i], self.nodes[j], self.adj_matrix[i][j]))
+
+        for node in self.nodes:
+            for road in node.roads:
+                if road.id not in road_ids:
+                    road_ids.add(road.id)
+                    roads.append(road)
+
         return roads
 
     def _to_adj_matrix(self) -> tuple[np.array, dict[LandGraphNode, int], dict[str, int]]:
@@ -110,7 +119,7 @@ class LandGraph:
         id2ind = {
             v.id: i for i, v in enumerate(self.nodes)
         }
-        adj_mtrx = np.full((len(node2ind), len(node2ind)), 10000000)
+        adj_mtrx = np.full((len(node2ind), len(node2ind)), np.Inf)
         for v, i in node2ind.items():
             for child in v.roads:
                 c_i = node2ind[child.finish]

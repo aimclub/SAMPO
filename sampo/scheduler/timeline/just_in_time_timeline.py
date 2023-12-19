@@ -286,9 +286,14 @@ class JustInTimeTimeline(Timeline):
             c_st = max(c_ft + lag, max_parent_time)
             new_finish_time = c_st + working_time
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node, c_st,
-                                                                                       new_finish_time,
-                                                                                       dep_node.work_unit.need_materials())
+            new_finish_time = self._material_timeline.find_min_material_time(dep_node,
+                                                                             landscape=self.landscape,
+                                                                             start_time=c_st,
+                                                                             materials=dep_node.work_unit.need_materials(),
+                                                                             )
+            deliveries, _, new_finish_time = self._material_timeline.find_min_material_time(dep_node, c_st,
+                                                                                            new_finish_time,
+                                                                                            dep_node.work_unit.need_materials())
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(c_st, new_finish_time),

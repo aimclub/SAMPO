@@ -7,7 +7,6 @@ from sortedcontainers import SortedList
 
 from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, LandEdge
 from sampo.schemas.resources import Material
-from sampo.schemas.time import Time
 from sampo.schemas.zones import ZoneConfiguration
 
 
@@ -24,9 +23,7 @@ class ResourceSupply(ABC):
 class Road(ResourceSupply):
     def __init__(self, name: str,
                  edge: LandEdge,
-                 bandwidth: float = 10,
-                 speed: float = 50,
-                 vehicles: int = 0):
+                 speed: float = 50):
         """
         :param name: name of road
         :param edge: the edge in LandGraph
@@ -35,12 +32,11 @@ class Road(ResourceSupply):
         :param vehicles: the number of vehicles that are on the road at the current moment
         """
         super(Road, self).__init__(edge.id, name)
-        self.vehicles = vehicles
+        self.vehicles = edge.bandwidth
         self.length = edge.weight
         self.speed = speed
         self.overcome_time = math.ceil(self.length / self.speed)
         self.edge = edge
-        self.bandwidth = bandwidth
 
     def get_resources(self) -> list[tuple[str, int]]:
         return [('speed', self.speed), ('length', self.edge.weight), ('vehicles', self.vehicles)]
@@ -50,10 +46,8 @@ class Vehicle(ResourceSupply):
     def __init__(self,
                  id: str,
                  name: str,
-                 holder: 'ResourceHolder',
                  capacity: list[Material]):
         super(Vehicle, self).__init__(id, name)
-        self.holder = holder
         self.capacity = capacity
         self.cost = 0.0
         self.volume = sum([mat.count for mat in self.capacity])
@@ -98,8 +92,7 @@ class LandscapeConfiguration:
                  holders: list[ResourceHolder] = None,
                  lg: LandGraph = None,
                  zone_config: ZoneConfiguration = ZoneConfiguration()):
-        # TODO: change value of WAY_LENGTH
-        self.WAY_LENGTH = 10000000.0
+        self.WAY_LENGTH = np.Inf
         self.dist_mx: list[list[float]] = None
         self.path_mx: np.array = None
         self.road_mx: list[list[str]] = None
@@ -117,14 +110,14 @@ class LandscapeConfiguration:
     def build_landscape(self):
         self._build_routes()
 
-    def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[tuple[float, int, str] | str]]]:
+    def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[float, str]]]:
         """
         :param node_id: id of node in LandGraph's list of nodes
         :return: sorted list of holders' id by the length of way
         """
         holders = []
-        for i in range(len(self.road_mx)):
-            if int(self.dist_mx[node_id][i]) != self.WAY_LENGTH:
+        for i in self.ind2holder_id.keys():
+            if self.dist_mx[node_id][i] != self.WAY_LENGTH:
                 holders.append((self.dist_mx[node_id][i], self.ind2holder_id[i]))
         return SortedList(holders, key=lambda x: x[0])
 
@@ -140,7 +133,7 @@ class LandscapeConfiguration:
 
     @cached_property
     def roads(self) -> list[Road]:
-        return [Road('road', edge) for edge in self.lg.roads]
+        return [Road(f'road_{i}', edge) for i, edge in enumerate(self.lg.edges)]
 
     def get_all_resources(self) -> list[dict]:
         def merge_dicts(a, b):
@@ -150,7 +143,7 @@ class LandscapeConfiguration:
 
         holders = {
             holder.id: merge_dicts({name: count for name, count in holder.node.resource_storage_unit.capacity.items()},
-                                   {vehicle.id: vehicle.get_resources() for vehicle in holder.vehicles})
+                                   {'vehicles': len(holder.vehicles)})
             for holder in self.holders}
         roads = {road.id: {'vehicles': road.vehicles}
                  for road in self.roads}
@@ -170,7 +163,7 @@ class LandscapeConfiguration:
             for u in range(count):
                 if v == u:
                     path_mx[v][u] = 0
-                elif dist_mx[v][u] != 10000000:
+                elif dist_mx[v][u] != np.Inf:
                     path_mx[v][u] = v
                     for road in self.lg.nodes[v].roads:
                         if self.lg.node2ind[road.finish] == u:
@@ -181,7 +174,8 @@ class LandscapeConfiguration:
         for i in range(self.lg.vertex_count):
             for u in range(self.lg.vertex_count):
                 for v in range(self.lg.vertex_count):
-                    if (dist_mx[u][i] != 10000000 and dist_mx[u][i] != 0 and dist_mx[i][v] != 10000000 and dist_mx[i][v] != 0
+                    if (dist_mx[u][i] != np.Inf and dist_mx[u][i] != 0
+                            and dist_mx[i][v] != np.Inf and dist_mx[i][v] != 0
                             and dist_mx[u][i] + dist_mx[i][v] < dist_mx[u][v]):
                         dist_mx[u][v] = dist_mx[u][i] + dist_mx[i][v]
                         path_mx[u][v] = path_mx[i][v]
@@ -189,17 +183,3 @@ class LandscapeConfiguration:
         self.dist_mx = dist_mx
         self.path_mx = path_mx
         self.road_mx = road_mx
-
-
-# TODO: delete
-class MaterialDelivery:
-    def __init__(self, work_id: str):
-        self.id = work_id
-        self.delivery = {}
-
-    def add_deliveries(self, name: str, deliveries: list[tuple[Time, int]]):
-        material_delivery = self.delivery.get(name, None)
-        if material_delivery is None:
-            self.delivery[name] = deliveries
-        else:
-            material_delivery.extend(deliveries)

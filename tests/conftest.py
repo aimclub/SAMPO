@@ -14,7 +14,7 @@ from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
-from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
+from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle
 from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, ResourceStorageUnit
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
@@ -43,12 +43,38 @@ def setup_landscape_one_holder():
 
 
 @fixture
-def setup_landscape_many_holders():
-    return LandscapeConfiguration(holders=[ResourceHolder('holder1',
-                                                          materials=[Material('111', 'mat1', 100000)]),
-                                           ResourceHolder('holder2',
-                                                          materials=[Material('222', 'mat2', 100000)])
-                                           ])
+def setup_landscape_many_holders(setup_lg):
+    lg, holders = setup_lg
+    return LandscapeConfiguration(holders=[
+        ResourceHolder(str(uuid.uuid4()), 'holder1',
+                       [
+                           Vehicle(str(uuid.uuid4()), 'vehicle1', [
+                               Material('111', 'mat1', 10),
+                               Material('222', 'mat2', 10),
+                               Material('333', 'mat3', 10)
+                           ]),
+                           Vehicle(str(uuid.uuid4()), 'vehicle2', [
+                               Material('111', 'mat1', 15),
+                               Material('222', 'mat2', 15),
+                               Material('333', 'mat3', 15)
+                           ])
+                       ],
+                       holders[0]),
+        ResourceHolder(str(uuid.uuid4()), 'holder2',
+                       [
+                           Vehicle(str(uuid.uuid4()), 'vehicle1', [
+                               Material('111', 'mat1', 12),
+                               Material('222', 'mat2', 12),
+                               Material('333', 'mat3', 12)
+                           ]),
+                           Vehicle(str(uuid.uuid4()), 'vehicle2', [
+                               Material('111', 'mat1', 14),
+                               Material('222', 'mat2', 14),
+                               Material('333', 'mat3', 14)
+                           ])
+                       ],
+                       holders[1]),
+        ], lg=lg)
 
 
 @fixture
@@ -79,22 +105,21 @@ def setup_lg():
                               }))
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
                             ResourceStorageUnit({
-                                  'mat1': 40,
-                                  'mat2': 55,
-                                  'mat3': 70
-                              }))
+                                'mat1': 40,
+                                'mat2': 55,
+                                'mat3': 70
+                            }))
     holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
                             ResourceStorageUnit({
-                                  'mat1': 40,
-                                  'mat2': 60,
-                                  'mat3': 65
-                              }))
-    platform1.add_neighbours([(platform3, 1.0)])
-    platform2.add_neighbours([(platform4, 2.0)])
-    platform3.add_neighbours([(platform1, 1.0), (holder1, 4.0), (holder2, 3.0)])
-    platform4.add_neighbours([(holder1, 5.0), (holder2, 7.0), (platform2, 2.0)])
-    holder1.add_neighbours([(platform3, 4.0), (platform4, 5.0), (holder2, 6.0)])
-    holder2.add_neighbours([(holder1, 6.0), (platform3, 3.0), (platform4, 7.0)])
+                                'mat1': 40,
+                                'mat2': 60,
+                                'mat3': 65
+                            }))
+    platform1.add_neighbours([(platform3, 1.0, 2)])
+    platform2.add_neighbours([(platform4, 2.0, 1)])
+    platform3.add_neighbours([(holder1, 4.0, 2), (holder2, 3.0, 3)])
+    platform4.add_neighbours([(holder1, 5.0, 1), (holder2, 7.0, 2)])
+    holder1.add_neighbours([(holder2, 6.0, 2)])
 
     return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]
 

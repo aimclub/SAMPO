@@ -1,4 +1,3 @@
-import math
 import uuid
 from collections import defaultdict
 from operator import itemgetter
@@ -7,7 +6,7 @@ from sortedcontainers import SortedList
 
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.landscape import LandscapeConfiguration, MaterialDelivery, ResourceHolder, Vehicle, Road
+from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle, Road
 from sampo.schemas.resources import Material
 from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType
@@ -43,11 +42,11 @@ class SupplyTimeline:
                 }
 
     def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
-                                   materials: list[Material], batch_size: int) -> bool:
-        return self.find_min_material_time(node, landscape, start_time, materials, batch_size) == start_time
+                                   materials: list[Material]) -> bool:
+        return self.find_min_material_time(node, landscape, start_time, materials) == start_time
 
     def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
-                               materials: list[Material], batch_size: int) -> Time:
+                               materials: list[Material]) -> Time:
         mat_request: list[Material] = []
 
         for need_mat in materials:
@@ -60,38 +59,7 @@ class SupplyTimeline:
         if not mat_request:
             return start_time
 
-        return self.supply_resources(node, landscape, start_time, materials, True)[1]
-
-    # TODO: delete method
-    def deliver_materials(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time, finish_time: Time,
-                          materials: list[Material], batch_size: int) -> tuple[list[MaterialDelivery], Time, Time]:
-        """
-        Models material delivery.
-
-        Delivery performed in batches sized by batch_size.
-
-        :return: pair of material-driven minimum start and finish times
-        """
-        sum_materials = sum([material.count for material in materials])
-        ratio = sum_materials / batch_size
-        batches = max(1, math.ceil(ratio))
-
-        first_batch = [material.copy().with_count(material.count // batches) for material in materials]
-        other_batches = [first_batch for _ in range(batches - 2)]
-        if batches > 1:
-            other_batches.append([material.copy().with_count(material.count - batch_material.count * (batches - 1))
-                                  for material, batch_material in zip(materials, first_batch)])
-
-        deliveries = []
-        d, start_time = self.supply_resources(node, landscape, start_time, first_batch, False)
-        deliveries.append(d)
-        max_finish_time = finish_time
-        for batch in other_batches:
-            d, finish_time = self.supply_resources(node, landscape, max_finish_time, batch, False, start_time)
-            deliveries.append(d)
-            max_finish_time = finish_time if finish_time > max_finish_time else max_finish_time
-
-        return deliveries, start_time, max_finish_time
+        return self.supply_resources(node, landscape, start_time, materials)
 
     def _find_best_holder_time(self, landscape: LandscapeConfiguration, node_id: int, materials: list[Material],
                                deadline: Time) -> tuple[str, Time]:
@@ -142,8 +110,7 @@ class SupplyTimeline:
                          landscape: LandscapeConfiguration,
                          deadline: Time,
                          materials: list[Material],
-                         min_supply_start_time: Time = Time(0)) \
-            -> tuple[MaterialDelivery, Time]:
+                         min_supply_start_time: Time = Time(0)) -> Time:
         """
         Finds minimal time that given materials can be supplied, greater than given start time
 
@@ -151,14 +118,9 @@ class SupplyTimeline:
         :param landscape: landscape
         :param deadline: the time work starts
         :param materials: material resources that are required to start
-        :param simulate: should timeline only find minimum supply time and not change timeline
         :param min_supply_start_time:
         :return: material deliveries, the time when resources are ready
         """
-        def merge_dicts(a, b):
-            c = a.copy()
-            c.update(b)
-            return c
 
         assert min_supply_start_time <= deadline
         min_work_start_time = deadline
@@ -172,7 +134,6 @@ class SupplyTimeline:
         sorted_vehicles = SortedList(iterable=self._id2holder[depot_id].vehicles,
                                      key=lambda v: -v.volume)
         need_mat = {mat.name: mat.count for mat in materials}
-        dict_mat = need_mat.copy()
         need_volume = sum([count for mat, count in need_mat.items()])
         vehicles: list[Vehicle] = []
 
@@ -190,16 +151,19 @@ class SupplyTimeline:
             for mat in vehicle.capacity:
                 load_resources[mat.name] += mat.count
 
-        finish_time, deliveries = self._get_route_time(landscape.lg.id2ind[depot_id], node_ind, vehicles, landscape, depot_time)
+        finish_time, deliveries = self._get_route_time(landscape.lg.id2ind[depot_id], node_ind, vehicles, landscape,
+                                                       depot_time)
 
-        update_timeline_info = {depot_id: {'start_time': depot_time,
-                                           'exec_time': Time(1),
-                                           'resource': dict_mat}}
+        update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
+
+        update_timeline_info[depot_id] = [(mat.name, mat.count, depot_time, depot_time + 1) for mat in materials]
+        update_timeline_info[depot_id].append(('vehicles', len(vehicles), depot_time, finish_time))
 
         for delivery_dict in deliveries:
-            update_timeline_info = merge_dicts(update_timeline_info, delivery_dict)
+            for road_id, res_info in delivery_dict.items():
+                update_timeline_info[road_id].append(res_info)
 
-        self.update_timeline(update_timeline_info)
+        self._update_timeline(update_timeline_info)
 
         return finish_time
 
@@ -207,7 +171,7 @@ class SupplyTimeline:
     def _find_earliest_start_time(state: SortedList[ScheduleEvent],
                                   required_resources: int,
                                   parent_time: Time,
-                                  exec_time: Time):
+                                  exec_time: Time) -> Time:
         current_state_time = parent_time
         base_ind = state.bisect_right(parent_time) - 1
 
@@ -236,7 +200,7 @@ class SupplyTimeline:
 
     def _get_route_time(self, holder_ind: int, node_ind: int, vehicles: list[Vehicle],
                         landscape: LandscapeConfiguration,
-                        start_holder_time: Time) -> tuple[Time, list[dict[str, dict[str, Time | int]]]]:
+                        start_holder_time: Time) -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]]]:
 
         def get_path(path, v, u):
             if landscape.path_mx[v][u] == v:
@@ -248,7 +212,7 @@ class SupplyTimeline:
                           to_node: int,
                           _parent_time: Time,
                           batch_size: int):
-            road_delivery: dict[str, dict[str, Time | int]] = {}
+            road_delivery: dict[str, tuple[str, int, Time, Time]] = {}
             parent_time = _parent_time
 
             path = [from_node]
@@ -264,10 +228,8 @@ class SupplyTimeline:
                                                                 required_resources=batch_size,
                                                                 parent_time=parent_time,
                                                                 exec_time=_id2road[road_id].overcome_time)
-                    road_delivery[road_id] = {'start_time': start_time,
-                                              'exec_time': Time(_id2road[road_id].overcome_time),
-                                              'resource': {'vehicles': batch_size}
-                                              }
+                    road_delivery[road_id] = ('vehicles', batch_size,
+                                              start_time, start_time + Time(_id2road[road_id].overcome_time))
                     parent_time = start_time + _id2road[road_id].overcome_time
 
             return parent_time, road_delivery
@@ -283,16 +245,32 @@ class SupplyTimeline:
 
         return finish_delivery_time, [delivery, return_delivery]
 
-    def update_timeline(self, update_timeline_info: dict[str, dict[str, Time | dict[str, int]]]):
-        # 1) establish the number of available resources in holder at the moment 'depot_time'
-        # 2) replenish resources in 'platform'
-        # 3) occupy chosen vehicles on route time
-        # 4) occupy roads of found route on supplying time
+    def _update_timeline(self, update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]]) -> None:
 
         for res_holder_id, res_holder_info in update_timeline_info.items():
             res_holder_state = self._timeline[res_holder_id]
-            start_time = res_holder_info['start_info']
-            exec_time = res_holder_info['exec_time']
 
-            for res_name, res_count in res_holder_info['resource'].items():
-                start_id
+            for res_info in res_holder_info:
+                res_name, res_count, start_time, end_time = res_info
+                res_state = res_holder_state[res_name]
+                start_idx = res_state.bisect_right(start_time)
+                end_idx = res_state.bisect_right(end_time)
+                available_res_count = res_state[start_idx - 1].available_workers_count
+
+                for event in res_state[start_idx: end_idx]:
+                    assert event.available_workers_count >= res_count
+                    event.available_workers_count -= res_count
+
+                assert available_res_count >= res_count
+
+                if start_idx < end_idx:
+                    event: ScheduleEvent = res_state[end_idx - 1]
+                    assert res_state[0].available_workers_count >= event.available_workers_count + res_count
+                    end_count = event.available_workers_count + res_count
+                else:
+                    assert res_state[0].avaulable_workers_count >= available_res_count
+                    end_count = available_res_count
+
+                res_state.add(
+                    ScheduleEvent(int(start_idx), EventType.START, start_time, None, available_res_count - res_count))
+                res_state.add(ScheduleEvent(int(end_time), EventType.END, end_time, None, end_count))

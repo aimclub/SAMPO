@@ -1,13 +1,10 @@
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.landscape import MaterialDelivery
 from sampo.schemas.resources import Equipment, ConstructionObject, Worker
 from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.zones import ZoneTransition
 from sampo.utilities.serializers import custom_serializer
@@ -37,7 +34,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  equipments: list[Equipment] | None = None,
                  zones_pre: list[ZoneTransition] | None = None,
                  zones_post: list[ZoneTransition] | None = None,
-                 materials: list[MaterialDelivery] | None = None,
                  c_object: ConstructionObject | None = None):
         self.id = work_unit.id
         self.name = work_unit.name
@@ -50,7 +46,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.equipments = equipments if equipments is not None else []
         self.zones_pre = zones_pre if zones_pre is not None else []
         self.zones_post = zones_post if zones_post is not None else []
-        self.materials = materials if materials is not None else []
         self.object = c_object if c_object is not None else []
 
         if contractor is not None:

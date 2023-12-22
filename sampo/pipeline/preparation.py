@@ -15,7 +15,11 @@ class PreparationPipeline:
                  contractors: str | pd.DataFrame | list[Contractor] | None = None):
         self._wg = wg
         self._contractors = contractors
-        self._history = history
+        self._history = history if history is not None else pd.DataFrame(columns=['marker_for_glue', 'work_name',
+                                                                                  'first_day', 'last_day',
+                                                                                  'upper_works', 'work_name_clear_old',
+                                                                                  'smr_name', 'work_name_clear',
+                                                                                  'granular_smr_name'])
         self._fix_edges_with_history = False
         self._fill_edges_with_history = False
         self._sep_wg = ';'
@@ -65,7 +69,8 @@ class PreparationPipeline:
         return self
 
     def _prepare_works_info(self) -> pd.DataFrame:
-        return CSVParser.read_graph_info(project_info=self._wg,
+        wg = self._wg.to_frame(save_req=True) if isinstance(self._wg, WorkGraph) else self._wg
+        return CSVParser.read_graph_info(project_info=wg,
                                          history_data=self._history,
                                          sep_wg=self._sep_wg,
                                          sep_history=self._sep_history,

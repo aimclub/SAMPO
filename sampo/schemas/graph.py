@@ -385,7 +385,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                     for req in node_info_dict['work_unit']['worker_reqs']:
                         min_req_dict[req['kind']] = req['min_count']
                         max_req_dict[req['kind']] = req['max_count']
-                        req_volume_dict[req['kind']] = req['volume']
+                        req_volume_dict[req['kind']] = req['volume']['value']
 
                     graph_df_structure['min_req'].append(min_req_dict)
                     graph_df_structure['max_req'].append(max_req_dict)

@@ -38,7 +38,7 @@ class DefaultStructureGenerationEstimator(StructureGenerationEstimator):
         return self
 
     def generate_probabilities(self, parent: WorkUnit) -> dict[str, float]:
-        return self._gen_probabilities[parent]
+        return self._gen_probabilities[parent.name]
 
     def get_volume(self, parent: WorkUnit, target: str) -> float:
         return self._volume.rand_float()

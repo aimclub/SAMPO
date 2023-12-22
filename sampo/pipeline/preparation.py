@@ -1,6 +1,7 @@
 import pandas as pd
 
 from sampo.schemas import WorkGraph, Contractor, WorkTimeEstimator
+from sampo.schemas.structure_estimator import StructureEstimator
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.userinput import CSVParser
 from sampo.utilities.name_mapper import NameMapper
@@ -21,6 +22,7 @@ class PreparationPipeline:
         self._sep_history = ';'
         self._name_mapper = None
         self._work_estimator = DefaultWorkEstimator()
+        self._structure_estimator = None
 
     def wg(self, wg: str | pd.DataFrame | WorkGraph):
         self._wg = wg
@@ -58,6 +60,10 @@ class PreparationPipeline:
         self._work_estimator = work_estimator
         return self
 
+    def structure_estimator(self, structure_estimator: StructureEstimator) -> 'PreparationPipeline':
+        self._structure_estimator = structure_estimator
+        return self
+
     def _prepare_works_info(self) -> pd.DataFrame:
         return CSVParser.read_graph_info(project_info=self._wg,
                                          history_data=self._history,
@@ -74,6 +80,9 @@ class PreparationPipeline:
             name_mapper=self._name_mapper,
             work_resource_estimator=self._work_estimator
         )
+
+        if self._structure_estimator is not None:
+            wg = self._structure_estimator.restruct(wg)
 
         return wg
 

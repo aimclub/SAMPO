@@ -168,7 +168,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         stage_node_id = make_new_node_id(wu.id, stage_i)
         proportion = accum - accum_pred
         reqs_amounts, reqs_amounts_accum = get_reqs_amounts(proportion, reqs_amounts_accum)
-        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
+        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
                                                                         EdgeType.InseparableFinishStart)],
                                                           wu_attrs, reqs2attrs
                                                           )
@@ -183,7 +183,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         attr = 'volume' if reqs == 'worker_reqs' else 'count'
         reqs_amounts[reqs] = [getattr(req, attr) - req_accum
                               for req, req_accum in zip(getattr(wu, reqs), reqs_amounts_accum[reqs])]
-    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
+    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
                                                                     EdgeType.InseparableFinishStart)],
                                                       wu_attrs, reqs2attrs
                                                       )

@@ -14,11 +14,11 @@ from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.resources import Worker
 
 
 def create_toolbox_and_mapping_objects(wg: WorkGraph,
@@ -31,10 +31,10 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        init_schedules: dict[
                                            str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                        rand: random.Random,
+                                       landscape: LandscapeConfiguration,
                                        spec: ScheduleSpec = ScheduleSpec(),
                                        work_estimator: WorkTimeEstimator = None,
                                        assigned_parent_time: Time = Time(0),
-                                       landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                        verbose: bool = True) \
         -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, list[int]]]:
     start = time.time()
@@ -132,7 +132,7 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
-                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                   landscape: LandscapeConfiguration,
                    fitness_constructor: Callable[
                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),

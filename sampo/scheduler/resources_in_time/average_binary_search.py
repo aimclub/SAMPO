@@ -26,10 +26,10 @@ class AverageBinarySearchResourceOptimizingScheduler:
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: list[Contractor],
                             deadline: Time,
+                            landscape: LandscapeConfiguration,
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            assigned_parent_time: Time = Time(0),
-                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+                            assigned_parent_time: Time = Time(0)) \
             -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:
         def call_scheduler(k: float, inner_spec: ScheduleSpec) \
                 -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:

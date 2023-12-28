@@ -56,6 +56,6 @@ def test_holder_sorting(setup_lg, setup_landscape_many_holders):
             if dist < min_dist:
                 min_dist = dist
                 received_holder = holder
-        correct += 1 if landscape.holder_id2resource_holder[target_holder].node.id == received_holder.id else 0
+        correct += 1 if landscape.holder_node_id2resource_holder[target_holder].node.id == received_holder.id else 0
 
     assert correct / lg.vertex_count == 1.0

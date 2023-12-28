@@ -55,6 +55,7 @@ class MomentumTimeline(Timeline):
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
         # and remember how many workers of a certain type is available at this particular moment
+        self.landscape = landscape
         self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {}
         for worker_name, worker_counts in worker_pool.items():
             for contractor, worker in worker_counts.items():
@@ -138,7 +139,8 @@ class MomentumTimeline(Timeline):
                 self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
             )
 
-            max_material_time = self._material_timeline.find_min_material_time(node.id,
+            max_material_time = self._material_timeline.find_min_material_time(node,
+                                                                               self.landscape,
                                                                                start_time,
                                                                                node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time,

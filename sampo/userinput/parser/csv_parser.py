@@ -97,7 +97,7 @@ class CSVParser:
                    name_mapper: NameMapper | None = None,
                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> WorkGraph:
         """
-        Gets a info about WorkGraph and Contractors from file .csv.
+        Gets an info about WorkGraph and Contractors from file .csv.
 
         Schema of Contractors .csv file (optional data):
             mandatory fields:
@@ -145,7 +145,7 @@ class CSVParser:
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> tuple[WorkGraph, list[Contractor]]:
         """
-        Gets a info about WorkGraph and Contractors from file .csv.
+        Gets an info about WorkGraph and Contractors from file .csv.
 
         Schema of Contractors .csv file (optional data):
             mandatory fields:

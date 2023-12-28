@@ -280,8 +280,8 @@ def generate_population(n: int,
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         rand: random.Random,
-                        work_estimator: WorkTimeEstimator = None,
-                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
+                        landscape: LandscapeConfiguration,
+                        work_estimator: WorkTimeEstimator = None) -> list[Individual]:
     """
     Generates population.
     Do not use `generate_chromosome` function.
@@ -313,7 +313,6 @@ def generate_population(n: int,
 
     return chromosomes
 
-
 def generate_chromosome(wg: WorkGraph,
                         contractors: list[Contractor],
                         work_id2index: dict[str, int],
@@ -323,8 +322,8 @@ def generate_chromosome(wg: WorkGraph,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         spec: ScheduleSpec,
                         rand: random.Random,
-                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Individual:
+                        landscape: LandscapeConfiguration,
+                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Individual:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)

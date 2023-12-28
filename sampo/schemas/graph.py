@@ -53,8 +53,9 @@ class GraphNode(JSONSerializable['GraphNode']):
     Class to describe Node in graph
     """
 
-    def __init__(self, work_unit: WorkUnit, platform: LandGraphNode,
-                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
+    def __init__(self, work_unit: WorkUnit,
+                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]],
+                 platform: LandGraphNode = None):
         self.platform = platform
         self._work_unit = work_unit
         self._parent_edges = []

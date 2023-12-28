@@ -59,9 +59,6 @@ class Vehicle(ResourceSupply):
     def get_resources(self) -> list[tuple[str, int]]:
         return [(mat.name, mat.count) for mat in self.capacity]
 
-    def get_sum_resources(self) -> int:
-        return sum([mat.count for mat in self.capacity])
-
 
 class ResourceHolder(ResourceSupply):
     def __init__(self,
@@ -79,9 +76,6 @@ class ResourceHolder(ResourceSupply):
         self.node_id = node.id
         self.vehicles = vehicles
         self.node = node
-
-    def get_vehicles_resources(self) -> list[list[tuple[str, int]]]:
-        return [vehicle.get_resources() for vehicle in self.vehicles]
 
     def get_resources(self) -> list[tuple[str, int]]:
         return [(name, count) for name, count in self.node.resource_storage_unit.capacity.items()]
@@ -102,12 +96,10 @@ class LandscapeConfiguration:
         self._holders: list[ResourceHolder] = holders
 
         # _ind2holder_id is required to match ResourceHolder's id to index in list of LangGraphNodes to work with routing_mx
-        self.ind2holder_id: dict[int, str] = {self.lg.node2ind[holder.node]: holder.node.id for holder in
-                                              self._holders}
-        self.holder_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
+        self.ind2holder_node_id: dict[int, str] = {self.lg.node2ind[holder.node]: holder.node.id for holder in
+                                                   self._holders}
+        self.holder_node_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
         self.zone_config = zone_config
-
-    def build_landscape(self):
         self._build_routes()
 
     def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[float, str]]]:
@@ -116,9 +108,9 @@ class LandscapeConfiguration:
         :return: sorted list of holders' id by the length of way
         """
         holders = []
-        for i in self.ind2holder_id.keys():
+        for i in self.ind2holder_node_id.keys():
             if self.dist_mx[node_id][i] != self.WAY_LENGTH:
-                holders.append((self.dist_mx[node_id][i], self.ind2holder_id[i]))
+                holders.append((self.dist_mx[node_id][i], self.ind2holder_node_id[i]))
         return SortedList(holders, key=lambda x: x[0])
 
     @cached_property
@@ -135,14 +127,14 @@ class LandscapeConfiguration:
     def roads(self) -> list[Road]:
         return [Road(f'road_{i}', edge) for i, edge in enumerate(self.lg.edges)]
 
-    def get_all_resources(self) -> list[dict]:
+    def get_all_resources(self) -> list[dict[str, dict[str, int]]]:
         def merge_dicts(a, b):
             c = a.copy()
             c.update(b)
             return c
 
         holders = {
-            holder.id: merge_dicts({name: count for name, count in holder.node.resource_storage_unit.capacity.items()},
+            holder.id: merge_dicts({name: count for name, count in holder.get_resources()},
                                    {'vehicles': len(holder.vehicles)})
             for holder in self.holders}
         roads = {road.id: {'vehicles': road.vehicles}

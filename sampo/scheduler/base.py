@@ -47,11 +47,11 @@ class Scheduler(ABC):
     def schedule(self,
                  wg: WorkGraph,
                  contractors: list[Contractor],
+                 landscape: LandscapeConfiguration,
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),
-                 timeline: Timeline | None = None,
-                 landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+                 timeline: Timeline | None = None) \
             -> Schedule:
         """
         Implementation of a scheduling process. 'schedule' version returns only Schedule.
@@ -70,7 +70,7 @@ class Scheduler(ABC):
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                            landscape: LandscapeConfiguration,
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),

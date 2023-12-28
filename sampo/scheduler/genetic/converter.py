@@ -81,7 +81,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
-                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                   landscape: LandscapeConfiguration,
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \

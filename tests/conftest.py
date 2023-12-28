@@ -34,40 +34,34 @@ def setup_rand() -> Random:
 
 
 @fixture
-def setup_landscape_one_holder():
-    return LandscapeConfiguration(holders=[ResourceHolder('holder1',
-                                                          materials=[Material('111', 'mat1', 100000)])])
-
-
-@fixture
 def setup_landscape_many_holders(setup_lg):
     lg, holders = setup_lg
     return LandscapeConfiguration(holders=[
         ResourceHolder(str(uuid.uuid4()), 'holder1',
                        [
                            Vehicle(str(uuid.uuid4()), 'vehicle1', [
-                               Material('111', 'mat1', 10),
-                               Material('222', 'mat2', 10),
-                               Material('333', 'mat3', 10)
+                               Material('111', 'mat1', 100),
+                               Material('222', 'mat2', 100),
+                               Material('333', 'mat3', 100)
                            ]),
                            Vehicle(str(uuid.uuid4()), 'vehicle2', [
-                               Material('111', 'mat1', 15),
-                               Material('222', 'mat2', 15),
-                               Material('333', 'mat3', 15)
+                               Material('111', 'mat1', 150),
+                               Material('222', 'mat2', 150),
+                               Material('333', 'mat3', 150)
                            ])
                        ],
                        holders[0]),
         ResourceHolder(str(uuid.uuid4()), 'holder2',
                        [
                            Vehicle(str(uuid.uuid4()), 'vehicle1', [
-                               Material('111', 'mat1', 12),
-                               Material('222', 'mat2', 12),
-                               Material('333', 'mat3', 12)
+                               Material('111', 'mat1', 120),
+                               Material('222', 'mat2', 120),
+                               Material('333', 'mat3', 120)
                            ]),
                            Vehicle(str(uuid.uuid4()), 'vehicle2', [
-                               Material('111', 'mat1', 14),
-                               Material('222', 'mat2', 14),
-                               Material('333', 'mat3', 14)
+                               Material('111', 'mat1', 140),
+                               Material('222', 'mat2', 140),
+                               Material('333', 'mat3', 140)
                            ])
                        ],
                        holders[1]),
@@ -78,39 +72,39 @@ def setup_landscape_many_holders(setup_lg):
 def setup_lg():
     platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
                               ResourceStorageUnit({
-                                  'mat1': 10,
-                                  'mat2': 15,
-                                  'mat3': 12
+                                  'mat1': 100,
+                                  'mat2': 150,
+                                  'mat3': 120
                               }))
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
                               ResourceStorageUnit({
-                                  'mat1': 7,
-                                  'mat2': 8,
-                                  'mat3': 9
+                                  'mat1': 70,
+                                  'mat2': 80,
+                                  'mat3': 90
                               }))
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
                               ResourceStorageUnit({
-                                  'mat1': 11,
-                                  'mat2': 13,
-                                  'mat3': 17
+                                  'mat1': 110,
+                                  'mat2': 130,
+                                  'mat3': 170
                               }))
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
                               ResourceStorageUnit({
-                                  'mat1': 18,
-                                  'mat2': 19,
-                                  'mat3': 20
+                                  'mat1': 180,
+                                  'mat2': 190,
+                                  'mat3': 200
                               }))
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
                             ResourceStorageUnit({
-                                'mat1': 40,
-                                'mat2': 55,
-                                'mat3': 70
+                                'mat1': 500,
+                                'mat2': 500,
+                                'mat3': 500
                             }))
     holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
                             ResourceStorageUnit({
-                                'mat1': 40,
-                                'mat2': 60,
-                                'mat3': 65
+                                'mat1': 705,
+                                'mat2': 750,
+                                'mat3': 800
                             }))
     platform1.add_neighbours([(platform3, 1.0, 2)])
     platform2.add_neighbours([(platform4, 2.0, 1)])

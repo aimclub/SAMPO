@@ -2,9 +2,9 @@ import random
 from typing import Optional, Callable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
-from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -134,7 +134,7 @@ class GeneticScheduler(Scheduler):
     @staticmethod
     def generate_first_population(wg: WorkGraph,
                                   contractors: list[Contractor],
-                                  landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                  landscape: LandscapeConfiguration,
                                   spec: ScheduleSpec = ScheduleSpec(),
                                   work_estimator: WorkTimeEstimator = None,
                                   deadline: Time = None,
@@ -196,7 +196,7 @@ class GeneticScheduler(Scheduler):
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                            landscape: LandscapeConfiguration,
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),

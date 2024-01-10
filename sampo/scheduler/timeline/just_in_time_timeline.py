@@ -288,7 +288,8 @@ class JustInTimeTimeline(Timeline):
             deliveries, mat_del_time = self._material_timeline.supply_resources(dep_node,
                                                                                 self.landscape,
                                                                                 c_st,
-                                                                                dep_node.work_unit.need_materials())
+                                                                                dep_node.work_unit.need_materials(),
+                                                                                True)
 
             c_st = max(c_st, mat_del_time)
             new_finish_time = c_st + working_time

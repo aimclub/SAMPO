@@ -1,11 +1,10 @@
 import math
 import uuid
 from collections import defaultdict
-from operator import itemgetter
 
 from sortedcontainers import SortedList
 
-from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoAvailableResources, NoDepots
+from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoDepots
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle, Road, MaterialDelivery
 from sampo.schemas.landscape_graph import LandGraphNode
@@ -100,21 +99,28 @@ class SupplyTimeline:
             return True
         return False
 
+    def _request_materials(self, node: GraphNode, materials: list[Material], start_time: Time) -> list[Material]:
+        request: list[Material] = []
+        for need_mat in materials:
+            ind = self._timeline[node.platform.id][need_mat.name].bisect_right(start_time) - 1
+            available_count_material = self._timeline[node.platform.id][need_mat.name][ind].available_workers_count
+            if available_count_material < need_mat.count:
+                request.append(
+                    Material(str(uuid.uuid4()), need_mat.name, node.platform.resource_storage_unit.capacity[need_mat.name] - available_count_material))
+            else:
+                request.append(
+                    Material(str(uuid.uuid4()), need_mat.name, 0)
+                )
+        return request
+
     def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
                                materials: list[Material]) -> Time:
-        mat_request: list[Material] = []
+        mat_request = self._request_materials(node, materials, start_time)
 
-        for need_mat in materials:
-            indx = self._timeline[node.platform.id][need_mat.name].bisect_right(start_time) - 1
-            available_count_material = self._timeline[node.platform.id][need_mat.name][indx].available_workers_count
-            if available_count_material < need_mat.count:
-                mat_request.append(
-                    Material(str(uuid.uuid4()), need_mat.name, available_count_material - need_mat.count))
-
-        if not mat_request:
+        if sum(mat.count for mat in mat_request) == 0:
             return start_time
 
-        _, time = self.supply_resources(node, landscape, start_time, materials)
+        _, time = self.supply_resources(node, landscape, start_time, mat_request)
         return time
 
     def _find_best_holders_by_dist(self, landscape: LandscapeConfiguration, node: LandGraphNode,
@@ -155,17 +161,19 @@ class SupplyTimeline:
     def supply_resources(self, node: GraphNode,
                          landscape: LandscapeConfiguration,
                          deadline: Time,
-                         materials: list[Material]) -> tuple[MaterialDelivery, Time]:
+                         materials: list[Material],
+                         update: bool = False) -> tuple[MaterialDelivery, Time]:
         """
         Finds minimal time that given materials can be supplied, greater than given start time
 
+        :param update: Should timeline be updated?
+        It is necessary when materials are supplied, otherwise, timeline should not be updated
         :param node: GraphNode that initializes the resource-delivery
         :param landscape: landscape
         :param deadline: the time work starts
         :param materials: material resources that are required to start
         :return: material deliveries, the time when resources are ready
         """
-        print(node.id)
         delivery = MaterialDelivery(node.id)
         land_node = node.platform
         # if a job doesn't need materials
@@ -211,12 +219,16 @@ class SupplyTimeline:
 
                 road_deliveries = deliveries
 
+        for mat in materials:
+            delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time)
+
+        if not update:
+            return delivery, finish_delivery_time
+
         update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
 
         update_timeline_info[depot_id] = [(mat.name, mat.count, min_depot_time, min_depot_time + Time.inf()) for mat in
                                           materials]
-        for mat in materials:
-            delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time)
         update_timeline_info[depot_id].append(('vehicles', len(vehicles), min_depot_time, finish_vehicle_time))
 
         for delivery_dict in road_deliveries:

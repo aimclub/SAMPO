@@ -127,6 +127,7 @@ class LandscapeConfiguration:
         to = to_ind
         while self.path_mx[from_ind][to] != from_ind:
             path.append(self.path_mx[from_ind][to])
+            to = self.path_mx[from_ind][to]
         path.append(from_ind)
 
         return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]

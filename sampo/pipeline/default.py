@@ -70,8 +70,8 @@ class DefaultInputPipeline(InputPipeline):
         self._all_connections: bool = False
         self._change_connections_info: bool = False
         self._name_mapper: NameMapper | None = None
-        self.sep_wg = ';'
-        self.sep_history = ';'
+        self._sep_wg = ';'
+        self._sep_history = ';'
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
@@ -93,7 +93,7 @@ class DefaultInputPipeline(InputPipeline):
         self._wg = wg
         self._all_connections = all_connections
         self._change_connections_info = change_connections_info
-        self.sep_wg = sep
+        self._sep_wg = sep
         return self
 
     def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
@@ -141,7 +141,7 @@ class DefaultInputPipeline(InputPipeline):
             work_info.csv as in history_data.csv and vice versa.
         """
         self._history = history
-        self.sep_history = sep
+        self._sep_history = sep
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -193,8 +193,8 @@ class DefaultInputPipeline(InputPipeline):
                 CSVParser.work_graph_and_contractors(
                     works_info=CSVParser.read_graph_info(project_info=self._wg,
                                                          history_data=self._history,
-                                                         sep_wg=self.sep_wg,
-                                                         sep_history=self.sep_history,
+                                                         sep_wg=self._sep_wg,
+                                                         sep_history=self._sep_history,
                                                          name_mapper=self._name_mapper,
                                                          all_connections=self._all_connections,
                                                          change_connections_info=self._change_connections_info),

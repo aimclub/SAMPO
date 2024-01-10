@@ -1,3 +1,4 @@
+import heapq
 import math
 from abc import ABC, abstractmethod
 from functools import cached_property
@@ -101,17 +102,80 @@ class LandscapeConfiguration:
         self.holder_node_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
         self.zone_config = zone_config
         self._build_routes()
+        self._node2ind = self.lg.node2ind
 
-    def get_sorted_holders(self, node_id: int) -> SortedList[list[tuple[float, str]]]:
+    def get_sorted_holders(self, node: LandGraphNode) -> SortedList[list[tuple[float, str]]]:
         """
         :param node_id: id of node in LandGraph's list of nodes
         :return: sorted list of holders' id by the length of way
         """
         holders = []
+        node_ind = self._node2ind[node]
         for i in self.ind2holder_node_id.keys():
-            if self.dist_mx[node_id][i] != self.WAY_LENGTH:
-                holders.append((self.dist_mx[node_id][i], self.ind2holder_node_id[i]))
+            if self.dist_mx[node_ind][i] != self.WAY_LENGTH:
+                holders.append((self.dist_mx[node_ind][i], self.ind2holder_node_id[i]))
         return SortedList(holders, key=lambda x: x[0])
+
+    def get_route(self, from_node: LandGraphNode, to_node: LandGraphNode) -> list[str]:
+        """
+        Return a list of roads' id that are part of the route
+        """
+        from_ind = self._node2ind[from_node]
+        to_ind = self._node2ind[to_node]
+
+        path = [to_ind]
+        to = to_ind
+        while self.path_mx[from_ind][to] != from_ind:
+            path.append(self.path_mx[from_ind][to])
+        path.append(from_ind)
+
+        return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]
+
+    def construct_route(self, from_node: LandGraphNode, to_node: LandGraphNode, roads_available: list[Road]) -> list[str]:
+        """
+        Construct the route from the list of available roads whether it is possible.
+        :param roads_available: list of available roads
+        :return: list of roads' id that are included to the route whether it exists, otherwise return empty list
+        """
+        def dijkstra(node_ind: int):
+            prior_queue = [(.0, node_ind)]
+            distances[node_ind] = 0
+
+            while prior_queue:
+                dist, v = heapq.heappop(prior_queue)
+
+                if dist > distances[v]:
+                    continue
+
+                for road in self.lg.nodes[v].roads:
+                    d = dist + road.weight
+                    finish_ind = self._node2ind[road.finish]
+                    if d < distances[finish_ind] and road.id in roads_available_set:
+                        distances[finish_ind] = d
+                        path_mx[node_ind][finish_ind] = v
+                        heapq.heappush(prior_queue, (d, finish_ind))
+
+        distances = [self.WAY_LENGTH] * self.lg.vertex_count
+        path_mx = np.full((self.lg.vertex_count, self.lg.vertex_count), -1)
+        roads_available_set = set(road.id for road in roads_available)
+        for v in range(self.lg.vertex_count):
+            for u in range(self.lg.vertex_count):
+                if v == u:
+                    path_mx[v][u] = 0
+                elif self.lg.adj_matrix[v][u] != np.Inf and self.road_mx[v][u] in roads_available_set:
+                    path_mx[v][u] = v
+
+        from_ind = self._node2ind[from_node]
+        to_ind = self._node2ind[to_node]
+        dijkstra(to_ind)
+
+        path = [to_ind]
+        to = to_ind
+        while path_mx[from_ind][to] != from_ind:
+            path.append(path_mx[from_ind][to])
+            to = path_mx[from_ind][to]
+        path.append(from_ind)
+        return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]
 
     @cached_property
     def holders(self) -> list[ResourceHolder]:
@@ -175,3 +239,23 @@ class LandscapeConfiguration:
         self.dist_mx = dist_mx
         self.path_mx = path_mx
         self.road_mx = road_mx
+
+
+class MaterialDelivery:
+    def __init__(self, work_id: str):
+        self.id = work_id
+        self.delivery = {}
+
+    def add_delivery(self, name: str, count: int, start_time: 'Time', finish_time: 'Time'):
+        material_delivery = self.delivery.get(name, None)
+        if material_delivery is None:
+            material_delivery = []
+            self.delivery[name] = material_delivery
+        material_delivery.append((count, start_time, finish_time))
+
+    def add_deliveries(self, name: str, deliveries: list[tuple['Time', int]]):
+        material_delivery = self.delivery.get(name, None)
+        if material_delivery is None:
+            self.delivery[name] = deliveries
+        else:
+            material_delivery.extend(deliveries)

@@ -56,9 +56,7 @@ def run_contractor_search(contractors: list[Contractor],
 
     # optimization metric
     best_finish_time = Time.inf()
-    best_start_time = None
     best_contractor = None
-    best_worker_team = None
     # heuristic: if contractors' finish times are equal, we prefer smaller one
     best_contractor_size = float('inf')
 
@@ -68,14 +66,14 @@ def run_contractor_search(contractors: list[Contractor],
 
         if not finish_time.is_inf() and (finish_time < best_finish_time or
                                          (finish_time == best_finish_time and contractor_size < best_contractor_size)):
-            best_start_time = start_time
             best_finish_time = finish_time
             best_contractor = contractor
-            best_worker_team = worker_team
             best_contractor_size = contractor_size
 
     if best_contractor is None:
         raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
                                           f'{contractors}')
+
+    best_start_time, best_finish_time, best_worker_team = runner(best_contractor)
 
     return best_start_time, best_finish_time, best_contractor, best_worker_team

@@ -53,7 +53,7 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._estimation_mode = WorkEstimationMode.Realistic
         self.rand = rand
         self._productivity_mode = WorkerProductivityMode.Static
-        self._productivity = {worker: IntervalGaussian(1, 0.2, 1, 0)
+        self._productivity = {worker: {'__ALL__': IntervalGaussian(1, 0.2, 1, 0)}
                               for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']}
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
@@ -103,14 +103,18 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         :param max_count_workers: maximum workers count according to worker reqs
         :return:
         """
-        productivity_interval = self._productivity[worker.name]
+        worker_productivities = self._productivity[worker.name]
+        productivity_interval = worker_productivities.get(worker.contractor_id, worker_productivities['__ALL__'])
         productivity = productivity_interval.mean \
             if self._productivity_mode is WorkerProductivityMode.Static \
             else productivity_interval.rand_float(self.rand)
         return productivity * worker.count * communication_coefficient(worker.count, max_count_workers)
 
-    def set_worker_productivity(self, name: str, productivity: Interval):
-        self._productivity[name] = productivity
+    def set_worker_productivity(self, productivity: Interval, name: str, contractor: str | None = None):
+        if contractor is None:
+            self._productivity[name]['__ALL__'] = productivity
+            return
+        self._productivity[name][contractor] = productivity
 
 
 def communication_coefficient(groups_count: int, max_groups: int) -> float:

@@ -14,7 +14,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 def get_node_dependencies(wg: WorkGraph) -> dict[str, set[str]]:
     """
-    Creates a mapper for nodes in Word Graph that matches each node id to its parents ids
+    Creates a mapper for nodes in Work Graph that matches each node id to its parents ids
     and leaves only the first node in inseparable chains.
 
     :param wg: WorkGraph

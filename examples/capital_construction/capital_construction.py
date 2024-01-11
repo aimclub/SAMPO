@@ -1,17 +1,17 @@
-from random import Random
 from typing import Dict
 
 from sampo.scheduler.base import Scheduler
-from sampo.scheduler.multi_agency import validate_block_schedule
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
-from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
-from sampo.scheduler.utils.obstruction import OneInsertObstruction, Obstruction
+from sampo.scheduler.multi_agency.multi_agency import Agent, ScheduledBlock, StochasticManager
+from sampo.schemas import IntervalGaussian
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
+from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 
 def load_queues_bg(queues: list[list[WorkGraph]]):
     wgs: list[WorkGraph] = [wg for queue in queues for wg in queue]
+
     bg = BlockGraph.pure(wgs)
 
     index = 0  # global wg index in `wgs`
@@ -39,20 +39,25 @@ def load_queues_bg(queues: list[list[WorkGraph]]):
     return bg
 
 
-def run_example(queues_with_obstructions: list[list[WorkGraph]],
-                schedulers: list[Scheduler], contractors: list[Contractor]) -> Dict[str, ScheduledBlock]:
+def run_example(queues: list[list[WorkGraph]],
+                schedulers: list[Scheduler],
+                contractors: list[Contractor]) -> Dict[str, ScheduledBlock]:
+    work_estimator = DefaultWorkEstimator()
+    for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']:
+        for i, contractor in enumerate(contractors):
+            work_estimator.set_worker_productivity(IntervalGaussian(0.2 * i + 0.2, 1, 0, 2), worker, contractor.id)
+    for scheduler in schedulers:
+        scheduler.work_estimator = work_estimator
 
     # Scheduling agents and manager initialization
     agents = [Agent(f'Agent {i}', schedulers[i % len(schedulers)], [contractor])
               for i, contractor in enumerate(contractors)]
-    manager = Manager(agents)
+    manager = StochasticManager(agents)
 
-    # Upload information about routine tasks, obstruction tasks, related to them and probabilities
-    bg = load_queues_bg(queues_with_obstructions)
+    # Upload information about routine tasks
+    bg = load_queues_bg(queues)
 
     # Schedule blocks of tasks using multi-agent modelling
     blocks_schedules = manager.manage_blocks(bg, logger=print)
-
-    validate_block_schedule(bg, blocks_schedules, agents)
 
     return blocks_schedules

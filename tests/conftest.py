@@ -117,8 +117,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
         case _:
             raise ValueError(f'Unknown graph type: {graph_type}')
 
-    if lag_optimization:
-        wg = graph_restructuring(wg, use_lag_edge_optimization=True)
+    wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
     return wg
 

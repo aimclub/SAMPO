@@ -73,7 +73,7 @@ class LFTScheduler(GenericScheduler):
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
-        schedule, schedule_start_time, timeline = self.build_scheduler(wg, ordered_nodes, contractors, landscape, spec,
+        schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, contractors, landscape, spec,
                                                                        self.work_estimator, assigned_parent_time,
                                                                        timeline)
         del self._node_id2workers

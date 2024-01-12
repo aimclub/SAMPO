@@ -4,6 +4,7 @@ class NoSufficientContractorError(Exception):
 
     It indicates when the contractors have not sufficient resources to perform schedule.
     """
+
     def __init__(self, message):
         super().__init__(message)
 
@@ -15,6 +16,12 @@ class NotEnoughMaterialsInDepots(Exception):
 
 
 class NoAvailableResources(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class IncorrectAmountOfWorker(Exception):
 
     def __init__(self, message):
         super().__init__(message)

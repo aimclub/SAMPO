@@ -10,7 +10,6 @@ from sampo.schemas.time import Time
 def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str] | None = None) -> dict[str, np.ndarray]:
     df = schedule.full_schedule_df
     points = df[['start', 'finish']].to_numpy().copy()
-    points[:, 1] += 1
     points = SortedList(set(points.flatten()))
     usage = defaultdict(lambda: np.zeros_like(points))
 

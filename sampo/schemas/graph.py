@@ -104,7 +104,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         edges: list[GraphEdge] = []
         if parent_works:
             if isinstance(parent_works[0], GraphNode):
-                edges = [GraphEdge(p, self, 1, EdgeType.FinishStart) for p in parent_works]
+                edges = [GraphEdge(p, self, 0, EdgeType.FinishStart) for p in parent_works]
             elif isinstance(parent_works[0], tuple):
                 edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 

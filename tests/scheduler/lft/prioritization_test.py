@@ -1,6 +1,6 @@
 from sampo.scheduler.lft.prioritization import lft_prioritization
+from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
-from sampo.schemas.contractor import get_worker_contractor_pool
 from tests.scheduler.lft.fixtures import setup_schedulers_and_parameters
 
 

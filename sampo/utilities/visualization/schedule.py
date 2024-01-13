@@ -3,6 +3,7 @@ from typing import Optional
 
 import pandas as pd
 import plotly.express as px
+from matplotlib.figure import Figure
 
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 
@@ -10,7 +11,7 @@ from sampo.utilities.visualization.base import VisualizationMode, visualize
 def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                             visualization: VisualizationMode,
                             remove_service_tasks: bool = False,
-                            fig_file_name: Optional[str] = None):
+                            fig_file_name: Optional[str] = None) -> Figure | None:
     """
     Creates and saves a gant chart of the scheduled tasks to the specified path.
 

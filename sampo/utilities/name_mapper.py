@@ -1,3 +1,4 @@
+import json
 from abc import ABC
 
 import pandas as pd
@@ -32,6 +33,17 @@ def read_tasks_df(path: str) -> pd.DataFrame:
     return pd.read_csv(path, sep=';', header=0)
 
 
+def read_json(path: str) -> 'NameMapper':
+    """
+    Gets mapping of the unique names to our task names
+    :param path: path to the .json file
+    :return: NameMapper: our_name -> unique_name
+    """
+    with open(path) as f:
+        mapper: dict[str, str] = json.load(f)
+    return DictNameMapper({name[0]: name[1] for name in mapper.items()})
+
+
 class NameMapper(ABC):
     def __getitem__(self, key):
         ...
@@ -44,14 +56,14 @@ class NameMapper(ABC):
 
 
 class DummyNameMapper(NameMapper):
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> str:
         return item
 
     def get(self, item):
         self.__getitem__(item)
 
     @property
-    def _source(self):
+    def _source(self) -> NameMapper:
         return self
 
 
@@ -62,7 +74,7 @@ class DictNameMapper(NameMapper):
     def get(self, item):
         self.__getitem__(item)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> str:
         return self._source[item] if item in self._source else item
 
 
@@ -70,6 +82,7 @@ class ModelNameMapper(NameMapper):
     """
     NameMapper for Kovalchuk's model integration
     """
+
     # TODO: implement
     def __init__(self):
         self.__nie()

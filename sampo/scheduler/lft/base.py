@@ -6,12 +6,13 @@ from typing import Type, Callable
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generic import GenericScheduler, get_finish_time_default
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
 from sampo.scheduler.lft.time_computaion import work_duration
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool, WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -72,7 +73,7 @@ class LFTScheduler(GenericScheduler):
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
-        schedule, schedule_start_time, timeline = self.build_scheduler(wg, ordered_nodes, contractors, landscape, spec,
+        schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, contractors, landscape, spec,
                                                                        self.work_estimator, assigned_parent_time,
                                                                        timeline)
         del self._node_id2workers

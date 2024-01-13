@@ -9,11 +9,10 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.project import ScheduledProject
-from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
 class InputPipeline(ABC):
@@ -23,8 +22,9 @@ class InputPipeline(ABC):
 
     @abstractmethod
     def wg(self, wg: WorkGraph | pd.DataFrame | str,
-           is_wg_has_full_info_about_connections: bool = False,
-           change_base_on_history: bool = False) -> 'InputPipeline':
+           all_connections: bool = False,
+           change_connections_info: bool = False,
+           sep: str = ',') -> 'InputPipeline':
         ...
 
     @abstractmethod
@@ -32,11 +32,12 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
-    def name_mapper(self, name_mapper: NameMapper) -> 'InputPipeline':
+    def name_mapper(self, name_mapper: NameMapper | str) -> 'InputPipeline':
         ...
 
     @abstractmethod
-    def history(self, history: pd.DataFrame | str) -> 'InputPipeline':
+    def history(self, history: pd.DataFrame | str,
+                sep: str = ',') -> 'InputPipeline':
         ...
 
     @abstractmethod

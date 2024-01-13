@@ -19,13 +19,13 @@ class BlockNode:
         self.blocks_to: list[BlockNode] = []
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self.wg.start.id
 
-    def is_service(self):
+    def is_service(self) -> bool:
         return self.wg.vertex_count == 2
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.id)
 
 
@@ -39,7 +39,7 @@ class BlockGraph:
         self.node_dict = build_index(self.nodes, attrgetter('id'))
 
     @staticmethod
-    def pure(nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None):
+    def pure(nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None) -> 'BlockGraph':
         """
         Build BlockGraph from the received list of WorkGraphs without edges
 
@@ -52,10 +52,10 @@ class BlockGraph:
     def __getitem__(self, item) -> BlockNode:
         return self.node_dict[item]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.nodes)
 
-    def __copy__(self):
+    def __copy__(self) -> 'BlockGraph':
         parent_ids = [[parent.id for parent in node.blocks_to] for node in self.nodes]
         nodes = [BlockNode(old_node.wg, old_node.obstruction) for old_node in self.nodes]
         nodes_index = build_index(nodes, attrgetter('id'))

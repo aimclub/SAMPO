@@ -38,5 +38,5 @@ class GeneralTimeline(Generic[T]):
         """
         return self._timeline[index][1]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._timeline)

@@ -1,4 +1,4 @@
-from sampo.scheduler.generic import GenericScheduler
+from sampo.scheduler.generic import GenericScheduler, PRIORITIZATION_F, RESOURCE_OPTIMIZE_F
 
 
 class DelegatingScheduler(GenericScheduler):
@@ -16,9 +16,9 @@ class DelegatingScheduler(GenericScheduler):
                          delegate.work_estimator)
 
     # noinspection PyMethodMayBeStatic
-    def delegate_prioritization(self, prioritization):
+    def delegate_prioritization(self, prioritization) -> PRIORITIZATION_F:
         return prioritization
 
     # noinspection PyMethodMayBeStatic
-    def delegate_optimize_resources(self, optimize_resources):
+    def delegate_optimize_resources(self, optimize_resources) -> RESOURCE_OPTIMIZE_F:
         return optimize_resources

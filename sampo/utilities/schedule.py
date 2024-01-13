@@ -59,10 +59,16 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     :param task_df: pd.DataFrame: one real task's stages dataframe, sorted by start time
     :return: pd.Series with the full information about the task
     """
+
+    def get_stage_num(name: str):
+        split_name = name.split(STAGE_SEP)
+        return int(split_name[-1]) if len(split_name) > 1 else -1
+
     if len(task_df) > 1:
-        task_df = task_df.sort_values(by='task_name_mapped')
-        task_df = task_df.reset_index(drop=True)
         df = task_df.copy()
+        df['stage_num'] = df['task_name_mapped'].apply(get_stage_num)
+        df = df.sort_values(by='stage_num')
+        df = df.reset_index(drop=True)
 
         df = df.iloc[-1:].reset_index(drop=True)
         for column in ['task_id', 'task_name', 'task_name_mapped']:

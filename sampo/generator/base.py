@@ -1,9 +1,9 @@
 from random import Random
 
-from sampo.generator.environment.contractor import get_contractor
+from sampo.generator import SyntheticGraphType
+from sampo.generator.environment import get_contractor
 from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.generator.pipeline.project import get_small_graph, get_graph
-from sampo.generator.pipeline.types import SyntheticGraphType
 from sampo.schemas.graph import WorkGraph
 
 

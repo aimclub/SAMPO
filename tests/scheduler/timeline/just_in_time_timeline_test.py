@@ -5,7 +5,7 @@ from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
-from sampo.schemas.contractor import get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork

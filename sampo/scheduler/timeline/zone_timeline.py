@@ -33,7 +33,7 @@ class ZoneTimeline:
                           for zone, status in config.start_statuses.items()}
         self._config = config
 
-    def find_min_start_time(self, zones: list[ZoneReq], parent_time: Time, exec_time: Time):
+    def find_min_start_time(self, zones: list[ZoneReq], parent_time: Time, exec_time: Time) -> Time:
         # here we look for the earliest time slot that can satisfy all the zones
 
         start = parent_time
@@ -95,7 +95,6 @@ class ZoneTimeline:
 
         # updating all events in between the start and the end of our current task
         for event in state[start_idx: end_idx]:
-            # TODO Check that we shouldn't change the between statuses
             assert self._config.statuses.match_status(event.available_workers_count, required_status)
 
         assert state[start_idx - 1].event_type == EventType.END \

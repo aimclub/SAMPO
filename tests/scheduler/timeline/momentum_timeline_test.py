@@ -1,7 +1,7 @@
 from _pytest.fixtures import fixture
 
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
-from sampo.schemas.contractor import get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker

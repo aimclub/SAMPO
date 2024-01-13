@@ -7,6 +7,7 @@ from typing import Generic, TypeVar, Union
 
 import numpy as np
 import pandas as pd
+from typing_extensions import deprecated
 
 from sampo.utilities.serializers import CUSTOM_FIELD_SERIALIZER, CUSTOM_FIELD_DESERIALIZER, CUSTOM_TYPE_SERIALIZER, \
     CUSTOM_TYPE_DESERIALIZER, default_ndarray_serializer, default_dataframe_serializer, default_ndarray_deserializer, \
@@ -195,7 +196,37 @@ class JSONSerializable(Serializable[dict[str,
         ...
 
     @classmethod
+    def loadd(cls, dict_representation: dict) -> JS:
+        """
+        Factory method that produces a python object from the serialized version of it
+        :param dict_representation: the dictionary repr of the object
+        :return: The constructed python object
+        """
+        return cls._deserialize(dict_representation)
+
+    @classmethod
+    def loads(cls, str_representation: str) -> JS:
+        """
+        Factory method that produces a python object from the serialized version of it
+        :param str_representation: the string repr of the object
+        :return: The constructed python object
+        """
+        return cls.loadd(json.loads(str_representation))
+
+    @classmethod
+    @deprecated('Use loadf. Will be removed in version 0.3')
     def load(cls, folder_path: str, file_name: str) -> JS:
+        """
+        Factory method that produces a python object from the serialized version of it
+        :param folder_path: Path to the folder, where the serialized file is saved
+        :param file_name: File name without extension
+        (the file extension should match with the one returned by serializer_extension method)
+        :return: The constructed python object
+        """
+        return cls.loadf(folder_path, file_name)
+
+    @classmethod
+    def loadf(cls, folder_path: str, file_name: str) -> JS:
         """
         Factory method that produces a python object from the serialized version of it
         :param folder_path: Path to the folder, where the serialized file is saved
@@ -206,20 +237,34 @@ class JSONSerializable(Serializable[dict[str,
         full_file_name = cls.get_full_file_name(folder_path, file_name)
         with open(full_file_name, 'r', encoding='utf-8') as read_file:
             dict_representation = json.load(read_file)
-        return cls._deserialize(dict_representation)
+            return cls.loadd(dict_representation)
 
-    def dump(self, folder_path: str, file_name: str) -> None:
+    def dumpd(self) -> dict:
         """
-        Serializes object and saves it to file
+        Serializes the object and returns it as a dict.
+        :return serialized object
+        """
+        return self._serialize()
+
+    def dumps(self) -> str:
+        """
+        Serializes the object and returns it as a string.
+        :return serialized object
+        """
+        return json.dumps(self.dumpd())
+
+    def dump(self, folder_path: str, file_name: str):
+        """
+        Serializes the object and saves it to file.
         :param folder_path: Path to the folder where the serialized file should be saved
         :param file_name: Name of the file without extension
         (the appended extension could be explored via serializer_extension method)
         :return None
         """
         full_file_name = self.get_full_file_name(folder_path, file_name)
-        serialized_dict = self._serialize()
+        serialized_str = self.dumps()
         with open(full_file_name, 'w', encoding='utf-8') as write_file:
-            json.dump(serialized_dict, write_file)
+            write_file.write(serialized_str)
 
 
 # TODO: Implement automotive Enum serialization/deserialization
@@ -252,7 +297,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
     @classmethod
     @property
-    def _default_serializers(cls):
+    def _default_serializers(cls) -> dict:
         """
         :param cls: current class (predecessors of parent class AutoJSONSerializable)
         :return: dict: dictionary of serialization methods
@@ -270,7 +315,7 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
 
     @classmethod
     @property
-    def ignored_fields(cls):
+    def ignored_fields(cls) -> list:
         """
         Return list of fields, which not be included to JSON representation (needed for client interface
         and Draw Schedule system)

@@ -145,7 +145,7 @@ class SupplyTimeline:
             going_right = False
 
             while need_count > 0:
-                # find current period
+                # find current period 
                 time_left = material_timeline[idx_left][0]
                 time_right = material_timeline[idx_left + 1][0]
 
@@ -189,5 +189,5 @@ class SupplyTimeline:
         return delivery, min_work_start_time
 
     @property
-    def resource_sources(self):
+    def resource_sources(self) -> dict[str, dict[str, int]]:
         return self._resource_sources

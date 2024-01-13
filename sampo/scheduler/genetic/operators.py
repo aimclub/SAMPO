@@ -12,7 +12,8 @@ from deap import creator, base
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
@@ -62,7 +63,7 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -84,7 +85,7 @@ class SumOfResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -106,7 +107,7 @@ class TimeWithResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(resources_names: Iterable[str]):
+    def prepare(resources_names: Iterable[str]) -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -130,7 +131,8 @@ class DeadlineResourcesFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(deadline: Time, resources_names: Iterable[str] | None = None):
+    def prepare(deadline: Time, resources_names: Iterable[str] | None = None) \
+            -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """
@@ -155,7 +157,8 @@ class DeadlineCostFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
-    def prepare(deadline: Time, resources_names: Iterable[str] | None = None):
+    def prepare(deadline: Time, resources_names: Iterable[str] | None = None) \
+            -> Callable[[list[ChromosomeType]], list[Schedule]]:
         """
         Returns the constructor of that fitness function prepared to use in Genetic
         """

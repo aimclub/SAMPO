@@ -4,7 +4,7 @@ import numpy as np
 
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.coordinate_descent import CoordinateDescentResourceOptimizer
-from sampo.schemas.contractor import WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 from sampo.utilities.base_opt import dichotomy_int

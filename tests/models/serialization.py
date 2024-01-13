@@ -13,7 +13,7 @@ class TestSimpleSerialization(AutoJSONSerializable['TestSimpleSerialization']):
     key: str
     value: Any
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{{{self.key}: {self.value}}}'
 
 
@@ -34,33 +34,33 @@ class TestAutoJSONSerializable(AutoJSONSerializable['TestAutoJSONSerializable'])
     ignored_fields = ['array_field', 'bool_field']
 
     @custom_serializer(float)
-    def floater(self, value):
+    def floater(self, value) -> str:
         return str(value).replace('.', '|')
 
     @classmethod
     @custom_serializer(float, deserializer=True)
-    def defloater(cls, value):
+    def defloater(cls, value) -> float:
         return float(value.replace('|', '.'))
 
     @custom_serializer('class_field')
-    def tsser(self, value):
+    def tsser(self, value) -> list:
         return [value.key, value.value]
 
     @classmethod
     @custom_serializer('class_field', deserializer=True)
-    def detsser(cls, value):
+    def detsser(cls, value) -> TestSimpleSerialization:
         r = TestSimpleSerialization()
         r.key = value[0]
         r.value = value[1]
         return r
 
     @custom_type_serializer('TestAutoJSONSerializable')
-    def neighbourer(self, value):
+    def neighbourer(self, value) -> int:
         return value.int_field
 
     @classmethod
     @custom_type_deserializer('TestAutoJSONSerializable')
-    def deneighbourer(cls, value):
+    def deneighbourer(cls, value) -> 'TestAutoJSONSerializable':
         return TestAutoJSONSerializable(value, None, None, None, None, None, None, None, None, None, None)
 
 

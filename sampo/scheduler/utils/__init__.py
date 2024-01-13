@@ -12,7 +12,7 @@ def get_worker_contractor_pool(contractors: Iterable[Contractor]) -> WorkerContr
     Alias for frequently used functionality.
 
     :param contractors: list of all the considered contractors
-    :return: Dictionary of workers by worker name, next by contractor id
+    :return: dictionary of workers by worker name, next by contractor id
     """
     worker_pool = defaultdict(dict)
     for contractor in contractors:

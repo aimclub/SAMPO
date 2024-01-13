@@ -282,12 +282,12 @@ class GraphNode(JSONSerializable['GraphNode']):
                     for edge in self.edges_to if edge.start in node2swork), default=Time(0))
 
 
-def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> GraphNode:
+def get_start_stage(work_id: str | None = None, rand: Random | None = None) -> GraphNode:
     """
     Creates a service vertex necessary for constructing the graph of works,
     which is the only vertex without a parent in the graph
     :param work_id: id for the start node
-    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :param rand: number generator with a fixed seed, or None for no fixed seed
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
@@ -295,14 +295,14 @@ def get_start_stage(work_id: str | None = "", rand: Random | None = None) -> Gra
     return GraphNode(work, [])
 
 
-def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = "",
+def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = None,
                      rand: Random | None = None) -> GraphNode:
     """
     Creates a service vertex necessary for constructing the graph of works,
     which is the only vertex without children in the graph
     :param parents: a list of all non-service nodes that do not have children
     :param work_id: id for the start node
-    :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :param rand: number generator with a fixed seed, or None for no fixed seed
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)

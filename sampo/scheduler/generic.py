@@ -178,4 +178,5 @@ class GenericScheduler(Scheduler):
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
+        a = 0
         return node2swork.values(), assigned_parent_time, timeline

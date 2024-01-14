@@ -15,37 +15,37 @@ from sampo.utilities.visualization import VisualizationMode
 def setup_lg():
     platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
                               ResourceStorageUnit({
-                                  'mat1': 100000,
+                                  'mat1': 60,
                                   'mat2': 150,
                                   'mat3': 120
                               }))
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
                               ResourceStorageUnit({
-                                  'mat1': 70000,
+                                  'mat1': 60,
                                   'mat2': 80,
                                   'mat3': 90
                               }))
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
                               ResourceStorageUnit({
-                                  'mat1': 110000,
+                                  'mat1': 60,
                                   'mat2': 130,
                                   'mat3': 170
                               }))
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
                               ResourceStorageUnit({
-                                  'mat1': 180000,
+                                  'mat1': 60,
                                   'mat2': 190,
                                   'mat3': 200
                               }))
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
                             ResourceStorageUnit({
-                                'mat1': 500000,
+                                'mat1': 12000,
                                 'mat2': 500,
                                 'mat3': 500
                             }))
     holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
                             ResourceStorageUnit({
-                                'mat1': 705000,
+                                'mat1': 1000,
                                 'mat2': 750,
                                 'mat3': 800
                             }))

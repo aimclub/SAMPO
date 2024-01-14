@@ -120,7 +120,7 @@ class SupplyTimeline:
         if sum(mat.count for mat in mat_request) == 0:
             return start_time
 
-        _, time = self.supply_resources(node, landscape, start_time, mat_request)
+        _, time = self.supply_resources(node, landscape, start_time, materials)
         return time
 
     def _find_best_holders_by_dist(self, landscape: LandscapeConfiguration, node: LandGraphNode,
@@ -175,13 +175,21 @@ class SupplyTimeline:
         :return: material deliveries, the time when resources are ready
         """
         delivery = MaterialDelivery(node.id)
+        mat_request = self._request_materials(node, materials, deadline)
         land_node = node.platform
         # if a job doesn't need materials
-        if not materials or sum([mat.count for mat in materials]) == 0:
+        if not mat_request or sum([mat.count for mat in mat_request]) == 0:
+            if update and not node.platform is None:
+                update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
+                for mat in materials:
+                    update_timeline_info[node.platform.id].append((mat.name, mat.count, deadline, Time.inf()))
+
+                self._update_timeline(update_timeline_info)
+
             return MaterialDelivery(node.id), deadline
 
         # get the best depot that has enough materials and get its access start time (absolute value)
-        depots = self._find_best_holders_by_dist(landscape, land_node, materials)
+        depots = self._find_best_holders_by_dist(landscape, land_node, mat_request)
         depot_id = None
         min_depot_time = Time.inf()
 
@@ -194,32 +202,33 @@ class SupplyTimeline:
         # find time, that depot could provide resources
         for depot in depots:
             depot_time = Time(0)
-            for mat in materials:
+            for mat in mat_request:
                 depot_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
                                                                 mat.count,
                                                                 Time(0),
                                                                 Time.inf()),
                                  depot_time)
             # get vehicles from the depot
-            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, materials)
+            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, mat_request)
             vehicles: list[Vehicle] = self._holder_id2holder[depot].vehicles[:vehicle_count_need]
 
-            finish_delivery_time, deliveries, exec_return_time = \
+            delivery_time, deliveries, exec_return_time = \
                 self._get_route_time(self._holder_id2holder[depot].node,
                                      land_node, vehicles, landscape, depot_time)
 
             depot_time = max(depot_time, self._find_earliest_start_time(vehicle_state,
                                                                         vehicle_count_need,
                                                                         depot_time,
-                                                                        finish_delivery_time + exec_return_time))
+                                                                        delivery_time + exec_return_time))
             if min_depot_time > depot_time:
-                finish_vehicle_time = finish_delivery_time + exec_return_time
+                finish_vehicle_time = delivery_time + exec_return_time
                 min_depot_time = depot_time
+                finish_delivery_time = delivery_time
                 depot_id = depot
 
                 road_deliveries = deliveries
 
-        for mat in materials:
+        for mat in mat_request:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time)
 
         if not update:
@@ -227,13 +236,28 @@ class SupplyTimeline:
 
         update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
 
+        # add update info about depot
         update_timeline_info[depot_id] = [(mat.name, mat.count, min_depot_time, min_depot_time + Time.inf()) for mat in
-                                          materials]
+                                          mat_request]
         update_timeline_info[depot_id].append(('vehicles', len(vehicles), min_depot_time, finish_vehicle_time))
 
+        # add update info about roads
         for delivery_dict in road_deliveries:
             for road_id, res_info in delivery_dict.items():
                 update_timeline_info[road_id].append(res_info)
+
+        # add update info about platform
+        platform_state = self._timeline[node.platform.id]
+        for mat in materials:
+            ind = platform_state[mat.name].bisect_right(finish_delivery_time) - 1
+            available_mat = platform_state[mat.name][ind].available_workers_count
+            if mat.name not in set(m.name for m in mat_request):
+                update_timeline_info[node.platform.id].append((mat.name, mat.count,
+                                                               finish_delivery_time, Time.inf()))
+            else:
+                update_timeline_info[node.platform.id].append((mat.name,
+                                                               available_mat - node.platform.resource_storage_unit.capacity[mat.name] + mat.count,
+                                                               finish_delivery_time, Time.inf()))
 
         self._update_timeline(update_timeline_info)
 

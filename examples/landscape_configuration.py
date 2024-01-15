@@ -165,4 +165,5 @@ project = SchedulingPipeline.create() \
     .contractors(contractors) \
     .landscape(landscape) \
     .schedule(scheduler) \
-    .finish()
+    .visualization('2023-01-01') \
+    .show_gant_chart()

@@ -149,6 +149,8 @@ class LandscapeConfiguration:
                     continue
 
                 for road in self.lg.nodes[v].roads:
+                    if road.id not in roads_available_set:
+                        continue
                     d = dist + road.weight
                     finish_ind = self._node2ind[road.finish]
                     if d < distances[finish_ind] and road.id in roads_available_set:
@@ -170,13 +172,13 @@ class LandscapeConfiguration:
         to_ind = self._node2ind[to_node]
         dijkstra(to_ind)
 
-        path = [to_ind]
-        to = to_ind
-        while path_mx[from_ind][to] != from_ind:
-            path.append(path_mx[from_ind][to])
-            to = path_mx[from_ind][to]
-        path.append(from_ind)
-        return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]
+        path = [from_ind]
+        fr = from_ind
+        while path_mx[to_ind][fr] != to_ind:
+            path.append(path_mx[to_ind][fr])
+            fr = path_mx[to_ind][fr]
+        path.append(to_ind)
+        return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 
     @cached_property
     def holders(self) -> list[ResourceHolder]:
@@ -247,14 +249,14 @@ class MaterialDelivery:
         self.id = work_id
         self.delivery = {}
 
-    def add_delivery(self, name: str, count: int, start_time: 'Time', finish_time: 'Time'):
+    def add_delivery(self, name: str, count: int, start_time: 'Time', finish_time: 'Time', from_holder: str):
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             material_delivery = []
             self.delivery[name] = material_delivery
-        material_delivery.append((count, start_time, finish_time))
+        material_delivery.append((count, start_time, finish_time, from_holder))
 
-    def add_deliveries(self, name: str, deliveries: list[tuple['Time', int]]):
+    def add_deliveries(self, name: str, deliveries: list[tuple[int, 'Time', 'Time', str]]):
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             self.delivery[name] = deliveries

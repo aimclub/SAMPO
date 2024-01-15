@@ -1,6 +1,6 @@
-import random
 import uuid
 
+import pytest
 from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
@@ -23,19 +23,17 @@ def test_init_resource_structure(setup_timeline):
         for state in res_holder_info.values():
             assert len(state) == 1
 
-
-def test_supply_resources(setup_scheduler_parameters):
+def test_supply_resources(setup_scheduler_parameters, setup_rand):
     wg, contractors, landscape = setup_scheduler_parameters
+    if wg.vertex_count > 20:
+        pytest.skip('Not manual graph')
     timeline = SupplyTimeline(landscape)
 
     ordered_nodes = prioritization(wg, DefaultWorkEstimator())
-    ordered_nodes[-1].platform = landscape.platforms[1]
-    ordered_nodes[-2].platform = landscape.platforms[2]
-    ordered_nodes[-3].platform = landscape.platforms[1]
-    ordered_nodes[-4].platform = landscape.platforms[3]
-    ordered_nodes[-5].platform = landscape.platforms[0]
-    for nd in ordered_nodes[:-5]:
-        nd.platform = landscape.platforms[random.randint(0, len(landscape.platforms) - 1)]
+    for nd in ordered_nodes:
+        if nd.work_unit.is_service_unit:
+            continue
+        nd.platform = landscape.platforms[setup_rand.randint(0, len(landscape.platforms) - 1)]
 
     parent_time = Time(0)
     for node in ordered_nodes[-1::-1]:

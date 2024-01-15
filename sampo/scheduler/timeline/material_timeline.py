@@ -53,50 +53,46 @@ class SupplyTimeline:
 
     def can_schedule_at_the_moment(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
                                    materials: list[Material], exec_time: Time) -> bool:
-        """
-        1) получить список подходящих складов
-        2) пробежаться по этим складам и посмотреть, что в момент времени "start_time + exec_time" будут доступны все требуемые материалы
-            2.1) что будет доступно достаточное кол-во машин
-            2.2) что будут доступны дороги, по которым можно будет доставить ресурсы
-        """
         holders = self._find_best_holders_by_dist(landscape, node.platform, materials)
+        finish_delivery_time = Time(-1)
 
-        for depot_id in holders:
-            depot_state = self._timeline[depot_id]
+        while finish_delivery_time < exec_time:
+            for depot_id in holders:
+                depot_state = self._timeline[depot_id]
 
-            not_enough_mat = False
-            # check whether remaining materials volume is enough for request
-            for mat in materials:
-                right_index = depot_state[mat.name].bisect_right(start_time + exec_time)
-                if depot_state[mat.name][right_index] < mat.count:
-                    not_enough_mat = True
-                    break
-            if not_enough_mat:
-                continue
+                not_enough_mat = False
+                # check whether remaining materials volume is enough for request
+                for mat in materials:
+                    right_index = depot_state[mat.name].bisect_right(start_time + exec_time)
+                    if depot_state[mat.name][right_index] < mat.count:
+                        not_enough_mat = True
+                        break
+                if not_enough_mat:
+                    continue
 
-            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot_id, materials)
-            start_ind = vehicle_state.bisect_right(start_time)
-            finish_ind = vehicle_state.bisect_right(start_time + exec_time)
+                vehicle_state, vehicle_count_need = self._get_vehicle_info(depot_id, materials)
+                start_ind = vehicle_state.bisect_right(start_time)
+                finish_ind = vehicle_state.bisect_right(start_time + exec_time)
 
-            not_enough_vehicles = False
-            for ind in range(start_ind, finish_ind + 1):
-                if vehicle_state[ind].available_workers_count < vehicle_count_need:
-                    not_enough_vehicles = True
-                    break
-            if not_enough_vehicles:
-                continue
+                not_enough_vehicles = False
+                for ind in range(start_ind, finish_ind + 1):
+                    if vehicle_state[ind].available_workers_count < vehicle_count_need:
+                        not_enough_vehicles = True
+                        break
+                if not_enough_vehicles:
+                    continue
 
-            road_available = []
-            for road in landscape.roads:
-                road_state = self._timeline[road.id]['vehicles']
-                start_ind = road_state.bisect_right(start_time)
-                right_index = road_state.bisect_right(start_time + exec_time)
-                if start_ind != right_index:
-                    road_available.append(road)
+                road_available = []
+                for road in landscape.roads:
+                    road_state = self._timeline[road.id]['vehicles']
+                    start_ind = road_state.bisect_right(start_time)
+                    right_index = road_state.bisect_right(start_time + exec_time)
+                    if start_ind != right_index:
+                        road_available.append(road)
 
-            if not landscape.construct_route(self._holder_id2holder[depot_id].node, node.platform, road_available):
-                continue
-            return True
+                if not landscape.construct_route(self._holder_id2holder[depot_id].node, node.platform, road_available):
+                    continue
+                return True
         return False
 
     def _request_materials(self, node: GraphNode, materials: list[Material], start_time: Time) -> list[Material]:
@@ -179,7 +175,7 @@ class SupplyTimeline:
         land_node = node.platform
         # if a job doesn't need materials
         if not mat_request or sum([mat.count for mat in mat_request]) == 0:
-            if update and not node.platform is None:
+            if update and node.platform is not None:
                 update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
                 for mat in materials:
                     update_timeline_info[node.platform.id].append((mat.name, mat.count, deadline, Time.inf()))
@@ -195,41 +191,45 @@ class SupplyTimeline:
 
         vehicles = []
         finish_vehicle_time = Time(0)
-        finish_delivery_time = Time(0)
+        start_delivery_time = Time(-1)
+        finish_delivery_time = Time(-1)
 
         road_deliveries = []
 
         # find time, that depot could provide resources
-        for depot in depots:
-            depot_time = Time(0)
-            for mat in mat_request:
-                depot_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
-                                                                mat.count,
-                                                                Time(0),
-                                                                Time.inf()),
-                                 depot_time)
-            # get vehicles from the depot
-            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, mat_request)
-            vehicles: list[Vehicle] = self._holder_id2holder[depot].vehicles[:vehicle_count_need]
+        while finish_delivery_time < deadline:
+            start_delivery_time += 1
+            local_min_depot_time = Time.inf()
+            for depot in depots:
+                depot_time = Time(0)
+                for mat in mat_request:
+                    depot_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
+                                                                    mat.count,
+                                                                    start_delivery_time,
+                                                                    Time.inf()),
+                                     depot_time)
+                # get vehicles from the depot
+                vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, mat_request)
+                vehicles: list[Vehicle] = self._holder_id2holder[depot].vehicles[:vehicle_count_need]
 
-            delivery_time, deliveries, exec_return_time = \
-                self._get_route_time(self._holder_id2holder[depot].node,
-                                     land_node, vehicles, landscape, depot_time)
+                delivery_time, deliveries, exec_return_time = \
+                    self._get_route_time(self._holder_id2holder[depot].node,
+                                         land_node, vehicles, landscape, depot_time)
 
-            depot_time = max(depot_time, self._find_earliest_start_time(vehicle_state,
-                                                                        vehicle_count_need,
-                                                                        depot_time,
-                                                                        delivery_time + exec_return_time))
-            if min_depot_time > depot_time:
-                finish_vehicle_time = delivery_time + exec_return_time
-                min_depot_time = depot_time
-                finish_delivery_time = delivery_time
-                depot_id = depot
+                depot_time = max(depot_time, self._find_earliest_start_time(vehicle_state,
+                                                                            vehicle_count_need,
+                                                                            depot_time,
+                                                                            delivery_time + exec_return_time))
+                if local_min_depot_time > depot_time:
+                    finish_vehicle_time = delivery_time + exec_return_time
+                    min_depot_time = local_min_depot_time = depot_time
+                    finish_delivery_time = delivery_time
+                    depot_id = depot
 
-                road_deliveries = deliveries
+                    road_deliveries = deliveries
 
         for mat in mat_request:
-            delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time)
+            delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, self._holder_id2holder[depot_id].name)
 
         if not update:
             return delivery, finish_delivery_time
@@ -268,41 +268,40 @@ class SupplyTimeline:
                                   required_resources: int,
                                   parent_time: Time,
                                   exec_time: Time) -> Time:
-        current_state_time = parent_time
+        current_start_time = parent_time
         base_ind = state.bisect_right(parent_time) - 1
 
-        while state[base_ind:]:
-            end_ind = state.bisect_right(current_state_time + exec_time)
+        last_time = state[-1].time
+
+        while current_start_time <= last_time:
+            end_ind = state.bisect_right((current_start_time + exec_time, -1, EventType.INITIAL))
 
             not_enough_resources = False
-            for idx in range(end_ind - 1, base_ind - 2, -1):
+            for idx in range(end_ind - 1, base_ind - 1, -1):
                 if state[idx].available_workers_count < required_resources:
-                    base_ind = max(idx, base_ind) + 1
+                    base_ind = idx + 1
                     not_enough_resources = True
                     break
 
             if not not_enough_resources:
                 break
 
-            if base_ind >= len(state):
-                current_state_time = max(parent_time, state[-1].time + 1)
-                break
+            current_start_time = state[base_ind].time
 
-            current_state_time = state[base_ind].time
-
-        return current_state_time
+        return current_start_time
 
     def _get_route_time(self, holder_node: LandGraphNode, node: LandGraphNode, vehicles: list[Vehicle],
                         landscape: LandscapeConfiguration,
                         start_holder_time: Time) -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]], Time]:
         def move_vehicles(from_node: LandGraphNode,
                           to_node: LandGraphNode,
-                          _parent_time: Time,
+                          parent_time: Time,
                           batch_size: int):
             road_delivery: dict[str, tuple[str, int, Time, Time]] = {}
-            parent_time = _parent_time
+            finish_time = parent_time
 
-            route = landscape.get_route(from_node, to_node)
+            available_roads = [road for road in landscape.roads if road.vehicles >= batch_size]
+            route = landscape.construct_route(from_node, to_node, available_roads)
 
             # check time availability of each part of 'route'
             for road_id in route:
@@ -310,13 +309,13 @@ class SupplyTimeline:
                 for i in range(len(vehicles) // batch_size):
                     start_time = self._find_earliest_start_time(state=self._timeline[road_id]['vehicles'],
                                                                 required_resources=batch_size,
-                                                                parent_time=parent_time,
+                                                                parent_time=finish_time,
                                                                 exec_time=road_overcome_time)
                     road_delivery[road_id] = ('vehicles', batch_size,
                                               start_time, start_time + Time(road_overcome_time))
-                    parent_time = start_time + road_overcome_time
+                    finish_time = start_time + road_overcome_time
 
-            return parent_time, road_delivery, parent_time - _parent_time
+            return finish_time, road_delivery, finish_time - parent_time
 
         _id2road: dict[str, Road] = {road.id: road for road in landscape.roads}
 
@@ -340,22 +339,21 @@ class SupplyTimeline:
                 res_name, res_count, start_time, end_time = res_info
                 res_state = res_holder_state[res_name]
                 start_idx = res_state.bisect_right(start_time)
-                end_idx = res_state.bisect_right(end_time)
+                end_idx = res_state.bisect_left((end_time, -1, EventType.INITIAL))
                 available_res_count = res_state[start_idx - 1].available_workers_count
 
-                for event in res_state[start_idx: end_idx + 1]:
+                for event in res_state[start_idx: end_idx]:
                     assert event.available_workers_count >= res_count
                     event.available_workers_count -= res_count
 
                 assert available_res_count >= res_count
 
-                if start_idx < end_idx:
-                    event: ScheduleEvent = res_state[end_idx - 1]
-                    end_count = event.available_workers_count + res_count
+                end_idx = res_state.bisect_right(end_time) - 1
+                if res_state[end_idx].time == end_time:
+                    end_count = res_state[end_idx].available_workers_count
                 else:
-                    assert res_state[0].available_workers_count >= available_res_count
-                    end_count = available_res_count
+                    end_count = res_state[end_idx].available_workers_count + res_count
 
                 res_state.add(
                     ScheduleEvent(int(start_idx), EventType.START, start_time, None, available_res_count - res_count))
-                res_state.add(ScheduleEvent(int(end_time), EventType.END, end_time, None, end_count))
+                res_state.add(ScheduleEvent(int(start_idx), EventType.END, end_time, None, end_count))

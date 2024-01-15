@@ -160,7 +160,8 @@ class MomentumTimeline(Timeline):
                     self._timeline[contractor_id], inseparable_chain, spec, st, exec_time, worker_team
                 )
 
-                max_material_time = self._material_timeline.find_min_material_time(node.id,
+                max_material_time = self._material_timeline.find_min_material_time(node,
+                                                                                   self.landscape,
                                                                                    start_time,
                                                                                    node.work_unit.need_materials())
                 max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
@@ -359,8 +360,8 @@ class MomentumTimeline(Timeline):
                     if not state[0].available_workers_count >= available_workers_count:
                         return False
 
-            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
-                                                                      node.work_unit.need_materials()):
+            if not self._material_timeline.can_schedule_at_the_moment(node, self.landscape, start_time,
+                                                                      node.work_unit.need_materials(), exec_time):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
                 return False

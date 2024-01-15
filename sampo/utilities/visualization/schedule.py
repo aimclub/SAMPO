@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 from matplotlib.figure import Figure
 
+from sampo.schemas import Time
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 
 
@@ -32,6 +33,42 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     schedule_finish = schedule_dataframe.loc[:, 'finish'].max()
     visualization_start_delta = timedelta(days=2)
     visualization_finish_delta = timedelta(days=(schedule_finish - schedule_start).days // 3)
+
+    def create_delivery_row(i, mat_name, material) -> dict:
+        return {'idx': i,
+                'contractor': material[-1],
+                'cost': 0,
+                'volume': material[0],
+                'duration': 0,
+                'measurement': 'unit',
+                'workers_dict': '',
+                'workers': '',
+                'task_name_mapped': mat_name,
+                'task_name': '',
+                'zone_information': '',
+                'start': timedelta(material[1].value) + schedule_start,
+                'finish': timedelta(material[2].value) + schedule_start}
+
+    sworks = schedule_dataframe['scheduled_work_object'].copy()
+    idx = schedule_dataframe['idx'].copy()
+
+    a = sworks[0].materials.delivery.values()
+
+    def get_delivery_info(swork) -> str:
+        return '<br>' + '<br>'.join([f'{mat[0][0]}: {mat[0][1]}' for mat in swork.materials.delivery.values()])
+
+    schedule_dataframe['material_information'] = sworks.apply(get_delivery_info)
+
+    mat_delivery_row = []
+
+    # create material delivery information
+    for i, swork in zip(idx, sworks):
+        delivery = swork.materials.delivery
+        if not delivery:
+            mat_delivery_row.append(create_delivery_row(0, '', (0, Time(0), Time(0), '')))
+        for name, mat_info in delivery.items():
+            if delivery:
+                mat_delivery_row.append(create_delivery_row(i, name, mat_info[0]))
 
     def create_zone_row(i, zone_names, zone) -> dict:
         return {'idx': i,
@@ -67,7 +104,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
         for zone in swork.zones_post:
             access_cards.append(create_zone_row(i, zone_names, zone))
 
-    schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards)])
+    schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards), pd.DataFrame.from_records(mat_delivery_row)])
 
     schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
         .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
@@ -94,7 +131,8 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                                   'volume': True,
                                   'measurement': True,
                                   'workers': True,
-                                  'zone_information': True},
+                                  'zone_information': True,
+                                  'material_information': True},
                       title=f"{'Project tasks - Gant chart'}",
                       category_orders={'idx': list(schedule_dataframe.idx)},
                       text='task_name')

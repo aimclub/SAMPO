@@ -297,7 +297,7 @@ class JustInTimeTimeline(Timeline):
                                                  start_end_time=(c_st, new_finish_time),
                                                  workers=workers,
                                                  contractor=contractor,
-                                                 materials=[deliveries])
+                                                 materials=deliveries)
             # change finish time for using workers
             c_ft = new_finish_time
 

@@ -1,5 +1,4 @@
 import uuid
-import uuid
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -107,9 +106,9 @@ def setup_lg():
                                 'mat3': 800
                             }))
     platform1.add_neighbours([(platform3, 1.0, 2)])
-    platform2.add_neighbours([(platform4, 2.0, 1)])
+    platform2.add_neighbours([(platform4, 2.0, 2)])
     platform3.add_neighbours([(holder1, 4.0, 2), (holder2, 3.0, 3)])
-    platform4.add_neighbours([(holder1, 5.0, 1), (holder2, 7.0, 2)])
+    platform4.add_neighbours([(holder1, 5.0, 2), (holder2, 7.0, 2)])
     holder1.add_neighbours([(holder2, 6.0, 2)])
 
     return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]

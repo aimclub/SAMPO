@@ -23,10 +23,10 @@ class ResourceHolder(ResourceSupply):
         self._materials = materials
 
     @property
-    def productivity(self):
+    def productivity(self) -> IntervalGaussian:
         return self._productivity
 
-    def copy(self):
+    def __copy__(self) -> 'ResourceHolder':
         return ResourceHolder(self.id, self.name, self.productivity, deepcopy(self._materials))
 
     def get_available_resources(self) -> list[tuple[int, str]]:
@@ -39,10 +39,10 @@ class Road(ResourceSupply):
         self._throughput = throughput
 
     @property
-    def throughput(self):
+    def throughput(self) -> IntervalGaussian:
         return self._throughput
 
-    def copy(self):
+    def __copy__(self) -> 'Road':
         return Road(self.id, self.name, self.throughput)
 
     def get_available_resources(self) -> list[tuple[int, str]]:

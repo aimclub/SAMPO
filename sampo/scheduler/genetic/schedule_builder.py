@@ -7,11 +7,11 @@ from deap import tools
 from deap.base import Toolbox
 
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
-from sampo.scheduler.genetic.operators import (init_toolbox, ChromosomeType, FitnessFunction, TimeFitness,
-                                               ResourcesFitness)
+from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor, WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
@@ -187,7 +187,7 @@ def build_schedule(wg: WorkGraph,
         # save best individuals
         hof = tools.HallOfFame(1, similar=compare_individuals)
 
-        fitness_f = fitness_constructor(native.evaluate)
+        fitness_f = fitness_constructor(native.evaluate) if not have_deadline else TimeFitness(native.evaluate)
 
         evaluation_start = time.time()
 
@@ -264,7 +264,7 @@ def build_schedule(wg: WorkGraph,
 
         if have_deadline:
 
-            fitness_resource = ResourcesFitness(native.evaluate)
+            fitness_resource = fitness_constructor(native.evaluate)
 
             if best_fitness > deadline:
                 print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
@@ -366,6 +366,7 @@ def build_schedule(wg: WorkGraph,
         if verbose:
             print(f'Final time: {best_fitness}')
             print(f'Generations processing took {(time.time() - start) * 1000} ms')
+            print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
             print(f'Evaluation time: {evaluation_time * 1000}')
 
         best_chromosome = hof[0]
@@ -377,5 +378,5 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]):
+def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]) -> bool:
     return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()

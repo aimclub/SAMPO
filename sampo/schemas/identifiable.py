@@ -13,5 +13,5 @@ class Identifiable:
     id: str
     name: Optional[str]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.id)

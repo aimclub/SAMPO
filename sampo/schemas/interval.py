@@ -106,7 +106,11 @@ class IntervalGaussian(Interval):
         :return kind: the random float
         """
         rand = rand or self.rand
-        return rand.gauss(self.mean, self.sigma)
+        value = rand.gauss(self.mean, self.sigma)
+        value = max(value, self.min_val)
+        value = min(value, self.max_val)
+        return value
+
 
     def rand_int(self, rand: Optional[random.Random] = None) -> int:
         """

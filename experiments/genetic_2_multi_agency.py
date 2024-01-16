@@ -1,9 +1,10 @@
 from random import Random
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
+from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.time import Time
 
 r_seed = 231 + Random(0).randint(0, 1000000)
@@ -13,7 +14,7 @@ rand = Random(r_seed)
 print(f'Seed: {r_seed}')
 
 
-def obstruction_getter(i: int):
+def obstruction_getter(i: int) -> Obstruction | None:
     return None
 
 

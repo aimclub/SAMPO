@@ -12,7 +12,6 @@ from sampo.schemas.serializable import AutoJSONSerializable
 from sampo.schemas.types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
-WorkerContractorPool = dict[WorkerName, dict[ContractorName, Worker]]
 DEFAULT_CONTRACTOR_CAPACITY = 25
 
 
@@ -32,76 +31,23 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
         for w in self.workers.values():
             w.contractor_id = self.id
 
-    def __hash__(self):
+    def __hash__(self) -> str:
         return hash(self.id)
 
     @custom_serializer('workers')
-    def serialize_workers(self, value):
+    def serialize_workers(self, value) -> list[dict]:
         return [{'key': k, 'val': v._serialize()} for k, v in value.items()]
 
     @custom_serializer('equipments')
-    def serialize_equipment(self, value):
+    def serialize_equipment(self, value) -> []:
         return {k: v._serialize() for k, v in value.items()}
 
     @classmethod
     @custom_serializer('workers', deserializer=True)
-    def deserialize_workers(cls, value):
+    def deserialize_workers(cls, value) -> dict[str, Worker]:
         return {i['key']: Worker._deserialize(i['val']) for i in value}
 
     @classmethod
     @custom_serializer('equipments', deserializer=True)
-    def deserialize_equipment(cls, value):
+    def deserialize_equipment(cls, value) -> dict[str,Equipment]:
         return {k: Equipment._deserialize(v) for k, v in value.items()}
-
-
-# TODO move from schemas
-def get_worker_contractor_pool(contractors: Iterable[Contractor]) -> WorkerContractorPool:
-    """
-    Gets agent dictionary from contractors list.
-    Alias for frequently used functionality.
-
-    :param contractors: list of all the considered contractors
-    :return: Dictionary of workers by worker name, next by contractor id
-    """
-    agents = defaultdict(dict)
-    for contractor in contractors:
-        for name, worker in contractor.workers.items():
-            agents[name][contractor.id] = worker.copy()
-    return agents
-
-
-# TODO move from schemas
-def get_contractor_for_resources_schedule(resources: Union[DataFrame, list[dict[str, int]]],
-                                          contractor_capacity: int = DEFAULT_CONTRACTOR_CAPACITY,
-                                          contractor_id: str = None,
-                                          contractor_name: str = "") \
-        -> 'Contractor':
-    """
-    Generates a contractor, which satisfies the provided resources
-    :param resources: list of resource requirements for each task
-    :param contractor_id: ID of the new contractor. If None, a new UUID4 is generated
-    :param contractor_name: Name of the new contractor. If None, an empty string should be passed
-    :param contractor_capacity: Capacity of the generated contractor. It influences scale of resource capacities
-    :return: A new contractor of the given type
-    """
-
-    def aggregate_resources(resources_in: DataFrame, contractor_capacity_in: int) -> Series:
-        """
-        Aggregates resources based on the contractor's capacity
-        :param resources_in: DataFrame with the (possibly sparse) resource grid
-        :param contractor_capacity_in: Capacity of the generated contractor
-        :return: Series with resources count
-        """
-        min_contractor = resources_in.max(axis=0, skipna=True, numeric_only=True)
-
-        return np.ceil(min_contractor * contractor_capacity_in / 10)
-
-    resources_df = resources if isinstance(resources, DataFrame) else DataFrame(resources)
-    contractor_id = contractor_id if contractor_id is not None else str(uuid4().hex)
-
-    # TODO: process equipment
-    return Contractor(id=contractor_id,
-                      name=contractor_name,
-                      workers={item[0]: Worker(str(i), str(item[0]), int(item[1]), contractor_id)
-                               for i, item in enumerate(aggregate_resources(resources_df, contractor_capacity).items())},
-                      equipments=dict())

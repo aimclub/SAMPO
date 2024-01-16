@@ -4,19 +4,20 @@ from typing import IO
 
 from pathos.multiprocessing import ProcessingPool
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
 from sampo.scheduler.topological.base import TopologicalScheduler
+from sampo.scheduler.utils.obstruction import Obstruction
 
 r_seed = Random().randint(0, 100000)
 p_rand = SimpleSynthetic(rand=r_seed)
 rand = Random(r_seed)
 
 
-def obstruction_getter(i: int):
+def obstruction_getter(i: int) -> Obstruction | None:
     return None
     # return OneInsertObstruction.from_static_graph(0.5, rand, p_rand.work_graph(SyntheticGraphType.SEQUENTIAL, 10))
 

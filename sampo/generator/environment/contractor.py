@@ -66,9 +66,11 @@ def get_contractor_with_equal_proportions(number_of_workers_in_contractors: int 
 
 def get_contractor(pack_worker_count: float,
                    sigma_scaler: float | None = 0.1,
-                   index: int = 0,
                    worker_proportions: dict[str, int] | None = WORKER_PROPORTIONS,
-                   available_worker_types: list | None = None, rand: Random | None = None) -> Contractor:
+                   available_worker_types: list | None = None,
+                   rand: Random | None = None,
+                   contractor_id: str | None = None,
+                   contractor_name: str | None = None) -> Contractor:
     """Generates a contractor for a synthetic graph for a given resource scalar and generation parameters
 
     :param pack_worker_count: The number of resource sets
@@ -82,18 +84,14 @@ def get_contractor(pack_worker_count: float,
     :returns: the contractor
 
     """
-    contractor_id = uuid_str(rand)
+    contractor_id = contractor_id or uuid_str(rand)
 
     worker_counts = _get_stochastic_counts(pack_worker_count, sigma_scaler, worker_proportions,
                                            available_worker_types, rand)
 
-    workers = dict()
-    for name in worker_counts.keys():
-        # print(counts_classes, worker_counts[name])
-        # counts_classes[START_BASIC_CLASS] += worker_proportions[name]
-        # counts_classes[START_BASIC_CLASS] += max((worker_counts[name] - sum(counts_classes)), 0)
-        workers[name] = Worker(uuid_str(rand), name,
-                               contractor_id=contractor_id,
-                               count=worker_counts[name])
+    workers = {name: Worker(uuid_str(rand), name,
+                            contractor_id=contractor_id,
+                            count=worker_counts[name])
+               for name, count in worker_counts.items()}
 
-    return Contractor(contractor_id, f'Contractor {contractor_id}', workers, {})
+    return Contractor(contractor_id, contractor_name, workers, {})

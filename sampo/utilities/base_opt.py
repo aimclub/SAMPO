@@ -10,7 +10,7 @@ Contains base optimization methods
 
 
 # float version
-def dichotomy_float(down: float, up: float, func, eps: float = 0.000001):
+def dichotomy_float(down: float, up: float, func, eps: float = 0.000001) -> float:
     delta = eps / 5
     while up - down > eps:
         x1 = (down + up - delta) / 2
@@ -24,7 +24,7 @@ def dichotomy_float(down: float, up: float, func, eps: float = 0.000001):
 
 
 # int version
-def dichotomy_int(down: int, up: int, func: Callable[[int], Time]):
+def dichotomy_int(down: int, up: int, func: Callable[[int], Time]) -> int:
     while up - down > 2:
         x1 = (down + up - 1) >> 1
         x2 = (down + up + 1) >> 1
@@ -49,7 +49,7 @@ def coordinate_descent(down: np.ndarray, up: np.ndarray,
         if optimize_array and not optimize_array[i]:
             continue
 
-        def part(x):
+        def part(x) -> Time:
             cur[i] = x
             return fitness(cur)
 

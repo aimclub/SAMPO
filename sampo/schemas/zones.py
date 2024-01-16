@@ -40,16 +40,17 @@ class DefaultZoneStatuses(ZoneStatuses):
         return 3
 
     def match_status(self, status_to_check: int, required_status: int) -> bool:
-        return required_status == 0 or status_to_check == 0 or status_to_check == required_status
+        return required_status == 0 or status_to_check == required_status
 
 
 @dataclass
 class ZoneConfiguration:
     start_statuses: dict[str, int] = field(default_factory=dict)
+    end_statuses: dict[str, int] = field(default_factory=dict)
     time_costs: np.ndarray = field(default_factory=lambda: np.array([[]]))
     statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
-    def change_cost(self, from_status: int, to_status: int):
+    def change_cost(self, from_status: int, to_status: int) -> int:
         return self.time_costs[from_status, to_status]
 
 
@@ -60,3 +61,6 @@ class ZoneTransition(AutoJSONSerializable['ZoneTransition']):
     to_status: int
     start_time: Time
     end_time: Time
+
+    def __str__(self) -> str:
+        return f'Access card {self.name} status {self.from_status} -> {self.to_status}'

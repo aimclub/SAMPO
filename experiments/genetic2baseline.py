@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
@@ -8,7 +8,7 @@ from sampo.schemas.resources import Worker
 
 
 class BaselineGeneticScheduler(GeneticScheduler):
-    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]):
+    def generate_first_population(self, wg: WorkGraph, contractors: list[Contractor]) -> dict[str, ]:
         return {
             "heft_end": (None, None),
             "heft_between": (None, None),

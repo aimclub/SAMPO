@@ -12,7 +12,8 @@ from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor, get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -131,7 +132,8 @@ class GeneticScheduler(Scheduler):
         self._verbose = verbose
 
     @staticmethod
-    def generate_first_population(wg: WorkGraph, contractors: list[Contractor],
+    def generate_first_population(wg: WorkGraph,
+                                  contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                   spec: ScheduleSpec = ScheduleSpec(),
                                   work_estimator: WorkTimeEstimator = None,
@@ -144,13 +146,16 @@ class GeneticScheduler(Scheduler):
         :param wg: graph of works
         :param contractors:
         :param spec:
+        :param work_estimator:
+        :param deadline:
+        :param weights:
         :return:
         """
 
         if weights is None:
             weights = [2, 2, 1, 1, 1, 1]
 
-        def init_k_schedule(scheduler_class, k):
+        def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
             try:
                 return scheduler_class(work_estimator=work_estimator,
                                        resource_optimizer=AverageReqResourceOptimizer(k)) \
@@ -161,7 +166,7 @@ class GeneticScheduler(Scheduler):
                 return None, None, None
 
         if deadline is None:
-            def init_schedule(scheduler_class):
+            def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
                     return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors,
                                                                                    landscape=landscape), \
@@ -170,7 +175,7 @@ class GeneticScheduler(Scheduler):
                     return None, None, None
 
         else:
-            def init_schedule(scheduler_class):
+            def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
                     (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=work_estimator)

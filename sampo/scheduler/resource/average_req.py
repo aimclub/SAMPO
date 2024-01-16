@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 
 from sampo.scheduler.resource.base import ResourceOptimizer
-from sampo.schemas.contractor import WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 
@@ -38,10 +38,10 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
         """
 
         if optimize_array:
-            for i, worker in enumerate(worker_team):
-                if optimize_array[i]:
-                    worker.count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
+            for worker, up, down, optimize in zip(worker_team, up_border, down_border, optimize_array):
+                if optimize:
+                    worker.count = max(1, down) + int((up - down) / self.k)
         else:
             # TODO Remove max()
-            for i, worker in enumerate(worker_team):
-                worker.count = max(1, down_border[i]) + int((up_border[i] - down_border[i]) / self.k)
+            for worker, up, down in zip(worker_team, up_border, down_border):
+                worker.count = max(1, down) + int((up - down) / self.k)

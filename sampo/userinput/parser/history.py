@@ -1,19 +1,20 @@
 import datetime
+import math
 from typing import Tuple
 
 import numpy as np
 import pandas as pd
 
 from sampo.schemas.graph import EdgeType
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
-def get_all_connections(graph_df: pd.DataFrame, use_mapper: bool = False, mapper: NameMapper = None) \
+def get_all_connections(graph_df: pd.DataFrame,
+                        use_mapper: bool = False,
+                        mapper: NameMapper | None = None) \
         -> Tuple[dict[str, list], dict[str, list]]:
 
-    task_name_column = 'activity_name'
-    if 'granular_name' in graph_df:
-        task_name_column = 'granular_name'
+    task_name_column = 'granular_name'
 
     num_tasks = len(graph_df)
     # Get the upper triangular indices to avoid duplicate pairs
@@ -102,13 +103,18 @@ def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
         ffs21, ffs21_lags, ffs21_percent_lags
 
 
-def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=None):
+def get_all_seq_statistic(history_data: pd.DataFrame,
+                          graph_df: pd.DataFrame,
+                          use_model_name: bool = False,
+                          mapper: NameMapper | None = None):
     df_grouped = history_data.copy()
 
     if use_model_name:
         column_name = 'model_name'
     else:
-        column_name = 'granular_smr_name'
+        if 'granular_name' not in history_data.columns:
+            history_data['granular_name'] = [activity_name for activity_name in history_data['work_name']]
+        column_name = 'granular_name'
 
     df_grouped = df_grouped.groupby('upper_works')[column_name].apply(list).reset_index(name="Works")
     works1, works2 = get_all_connections(graph_df, use_model_name, mapper)
@@ -138,9 +144,9 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                     # Looking to see if this pair of works occurred within the same site in the historical data
                     if w1 in work_list['Works'] and w2 in work_list['Works']:
                         ind1 = history_data.loc[(history_data['upper_works'] == work_list['upper_works']) &
-                                                (history_data['granular_smr_name'] == w1)]
+                                                (history_data[column_name] == w1)]
                         ind2 = history_data.loc[(history_data['upper_works'] == work_list['upper_works']) &
-                                                (history_data['granular_smr_name'] == w2)]
+                                                (history_data[column_name] == w2)]
 
                         ind1_sorted = ind1.sort_values(by=['first_day', 'last_day']).reset_index(drop=True)
                         ind2_sorted = ind2.sort_values(by=['first_day', 'last_day']).reset_index(drop=True)
@@ -198,9 +204,9 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
                                                                       count])
                         else:
                             if order_con == 1:
-                                predecessors_info_dict[w2_id].append([w1_id, 'FS', -1, count])
+                                predecessors_info_dict[w2_id].append([w1_id, 'FS', 1.0, count])
                             else:
-                                predecessors_info_dict[w1_id].append([w2_id, 'FS', -1, count])
+                                predecessors_info_dict[w1_id].append([w2_id, 'FS', 1.0, count])
                     elif ss > ffs:
                         if order_con == 1:
                                 predecessors_info_dict[w2_id].append([w1_id, 'SS',
@@ -224,59 +230,97 @@ def get_all_seq_statistic(history_data, graph_df, use_model_name=False, mapper=N
 def set_connections_info(graph_df: pd.DataFrame,
                          history_data: pd.DataFrame,
                          use_model_name: bool = False,
-                         mapper=None,
+                         mapper: NameMapper | None = None,
                          change_connections_info: bool = False,
-                         expert_connections_info: bool = False) \
+                         all_connections: bool = False,
+                         id2ind: dict[str, int] = None) \
         -> pd.DataFrame:
     """
     Restore tasks' connection based on history data
 
-    :param: change_connections_info - whether existing connections should be modified based on connection history data
+    :param: change_connections_info - whether existing connections' information should be modified based on history data
     :param: expert_connections_info - whether existing connections should not be modified based on connection history data
     :return: repaired DataFrame
     """
-    tasks_df = graph_df.copy().set_index('activity_id', drop=False)
-    connections_dict = get_all_seq_statistic(history_data, graph_df, use_model_name, mapper)
-    # connections_dict = {'25809398': [], '25809830': [], '25809831': [['25809830', 'FFS', 0.01, 185], ['25809856', 'FS', -1, 3]], '25809833': [['25809830', 'FFS', 0.01, 276], ['25809831', 'FFS', 0.01, 1646]], '25813507': [['25809830', 'FFS', 0.01, 60], ['25809831', 'FFS', 0.01, 131], ['25809833', 'FFS', 0.01, 423]], '25809836': [['25809830', 'FFS', 0.01, 113], ['25809831', 'FFS', 0.01, 907], ['25809833', 'FFS', 0.01, 1310], ['25813507', 'FFS', 0.01, 278]], '25809832': [['25809830', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.01, 5], ['25809839', 'SS', 0.05, 6], ['25809852', 'FS', -1, 2], ['25809854', 'FS', -1, 2]], '25809837': [['25809831', 'FS', -1, 2], ['25809836', 'SS', 0.75, 2], ['25809835', 'FS', -1, 2]], '25809838': [['25809830', 'FS', -1, 3], ['25809831', 'FFS', 0.01, 259], ['25809833', 'FFS', 0.01, 379], ['25813507', 'FFS', 0.01, 111], ['25809836', 'FFS', 0.01, 500]], '25809839': [['25809830', 'FFS', 0.52, 25], ['25809831', 'FFS', 0.01, 345], ['25809833', 'FFS', 0.01, 419], ['25813507', 'FFS', 0.33, 61], ['25809836', 'FFS', 0.01, 497], ['25809838', 'FFS', 0.01, 372], ['25809835', 'FS', -1, 2], ['25809847', 'FFS', 0.27, 10], ['25809850', 'FS', -1, 1], ['25809852', 'FFS', 0.05, 97], ['25809848', 'FFS', 0.27, 10], ['25809853', 'FS', -1, 1], ['25809854', 'FFS', 0.05, 97]], '25809834': [['25809830', 'FS', -1, 5], ['25809831', 'FS', -1, 6], ['25809833', 'FS', -1, 7], ['25809836', 'FFS', 0.38, 13], ['25809838', 'FFS', 0.5, 8], ['25809839', 'SS', 0.68, 4], ['25809835', 'FS', -1, 18], ['25809840', 'FS', -1, 18], ['25809841', 'FFS', 0.86, 12]], '25809835': [['25809831', 'FFS', 0.04, 6], ['25809833', 'FFS', 0.04, 6], ['25809836', 'SS', 0.19, 8], ['25809838', 'SS', 0.5, 5], ['25809841', 'SS', 0.76, 1], ['25809852', 'FS', -1, 2], ['25809854', 'FS', -1, 2]], '25809842': [['25809830', 'FFS', 0.01, 6], ['25809831', 'FFS', 0.01, 2], ['25809833', 'FFS', 0.01, 8], ['25813507', 'FFS', 0.25, 1], ['25809836', 'FFS', 0.01, 9], ['25809832', 'FFS', 0.01, 1], ['25809839', 'FFS', 0.01, 2], ['25809840', 'SS', 0.79, 1], ['25809841', 'FS', -1, 11]], '25809843': [['25809832', 'FFS', 0.01, 23], ['25809839', 'FS', -1, 1], ['25809842', 'FFS', 0.06, 1], ['25809841', 'FS', -1, 4]], '25809844': [['25809832', 'FFS', 0.01, 4], ['25809843', 'SS', 0.03, 4], ['25809841', 'FS', -1, 2]], '25809840': [['25809830', 'FS', -1, 2], ['25809831', 'FFS', 0.01, 40], ['25809833', 'FFS', 0.01, 43], ['25809836', 'FFS', 0.17, 45], ['25809838', 'FS', -1, 8], ['25809839', 'FS', -1, 13], ['25809835', 'FFS', 0.01, 24], ['25809841', 'FS', -1, 19], ['25809847', 'FS', -1, 7], ['25809850', 'FFS', 0.12, 1], ['25809848', 'FS', -1, 7], ['25809853', 'FFS', 0.12, 1]], '25809841': [['25809830', 'FFS', 0.01, 202], ['25809831', 'FFS', 0.01, 334], ['25809833', 'FFS', 0.01, 446], ['25813507', 'FFS', 0.01, 105], ['25809836', 'FFS', 0.01, 358], ['25809832', 'SS', 0.32, 7], ['25809838', 'FFS', 0.01, 103], ['25809839', 'FFS', 0.01, 190], ['25809847', 'FS', -1, 17], ['25809850', 'FS', -1, 2], ['25809852', 'FS', -1, 2], ['25809848', 'FS', -1, 17], ['25809853', 'FS', -1, 2], ['25809854', 'FS', -1, 2], ['25809856', 'FS', -1, 1]], '25809399': [], '25809400': [], '25809847': [['25809830', 'FS', -1, 1], ['25809831', 'FFS', 0.01, 81], ['25809833', 'FFS', 0.01, 85], ['25809836', 'FFS', 0.01, 133], ['25809838', 'FFS', 0.01, 54], ['25809834', 'FS', -1, 2], ['25809850', 'FFS', 0.03, 68], ['25809853', 'FFS', 0.03, 68], ['25809856', 'FS', -1, 2]], '25809850': [['25809831', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.67, 8], ['25809838', 'FFS', 0.03, 44], ['25809856', 'FS', -1, 3]], '25809852': [['25809831', 'FFS', 0.68, 3], ['25809833', 'FFS', 0.68, 3], ['25809836', 'FFS', 0.46, 6], ['25809838', 'SS', 0.01, 2], ['25809847', 'FFS', 0.01, 9], ['25809850', 'FFS', 0.01, 265], ['25809857', 'FS', -1, 1], ['25809855', 'FFS', 0.16, 20]], '25809848': [['25809830', 'FS', -1, 1], ['25809831', 'FFS', 0.01, 81], ['25809833', 'FFS', 0.01, 85], ['25809836', 'FFS', 0.01, 133], ['25809838', 'FFS', 0.01, 54], ['25809834', 'FS', -1, 2], ['25809850', 'FFS', 0.01, 68], ['25809852', 'FFS', 0.01, 9], ['25809853', 'FFS', 0.03, 68], ['25809856', 'FS', -1, 2]], '25809853': [['25809831', 'FS', -1, 3], ['25809833', 'FS', -1, 3], ['25809836', 'FFS', 0.67, 8], ['25809838', 'FFS', 0.03, 44], ['25809852', 'FFS', 0.01, 265], ['25809856', 'FS', -1, 3]], '25809854': [['25809831', 'FFS', 0.68, 3], ['25809833', 'FFS', 0.68, 3], ['25809836', 'FFS', 0.46, 6], ['25809838', 'SS', 0.01, 2], ['25809847', 'FFS', 0.01, 9], ['25809850', 'FFS', 0.01, 265], ['25809848', 'FFS', 0.01, 9], ['25809853', 'FFS', 0.01, 265], ['25809857', 'FS', -1, 1], ['25809855', 'FFS', 0.16, 20]], '25809856': [['25809833', 'FS', -1, 43], ['25813507', 'FFS', 0.91, 33], ['25809836', 'FFS', 0.47, 41], ['25809838', 'FFS', 0.01, 7], ['25809839', 'FFS', 0.01, 12], ['25809835', 'FS', -1, 1]], '25809401': [], '25809857': [['25809855', 'FS', -1, 1]], '25809858': [['25809833', 'FS', -1, 1], ['25809836', 'FS', -1, 1], ['25809838', 'FS', -1, 1], ['25809839', 'FFS', 0.01, 56], ['25809841', 'SS', 0.36, 4], ['25809847', 'FFS', 0.01, 17], ['25809850', 'FFS', 0.93, 91], ['25809852', 'FS', -1, 89], ['25809848', 'FFS', 0.01, 17], ['25809853', 'FFS', 0.93, 91], ['25809854', 'FS', -1, 89], ['25809856', 'SS', 0.64, 1], ['25809857', 'FS', -1, 1]], '25809855': [['25809850', 'FFS', 0.12, 4], ['25809853', 'FFS', 0.12, 4]]}
 
-    predecessors_ids_lst, predecessors_types_lst, predecessors_lags_lst, predecessors_counts_lst = [], [], [], []
+    def update_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst):
+        """Updates existing connections with new data."""
+        for i, pred_id in enumerate(pred_ids_lst_tmp):
+            if pred_id in pred_ids_lst:
+                idx = pred_ids_lst.index(pred_id)
+                pred_types_lst_tmp[i] = pred_types_lst[idx]
+                pred_lags_lst_tmp[i] = pred_lags_lst[idx]
+                pred_counts_lst_tmp[i] = pred_counts_lst[idx]
+        return pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp
+
+    def append_new_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst):
+        """Appends new connections to the existing lists."""
+        for i, pred_id in enumerate(pred_ids_lst):
+            if pred_id not in pred_ids_lst_tmp and pred_id != '-1' and pred_id in all_works:
+                pred_ids_lst_tmp.append(pred_id)
+                pred_types_lst_tmp.append(pred_types_lst[i])
+                pred_lags_lst_tmp.append(pred_lags_lst[i])
+                pred_counts_lst_tmp.append(pred_counts_lst[i])
+        return pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp
+
+    tasks_df = graph_df.copy()
+
+    INF = np.iinfo(np.int64).max
+
+    # | ------ no changes ------- |
+    if not change_connections_info and all_connections:
+        tasks_df['counts'] = [[INF] * len(tasks_df['predecessor_ids'][i]) for i in range(tasks_df.shape[0])]
+
+        tasks_df['connection_types'] = tasks_df['connection_types'].apply(
+            lambda x: [EdgeType(elem) if elem != '-1' else EdgeType.FinishStart for elem in x]
+        )
+        return tasks_df
+
+    # | ----------- for cache data ----------- |
+    connections_dict = get_all_seq_statistic(history_data, graph_df, use_model_name, mapper)
+    # with open('dormitory.json', 'w') as f:
+    #     json.dump(connections_dict, f)
+
+    all_works = tasks_df['activity_id'].values
 
     for task_id, pred_info_lst in connections_dict.items():
+        if str(task_id) not in all_works:
+            continue
+
+        row = tasks_df.loc[id2ind[str(task_id)]]
+
+        # | ------ change links and info about them ------ |
+        # by default, the links and their information change
         if len(pred_info_lst) > 0:
             pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
         else:
-            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], [-1], [0]
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], ['-1'], [1], [INF]
 
-        if str(task_id) in tasks_df.index:
-            if tasks_df.loc[str(task_id), 'predecessor_ids'] != ['-1']:
-                if expert_connections_info:
-                    predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
-                    predecessors_types_lst.append(tasks_df.loc[str(task_id), 'connection_types'])
-                    predecessors_lags_lst.append(tasks_df.loc[str(task_id), 'lags'])
-                    predecessors_counts_lst.append(pred_counts_lst)
-                    continue
-                if change_connections_info:
-                    predecessors_ids_lst.append(tasks_df.loc[str(task_id), 'predecessor_ids'])
-                else:
-                    predecessors_ids_lst.append(pred_ids_lst)
-            else:
-                predecessors_ids_lst.append(pred_ids_lst)
+        if not all_connections:
+            pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
+                row['predecessor_ids'].copy(), row['connection_types'].copy(), row['lags'].copy(), [INF] * len(row['lags']))
+            if change_connections_info:
+                pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
+                    update_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst))
+            pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst = (
+                append_new_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst))
         else:
-            predecessors_ids_lst.append(pred_ids_lst)
+            if row['predecessor_ids'] != ['-1']:
+                # if 'lags' is unknown, thus 'connection_type' is also unknown
+                pred_info_lst = [[pred_types_lst[i], pred_lags_lst[i], pred_counts_lst[i]]
+                                 for i in range(len(pred_ids_lst)) if pred_ids_lst[i] in row['predecessor_ids']]
+                pred_ids_lst = row['predecessor_ids']
+                if len(pred_info_lst) > 0:
+                    pred_types_lst, pred_lags_lst, pred_counts_lst = map(list, zip(*pred_info_lst))
+                else:
+                    pred_types_lst, pred_lags_lst, pred_counts_lst = ['-1'], [1], [INF]
 
-        predecessors_types_lst.append(pred_types_lst)
-        predecessors_lags_lst.append(pred_lags_lst)
-        predecessors_counts_lst.append(pred_counts_lst)
-        while len(predecessors_types_lst[-1]) != len(predecessors_ids_lst[-1]):
-            predecessors_types_lst[-1].append('FS')
-            predecessors_lags_lst[-1].append(-1)
-            predecessors_counts_lst[-1].append(0)
-
-    # Convert strings to arrays
-    tasks_df['predecessor_ids'] = predecessors_ids_lst
-    tasks_df['connection_types'] = predecessors_types_lst
-    tasks_df['lags'] = predecessors_lags_lst
-    tasks_df['counts'] = predecessors_counts_lst
+        while len(pred_ids_lst) != len(pred_types_lst):
+            pred_types_lst.append('FS')
+            pred_lags_lst.append(1)
+            pred_counts_lst.append(0)
+        for col, val in zip(['predecessor_ids', 'connection_types', 'lags', 'counts'], [pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst]):
+            tasks_df.at[id2ind[str(task_id)], col] = val
 
     tasks_df['connection_types'] = tasks_df['connection_types'].apply(
         lambda x: [EdgeType(elem) if elem != '-1' else EdgeType.FinishStart for elem in x]

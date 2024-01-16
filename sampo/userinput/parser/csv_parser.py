@@ -3,9 +3,9 @@ from itertools import chain
 from uuid import uuid4
 
 import pandas as pd
-from pandas import DataFrame
 
-from sampo.schemas.contractor import Contractor, get_contractor_for_resources_schedule
+from sampo.generator.environment import ContractorGenerationMethod, get_contractor_by_wg
+from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import DefaultWorkEstimator, WorkTimeEstimator
@@ -13,22 +13,26 @@ from sampo.userinput.parser.exception import InputDataException
 from sampo.userinput.parser.general_build import add_graph_info, topsort_graph_df, build_work_graph, \
     preprocess_graph_df, break_loops_in_input_graph
 from sampo.userinput.parser.history import set_connections_info
-from sampo.utilities.task_name import NameMapper
+from sampo.utilities.name_mapper import NameMapper
 
 
 class CSVParser:
 
     @staticmethod
-    def read_graph_info(project_info: str,
-                        history_data: str | None = None,
-                        full_connections: bool = False,
-                        change_base_on_history: bool = False) -> pd.DataFrame:
+    def read_graph_info(project_info: str | pd.DataFrame,
+                        history_data: str | pd.DataFrame,
+                        sep_wg: str = ';',
+                        sep_history: str = ';',
+                        name_mapper: NameMapper | None = None,
+                        all_connections: bool = False,
+                        change_connections_info: bool = False) -> pd.DataFrame:
         """
         Read the input data about work graph and preprocess it.
 
         Schema of WorkGraph .csv file:
             mandatory fields:
                 activity_id: str - Id of the current task,
+                activity_name: str - Name of the current task,
                 measurement: str - Measure of the size of the current task (e.g., km, pcs, lit),
                 volume: float - Volume of the current task
             optional fields:
@@ -36,12 +40,20 @@ class CSVParser:
                 predecessor_ids: list[str] - Ids of predecessors of the current task,
                 connection_types: list[str] - Types of links between the current task and its predecessors,
                 lags: float - Time lags,
-                min_req: dict[str: float] - A dictionary containing the minimum amount of each resource that is required to perform the current task
-                max_req: dict[str: float] - A dictionary containing the maximum amount of each resource that is required to perform the current task
+                min_req: dict[str, float] - A dictionary containing the minimum amount of each resource
+                                            that is required to perform the current task
+                max_req: dict[str, float] - A dictionary containing the maximum amount of each resource
+                                            that is required to perform the current task
+                description: str - A task description
+                required_statuses: dict[str, int] - A dictionary containing the zone statuses required
+                                                    to perform the current task
+
+        !NOTE! that length of predecessor_ids, connection_types and lags in each cell should be equal
+        for the correct predecessor resolution
 
         Schema of history .csv file (optional data):
             mandatory fields:
-                granular_smr_name: str - Task name as in the document,
+                granular_name: str - Task name as in the document,
                 first_day: str - Date of commencement of the work,
                 last_day: str - Date of completion
                 upper_works: list[str] - Names of predecessors of the current task
@@ -51,49 +63,87 @@ class CSVParser:
             history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
             2) If you send WorkGraph .csv file with column 'predecessor_ids', 'lags' etc. and there is no info in these
             columns, so framework repair the info from history data
+            3) If you don't put 'granular_name' and don't receive name_mapper to WorkGraph .csv file, thus you need to
+            be sure that activity_name is correct and correlate to 'granular_name' in history .csv file
 
+        :param name_mapper: name mapper that translates 'activity_name' to the name, as from a document
         :param project_info: path to the works' info file
         :param history_data: path to the history data of connection file
-        :param full_connections: does the project information contain full details of the works?
-        :param change_base_on_history: whether it is necessary to change project information based on connection history data?
+        :param all_connections: whether it is necessary to change connections
+        :param change_connections_info: whether it is necessary to change connections' information based on history data?
+        :param sep_wg: separating character. It's mandatory if you send the WorkGraph .csv
+        :param sep_history: separating character. It's mandatory if you send the HistoryData .csv file path
         :return: preprocessed info about works
         """
-        graph_df = pd.read_csv(project_info, sep=';', header=0) if isinstance(project_info,
-                                                                              str) else project_info
-        history_df = None
-        if history_data is not None:
-            history_df = pd.read_csv(history_data)
+        graph_df = pd.read_csv(project_info, sep=sep_wg, header=0) if isinstance(project_info,
+                                                                                 str) else project_info.copy()
+        history_df = pd.read_csv(history_data, sep=sep_history) if isinstance(history_data,
+                                                                              str) else history_data.copy()
 
-        if 'predecessor_ids' not in graph_df.columns and history_data is None:
+        if 'predecessor_ids' not in graph_df.columns and history_df.shape[0] == 0:
             raise InputDataException(
-                "you have neither history data about tasks nor tasks' connection info in received .csv file.")
+                'you have neither history data about tasks nor tasks\' connection info in received .csv file.')
 
-        if 'predecessor_ids' not in graph_df.columns:
-            # if we ought to restore predecessor info from history data
-            temp_lst = [math.nan] * graph_df.shape[0]
-            for col in ['predecessor_ids', 'connection_types', 'lags']:
-                graph_df[col] = temp_lst
-            graph_df = preprocess_graph_df(graph_df)
-            works_info = set_connections_info(graph_df, history_df)
-        else:
-            graph_df = preprocess_graph_df(graph_df)
-            if full_connections == change_base_on_history:
-                works_info = set_connections_info(graph_df, history_df, expert_connections_info=True)
-            elif not full_connections:
-                works_info = set_connections_info(graph_df, history_df, change_connections_info=True)
-            else:
-                return graph_df
+        graph_df = preprocess_graph_df(graph_df, name_mapper)
+        id2ind = {graph_df.loc[i, 'activity_id']: i for i in range(len(graph_df.index))}
+        works_info = set_connections_info(graph_df, history_df, mapper=name_mapper,
+                                          all_connections=all_connections,
+                                          change_connections_info=change_connections_info, id2ind=id2ind)
 
         return break_loops_in_input_graph(works_info)
 
     @staticmethod
+    def work_graph(works_info: pd.DataFrame,
+                   name_mapper: NameMapper | None = None,
+                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> WorkGraph:
+        """
+        Gets a info about WorkGraph and Contractors from file .csv.
+
+        Schema of Contractors .csv file (optional data):
+            mandatory fields:
+                contractor_id: str - Id of the current contractor,
+                name: str - Contractor name as in the document
+            optional fields:
+                {names of resources}: float - each resource is a separate column
+
+        ATTENTION!
+            1) If you do not provide work resource estimator, framework uses built-in estimator
+
+
+        :param works_info: dataFrame that contains preprocessed info about work graph structure
+        :param contractor_types:
+        :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
+        for a generation
+        :param contractor_info: path to contractor info .csv file or list of Contractors
+        :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
+        :return: WorkGraph and list of Contractors
+        """
+
+        works_info['activity_name_original'] = works_info.activity_name
+        if name_mapper:
+            works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
+
+        resources = [dict((worker_req.kind, int(worker_req.volume))
+                          for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
+                     for w in works_info.loc[:, ['granular_name', 'volume']].to_numpy()]
+
+        unique_res = list(set(chain(*[r.keys() for r in resources])))
+        # works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
+
+        works_resources = add_graph_info(works_info)
+        works_resources = topsort_graph_df(works_resources)
+        work_graph = build_work_graph(works_resources, unique_res, work_resource_estimator)
+
+        return work_graph
+
+    @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
-                                   contractor_info: str | list[Contractor] |  None = None,
+                                   contractor_info: str | list[Contractor] | tuple[ContractorGenerationMethod, int]
+                                   = (ContractorGenerationMethod.AVG, 1),
                                    contractor_types: list[int] | None = None,
-                                   unique_work_names_mapper: NameMapper | None = None,
-                                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                                   contractors_number: int = 1) \
-            -> (WorkGraph, Contractor):
+                                   name_mapper: NameMapper | None = None,
+                                   work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+            -> tuple[WorkGraph, list[Contractor]]:
         """
         Gets a info about WorkGraph and Contractors from file .csv.
 
@@ -122,23 +172,10 @@ class CSVParser:
 
         # gather resources and contractors based on work resource estimator or contractor info .csv file
         contractors = []
-        works_info['activity_name_original'] = works_info.activity_name
-        if unique_work_names_mapper:
-            works_info.activity_name = works_info.activity_name.apply(lambda name: unique_work_names_mapper[name])
 
-        if contractor_info is None:
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
-            contractors = [get_contractor_for_resources_schedule(resources,
-                                                                 contractor_capacity=contractor_types[i],
-                                                                 contractor_id=str(i),
-                                                                 contractor_name='Contractor' + ' ' + str(i + 1))
-                           for i in range(contractors_number)]
-        elif isinstance(contractor_info, list):
+        if isinstance(contractor_info, list):
             contractors = contractor_info
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]))
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
-        else:
+        elif isinstance(contractor_info, str):
             # if contractor info is given or contractor info and work resource estimator are received simultaneously
             contractor_df = pd.read_csv(contractor_info, sep=';', header=0) if isinstance(contractor_info,
                                                                                           str) else contractor_info
@@ -153,26 +190,16 @@ class CSVParser:
                                         enumerate(row[column_lag:].items())},
                                equipments=dict())
                 )
-            resource_names = contractor_df.columns[1:].to_list()
-            if len(contractors) == 0 and isinstance(work_resource_estimator, DefaultWorkEstimator):
-                raise InputDataException(
-                    'you have neither info about contractors nor work resource estimator.'
-                )
-            resources = [work_resource_estimator.find_work_resources(w[0], float(w[1]), resource_names)
-                         for w in works_info.loc[:, ['activity_name', 'volume']].to_numpy()]
 
-        unique_res = list(set(chain(*[r.keys() for r in resources])))
-        works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)
-
-        works_resources = add_graph_info(works_info)
-        works_resources = topsort_graph_df(works_resources)
-        work_graph = build_work_graph(works_resources, unique_res)
+        work_graph = CSVParser.work_graph(works_info, name_mapper, work_resource_estimator)
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:
-            contractors = [get_contractor_for_resources_schedule(resources,
-                                                                 contractor_id=str(i),
-                                                                 contractor_name='Contractor' + ' ' + str(i + 1))
+            generation_method, contractors_number = contractor_info
+            contractors = [get_contractor_by_wg(work_graph,
+                                                method=generation_method,
+                                                contractor_id=str(i),
+                                                contractor_name='Contractor' + ' ' + str(i + 1))
                            for i in range(contractors_number)]
 
         return work_graph, contractors

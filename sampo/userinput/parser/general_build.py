@@ -2,16 +2,20 @@ import math
 from collections import defaultdict
 from typing import Callable, Any
 from uuid import uuid4
+from ast import literal_eval
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
-from sampo.generator.pipeline.project import get_start_stage, get_finish_stage
+from sampo.schemas import Time
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
-from sampo.schemas.requirements import WorkerReq
+from sampo.schemas.requirements import WorkerReq, ZoneReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.schemas.works import WorkUnit
+from sampo.utilities.name_mapper import NameMapper
 
 UNKNOWN_CONN_TYPE = 0
 NONE_ELEM = '-1'
@@ -21,7 +25,7 @@ class Graph:
     def __init__(self):
         self.graph = defaultdict(list)
 
-    def add_edge(self, u, v, weight = None):
+    def add_edge(self, u, v, weight=None):
         self.graph[u].append((v, weight))
 
     def dfs_cycle(self, u, visited):
@@ -150,14 +154,28 @@ def fix_df_column_with_arrays(column: pd.Series, cast: Callable[[str], Any] | No
     return new_column
 
 
-def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
+def preprocess_graph_df(frame: pd.DataFrame,
+                        name_mapper: NameMapper | None = None) -> pd.DataFrame:
     def normalize_if_number(s):
         return str(int(float(s))) \
             if s.replace('.', '', 1).isdigit() \
             else s
 
+    temp_lst = [math.nan] * frame.shape[0]
+
+    for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
+        if col not in frame.columns:
+            frame[col] = temp_lst
+
+    if 'granular_name' not in frame.columns:
+        frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
+
     frame['activity_id'] = frame['activity_id'].astype(str)
-    frame['volume'] = frame['volume'].astype(float)
+    frame['volume'] = [float(x.replace(',', '.')) if isinstance(x, str) else float(x) for x in frame['volume']]
+
+    if 'min_req' in frame.columns and 'max_req' in frame.columns:
+        frame['min_req'] = [literal_eval(x) if isinstance(x, str) else x for x in frame['min_req']]
+        frame['max_req'] = [literal_eval(x) if isinstance(x, str) else x for x in frame['max_req']]
 
     frame['predecessor_ids'] = fix_df_column_with_arrays(frame['predecessor_ids'], cast=normalize_if_number)
     frame['connection_types'] = fix_df_column_with_arrays(frame['connection_types'],
@@ -166,6 +184,11 @@ def preprocess_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     if 'lags' not in frame.columns:
         frame['lags'] = [NONE_ELEM] * len(frame)
     frame['lags'] = fix_df_column_with_arrays(frame['lags'], float)
+    for col in ['predecessor_ids', 'connection_types', 'lags', 'counts']:
+        frame[col] = frame[col].astype(object)
+
+    for _, row in frame.iterrows():
+        frame.at[_, 'counts'] = [np.iinfo(np.int64).max] * len(frame.at[_, 'lags'])
 
     return frame
 
@@ -183,10 +206,6 @@ def add_graph_info(frame: pd.DataFrame) -> pd.DataFrame:
                 predecessor_ids[-1].append(row['predecessor_ids'][index])
                 connection_types[-1].append(row['connection_types'][index])
                 lags[-1].append(row['lags'][index])
-        if len(predecessor_ids[-1]) == 0:
-            predecessor_ids[-1].append(NONE_ELEM)
-            connection_types[-1].append(EdgeType.FinishStart)
-            lags[-1].append(float(NONE_ELEM))
     frame['predecessor_ids'], frame['connection_types'], frame['lags'] = predecessor_ids, connection_types, lags
 
     frame['edges'] = frame[['predecessor_ids', 'connection_types', 'lags']].apply(lambda row: list(zip(*row)), axis=1)
@@ -213,39 +232,38 @@ def topsort_graph_df(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def build_work_graph(frame: pd.DataFrame, resource_names: list[str]) -> WorkGraph:
-    start = get_start_stage()
-    has_succ = set()
-    id_to_node = {NONE_ELEM: start}
+def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estimator: WorkTimeEstimator) -> WorkGraph:
+    id_to_node = {}
 
     for _, row in frame.iterrows():
-        if 'min_req' in frame.columns and 'max_req' in frame.columns:
-            reqs = [WorkerReq(res_name, row[res_name],
-                              row['min_req'][res_name],
-                              row['max_req'][res_name]
-                              ) for res_name in resource_names
-                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]]
+        if 'min_req' in frame.columns and 'max_req' in frame.columns and 'req_volume' in frame.columns:
+            reqs = []
+            for res_name in resource_names:
+                if res_name in row['min_req'] and res_name in row['max_req']:
+                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]:
+                        reqs.append(WorkerReq(res_name, Time(int(row['req_volume'][res_name])),
+                                              row['min_req'][res_name],
+                                              row['max_req'][res_name]))
         else:
-            reqs = [WorkerReq(kind=res_name,
-                              volume=row[res_name],
-                              min_count=int(row[res_name] / 3),
-                              max_count=math.ceil(row[res_name] * 10))
-                    for res_name in resource_names
-                    if row[res_name] > 0]
+            reqs = work_estimator.find_work_resources(row['granular_name'], float(row['volume']))
         is_service_unit = len(reqs) == 0
-        work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=row['activity_name'],
-                             volume=row['volume'], volume_type=row['measurement'], is_service_unit=is_service_unit,
-                             display_name=row['activity_name'])
-        has_succ |= set(row['edges'][0])
+
+        zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \
+            if 'required_statuses' in frame.columns else []
+
+        description = row['description'] if 'description' in frame.columns else ''
+        group = row['group'] if 'group' in frame.columns else 'main project'
+
+        work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=group,
+                             description=description, volume=row['volume'], volume_type=row['measurement'],
+                             is_service_unit=is_service_unit, display_name=row['activity_name_original'],
+                             zone_reqs=zone_reqs)
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node
 
-    without_succ = list(set(id_to_node.keys()) - has_succ)
-    without_succ = [id_to_node[index] for index in without_succ]
-    end = get_finish_stage(without_succ)
-    graph = WorkGraph(start, end)
-    return graph
+    all_nodes = [id_to_node[index] for index in list(set(id_to_node.keys()))]
+    return WorkGraph.from_nodes(all_nodes)
 
 
 def get_graph_contractors(path: str, contractor_name: str | None = 'ООО "***"') -> (

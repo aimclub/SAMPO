@@ -18,7 +18,7 @@ def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str]
 
     for swork in schedule.works:
         start = points.bisect_left(swork.start_time)
-        finish = points.bisect_left(swork.finish_time + 1)
+        finish = points.bisect_left(swork.finish_time)
         for worker in swork.workers:
             if worker.name in resources_names or is_none:
                 usage[worker.name][start: finish] += worker.count

@@ -5,8 +5,9 @@ import numpy as np
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
-from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
+from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -182,3 +183,87 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
         cpkt_idx = min(cpkt_idx + 1, len(work_timeline))
 
     return node2swork, assigned_parent_time, timeline, order_nodes
+
+
+def serial_convert_chromosome_to_schedule(chromosome: ChromosomeType,
+                                          worker_pool: WorkerContractorPool,
+                                          index2node: dict[int, GraphNode],
+                                          index2contractor: dict[int, Contractor],
+                                          index2zone: dict[int, str],
+                                          worker_pool_indices: dict[int, dict[int, Worker]],
+                                          worker_name2index: dict[str, int],
+                                          contractor2index: dict[str, int],
+                                          landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                          timeline: Timeline | None = None,
+                                          assigned_parent_time: Time = Time(0),
+                                          work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+        -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+    """
+    Build schedule from received chromosome
+    It can be used in visualization of final solving of genetic algorithm
+    """
+    node2swork: dict[GraphNode, ScheduledWork] = {}
+
+    works_order = chromosome[0]
+    works_resources = chromosome[1]
+    border = chromosome[2]
+    spec = chromosome[3]
+    zone_statuses = chromosome[4]
+    worker_pool = copy.deepcopy(worker_pool)
+
+    # use 3rd part of chromosome in schedule generator
+    for worker_index in worker_pool:
+        for contractor_index in worker_pool[worker_index]:
+            worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
+                                                                   worker_name2index[worker_index]])
+
+    if not isinstance(timeline, MomentumTimeline):
+        timeline = MomentumTimeline(worker_pool, landscape)
+
+    # if not isinstance(timeline, JustInTimeTimeline):
+    #     timeline = JustInTimeTimeline(worker_pool, landscape)
+
+    order_nodes = []
+
+    for order_index, work_index in enumerate(works_order):
+        node = index2node[work_index]
+        order_nodes.append(node)
+
+        work_spec = spec.get_work_spec(node.id)
+
+        resources = works_resources[work_index, :-1]
+        contractor_index = works_resources[work_index, -1]
+        contractor = index2contractor[contractor_index]
+        worker_team: list[Worker] = [worker_pool_indices[worker_index][contractor_index]
+                                     .copy().with_count(worker_count)
+                                     for worker_index, worker_count in enumerate(resources)
+                                     if worker_count > 0]
+
+        # apply worker spec
+        Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
+
+        st, ft, exec_times = timeline.find_min_start_time_with_additional(node, worker_team, node2swork, work_spec,
+                                                                          assigned_parent_time=assigned_parent_time,
+                                                                          work_estimator=work_estimator)
+
+        if order_index == 0:  # we are scheduling the work `start of the project`
+            st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
+
+        # finish using time spec
+        ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
+                               st, work_spec.assigned_time, assigned_parent_time, work_estimator)
+        # process zones
+        zone_reqs = [ZoneReq(index2zone[i], zone_status) for i, zone_status in enumerate(zone_statuses[work_index])]
+        zone_start_time = timeline.zone_timeline.find_min_start_time(zone_reqs, ft, 0)
+
+        # we should deny scheduling
+        # if zone status change can be scheduled only in delayed manner
+        if zone_start_time != ft:
+            node2swork[node].zones_post = timeline.zone_timeline.update_timeline(order_index,
+                                                                                 [z.to_zone() for z in zone_reqs],
+                                                                                 zone_start_time, 0)
+
+    schedule_start_time = min((swork.start_time for swork in node2swork.values() if
+                               len(swork.workers) != 0), default=assigned_parent_time)
+
+    return node2swork, schedule_start_time, timeline, order_nodes

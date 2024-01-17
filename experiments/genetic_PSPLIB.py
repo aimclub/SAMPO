@@ -4,7 +4,7 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler import GeneticScheduler, HEFTScheduler, HEFTBetweenScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -31,7 +31,7 @@ def run_scheduler(wg_info):
     for node_id in range(res_matrix.shape[0]):
         worker_reqs = [WorkerReq(workers[idx_req - 1], Time(0), res_matrix[node_id][idx_req],
                                  res_matrix[node_id][idx_req], workers[idx_req - 1]) for idx_req in range(1, 5)]
-        work_unit = WorkUnit(str(uuid.uuid4()), str(node_id), worker_reqs, time_exec=int(res_matrix[node_id][0]))
+        work_unit = WorkUnit(str(node_id), str(node_id), worker_reqs, time_exec=int(res_matrix[node_id][0]))
         node = GraphNode(work_unit, [])
         nodes.append(node)
         sum_of_time += res_matrix[node_id][0]
@@ -56,8 +56,9 @@ def run_scheduler(wg_info):
     for i in range(res_matrix.shape[0]):
         times.append(res_matrix[i][0])
     work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
+    # scheduler = HEFTScheduler(work_estimator=work_estimator)
     # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
-    scheduler = GeneticScheduler(50, work_estimator=work_estimator)
+    scheduler = GeneticScheduler(10, work_estimator=work_estimator)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)
     finish = time.time()

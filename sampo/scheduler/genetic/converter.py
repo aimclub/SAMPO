@@ -234,10 +234,9 @@ def serial_convert_chromosome_to_schedule(chromosome: ChromosomeType,
         resources = works_resources[work_index, :-1]
         contractor_index = works_resources[work_index, -1]
         contractor = index2contractor[contractor_index]
-        worker_team: list[Worker] = [worker_pool_indices[worker_index][contractor_index]
-                                     .copy().with_count(worker_count)
-                                     for worker_index, worker_count in enumerate(resources)
-                                     if worker_count > 0]
+        worker_team: list[Worker] = [worker_pool[wreq.kind][contractor.id]
+                                     .copy().with_count(resources[worker_name2index[wreq.kind]])
+                                     for wreq in node.work_unit.worker_reqs]
 
         # apply worker spec
         Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)

@@ -58,7 +58,7 @@ def run_scheduler(wg_info):
     work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
     # scheduler = HEFTScheduler(work_estimator=work_estimator)
     # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
-    scheduler = GeneticScheduler(10, work_estimator=work_estimator)
+    scheduler = GeneticScheduler(10, size_of_population=50, work_estimator=work_estimator)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)
     finish = time.time()

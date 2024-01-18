@@ -1,6 +1,7 @@
 import time
 import uuid
 from multiprocessing import Pool
+import multiprocess as mp
 
 import numpy as np
 
@@ -58,15 +59,15 @@ def run_scheduler(wg_info):
     work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
     # scheduler = HEFTScheduler(work_estimator=work_estimator)
     # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
-    scheduler = GeneticScheduler(10, size_of_population=50, work_estimator=work_estimator)
+    scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)
     finish = time.time()
 
-    merged_schedule = schedule.merged_stages_datetime_df('2022-01-01')
-    schedule_gant_chart_fig(merged_schedule, VisualizationMode.ShowFig)
-
-    resource_employment_fig(merged_schedule, fig_type=EmploymentFigType.DateLabeled, vis_mode=VisualizationMode.ShowFig)
+    # merged_schedule = schedule.merged_stages_datetime_df('2022-01-01')
+    # schedule_gant_chart_fig(merged_schedule, VisualizationMode.ShowFig)
+    #
+    # resource_employment_fig(merged_schedule, fig_type=EmploymentFigType.DateLabeled, vis_mode=VisualizationMode.ShowFig)
 
     return (finish - start), schedule.execution_time, sum_of_time
 
@@ -75,32 +76,24 @@ if __name__ == '__main__':
     result = []
     makespans = []
     exec_times = []
-    iterations = 10
     for wg_size in instances:
 
         with open(f'psplib_datasets/optimal_makespan/j{str(wg_size)}opt.sm', 'r') as f:
             lines = f.readlines()
-            lines = lines[22:23]
-        true_val = []
-        for line in lines:
-            true_val.append(int(line.split()[2]))
+            lines = lines[22:-2]
+        true_val = np.array([int(line.split()[2]) for line in lines])
 
         dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
-        size = len(dataset[0:1])
-        tasks = []
-        for i in range(0, size // iterations * iterations, iterations):
-            tasks.append(dataset[i:i+iterations])
-        if size != size // iterations * iterations:
-            tasks.append(dataset[size // iterations * iterations:size])
-
-        # with Pool() as pool:
-        #     for task in tasks:
-        #         result.extend(pool.map(run_scheduler, task))
-        for task in tasks:
-            result.extend([run_scheduler(t) for t in task])
 
         gap_sum = 0.0
-        for i in range(len(result)):
-            gap_sum += (np.abs(true_val[i] - result[i][1].value) * 100. / true_val[i])
+        cnt = 0
+        for _ in range(1):
+            with mp.Pool(10) as pool:
+                result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
+            result = np.array([res[1].value for res in result])
 
-        print(f'Average gap: {gap_sum / len(result)}')
+            gap = (result - true_val) / true_val * 100
+            gap_sum += gap.sum()
+            cnt += len(dataset)
+
+        print(f'Average gap: {gap_sum / cnt}')

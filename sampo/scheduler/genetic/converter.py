@@ -139,8 +139,9 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     ))
 
     # declare current checkpoint index
-    cpkt_idx = 0
+    ckpt_idx = 0
     start_time = assigned_parent_time - 1
+    pred_start_time = start_time - 1
 
     def work_scheduled(args) -> bool:
         idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
@@ -170,17 +171,21 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
 
     # while there are unprocessed checkpoints
     while len(enumerated_works_remaining) > 0:
-        if cpkt_idx < len(work_timeline):
-            start_time = work_timeline[cpkt_idx]
+        if ckpt_idx < len(work_timeline):
+            start_time = work_timeline[ckpt_idx]
+            if pred_start_time == start_time:
+                ckpt_idx += 1
+                continue
             if start_time.is_inf():
                 # break because schedule already contains Time.inf(), that is incorrect schedule
                 break
+            pred_start_time = start_time
         else:
             start_time += 1
 
         # find all works that can start at start_time moment and remove it if scheduled
         enumerated_works_remaining.remove_if(work_scheduled)
-        cpkt_idx = min(cpkt_idx + 1, len(work_timeline))
+        ckpt_idx = min(ckpt_idx + 1, len(work_timeline))
 
     return node2swork, assigned_parent_time, timeline, order_nodes
 

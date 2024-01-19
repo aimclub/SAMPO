@@ -1,7 +1,7 @@
 from abc import ABC
 
 import pathos.multiprocessing
-from typing import Callable
+from typing import Callable, Any, Type
 
 from sampo.backend import ComputationalBackend, T, R, ComputationalContext
 

@@ -24,6 +24,7 @@ class SchedulerType(Enum):
     Topological = 'topological'
     HEFTAddEnd = 'heft_add_end'
     HEFTAddBetween = 'heft_add_between'
+    LFT = 'LFT'
 
 
 class Scheduler(ABC):

@@ -15,7 +15,7 @@ from sampo.schemas.time import Time
 class AverageBinarySearchResourceOptimizingScheduler:
     """
     The scheduler optimizes resources to deadline.
-    Scheduler uses binary search over the resources to optimize it.
+    Scheduler uses binary search over the resources to optimize them.
     """
 
     def __init__(self, base_scheduler: Scheduler):
@@ -26,10 +26,10 @@ class AverageBinarySearchResourceOptimizingScheduler:
     def schedule_with_cache(self, wg: WorkGraph,
                             contractors: list[Contractor],
                             deadline: Time,
-                            landscape: LandscapeConfiguration,
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
-                            assigned_parent_time: Time = Time(0)) \
+                            assigned_parent_time: Time = Time(0),
+                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:
         def call_scheduler(k: float, inner_spec: ScheduleSpec) \
                 -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:

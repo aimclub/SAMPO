@@ -41,14 +41,18 @@ def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: dict[str, Gr
     zero_stage_id = make_new_node_id(origin_node.id, 0)
     zero_stage_id = zero_stage_id if zero_stage_id in id2new_nodes else last_stage_id
 
+    indent = 0
+
     parents_zero_stage: list[tuple[GraphNode, float, EdgeType]] = []
     parents_last_stage: list[tuple[GraphNode, float, EdgeType]] = []
     for edge in origin_node.edges_to:
-        # indent = 1 if not (edge.start.work_unit.is_service_unit or edge.finish.work_unit.is_service_unit) else 0
-        indent = 0
+        # TODO Check indent application
         if edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]:
-            lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
-            # lag = lag if lag > 0 else indent
+            if edge.type is EdgeType.InseparableFinishStart:
+                lag = indent
+            else:
+                lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
+                # lag = lag if lag > 0 else indent
             parents_zero_stage.append((id2new_nodes[edge.start.id], lag, edge.type))
         elif not use_lag_edge_optimization:
             match edge.type:

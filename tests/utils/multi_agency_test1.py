@@ -8,7 +8,7 @@ from sampo.scheduler.heft.base import HEFTBetweenScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.multi_agency.block_generator import generate_blocks, SyntheticBlockGraphType, generate_queues
 from sampo.scheduler.multi_agency.block_validation import validate_block_schedule
-from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
+from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock, StochasticManager
 from sampo.scheduler.topological.base import TopologicalScheduler
 from sampo.scheduler.utils.obstruction import OneInsertObstruction, Obstruction
 from sampo.schemas import Time
@@ -38,7 +38,7 @@ def manage_block_graph(contractors: list[Contractor]):
 
     agents = [Agent(f'Agent {i}', scheduler_constructors[i % len(scheduler_constructors)](), [contractor])
               for i, contractor in enumerate(contractors)]
-    manager = Manager(agents)
+    manager = StochasticManager(agents)
     bg = generate_blocks(SyntheticBlockGraphType.RANDOM, 10, [1, 1, 1], lambda x: (50, 60), 0.5, rand)
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)

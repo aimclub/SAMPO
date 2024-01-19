@@ -1,4 +1,3 @@
-import uuid
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -12,8 +11,8 @@ from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
-from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle
-from sampo.schemas.landscape_graph import LandGraph, LandGraphNode, ResourceStorageUnit
+from sampo.schemas.interval import IntervalGaussian
+from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
 from sampo.schemas.requirements import MaterialReq
 from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
@@ -33,85 +32,18 @@ def setup_rand() -> Random:
 
 
 @fixture
-def setup_landscape_many_holders(setup_lg):
-    lg, holders = setup_lg
-    return LandscapeConfiguration(holders=[
-        ResourceHolder(str(uuid.uuid4()), 'holder1',
-                       [
-                           Vehicle(str(uuid.uuid4()), 'vehicle1', [
-                               Material('111', 'mat1', 100),
-                               Material('222', 'mat2', 100),
-                               Material('333', 'mat3', 100)
-                           ]),
-                           Vehicle(str(uuid.uuid4()), 'vehicle2', [
-                               Material('111', 'mat1', 150),
-                               Material('222', 'mat2', 150),
-                               Material('333', 'mat3', 150)
-                           ])
-                       ],
-                       holders[0]),
-        ResourceHolder(str(uuid.uuid4()), 'holder2',
-                       [
-                           Vehicle(str(uuid.uuid4()), 'vehicle1', [
-                               Material('111', 'mat1', 120),
-                               Material('222', 'mat2', 120),
-                               Material('333', 'mat3', 120)
-                           ]),
-                           Vehicle(str(uuid.uuid4()), 'vehicle2', [
-                               Material('111', 'mat1', 140),
-                               Material('222', 'mat2', 140),
-                               Material('333', 'mat3', 140)
-                           ])
-                       ],
-                       holders[1]),
-        ], lg=lg)
+def setup_landscape_one_holder() -> LandscapeConfiguration:
+    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
+                                                          materials=[Material('111', 'mat1', 100000)])])
 
 
 @fixture
-def setup_lg():
-    platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
-                              ResourceStorageUnit({
-                                  'mat1': 100,
-                                  'mat2': 150,
-                                  'mat3': 120
-                              }))
-    platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
-                              ResourceStorageUnit({
-                                  'mat1': 70,
-                                  'mat2': 80,
-                                  'mat3': 90
-                              }))
-    platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
-                              ResourceStorageUnit({
-                                  'mat1': 110,
-                                  'mat2': 130,
-                                  'mat3': 170
-                              }))
-    platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
-                              ResourceStorageUnit({
-                                  'mat1': 180,
-                                  'mat2': 190,
-                                  'mat3': 200
-                              }))
-    holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
-                            ResourceStorageUnit({
-                                'mat1': 500,
-                                'mat2': 500,
-                                'mat3': 500
-                            }))
-    holder2 = LandGraphNode(str(uuid.uuid4()), 'holder2',
-                            ResourceStorageUnit({
-                                'mat1': 705,
-                                'mat2': 750,
-                                'mat3': 800
-                            }))
-    platform1.add_neighbours([(platform3, 1.0, 2)])
-    platform2.add_neighbours([(platform4, 2.0, 2)])
-    platform3.add_neighbours([(holder1, 4.0, 2), (holder2, 3.0, 3)])
-    platform4.add_neighbours([(holder1, 5.0, 2), (holder2, 7.0, 2)])
-    holder1.add_neighbours([(holder2, 6.0, 2)])
-
-    return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]
+def setup_landscape_many_holders() -> LandscapeConfiguration:
+    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
+                                                          materials=[Material('111', 'mat1', 100000)]),
+                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
+                                                          materials=[Material('222', 'mat2', 100000)])
+                                           ])
 
 
 @fixture
@@ -185,8 +117,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
         case _:
             raise ValueError(f'Unknown graph type: {graph_type}')
 
-    if lag_optimization:
-        wg = graph_restructuring(wg, use_lag_edge_optimization=True)
+    wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
     return wg
 
@@ -230,7 +161,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
-    num_contractors = 1
+    num_contractors= 1
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:

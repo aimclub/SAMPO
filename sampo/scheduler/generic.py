@@ -1,11 +1,11 @@
 from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
+from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.scheduler.utils.multi_contractor import run_contractor_search, get_worker_borders
-from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -100,7 +100,7 @@ class GenericScheduler(Scheduler):
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration,
+                            landscape: LandscapeConfiguration() = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
@@ -124,7 +124,7 @@ class GenericScheduler(Scheduler):
     def build_scheduler(self,
                         ordered_nodes: list[GraphNode],
                         contractors: list[Contractor],
-                        landscape: LandscapeConfiguration,
+                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
                         spec: ScheduleSpec = ScheduleSpec(),
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         assigned_parent_time: Time = Time(0),
@@ -178,5 +178,4 @@ class GenericScheduler(Scheduler):
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
-        a = 0
         return node2swork.values(), assigned_parent_time, timeline

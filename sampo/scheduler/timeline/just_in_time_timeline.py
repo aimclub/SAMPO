@@ -284,15 +284,13 @@ class JustInTimeTimeline(Timeline):
                 lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
 
-            # TODO: fix MaterialTimeline to save deliveries history
-            deliveries, mat_del_time = self._material_timeline.supply_resources(dep_node,
-                                                                                self.landscape,
-                                                                                c_st,
-                                                                                dep_node.work_unit.need_materials(),
-                                                                                True)
-
-            c_st = max(c_st, mat_del_time)
             new_finish_time = c_st + working_time
+
+            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
+                                                                                       new_finish_time,
+                                                                                       dep_node.work_unit.need_materials(),
+                                                                                       dep_node.work_unit.workground_size)
+
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(c_st, new_finish_time),
                                                  workers=workers,

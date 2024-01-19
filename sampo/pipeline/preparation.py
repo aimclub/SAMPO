@@ -1,6 +1,7 @@
 import pandas as pd
 
 from sampo.schemas import WorkGraph, Contractor, WorkTimeEstimator
+from sampo.schemas.structure_estimator import StructureEstimator
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.userinput import CSVParser
 from sampo.utilities.name_mapper import NameMapper
@@ -14,13 +15,18 @@ class PreparationPipeline:
                  contractors: str | pd.DataFrame | list[Contractor] | None = None):
         self._wg = wg
         self._contractors = contractors
-        self._history = history
+        self._history = history if history is not None else pd.DataFrame(columns=['marker_for_glue', 'work_name',
+                                                                                  'first_day', 'last_day',
+                                                                                  'upper_works', 'work_name_clear_old',
+                                                                                  'smr_name', 'work_name_clear',
+                                                                                  'granular_smr_name'])
         self._fix_edges_with_history = False
         self._fill_edges_with_history = False
         self._sep_wg = ';'
         self._sep_history = ';'
         self._name_mapper = None
         self._work_estimator = DefaultWorkEstimator()
+        self._structure_estimator = None
 
     def wg(self, wg: str | pd.DataFrame | WorkGraph):
         self._wg = wg
@@ -58,8 +64,13 @@ class PreparationPipeline:
         self._work_estimator = work_estimator
         return self
 
+    def structure_estimator(self, structure_estimator: StructureEstimator) -> 'PreparationPipeline':
+        self._structure_estimator = structure_estimator
+        return self
+
     def _prepare_works_info(self) -> pd.DataFrame:
-        return CSVParser.read_graph_info(project_info=self._wg,
+        wg = self._wg.to_frame(save_req=True) if isinstance(self._wg, WorkGraph) else self._wg
+        return CSVParser.read_graph_info(project_info=wg,
                                          history_data=self._history,
                                          sep_wg=self._sep_wg,
                                          sep_history=self._sep_history,
@@ -74,6 +85,9 @@ class PreparationPipeline:
             name_mapper=self._name_mapper,
             work_resource_estimator=self._work_estimator
         )
+
+        if self._structure_estimator is not None:
+            wg = self._structure_estimator.restruct(wg)
 
         return wg
 

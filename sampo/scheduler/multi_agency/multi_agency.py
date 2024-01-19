@@ -12,6 +12,7 @@ from sampo.scheduler.multi_agency.exception import NoSufficientAgents
 from sampo.scheduler.selection.neural_net import NeuralNetTrainer
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils.obstruction import Obstruction
+from sampo.schemas import WorkerProductivityMode
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import Schedule
@@ -42,7 +43,6 @@ class Agent:
 
         To apply returned offer, use `Agent#confirm`.
         """
-
         schedule, start_time, timeline, _ = \
             self._scheduler.schedule_with_cache(wg, self._contractors,
                                                 assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))
@@ -188,12 +188,66 @@ class Manager:
                 best_schedule = offered_schedule
                 best_timeline = offered_timeline
                 best_agent = offered_agent
+        # To simulate stochastic behaviour
+        best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
         best_agent.confirm(best_timeline, best_start_time, best_end_time)
         for agent in self._agents:
             if agent.name != best_agent.name:
                 agent.update_stat(best_start_time)
 
-        print(best_agent.name)
+        # print(best_agent.name)
+        return best_start_time, best_end_time, best_schedule, best_agent
+
+
+class StochasticManager(Manager):
+    """
+    Manager entity representation in the multi-agent model
+    Manager interact with agents
+    """
+
+    def __init__(self, agents: list[Agent]):
+        super().__init__(agents)
+        self._confidence = {agent.name: 1 for agent in agents}
+
+    def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
+        """
+        Runs the auction on the given `WorkGraph`.
+
+        :param wg: target `WorkGraph`
+        :param parent_time: max parent time of given block
+        :return: best start time, end time and the agent that is able to support this working time
+        """
+        best_end_time = Time.inf()
+        best_agent = None
+
+        def get_offer(agent: Agent):
+            agent._scheduler.work_estimator.set_productivity_mode(WorkerProductivityMode.Static)
+            return agent, agent.offer(wg, parent_time)
+
+        offers = [get_offer(agent) for agent in self._agents]
+
+        for offered_agent, (offered_start_time, offered_end_time, _, _) in offers:
+            offered_end_time = offered_start_time + (offered_end_time - offered_start_time) * self._confidence[offered_agent.name]
+            if offered_end_time < best_end_time:
+                best_end_time = offered_end_time
+                best_agent = offered_agent
+
+        best_agent._scheduler.work_estimator.set_productivity_mode(WorkerProductivityMode.Stochastic)
+
+        old_best_end_time = best_end_time
+        best_start_time, best_end_time, best_schedule, best_timeline = best_agent.offer(wg, parent_time)
+        modified_end_time = best_start_time + (best_end_time - best_start_time) * self._confidence[
+            best_agent.name]
+        best_agent.confirm(best_timeline, best_start_time, best_end_time)
+
+        if modified_end_time > old_best_end_time:
+            # agent supplied worse time than predicted, lower its confidence
+            self._confidence[best_agent.name] += 0.1
+
+        for agent in self._agents:
+            if agent.name != best_agent.name:
+                agent.update_stat(best_start_time)
+
         return best_start_time, best_end_time, best_schedule, best_agent
 
 

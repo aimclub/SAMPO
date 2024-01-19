@@ -112,7 +112,7 @@ class MomentumTimeline(Timeline):
 
         exec_time: Time = Time(0)
         exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
-        for _, chain_node in enumerate(inseparable_chain):
+        for chain_node in inseparable_chain:
             node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
                 work_estimator.estimate_time(chain_node.work_unit, worker_team)
 
@@ -133,41 +133,31 @@ class MomentumTimeline(Timeline):
         if assigned_start_time is not None:
             st = assigned_start_time
         else:
-            prev_st = max_parent_time
-
-            start_time = self._find_min_start_time(
-                self._timeline[contractor_id], inseparable_chain, spec, prev_st, exec_time, worker_team
-            )
-
-            max_material_time = self._material_timeline.find_min_material_time(node,
-                                                                               self.landscape,
-                                                                               start_time,
-                                                                               node.work_unit.need_materials())
-            max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time,
-                                                                   exec_time)
-
-            st = max(max_material_time, max_zone_time, start_time)
-
             # we can't just use max() of all times we found from different constraints
             # because start time shifting can corrupt time slots we found from every constraint
             # so let's find the time that is agreed with all constraints
-            j = 0
-            while st != prev_st:
-                # if j > 0 and j % 50 == 0:
-                #     print(f'ERROR! Probably cycle in looking for diff start time: {j} iteration, {prev_st}, {st}')
-                j += 1
-                start_time = self._find_min_start_time(
-                    self._timeline[contractor_id], inseparable_chain, spec, st, exec_time, worker_team
-                )
+            cur_start_time = max_parent_time
+            found_earliest_time = False
+            while not found_earliest_time:
+                cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
+                                                           cur_start_time, exec_time, worker_team)
 
-                max_material_time = self._material_timeline.find_min_material_time(node,
-                                                                                   self.landscape,
-                                                                                   start_time,
-                                                                                   node.work_unit.need_materials())
-                max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, start_time, exec_time)
+                material_time = self._material_timeline.find_min_material_time(node,
+                                                                               self.landscape,
+                                                                               cur_start_time,
+                                                                               node.work_unit.need_materials())
+                if material_time > cur_start_time:
+                    cur_start_time = material_time
+                    continue
 
-                prev_st = st
-                st = max(max_material_time, max_zone_time, start_time)
+                zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
+                                                                   exec_time)
+                if zone_time > cur_start_time:
+                    cur_start_time = zone_time
+                else:
+                    found_earliest_time = True
+
+            st = cur_start_time
 
         return st, st + exec_time, exec_times
 
@@ -223,8 +213,7 @@ class MomentumTimeline(Timeline):
 
         i = 0
         while len(queue) > 0:
-            # if i > 0 and i % 50 == 0:
-            #     print(f'Warning! Probably cycle in looking for diff workers: {i} iteration')
+
             i += 1
 
             wreq = queue.popleft()
@@ -236,12 +225,7 @@ class MomentumTimeline(Timeline):
 
             assert found_start >= start
 
-            if len(scheduled_wreqs) == 0 or start == found_start:
-                # we schedule the first worker's specialization or the next spec has the same start time
-                # as the all previous ones
-                scheduled_wreqs.append(wreq)
-                start = max(found_start, start)
-            else:
+            if scheduled_wreqs and start != found_start:
                 # The current worker specialization can be started only later than
                 # the previously found start time.
                 # In this case we need to add back all previously scheduled wreq-s into the queue
@@ -249,8 +233,9 @@ class MomentumTimeline(Timeline):
                 # This process should reach its termination at least at the very end of this contractor's schedule.
                 queue.extend(scheduled_wreqs)
                 scheduled_wreqs.clear()
-                scheduled_wreqs.append(wreq)
-                start = max(found_start, start)
+
+            scheduled_wreqs.append(wreq)
+            start = found_start
 
         return start
 
@@ -270,49 +255,38 @@ class MomentumTimeline(Timeline):
         :param required_worker_count: requirements amount of Worker
         :return: the earliest start time
         """
+        # if the work has zero execution time, then there is no need to take resources
+        if exec_time == 0:
+            return parent_time
+
         current_start_time = parent_time
         current_start_idx = state.bisect_right(current_start_time) - 1
+
+        last_time = state[-1].time
+
+        if spec.is_independent:
+            return max(parent_time, last_time)
 
         # the condition means we have reached the end of schedule for this contractor subject to specialization (wreq)
         # as long as we assured that this contractor has enough capacity at all to handle the task
         # we can stop and put the task at the very end
-        i = 0
-        while len(state[current_start_idx:]) > 0:
-            # if i > 0 and i % 50 == 0:
-            #     print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
-            #     print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
-            i += 1
-            end_idx = state.bisect_right(current_start_time + exec_time)
+        while current_start_time < last_time:
 
-            if spec.is_independent:
-                if end_idx - current_start_idx > 1:
-                    # here we know that there are milestones within our time slot
-                    # so let's go to the end
-                    return state[len(state) - 1].time + 1
+            end_idx = state.bisect_left((current_start_time + exec_time, -1, EventType.INITIAL))
 
             # checking from the end of execution interval, i.e., end_idx - 1
-            # up to (including) the event right prepending the start
-            # of the execution interval, i.e., current_start_idx - 1
-            # we need to check the event current_start_idx - 1 cause it is the first event
-            # that influence amount of available for us workers
+            # up to (including) the event right prepending or equal the start
+            # of the execution interval, i.e., current_start_idx
             not_enough_workers_found = False
-            for idx in range(end_idx - 1, current_start_idx - 2, -1):
-                if state[idx].available_workers_count < required_worker_count or state[idx].time < parent_time:
+            for idx in range(end_idx - 1, current_start_idx - 1, -1):
+                if state[idx].available_workers_count < required_worker_count:
                     # we're trying to find a new slot that would start with
-                    # either the last index passing the quantity check
-                    # or the index after the execution interval
-                    # we need max here to process a corner case when the problem arises
-                    # on current_start_idx - 1
-                    # without max it would get into infinite cycle
-                    current_start_idx = max(idx, current_start_idx) + 1
+                    # the last index passing the quantity check
+                    current_start_idx = idx + 1
                     not_enough_workers_found = True
                     break
 
             if not not_enough_workers_found:
-                break
-
-            if current_start_idx >= len(state):
-                current_start_time = max(parent_time, state[-1].time + 1)
                 break
 
             current_start_time = state[current_start_idx].time
@@ -377,6 +351,9 @@ class MomentumTimeline(Timeline):
         """
         Inserts `chosen_workers` into the timeline with it's `inseparable_chain`
         """
+        # if the work has zero execution time, then there is no need to take resources
+        if exec_time == 0:
+            return
         # 7. for each worker's specialization of the chosen contractor being used by the task
         # we update counts of available workers on previously scheduled events
         # that lie between start and end of the task
@@ -393,7 +370,7 @@ class MomentumTimeline(Timeline):
         for w in worker_team:
             state = self._timeline[w.contractor_id][w.name]
             start_idx = state.bisect_right(start)
-            end_idx = state.bisect_right(end)
+            end_idx = state.bisect_left((end, -1, EventType.INITIAL))
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
@@ -402,15 +379,18 @@ class MomentumTimeline(Timeline):
 
             assert available_workers_count >= w.count
 
-            if start_idx < end_idx:
-                event: ScheduleEvent = state[end_idx - 1]
-                assert state[0].available_workers_count >= event.available_workers_count + w.count
-                end_count = event.available_workers_count + w.count
-            else:
-                assert state[0].available_workers_count >= available_workers_count
-                end_count = available_workers_count
-
             state.add(ScheduleEvent(task_index, EventType.START, start, None, available_workers_count - w.count))
+
+            # move the index on time when resources of the work will be freed
+            end_idx = state.bisect_right(end) - 1
+            if state[end_idx].time == end:
+                # time when resources will be freed is already in timeline
+                # so resources amount will be the same at the moment
+                end_count = state[end_idx].available_workers_count
+            else:
+                # time when resources will be freed is not in timeline
+                end_count = state[end_idx].available_workers_count + w.count
+
             state.add(ScheduleEvent(task_index, EventType.END, end, None, end_count))
 
     def schedule(self,
@@ -461,7 +441,7 @@ class MomentumTimeline(Timeline):
                 workers=worker_team,
                 contractor=contractor
             )
-            curr_time += node_time + node_lag
+            curr_time = start_work + node_time
             node2swork[chain_node] = swork
 
         self.update_timeline(curr_time, curr_time - start_time, node, worker_team, spec)

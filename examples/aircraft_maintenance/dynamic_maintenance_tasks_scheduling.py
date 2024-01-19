@@ -2,6 +2,7 @@ from random import Random
 from typing import Dict
 
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.multi_agency import validate_block_schedule
 from sampo.scheduler.multi_agency.block_graph import BlockGraph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager, ScheduledBlock
 from sampo.scheduler.utils.obstruction import OneInsertObstruction, Obstruction
@@ -9,14 +10,9 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 
 
-def load_queues_bg(queues: list[list[(WorkGraph, WorkGraph)]], obstruction_prob: float, rand: Random = Random()):
-    wgs: list[WorkGraph] = [wg for queue in queues for wg, _ in queue]
-    obstructions: list[WorkGraph] = [obstruction for queue in queues for _, obstruction in queue]
-
-    def obstruction_getter(i: int) -> Obstruction | None:
-        return OneInsertObstruction.from_static_graph(obstruction_prob, rand, obstructions[i])
-
-    bg = BlockGraph.pure(wgs, obstruction_getter)
+def load_queues_bg(queues: list[list[WorkGraph]]):
+    wgs: list[WorkGraph] = [wg for queue in queues for wg in queue]
+    bg = BlockGraph.pure(wgs)
 
     index = 0  # global wg index in `wgs`
     nodes_prev = []
@@ -43,7 +39,7 @@ def load_queues_bg(queues: list[list[(WorkGraph, WorkGraph)]], obstruction_prob:
     return bg
 
 
-def run_example(obstruction_prob: float, rand: Random, queues_with_obstructions: list[list[(WorkGraph, WorkGraph)]],
+def run_example(queues_with_obstructions: list[list[WorkGraph]],
                 schedulers: list[Scheduler], contractors: list[Contractor]) -> Dict[str, ScheduledBlock]:
 
     # Scheduling agents and manager initialization
@@ -52,11 +48,11 @@ def run_example(obstruction_prob: float, rand: Random, queues_with_obstructions:
     manager = Manager(agents)
 
     # Upload information about routine tasks, obstruction tasks, related to them and probabilities
-    bg = load_queues_bg(queues_with_obstructions, obstruction_prob, rand)
+    bg = load_queues_bg(queues_with_obstructions)
 
-    # Schedule blocks of tasks using multiagent modelling
+    # Schedule blocks of tasks using multi-agent modelling
     blocks_schedules = manager.manage_blocks(bg, logger=print)
 
+    validate_block_schedule(bg, blocks_schedules, agents)
+
     return blocks_schedules
-
-

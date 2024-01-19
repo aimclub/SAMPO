@@ -62,7 +62,7 @@ class DefaultInputPipeline(InputPipeline):
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
-        self._landscape_config = None
+        self._landscape_config = LandscapeConfiguration()
         self._preparation = PreparationPipeline()
         self._history: pd.DataFrame = pd.DataFrame(columns=['marker_for_glue', 'work_name', 'first_day', 'last_day',
                                                             'upper_works', 'work_name_clear_old', 'smr_name',
@@ -70,19 +70,20 @@ class DefaultInputPipeline(InputPipeline):
         self._all_connections: bool = False
         self._change_connections_info: bool = False
         self._name_mapper: NameMapper | None = None
-        self._sep_wg = ';'
-        self._sep_history = ';'
+        self.sep_wg = ';'
+        self.sep_history = ';'
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
+           change_base_on_history: bool = False,
            sep: str = ';',
            all_connections: bool = False,
            change_connections_info: bool = False) -> 'InputPipeline':
         """
         Mandatory argument.
 
-        :param change_connections_info: whether it is necessary to change project information based on connection history data
-        :param all_connections: does the project information contain full details of the works
+        :param change_base_on_history: whether it is necessary to change project information based on connection history data
+        :param is_wg_has_full_info_about_connections: does the project information contain full details of the works
         :param wg: the WorkGraph object for scheduling task
         :param sep: separating character. It's mandatory, if you send the file path with work_info
 
@@ -93,7 +94,7 @@ class DefaultInputPipeline(InputPipeline):
         self._wg = wg
         self._all_connections = all_connections
         self._change_connections_info = change_connections_info
-        self._sep_wg = sep
+        self.sep_wg = sep
         return self
 
     def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
@@ -141,7 +142,7 @@ class DefaultInputPipeline(InputPipeline):
             work_info.csv as in history_data.csv and vice versa.
         """
         self._history = history
-        self._sep_history = sep
+        self.sep_history = sep
         return self
 
     def spec(self, spec: ScheduleSpec) -> 'InputPipeline':
@@ -193,8 +194,8 @@ class DefaultInputPipeline(InputPipeline):
                 CSVParser.work_graph_and_contractors(
                     works_info=CSVParser.read_graph_info(project_info=self._wg,
                                                          history_data=self._history,
-                                                         sep_wg=self._sep_wg,
-                                                         sep_history=self._sep_history,
+                                                         sep_wg=self.sep_wg,
+                                                         sep_history=self.sep_history,
                                                          name_mapper=self._name_mapper,
                                                          all_connections=self._all_connections,
                                                          change_connections_info=self._change_connections_info),

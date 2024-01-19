@@ -5,7 +5,7 @@ from sampo.schemas.exceptions import NoSufficientContractorError, NotEnoughMater
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.interval import Interval, IntervalGaussian, IntervalUniform
-from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, ResourceSupply, Road
+from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, ResourceSupply, Road, MaterialDelivery
 from sampo.schemas.project import ScheduledProject
 from sampo.schemas.requirements import BaseReq, MaterialReq, ZoneReq, EquipmentReq, WorkerReq, ConstructionObjectReq
 from sampo.schemas.resources import Resource, Worker, WorkerProductivityMode, ConstructionObject, Material, Equipment

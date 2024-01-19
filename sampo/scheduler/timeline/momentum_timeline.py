@@ -123,7 +123,7 @@ class MomentumTimeline(Timeline):
             exec_time += lag + node_exec_time
 
         if len(worker_team) == 0:
-            max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
+            max_material_time = self._material_timeline.find_min_material_time(node, self.landscape, max_parent_time,
                                                                                node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 

@@ -36,7 +36,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                        verbose: bool = True) \
-        -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, list[int]]]:
+        -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, set[int]]]:
     start = time.time()
 
     # preparing access-optimized data structures

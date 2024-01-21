@@ -1,4 +1,5 @@
 import copy
+from enum import Enum
 
 import numpy as np
 
@@ -19,6 +20,11 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.linked_list import LinkedList
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
+
+
+class ScheduleGenerationScheme(Enum):
+    Parallel = 'Parallel'
+    Serial = 'Serial'
 
 
 def convert_schedule_to_chromosome(work_id2index: dict[str, int],
@@ -85,13 +91,49 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
-                                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+                                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                                   sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
     """
     Build schedule from received chromosome
     It can be used in visualization of final solving of genetic algorithm
+    """
+    match sgs_type:
+        case ScheduleGenerationScheme.Parallel:
+            converter = parallel_schedule_generation_scheme
+        case ScheduleGenerationScheme.Serial:
+            converter = serial_schedule_generation_scheme
+        case _:
+            raise ValueError('Unknown type of schedule generation scheme')
+    return converter(chromosome,
+                     worker_pool,
+                     index2node,
+                     index2contractor,
+                     index2zone,
+                     worker_pool_indices,
+                     worker_name2index,
+                     contractor2index,
+                     landscape,
+                     timeline,
+                     assigned_parent_time,
+                     work_estimator)
 
-    Here are Parallel SGS
+
+def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
+                                        worker_pool: WorkerContractorPool,
+                                        index2node: dict[int, GraphNode],
+                                        index2contractor: dict[int, Contractor],
+                                        index2zone: dict[int, str],
+                                        worker_pool_indices: dict[int, dict[int, Worker]],
+                                        worker_name2index: dict[str, int],
+                                        contractor2index: dict[str, int],
+                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                        timeline: Timeline | None = None,
+                                        assigned_parent_time: Time = Time(0),
+                                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+        -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+    """
+    Implementation of Parallel Schedule Generation Scheme
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -106,7 +148,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     for worker_index in worker_pool:
         for contractor_index in worker_pool[worker_index]:
             worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
-                                                                   worker_name2index[worker_index]])
+            worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
         timeline = JustInTimeTimeline(worker_pool, landscape)
@@ -190,22 +232,21 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
     return node2swork, assigned_parent_time, timeline, order_nodes
 
 
-def serial_convert_chromosome_to_schedule(chromosome: ChromosomeType,
-                                          worker_pool: WorkerContractorPool,
-                                          index2node: dict[int, GraphNode],
-                                          index2contractor: dict[int, Contractor],
-                                          index2zone: dict[int, str],
-                                          worker_pool_indices: dict[int, dict[int, Worker]],
-                                          worker_name2index: dict[str, int],
-                                          contractor2index: dict[str, int],
-                                          landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                                          timeline: Timeline | None = None,
-                                          assigned_parent_time: Time = Time(0),
-                                          work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
+def serial_schedule_generation_scheme(chromosome: ChromosomeType,
+                                      worker_pool: WorkerContractorPool,
+                                      index2node: dict[int, GraphNode],
+                                      index2contractor: dict[int, Contractor],
+                                      index2zone: dict[int, str],
+                                      worker_pool_indices: dict[int, dict[int, Worker]],
+                                      worker_name2index: dict[str, int],
+                                      contractor2index: dict[str, int],
+                                      landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                      timeline: Timeline | None = None,
+                                      assigned_parent_time: Time = Time(0),
+                                      work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
     """
-    Build schedule from received chromosome
-    It can be used in visualization of final solving of genetic algorithm
+    Implementation of Serial Schedule Generation Scheme
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -220,13 +261,10 @@ def serial_convert_chromosome_to_schedule(chromosome: ChromosomeType,
     for worker_index in worker_pool:
         for contractor_index in worker_pool[worker_index]:
             worker_pool[worker_index][contractor_index].with_count(border[contractor2index[contractor_index],
-                                                                   worker_name2index[worker_index]])
+            worker_name2index[worker_index]])
 
     if not isinstance(timeline, MomentumTimeline):
         timeline = MomentumTimeline(worker_pool, landscape)
-
-    # if not isinstance(timeline, JustInTimeTimeline):
-    #     timeline = JustInTimeTimeline(worker_pool, landscape)
 
     order_nodes = []
 

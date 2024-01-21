@@ -9,8 +9,8 @@ from typing import Callable, Iterable
 import numpy as np
 from deap import creator, base
 
-from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule, serial_convert_chromosome_to_schedule
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
+from sampo.scheduler.genetic.converter import (convert_chromosome_to_schedule, convert_schedule_to_chromosome,
+                                               ChromosomeType, ScheduleGenerationScheme)
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
@@ -204,7 +204,8 @@ def init_toolbox(wg: WorkGraph,
                  children: dict[int, set[int]],
                  resources_border: np.ndarray,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> base.Toolbox:
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
     list of parameters that received this function is sufficient and complete to manipulate with genetic algorithm
@@ -259,12 +260,12 @@ def init_toolbox(wg: WorkGraph,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      landscape=landscape)
-    toolbox.register("chromosome_to_schedule", serial_convert_chromosome_to_schedule, worker_pool=worker_pool,
+    toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, assigned_parent_time=assigned_parent_time,
                      work_estimator=work_estimator, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, index2zone=index2zone,
-                     landscape=landscape)
+                     landscape=landscape, sgs_type=sgs_type)
     toolbox.register('copy_individual', lambda ind: Individual(copy_chromosome(ind)))
 
     return toolbox

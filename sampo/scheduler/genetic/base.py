@@ -4,7 +4,7 @@ from typing import Optional, Callable
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
-from sampo.scheduler.genetic.converter import ChromosomeType
+from sampo.scheduler.genetic.converter import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
@@ -44,6 +44,7 @@ class GeneticScheduler(Scheduler):
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
                  verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
@@ -57,6 +58,8 @@ class GeneticScheduler(Scheduler):
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
         self.work_estimator = work_estimator
+        self.sgs_type = sgs_type
+
         self._optimize_resources = optimize_resources
         self._n_cpu = n_cpu
         self._weights = weights
@@ -236,6 +239,7 @@ class GeneticScheduler(Scheduler):
                                                                                      landscape,
                                                                                      self.fitness_constructor,
                                                                                      self.work_estimator,
+                                                                                     self.sgs_type,
                                                                                      self._n_cpu,
                                                                                      assigned_parent_time,
                                                                                      timeline,

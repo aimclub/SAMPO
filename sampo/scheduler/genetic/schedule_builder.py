@@ -6,7 +6,7 @@ import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
@@ -33,6 +33,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
                                        work_estimator: WorkTimeEstimator = None,
+                                       sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                        verbose: bool = True) \
@@ -118,7 +119,8 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         children,
                         resources_border,
                         assigned_parent_time,
-                        work_estimator), worker_name2index, worker_pool_indices, parents
+                        work_estimator,
+                        sgs_type), worker_name2index, worker_pool_indices, parents
 
 
 def build_schedule(wg: WorkGraph,
@@ -136,6 +138,7 @@ def build_schedule(wg: WorkGraph,
                    fitness_constructor: Callable[
                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                   sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None,
@@ -163,8 +166,8 @@ def build_schedule(wg: WorkGraph,
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                                                                   rand, spec, work_estimator, assigned_parent_time,
-                                                                   landscape, verbose)
+                                                                   rand, spec, work_estimator, sgs_type,
+                                                                   assigned_parent_time, landscape, verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 

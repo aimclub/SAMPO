@@ -1,11 +1,11 @@
 import time
 import uuid
-from multiprocessing import Pool
 import multiprocess as mp
 
 import numpy as np
 
 from sampo.scheduler import GeneticScheduler, HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler.genetic import ScheduleGenerationScheme
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -59,7 +59,8 @@ def run_scheduler(wg_info):
     work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
     # scheduler = HEFTScheduler(work_estimator=work_estimator)
     # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
-    scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator)
+    scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator,
+                                 sgs_type=ScheduleGenerationScheme.Serial, only_lft_initialization=True)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)
     finish = time.time()
@@ -87,7 +88,7 @@ if __name__ == '__main__':
 
         gap_sum = 0.0
         cnt = 0
-        for _ in range(1):
+        for _ in range(3):
             with mp.Pool(10) as pool:
                 result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
             result = np.array([res[1].value for res in result])

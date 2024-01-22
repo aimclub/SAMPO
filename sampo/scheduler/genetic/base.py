@@ -69,6 +69,7 @@ class GeneticScheduler(Scheduler):
         self._verbose = verbose
 
         self._time_border = None
+        self._max_plateau_steps = None
         self._deadline = None
 
     def __str__(self) -> str:
@@ -119,6 +120,9 @@ class GeneticScheduler(Scheduler):
 
     def set_time_border(self, time_border: int):
         self._time_border = time_border
+
+    def set_max_plateau_steps(self, max_plateau_steps: int):
+        self._max_plateau_steps = max_plateau_steps
 
     def set_deadline(self, deadline: Time):
         """
@@ -254,6 +258,7 @@ class GeneticScheduler(Scheduler):
                                                                                      assigned_parent_time,
                                                                                      timeline,
                                                                                      self._time_border,
+                                                                                     self._max_plateau_steps,
                                                                                      self._optimize_resources,
                                                                                      deadline,
                                                                                      self._only_lft_initialization,

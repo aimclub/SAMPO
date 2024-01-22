@@ -144,9 +144,10 @@ def build_schedule(wg: WorkGraph,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None,
-                   time_border: int = None,
+                   time_border: int | None = None,
+                   max_plateau_steps: int | None = None,
                    optimize_resources: bool = False,
-                   deadline: Time = None,
+                   deadline: Time | None = None,
                    only_lft_initialization: bool = False,
                    verbose: bool = True) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
@@ -218,7 +219,7 @@ def build_schedule(wg: WorkGraph,
         generation = 1
         plateau_steps = 0
         new_generation_number = generation_number if not have_deadline else generation_number // 2
-        max_plateau_steps = new_generation_number // 2
+        max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
         while generation <= new_generation_number and plateau_steps < max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
@@ -309,7 +310,7 @@ def build_schedule(wg: WorkGraph,
 
                 plateau_steps = 0
                 new_generation_number = generation_number - generation + 1
-                max_plateau_steps = new_generation_number // 2
+                max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
                 best_fitness = hof[0].fitness.values[0]
 
                 if len(pop) < population_size:

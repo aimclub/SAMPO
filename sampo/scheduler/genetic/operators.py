@@ -11,7 +11,8 @@ from deap import creator, base
 
 from sampo.scheduler.genetic.converter import (convert_chromosome_to_schedule, convert_schedule_to_chromosome,
                                                ChromosomeType, ScheduleGenerationScheme)
-from sampo.scheduler import RandomizedTopologicalScheduler, RandomizedLFTScheduler
+from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
+from sampo.scheduler.lft.base import RandomizedLFTScheduler
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph

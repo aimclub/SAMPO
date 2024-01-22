@@ -5,7 +5,8 @@ from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
 from sampo.scheduler.genetic.converter import ChromosomeType, ScheduleGenerationScheme
-from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, LFTScheduler
+from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler.lft.base import LFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
@@ -196,7 +197,7 @@ class GeneticScheduler(Scheduler):
                     return None, None, None
 
         return {
-            "lft": (init_lft_schedule, weights[0]),
+            "lft": (*init_lft_schedule, weights[0]),
             "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
             "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
             "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),

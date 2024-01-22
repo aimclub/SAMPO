@@ -11,7 +11,7 @@ from deap import creator, base
 
 from sampo.scheduler.genetic.converter import (convert_chromosome_to_schedule, convert_schedule_to_chromosome,
                                                ChromosomeType, ScheduleGenerationScheme)
-from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
+from sampo.scheduler import RandomizedTopologicalScheduler, RandomizedLFTScheduler
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -205,7 +205,8 @@ def init_toolbox(wg: WorkGraph,
                  resources_border: np.ndarray,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                 sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel) -> base.Toolbox:
+                 sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                 only_lft_initialization: bool = False) -> base.Toolbox:
     """
     Object, that include set of functions (tools) for genetic model and other functions related to it.
     list of parameters that received this function is sufficient and complete to manipulate with genetic algorithm
@@ -221,14 +222,11 @@ def init_toolbox(wg: WorkGraph,
 
     # create population
     # toolbox.register('population', tools.initRepeat, list, lambda: toolbox.generate_chromosome())
-    # toolbox.register('population', generate_population, wg=wg, contractors=contractors,
-    #                  work_id2index=work_id2index, worker_name2index=worker_name2index,
-    #                  contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
-    #                  init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
-    toolbox.register('population', generate_lft_population, wg=wg, contractors=contractors,
+    toolbox.register('population', generate_population, wg=wg, contractors=contractors,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
-                     rand=rand, work_estimator=work_estimator, landscape=landscape)
+                     init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape,
+                     only_lft_initialization=only_lft_initialization)
     # selection
     toolbox.register('select', select_new_population, pop_size=population_size)
     # combined crossover
@@ -287,67 +285,61 @@ def generate_population(n: int,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         rand: random.Random,
                         work_estimator: WorkTimeEstimator = None,
-                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
+                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                        only_lft_initialization: bool = False) -> list[Individual]:
     """
     Generates population.
     Do not use `generate_chromosome` function.
     """
 
-    def randomized_init() -> ChromosomeType:
-        schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, landscape=landscape)
+    def randomized_init(is_topological: bool = False) -> ChromosomeType:
+        if is_topological:
+            schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
+                .schedule(wg, contractors, landscape=landscape)
+        else:
+            schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors, spec,
+                                                                                                 landscape=landscape)
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 
+    if only_lft_initialization:
+        chromosomes = [Individual(randomized_init(is_topological=False)) for _ in range(n - 1)]
+        chromosomes.append(Individual(init_chromosomes['lft'][0]))
+        return chromosomes
+
     count_for_specified_types = (n // 3) // len(init_chromosomes)
     count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
-    sum_counts_for_specified_types = count_for_specified_types * len(init_chromosomes)
-    counts = [count_for_specified_types * importance for _, importance, _ in init_chromosomes.values()]
+    weights = [importance for _, importance, _ in init_chromosomes.values()]
+    sum_of_weights = sum(weights)
+    weights = [weight / sum_of_weights for weight in weights]
 
-    weights_multiplier = math.ceil(sum_counts_for_specified_types / sum(counts))
-    counts = [count * weights_multiplier for count in counts]
+    counts = [math.ceil(count_for_specified_types * weight) for weight in weights]
+    sum_counts_for_specified_types = sum(counts)
 
-    count_for_topological = n - sum_counts_for_specified_types
+    count_for_topological = n // 2 - sum_counts_for_specified_types
     count_for_topological = count_for_topological if count_for_topological > 0 else 1
-    counts += [count_for_topological]
+    counts.append(count_for_topological)
 
-    chromosome_types = rand.sample(list(init_chromosomes.keys()) + ['topological'], k=n, counts=counts)
+    count_for_rand_lft = n - count_for_topological - sum_counts_for_specified_types
+    count_for_rand_lft = count_for_rand_lft if count_for_rand_lft > 0 else 1
+    counts.append(count_for_rand_lft)
 
-    chromosomes = [Individual(init_chromosomes[generated_type][0])
-                   if generated_type != 'topological' else Individual(randomized_init())
-                   for generated_type in chromosome_types]
+    chromosome_types = rand.sample(list(init_chromosomes.keys()) + ['topological', 'rand_lft'], k=n, counts=counts)
 
-    return chromosomes
+    chromosomes = []
 
+    for generated_type in chromosome_types:
+        match generated_type:
+            case 'topological':
+                ind = Individual(randomized_init(is_topological=True))
+            case 'rand_lft':
+                ind = Individual(randomized_init(is_topological=False))
+            case _:
+                ind = Individual(init_chromosomes[generated_type][0])
 
-def generate_lft_population(n: int,
-                            wg: WorkGraph,
-                            contractors: list[Contractor],
-                            spec: ScheduleSpec,
-                            work_id2index: dict[str, int],
-                            worker_name2index: dict[str, int],
-                            contractor2index: dict[str, int],
-                            contractor_borders: np.ndarray,
-                            rand: random.Random,
-                            work_estimator: WorkTimeEstimator = None,
-                            landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[Individual]:
-    """
-    Generates population by MIN-LFT/LST Sampling.
-    """
-    from sampo.scheduler.lft.base import LFTScheduler, RandomizedLFTScheduler
+        chromosomes.append(ind)
 
-    schedule = LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, landscape=landscape)
-    chromosomes = [Individual(convert_schedule_to_chromosome(work_id2index, worker_name2index,
-                                                             contractor2index, contractor_borders, schedule, spec,
-                                                             landscape))]
-    for _ in range(n - 1):
-        schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors,
-                                                                                             landscape=landscape)
-        chromosomes.append(Individual(convert_schedule_to_chromosome(work_id2index, worker_name2index,
-                                                                     contractor2index, contractor_borders, schedule,
-                                                                     spec, landscape)))
-
-    return chromosomes
+    return chromosomes[:n]
 
 
 def generate_chromosome(wg: WorkGraph,

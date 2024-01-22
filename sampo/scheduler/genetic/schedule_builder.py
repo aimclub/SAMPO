@@ -36,6 +36,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                       only_lft_initialization: bool = False,
                                        verbose: bool = True) \
         -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, set[int]]]:
     start = time.time()
@@ -120,7 +121,8 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         resources_border,
                         assigned_parent_time,
                         work_estimator,
-                        sgs_type), worker_name2index, worker_pool_indices, parents
+                        sgs_type,
+                        only_lft_initialization), worker_name2index, worker_pool_indices, parents
 
 
 def build_schedule(wg: WorkGraph,
@@ -145,6 +147,7 @@ def build_schedule(wg: WorkGraph,
                    time_border: int = None,
                    optimize_resources: bool = False,
                    deadline: Time = None,
+                   only_lft_initialization: bool = False,
                    verbose: bool = True) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
@@ -167,7 +170,8 @@ def build_schedule(wg: WorkGraph,
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                                                    rand, spec, work_estimator, sgs_type,
-                                                                   assigned_parent_time, landscape, verbose)
+                                                                   assigned_parent_time, landscape,
+                                                                   only_lft_initialization, verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 

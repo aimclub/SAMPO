@@ -1,5 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Callable, TypeVar, Any, Type
+from typing import Callable, TypeVar
+
+from deap.base import Toolbox
+
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction
+from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration
+from sampo.schemas.schedule_spec import ScheduleSpec
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -27,9 +33,17 @@ class ComputationalBackend(ABC):
     def new_context(self) -> ComputationalContext:
         ...
 
-    def register(self, key: Any, action: Callable[[ComputationalContext, tuple], Any]):
-        self._actions[key] = action
+    @abstractmethod
+    def cache_scheduler_info(self,
+                             wg: WorkGraph,
+                             contractors: list[Contractor],
+                             landscape: LandscapeConfiguration,
+                             spec: ScheduleSpec,
+                             toolbox: Toolbox):
+        ...
 
-    # `return_type` is here for type inference
-    def run(self, key: Any, args: tuple, return_type: Type[T]) -> T:
-        return self._actions[key](self._context, *args)
+    @abstractmethod
+    def compute_chromosomes(self, fitness: FitnessFunction, chromosomes: list[ChromosomeType]) -> list[float]:
+        ...
+
+from sampo.backend.default import DefaultComputationalBackend

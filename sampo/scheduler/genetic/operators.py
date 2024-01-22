@@ -8,9 +8,11 @@ from typing import Callable, Iterable
 
 import numpy as np
 from deap import creator, base
+from deap.base import Toolbox
 
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction
 from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ChromosomeType
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
@@ -27,29 +29,15 @@ from sampo.utilities.resource_usage import resources_peaks_sum, resources_costs_
 # logger = mp.log_to_stderr(logging.DEBUG)
 
 
-class FitnessFunction(ABC):
-    """
-    Base class for description of different fitness functions.
-    """
-
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]]):
-        self._evaluator = evaluator
-
-    @abstractmethod
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        """
-        Calculate the value of fitness function of the all chromosomes.
-        It is better when value is less.
-        """
-        ...
-
-
 class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        return [schedule.execution_time.value for schedule in self._evaluator(chromosomes)]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return schedule.execution_time.value
 
 
 class SumOfResourcesPeaksFitness(FitnessFunction):
@@ -57,9 +45,7 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
     Fitness function that relies on sum of resources peaks usage.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
-                 resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
+    def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
@@ -69,9 +55,11 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
         """
         return partial(SumOfResourcesPeaksFitness, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [resources_peaks_sum(schedule, self._resources_names) for schedule in evaluated]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return resources_peaks_sum(schedule, self._resources_names)
 
 
 class SumOfResourcesFitness(FitnessFunction):
@@ -79,7 +67,7 @@ class SumOfResourcesFitness(FitnessFunction):
     Fitness function that relies on sum of resources usage.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
+    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
                  resources_names: Iterable[str] | None = None):
         super().__init__(evaluator)
         self._resources_names = list(resources_names) if resources_names is not None else None
@@ -91,9 +79,11 @@ class SumOfResourcesFitness(FitnessFunction):
         """
         return partial(SumOfResourcesFitness, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [resources_sum(schedule, self._resources_names) for schedule in evaluated]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return resources_sum(schedule, self._resources_names)
 
 
 class TimeWithResourcesFitness(FitnessFunction):
@@ -101,7 +91,7 @@ class TimeWithResourcesFitness(FitnessFunction):
     Fitness function that relies on finish time and the set of resources.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
+    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
                  resources_names: Iterable[str] | None = None):
         super().__init__(evaluator)
         self._resources_names = list(resources_names) if resources_names is not None else None
@@ -113,10 +103,11 @@ class TimeWithResourcesFitness(FitnessFunction):
         """
         return partial(TimeWithResourcesFitness, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names)
-                for schedule in evaluated]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names)
 
 
 class DeadlineResourcesFitness(FitnessFunction):
@@ -124,7 +115,8 @@ class DeadlineResourcesFitness(FitnessFunction):
     The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
+    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
+                 deadline: Time,
                  resources_names: Iterable[str] | None = None):
         super().__init__(evaluator)
         self._deadline = deadline
@@ -138,11 +130,12 @@ class DeadlineResourcesFitness(FitnessFunction):
         """
         return partial(DeadlineResourcesFitness, deadline, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        return [int(resources_peaks_sum(schedule, self._resources_names)
-                    * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in evaluated]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return resources_peaks_sum(schedule, self._resources_names) \
+                    * max(1.0, schedule.execution_time.value / self._deadline.value)
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -150,7 +143,8 @@ class DeadlineCostFitness(FitnessFunction):
     The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, deadline: Time, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
+    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
+                 deadline: Time,
                  resources_names: Iterable[str] | None = None):
         super().__init__(evaluator)
         self._deadline = deadline
@@ -164,11 +158,12 @@ class DeadlineCostFitness(FitnessFunction):
         """
         return partial(DeadlineCostFitness, deadline, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[int]:
-        evaluated = self._evaluator(chromosomes)
-        # TODO Integrate cost calculation to native module
-        return [int(resources_costs_sum(schedule, self._resources_names) * max(1.0, schedule.execution_time.value / self._deadline.value))
-                for schedule in evaluated]
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value
+        return resources_costs_sum(schedule, self._resources_names) \
+                * max(1.0, schedule.execution_time.value / self._deadline.value)
 
 
 # create class FitnessMin, the weights = -1 means that fitness - is function for minimum
@@ -254,6 +249,7 @@ def init_toolbox(wg: WorkGraph,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      landscape=landscape)
+    toolbox.register('evaluate_chromosome', evaluate, wg=wg, toolbox=toolbox)
     toolbox.register("chromosome_to_schedule", convert_chromosome_to_schedule, worker_pool=worker_pool,
                      index2node=index2node, index2contractor=index2contractor_obj,
                      worker_pool_indices=worker_pool_indices, assigned_parent_time=assigned_parent_time,
@@ -263,6 +259,14 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('copy_individual', lambda ind: Individual(copy_chromosome(ind)))
 
     return toolbox
+
+
+def evaluate(chromosome: ChromosomeType, wg: WorkGraph, toolbox: Toolbox) -> Schedule | None:
+    if toolbox.validate(chromosome):
+        sworks = toolbox.chromosome_to_schedule(chromosome)[0]
+        return Schedule.from_scheduled_works(sworks.values(), wg)
+    else:
+        return None
 
 
 def copy_chromosome(chromosome: ChromosomeType) -> ChromosomeType:

@@ -2,6 +2,7 @@ import copy
 
 import numpy as np
 
+from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
@@ -16,8 +17,6 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.linked_list import LinkedList
-
-ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
 
 
 def convert_schedule_to_chromosome(work_id2index: dict[str, int],

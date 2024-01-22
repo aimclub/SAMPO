@@ -6,19 +6,19 @@ import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
+from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
+from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.schemas.resources import Worker
 
 
 def create_toolbox_and_mapping_objects(wg: WorkGraph,
@@ -133,8 +133,7 @@ def build_schedule(wg: WorkGraph,
                    rand: random.Random,
                    spec: ScheduleSpec,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_constructor: Callable[
-                       [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                   fitness_constructor: Callable[[], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
@@ -161,215 +160,208 @@ def build_schedule(wg: WorkGraph,
     """
     global_start = start = time.time()
 
+    print('000')
+
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                                                    rand, spec, work_estimator, assigned_parent_time,
                                                                    landscape, verbose)
 
-    worker_name2index, worker_pool_indices, parents = mapping_objects
+    SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec, toolbox)
 
-    native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
-                           parents, work_estimator)
     # create population of a given size
     pop = toolbox.population(n=population_size)
 
     if verbose:
         print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
-    if native.native:
-        native_start = time.time()
-        best_chromosome = native.run_genetic(pop, mutpb_order, mutpb_order, mutpb_res, mutpb_res, mutpb_res, mutpb_res,
-                                             population_size)
-        if verbose:
-            print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
-    else:
-        have_deadline = deadline is not None
-        # save best individuals
-        hof = tools.HallOfFame(1, similar=compare_individuals)
+    have_deadline = deadline is not None
+    # save best individuals
+    hof = tools.HallOfFame(1, similar=compare_individuals)
 
-        fitness_f = fitness_constructor(native.evaluate) if not have_deadline else TimeFitness(native.evaluate)
+    fitness_f = fitness_constructor() if not have_deadline else TimeFitness()
+
+    evaluation_start = time.time()
+
+    print('1111111')
+
+    # map to each individual fitness function
+    pop = [ind for ind in pop if toolbox.validate(ind)]
+
+    fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
+
+    evaluation_time = time.time() - evaluation_start
+
+    for ind, fit in zip(pop, fitness):
+        ind.fitness.values = [fit]
+
+    hof.update(pop)
+    best_fitness = hof[0].fitness.values[0]
+
+    if verbose:
+        print(f'First population evaluation took {evaluation_time * 1000} ms')
+
+    start = time.time()
+
+    generation = 1
+    plateau_steps = 0
+    new_generation_number = generation_number if not have_deadline else generation_number // 2
+    max_plateau_steps = new_generation_number // 2
+
+    while generation <= new_generation_number and plateau_steps < max_plateau_steps \
+            and (time_border is None or time.time() - global_start < time_border):
+        if verbose:
+            print(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
+
+        rand.shuffle(pop)
+
+        offspring = []
+
+        for ind1, ind2 in zip(pop[::2], pop[1::2]):
+            # mate
+            offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+
+        for mutant in offspring:
+            # mutation
+            if optimize_resources:
+                # resource borders mutation
+                toolbox.mutate_resource_borders(mutant)
+            toolbox.mutate(mutant)
 
         evaluation_start = time.time()
 
-        # map to each individual fitness function
-        pop = [ind for ind in pop if toolbox.validate(ind)]
-        fitness = fitness_f.evaluate(pop)
+        offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
 
-        evaluation_time = time.time() - evaluation_start
-
-        for ind, fit in zip(pop, fitness):
+        for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = [fit]
 
-        hof.update(pop)
+        evaluation_time += time.time() - evaluation_start
+
+        # renewing population
+        pop += offspring
+        pop = toolbox.select(pop)
+        hof.update([pop[0]])
+
+        prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values[0]
+        if best_fitness == prev_best_fitness:
+            plateau_steps += 1
+        else:
+            plateau_steps = 0
 
-        if verbose:
-            print(f'First population evaluation took {evaluation_time * 1000} ms')
+        if have_deadline and best_fitness <= deadline:
+            if all([ind.fitness.values[0] <= deadline for ind in pop]):
+                break
 
-        start = time.time()
+        generation += 1
 
-        generation = 1
-        plateau_steps = 0
-        new_generation_number = generation_number if not have_deadline else generation_number // 2
-        max_plateau_steps = new_generation_number // 2
+    # Second stage to optimize resources if deadline is assigned
 
-        while generation <= new_generation_number and plateau_steps < max_plateau_steps \
-                and (time_border is None or time.time() - global_start < time_border):
-            if verbose:
-                print(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
+    if have_deadline:
+        fitness_resource = fitness_constructor()
 
-            rand.shuffle(pop)
-
-            offspring = []
-
-            for ind1, ind2 in zip(pop[::2], pop[1::2]):
-                # mate
-                offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
-
-            for mutant in offspring:
-                # mutation
-                if optimize_resources:
-                    # resource borders mutation
-                    toolbox.mutate_resource_borders(mutant)
-                toolbox.mutate(mutant)
+        if best_fitness > deadline:
+            print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
+            # save best individuals
+            hof = tools.HallOfFame(1, similar=compare_individuals)
+            pop = [ind for ind in pop if ind.fitness.values[0] == best_fitness]
 
             evaluation_start = time.time()
 
-            offspring_fitness = fitness_f.evaluate(offspring)
-
-            for ind, fit in zip(offspring, offspring_fitness):
-                ind.fitness.values = [fit]
+            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
+            for ind, res_peak in zip(pop, fitness):
+                ind.time = ind.fitness.values[0]
+                ind.fitness.values = [res_peak]
 
             evaluation_time += time.time() - evaluation_start
 
-            # renewing population
-            pop += offspring
-            pop = toolbox.select(pop)
-            hof.update([pop[0]])
+            hof.update(pop)
+        else:
+            optimize_resources = True
+            # save best individuals
+            hof = tools.HallOfFame(1, similar=compare_individuals)
 
-            prev_best_fitness = best_fitness
+            pop = [ind for ind in pop if ind.fitness.values[0] <= deadline]
+
+            evaluation_start = time.time()
+
+            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
+            for ind, res_peak in zip(pop, fitness):
+                ind.time = ind.fitness.values[0]
+                ind.fitness.values = [res_peak]
+
+            evaluation_time += time.time() - evaluation_start
+
+            hof.update(pop)
+
+            plateau_steps = 0
+            new_generation_number = generation_number - generation + 1
+            max_plateau_steps = new_generation_number // 2
             best_fitness = hof[0].fitness.values[0]
-            if best_fitness == prev_best_fitness:
-                plateau_steps += 1
-            else:
-                plateau_steps = 0
 
-            if have_deadline and best_fitness <= deadline:
-                if all([ind.fitness.values[0] <= deadline for ind in pop]):
-                    break
+            if len(pop) < population_size:
+                individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
+                copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
+                for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
+                    copied_ind.fitness.values = [ind.fitness.values[0]]
+                    copied_ind.time = ind.time
+                pop += copied_individuals
 
-            generation += 1
+            while generation <= generation_number and plateau_steps < max_plateau_steps \
+                    and (time_border is None or time.time() - global_start < time_border):
+                if verbose:
+                    print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+                rand.shuffle(pop)
 
-        # Second stage to optimize resources if deadline is assigned
+                offspring = []
 
-        if have_deadline:
+                for ind1, ind2 in zip(pop[::2], pop[1::2]):
+                    # mate
+                    offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
 
-            fitness_resource = fitness_constructor(native.evaluate)
-
-            if best_fitness > deadline:
-                print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
-                # save best individuals
-                hof = tools.HallOfFame(1, similar=compare_individuals)
-                pop = [ind for ind in pop if ind.fitness.values[0] == best_fitness]
+                for mutant in offspring:
+                    # resource borders mutation
+                    toolbox.mutate_resource_borders(mutant)
+                    # other mutation
+                    toolbox.mutate(mutant)
 
                 evaluation_start = time.time()
 
-                fitness = fitness_resource.evaluate(pop)
-                for ind, res_peak in zip(pop, fitness):
-                    ind.time = ind.fitness.values[0]
+                fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+
+                for ind, t in zip(offspring, fitness):
+                    ind.time = t
+
+                offspring = [ind for ind in offspring if ind.time <= deadline]
+
+                fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource, offspring)
+
+                for ind, res_peak in zip(offspring, fitness_res):
                     ind.fitness.values = [res_peak]
 
                 evaluation_time += time.time() - evaluation_start
 
-                hof.update(pop)
-            else:
-                optimize_resources = True
-                # save best individuals
-                hof = tools.HallOfFame(1, similar=compare_individuals)
+                # renewing population
+                pop += offspring
+                pop = toolbox.select(pop)
+                hof.update([pop[0]])
 
-                pop = [ind for ind in pop if ind.fitness.values[0] <= deadline]
-
-                evaluation_start = time.time()
-
-                fitness = fitness_resource.evaluate(pop)
-                for ind, res_peak in zip(pop, fitness):
-                    ind.time = ind.fitness.values[0]
-                    ind.fitness.values = [res_peak]
-
-                evaluation_time += time.time() - evaluation_start
-
-                hof.update(pop)
-
-                plateau_steps = 0
-                new_generation_number = generation_number - generation + 1
-                max_plateau_steps = new_generation_number // 2
+                prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values[0]
+                if best_fitness == prev_best_fitness:
+                    plateau_steps += 1
+                else:
+                    plateau_steps = 0
 
-                if len(pop) < population_size:
-                    individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
-                    copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
-                    for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
-                        copied_ind.fitness.values = [ind.fitness.values[0]]
-                        copied_ind.time = ind.time
-                    pop += copied_individuals
+                generation += 1
 
-                while generation <= generation_number and plateau_steps < max_plateau_steps \
-                        and (time_border is None or time.time() - global_start < time_border):
-                    if verbose:
-                        print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
-                    rand.shuffle(pop)
+    if verbose:
+        print(f'Final time: {best_fitness}')
+        print(f'Generations processing took {(time.time() - start) * 1000} ms')
+        print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
+        print(f'Evaluation time: {evaluation_time * 1000}')
 
-                    offspring = []
-
-                    for ind1, ind2 in zip(pop[::2], pop[1::2]):
-                        # mate
-                        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
-
-                    for mutant in offspring:
-                        # resource borders mutation
-                        toolbox.mutate_resource_borders(mutant)
-                        # other mutation
-                        toolbox.mutate(mutant)
-
-                    evaluation_start = time.time()
-
-                    fitness = fitness_f.evaluate(offspring)
-
-                    for ind, t in zip(offspring, fitness):
-                        ind.time = t
-
-                    offspring = [ind for ind in offspring if ind.time <= deadline]
-
-                    fitness_res = fitness_resource.evaluate(offspring)
-
-                    for ind, res_peak in zip(offspring, fitness_res):
-                        ind.fitness.values = [res_peak]
-
-                    evaluation_time += time.time() - evaluation_start
-
-                    # renewing population
-                    pop += offspring
-                    pop = toolbox.select(pop)
-                    hof.update([pop[0]])
-
-                    prev_best_fitness = best_fitness
-                    best_fitness = hof[0].fitness.values[0]
-                    if best_fitness == prev_best_fitness:
-                        plateau_steps += 1
-                    else:
-                        plateau_steps = 0
-
-                    generation += 1
-
-        native.close()
-
-        if verbose:
-            print(f'Final time: {best_fitness}')
-            print(f'Generations processing took {(time.time() - start) * 1000} ms')
-            print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
-            print(f'Evaluation time: {evaluation_time * 1000}')
-
-        best_chromosome = hof[0]
+    best_chromosome = hof[0]
 
     scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(best_chromosome,
                                                                                                  landscape=landscape,

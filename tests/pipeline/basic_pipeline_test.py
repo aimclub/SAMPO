@@ -41,9 +41,10 @@ def test_local_optimize_scheduling(setup_scheduler_parameters):
 
 # this test is needed to check validation of input contractors
 
-def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors,
-                                                                   setup_landscape_many_holders):
+def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors):
     thrown = False
+    if setup_wg.vertex_count > 16:
+        pass
     try:
         SchedulingPipeline.create() \
             .wg(setup_wg) \

@@ -101,6 +101,8 @@ class LandscapeConfiguration:
                                                    self._holders}
         self.holder_node_id2resource_holder: dict[str, ResourceHolder] = {holder.node.id: holder for holder in self._holders}
         self.zone_config = zone_config
+        if self.lg is None:
+            return
         self._build_routes()
         self._node2ind = self.lg.node2ind
 
@@ -170,14 +172,18 @@ class LandscapeConfiguration:
 
         from_ind = self._node2ind[from_node]
         to_ind = self._node2ind[to_node]
-        dijkstra(to_ind)
+        dijkstra(from_ind)
 
-        path = [from_ind]
+        path = []
+        if path_mx[from_ind][to_ind] == -1:
+            return []
         fr = from_ind
-        while path_mx[to_ind][fr] != to_ind:
-            path.append(path_mx[to_ind][fr])
-            fr = path_mx[to_ind][fr]
-        path.append(to_ind)
+        while path_mx[fr][to_ind] != to_ind:
+            path.append(path_mx[fr][to_ind])
+            fr = path_mx[fr][to_ind]
+        path_res = [from_ind]
+        path_res.extend(path)
+        path_res.append(to_ind)
         return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 
     @cached_property
@@ -199,6 +205,9 @@ class LandscapeConfiguration:
             c = a.copy()
             c.update(b)
             return c
+
+        if self.lg is None:
+            return []
 
         holders = {
             holder.id: merge_dicts({name: count for name, count in holder.get_resources()},

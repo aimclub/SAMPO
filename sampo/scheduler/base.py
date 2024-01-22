@@ -48,7 +48,7 @@ class Scheduler(ABC):
     def schedule(self,
                  wg: WorkGraph,
                  contractors: list[Contractor],
-                 landscape: LandscapeConfiguration,
+                 landscape: LandscapeConfiguration = LandscapeConfiguration(),
                  spec: ScheduleSpec = ScheduleSpec(),
                  validate: bool = False,
                  start_time: Time = Time(0),

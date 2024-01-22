@@ -163,8 +163,9 @@ def build_schedule(wg: WorkGraph,
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                                                                   rand, spec, work_estimator, assigned_parent_time,
-                                                                   landscape, verbose)
+                                                                   rand, spec=spec, work_estimator=work_estimator,
+                                                                   assigned_parent_time=assigned_parent_time,
+                                                                   landscape=landscape, verbose=verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 

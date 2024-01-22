@@ -66,10 +66,12 @@ class SupplyTimeline:
         start_delivery_time = Time(0)
         finish_delivery_time = start_time
         mat_request = self._request_materials(node, materials, finish_delivery_time)
+        if not mat_request:
+            return True
         platform_state = self._timeline[node.platform.id]
         for mat in mat_request:
-            start_ind = platform_state[mat.name].bisect_right(start_delivery_time)
-            finish_ind = platform_state[mat.name].bisect_right(finish_delivery_time)
+            start_ind = platform_state[mat.name].bisect_right(finish_delivery_time)
+            finish_ind = platform_state[mat.name].bisect_right(Time.inf()) - 1
             if not self._check_resource_availability(platform_state[mat.name], mat.count, start_ind, finish_ind):
                 return False
 
@@ -81,8 +83,8 @@ class SupplyTimeline:
             not_enough_mat = False
             # check whether remaining materials volume is enough for request
             for mat in materials:
-                right_index = depot_state[mat.name].bisect_right(finish_delivery_time)
-                if depot_state[mat.name][right_index] < mat.count:
+                right_index = depot_state[mat.name].bisect_right(finish_delivery_time) - 1
+                if depot_state[mat.name][right_index].available_workers_count < mat.count:
                     not_enough_mat = True
                     break
             if not_enough_mat:
@@ -115,11 +117,10 @@ class SupplyTimeline:
             available_count_material = self._timeline[node.platform.id][need_mat.name][ind].available_workers_count
             if available_count_material < need_mat.count:
                 request.append(
-                    Material(str(uuid.uuid4()), need_mat.name, node.platform.resource_storage_unit.capacity[need_mat.name] - available_count_material))
+                    Material(str(uuid.uuid4()), need_mat.name,
+                             node.platform.resource_storage_unit.capacity[need_mat.name] - available_count_material))
             else:
-                request.append(
-                    Material(str(uuid.uuid4()), need_mat.name, 0)
-                )
+                request.append(Material(str(uuid.uuid4()), need_mat.name, 0))
         return request
 
     def find_min_material_time(self, node: GraphNode, landscape: LandscapeConfiguration, start_time: Time,
@@ -149,6 +150,7 @@ class SupplyTimeline:
             raise NoDepots(
                 f"Schedule can not be built. There is no any resource holder")
 
+        holders_with_req_mat = []
         count = 0
         for holder_id in holders:
             material_available = [False] * len(materials)
@@ -156,13 +158,15 @@ class SupplyTimeline:
                 if not self._timeline[holder_id].get(materials[mat_ind].name, None) is None:
                     if self._timeline[holder_id][materials[mat_ind].name][-1].available_workers_count >= materials[mat_ind].count:
                         material_available[mat_ind] = True
-            count += 1 if all(material_available) else 0
+            if all(material_available):
+                count += 1
+                holders_with_req_mat.append(holder_id)
 
         if not count:
             raise NotEnoughMaterialsInDepots(
                 f'Schedule can not be built. There is no resource holder, that has required materials')
 
-        depots_result: list[str] = [depot_id for depot_id in holders if
+        depots_result: list[str] = [depot_id for depot_id in holders_with_req_mat if
                                     all([True if self._timeline[depot_id][mat.name][-1].available_workers_count >= mat.count else False for mat in materials])]
 
         return depots_result
@@ -286,7 +290,7 @@ class SupplyTimeline:
 
         last_time = state[-1].time
 
-        while current_start_time <= last_time:
+        while current_start_time < last_time:
             end_ind = state.bisect_right((current_start_time + exec_time, -1, EventType.INITIAL))
 
             not_enough_resources = False

@@ -30,35 +30,20 @@ def setup_sampler(request) -> Sampler:
 def setup_rand() -> Random:
     return Random(231)
 
-
-@fixture
-def setup_landscape_one_holder() -> LandscapeConfiguration:
-    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(25, 0),
-                                                          materials=[Material('111', 'mat1', 100000)])])
-
-
-@fixture
-def setup_landscape_many_holders() -> LandscapeConfiguration:
-    return LandscapeConfiguration(holders=[ResourceHolder(str(uuid4()), 'holder1', IntervalGaussian(50, 0),
-                                                          materials=[Material('111', 'mat1', 100000)]),
-                                           ResourceHolder(str(uuid4()), 'holder2', IntervalGaussian(50, 0),
-                                                          materials=[Material('222', 'mat2', 100000)])
-                                           ])
-
-
 @fixture
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
 
-@fixture(params=[(graph_type, lag) for lag in [True, False]
-                 for graph_type in ['manual',
-                                    'small plain synthetic', 'big plain synthetic']],
+@fixture(params=[(graph_type, lag, generate_materials)
+                 for lag in [True, False]
+                 for generate_materials in [True, False]
+                 for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']],
          # 'small advanced synthetic', 'big advanced synthetic']],
-         ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}'
+         ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}, generate_materials={generate_materials}'
               for lag_opt in [True, False]
-              for graph_type in ['manual',
-                                 'small plain synthetic', 'big plain synthetic']])
+              for generate_materials in [True, False]
+              for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
@@ -67,33 +52,35 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     ADV_GRAPH_UNIQ_WORKS_PROP = 0.4
     ADV_GRAPH_UNIQ_RES_PROP = 0.2
 
-    graph_type, lag_optimization = request.param
+    graph_type, lag_optimization, generate_materials = request.param
 
     match graph_type:
         case 'manual':
             sr = setup_sampler
-
             l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
-            l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
-            l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
-            l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                           (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-            l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
-            l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
-            l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
-            l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
             l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
-            l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+            if generate_materials:
+                l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+                l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+                l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+                l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+                l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+                l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+                l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+                l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             wg = WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
         case 'small plain synthetic':
@@ -119,14 +106,16 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
     wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
-    return wg
+    return setup_simple_synthetic.get_wg_with_platforms(wg) if generate_materials else wg
 
 
 # TODO Make parametrization with different(specialized) contractors
 @fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
-def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) -> tuple[
-    WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
+def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
+    generate_landscape = False
+    if setup_wg.nodes[setup_wg.vertex_count - 2].platform is not None:
+        generate_landscape = True
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
 
@@ -154,8 +143,10 @@ def setup_scheduler_parameters(request, setup_wg, setup_landscape_many_holders) 
                                       workers={name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
-    return setup_wg, contractors, setup_landscape_many_holders
 
+    landscape = setup_simple_synthetic.simple_synthetic_landscape(setup_wg) \
+        if generate_landscape else LandscapeConfiguration()
+    return setup_wg, contractors, landscape
 
 @fixture
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
@@ -182,10 +173,10 @@ def setup_empty_contractors(setup_wg) -> list[Contractor]:
 def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     return setup_scheduler_parameters, GeneticScheduler.generate_first_population(setup_wg, setup_contractors,
-                                                                                  setup_landscape,
+                                                                                  landscape=landscape,
                                                                                   work_estimator=work_estimator)
 
 
@@ -202,7 +193,7 @@ def setup_scheduler(request) -> Scheduler:
 
 
 @fixture
-def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_landscape_many_holders):
+def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_scheduler_type):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
 
     try:

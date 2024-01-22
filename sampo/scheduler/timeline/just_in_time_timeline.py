@@ -160,7 +160,7 @@ class JustInTimeTimeline(Timeline):
                 return False
 
             if not self._material_timeline.can_schedule_at_the_moment(node, self.landscape, start_time,
-                                                                      node.work_unit.need_materials()):
+                                                                      node.work_unit.need_materials(), exec_time):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
                 return False
@@ -286,10 +286,11 @@ class JustInTimeTimeline(Timeline):
 
             new_finish_time = c_st + working_time
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
-                                                                                       new_finish_time,
-                                                                                       dep_node.work_unit.need_materials(),
-                                                                                       dep_node.work_unit.workground_size)
+            deliveries, mat_del_time = self._material_timeline.supply_resources(dep_node,
+                                                                                self.landscape,
+                                                                                c_st,
+                                                                                dep_node.work_unit.need_materials(),
+                                                                                True)
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(c_st, new_finish_time),

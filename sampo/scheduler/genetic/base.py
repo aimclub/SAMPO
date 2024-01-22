@@ -160,7 +160,7 @@ class GeneticScheduler(Scheduler):
                 return scheduler_class(work_estimator=work_estimator,
                                        resource_optimizer=AverageReqResourceOptimizer(k)) \
                     .schedule(wg, contractors,
-                              spec,
+                              spec=spec,
                               landscape=landscape), list(reversed(prioritization(wg, work_estimator))), spec
             except NoSufficientContractorError:
                 return None, None, None

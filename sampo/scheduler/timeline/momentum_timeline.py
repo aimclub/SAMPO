@@ -435,11 +435,18 @@ class MomentumTimeline(Timeline):
             # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
+            deliveries, mat_del_time = self._material_timeline.supply_resources(chain_node,
+                                                                                self.landscape,
+                                                                                start_work,
+                                                                                chain_node.work_unit.need_materials(),
+                                                                                True)
+            start_work = max(start_work, mat_del_time)
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),
                 workers=worker_team,
-                contractor=contractor
+                contractor=contractor,
+                materials=deliveries
             )
             curr_time = start_work + node_time
             node2swork[chain_node] = swork
@@ -448,3 +455,4 @@ class MomentumTimeline(Timeline):
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         curr_time - start_time)
+

@@ -4,7 +4,7 @@ from itertools import chain
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import SchedulingPipeline
-from sampo.scheduler import HEFTScheduler, GeneticScheduler
+from sampo.scheduler import HEFTScheduler, GeneticScheduler, HEFTBetweenScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -91,8 +91,7 @@ def setup_landscape_many_holders(lg_info):
                        holders[1]),
         ], lg=lg)
 
-def setup_wg(lg_info):
-    landscape = lg_info
+def setup_wg(landscape):
     platforms = landscape.lg.nodes
     sr = Sampler(1e-1)
 
@@ -128,45 +127,43 @@ def setup_wg(lg_info):
 
     return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3]), landscape
 
-# Set up attributes for the generated synthetic graph
-synth_works_top_border = 2000
-synth_unique_works = 300
-synth_resources = 100
+if __name__ == '__main__':
+    # Set up attributes for the generated synthetic graph
+    synth_works_top_border = 2000
+    synth_unique_works = 300
+    synth_resources = 100
 
-# Set up scheduling algorithm and project's start date
-scheduler = GeneticScheduler(number_of_generation=10,
-                             mutate_order=0.05,
-                             mutate_resources=0.005,
-                             size_of_population=50)
-start_date = "2023-01-01"
+    # Set up scheduling algorithm and project's start date
+    scheduler = HEFTBetweenScheduler()
+    start_date = "2023-01-01"
 
-# Set up visualization mode (ShowFig or SaveFig) and the gant chart file's name (if SaveFig mode is chosen)
-visualization_mode = VisualizationMode.ShowFig
-gant_chart_filename = './output/synth_schedule_gant_chart.png'
+    # Set up visualization mode (ShowFig or SaveFig) and the gant chart file's name (if SaveFig mode is chosen)
+    visualization_mode = VisualizationMode.ShowFig
+    gant_chart_filename = './output/synth_schedule_gant_chart.png'
 
-# Generate synthetic graph with the given approximate works count,
-# number of unique works names and number of unique resources
-srand = SimpleSynthetic(rand=31)
-wg, landscape = setup_wg(setup_landscape_many_holders(setup_lg()))
+    # Generate synthetic graph with the given approximate works count,
+    # number of unique works names and number of unique resources
+    srand = SimpleSynthetic(rand=31)
+    wg, landscape = setup_wg(setup_landscape_many_holders(setup_lg()))
 
-# Get information about created WorkGraph's attributes
-works_count = len(wg.nodes)
-work_names_count = len(set(n.work_unit.name for n in wg.nodes))
-res_kind_count = len(set(req.kind for req in chain(*[n.work_unit.worker_reqs for n in wg.nodes])))
-print(works_count, work_names_count, res_kind_count)
+    # Get information about created WorkGraph's attributes
+    works_count = len(wg.nodes)
+    work_names_count = len(set(n.work_unit.name for n in wg.nodes))
+    res_kind_count = len(set(req.kind for req in chain(*[n.work_unit.worker_reqs for n in wg.nodes])))
+    print(works_count, work_names_count, res_kind_count)
 
-# Check the validity of the WorkGraph's attributes
-assert (works_count <= synth_works_top_border * 1.1)
-assert (work_names_count <= synth_works_top_border)
-assert (res_kind_count <= synth_works_top_border)
+    # Check the validity of the WorkGraph's attributes
+    assert (works_count <= synth_works_top_border * 1.1)
+    assert (work_names_count <= synth_works_top_border)
+    assert (res_kind_count <= synth_works_top_border)
 
-# Get list with the Contractor object, which can satisfy the created WorkGraph's resources requirements
-contractors = [get_contractor_by_wg(wg)]
+    # Get list with the Contractor object, which can satisfy the created WorkGraph's resources requirements
+    contractors = [get_contractor_by_wg(wg)]
 
-project = SchedulingPipeline.create() \
-    .wg(wg) \
-    .contractors(contractors) \
-    .landscape(landscape) \
-    .schedule(scheduler) \
-    .visualization('2023-01-01') \
-    .show_gant_chart()
+    project = SchedulingPipeline.create() \
+        .wg(wg) \
+        .contractors(contractors) \
+        .landscape(landscape) \
+        .schedule(scheduler) \
+        .visualization('2023-01-01') \
+        .show_gant_chart()

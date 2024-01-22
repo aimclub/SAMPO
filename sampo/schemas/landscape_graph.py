@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 from functools import cached_property
+from typing import Any
 
 import numpy as np
 
@@ -21,11 +22,13 @@ class LandEdge:
 
 
 class ResourceStorageUnit:
-    def __init__(self, capacity: dict[str, int]):
+    def __init__(self, capacity: dict[str, int] | None = None):
         """
         Represents the resource storage of a land graph node
         :param capacity: list of the maximum values of each material
         """
+        if capacity is None:
+            capacity = {}
         self._capacity = capacity
 
     @cached_property
@@ -35,10 +38,11 @@ class ResourceStorageUnit:
 
 class LandGraphNode:
     def __init__(self,
-                 id: str,
-                 name: str,
-                 resource_storage_unit: ResourceStorageUnit,
-                 neighbour_nodes: list[tuple['LandGraphNode', float, int]] | None = None):
+                 id: str = str(uuid.uuid4()),
+                 name: str = 'platform',
+                 resource_storage_unit: ResourceStorageUnit = ResourceStorageUnit(),
+                 neighbour_nodes: list[tuple['LandGraphNode', float, int]] | None = None,
+                 works: list['GraphNode'] | Any = None):
         """
         Represents the participant of landscape transport network
 
@@ -52,13 +56,18 @@ class LandGraphNode:
             self.add_neighbours(neighbour_nodes)
         self._roads: list[LandEdge] = []
         self.nodes: list['GraphNode'] = []
+        if works is not None:
+            self.nodes.extend(works) if isinstance(works, list) else self.nodes.append(works)
         self.resource_storage_unit = resource_storage_unit
+
+    def __hash__(self):
+        return hash(self.id)
 
     @cached_property
     def neighbours(self) -> list['LandGraphNode']:
         if self._roads:
             return [neighbour for neighbour, weight in self._roads]
-        raise NoAvailableResources('There is no roads in land graph')
+        return []
 
     @cached_property
     def roads(self) -> list[LandEdge]:
@@ -66,19 +75,27 @@ class LandGraphNode:
             return self._roads
         raise NoAvailableResources('There are no roads in land graph')
 
-    def add_works(self, nodes: list['GraphNode']):
-        self.nodes = nodes
+    def add_works(self, nodes: list['GraphNode'] | Any):
+        if isinstance(nodes, list):
+            self.nodes.extend(nodes)
+        else:
+            self.nodes.append(nodes)
 
     @cached_property
     def works(self) -> list['GraphNode']:
         return self.nodes
 
-    def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float, int]]):
-        for neighbour, length, bandwidth in neighbour_nodes:
+    def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float, int]] | tuple['LandGraphNode', float, int]):
+        if isinstance(neighbour_nodes, list):
+            for neighbour, length, bandwidth in neighbour_nodes:
+                road_id = str(uuid.uuid4())
+                self._roads.append(LandEdge(road_id, self, neighbour, length, bandwidth))
+                neighbour._roads.append(LandEdge(road_id, neighbour, self, length, bandwidth))
+        else:
+            neighbour, length, bandwidth = neighbour_nodes
             road_id = str(uuid.uuid4())
             self._roads.append(LandEdge(road_id, self, neighbour, length, bandwidth))
             neighbour._roads.append(LandEdge(road_id, neighbour, self, length, bandwidth))
-
 
 @dataclass
 class LandGraph:

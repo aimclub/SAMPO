@@ -67,13 +67,15 @@ class LandscapeConfiguration:
 
 class MaterialDelivery:
     def __init__(self, work_id: str):
-        """
-        :param work_id: id of work (e.x. id node in WorkGraph)
-        :param delivery: dictionary that contains named (by resource name) lists that saved info about all
-        deliveries certain resource
-        """
         self.id = work_id
         self.delivery = {}
+
+    def add_delivery(self, name: str, time: Time, count: int):
+        material_delivery = self.delivery.get(name, None)
+        if material_delivery is None:
+            material_delivery = []
+            self.delivery[name] = material_delivery
+        material_delivery.append((time, count))
 
     def add_deliveries(self, name: str, deliveries: list[tuple[Time, int]]):
         material_delivery = self.delivery.get(name, None)

@@ -76,11 +76,12 @@ def get_contractor(pack_worker_count: float,
     :param pack_worker_count: The number of resource sets
     :param sigma_scaler: parameter to calculate the scatter by Gaussian distribution with mean=0 amount from the
     transferred proportions
-    :param index: a parameter for naming a contractor
     :param worker_proportions: proportions of quantity for contractor resources to be scaled by pack_worker_count
     :param available_worker_types: Worker types for generation,
     if a subset of worker_proportions is used, if None, all worker_proportions are used
     :param rand: Number generator with a fixed seed, or None for no fixed seed
+    :param contractor_id: generated contractor's id
+    :param contractor_name: generated contractor's name
     :returns: the contractor
 
     """

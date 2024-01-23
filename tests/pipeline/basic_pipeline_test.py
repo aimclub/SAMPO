@@ -3,12 +3,10 @@ import sys
 
 from sampo.pipeline import SchedulingPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
-from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
 from sampo.schemas.exceptions import NoSufficientContractorError
-from sampo.utilities.visualization import schedule_gant_chart_fig, VisualizationMode
 
 
 def test_plain_scheduling(setup_scheduler_parameters):

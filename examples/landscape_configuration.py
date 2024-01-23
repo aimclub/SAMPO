@@ -4,7 +4,7 @@ from itertools import chain
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import SchedulingPipeline
-from sampo.scheduler import HEFTScheduler, GeneticScheduler, HEFTBetweenScheduler
+from sampo.scheduler import HEFTBetweenScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -135,6 +135,10 @@ if __name__ == '__main__':
 
     # Set up scheduling algorithm and project's start date
     scheduler = HEFTBetweenScheduler()
+    # scheduler = GeneticScheduler(number_of_generation=10,
+    #                              mutate_order=0.05,
+    #                              mutate_resources=0.005,
+    #                              size_of_population=50)
     start_date = "2023-01-01"
 
     # Set up visualization mode (ShowFig or SaveFig) and the gant chart file's name (if SaveFig mode is chosen)

@@ -66,7 +66,7 @@ class LandGraphNode:
     @cached_property
     def neighbours(self) -> list['LandGraphNode']:
         if self._roads:
-            return [neighbour for neighbour, weight in self._roads]
+            return [neighbour_edge.finish for neighbour_edge in self._roads]
         return []
 
     @cached_property

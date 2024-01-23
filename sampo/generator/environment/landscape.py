@@ -91,7 +91,10 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
     platforms = list(platforms)
 
     for i in range(holders_number):
-        materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(1, len(max_materials)))
+        if not max_materials:
+            materials_name = []
+        else:
+            materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(min(len(max_materials), 1), max(len(max_materials), 1)))
         holders_node.append(LandGraphNode(str(uuid.uuid4()), f'holder{i}',
                                           ResourceStorageUnit(
                                               {
@@ -107,11 +110,11 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1, 20))
+        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(30, 50))
                            for neighbour in neighbour_platforms]
         holders_node[-1].add_neighbours(neighbour_edges)
 
-        vehicles_number = rnd.randint(1, 20)
+        vehicles_number = rnd.randint(10, 20)
         holders.append(ResourceHolder(str(uuid.uuid4()), holders_node[-1].name,
                                       vehicles=[
                                           Vehicle(str(uuid.uuid4()), f'vehicle{j}',
@@ -148,9 +151,8 @@ def wg_with_platforms(wg: WorkGraph, rnd: random.Random) -> WorkGraph:
                                            }
                                        )))
 
-    n = len(platforms)
     for i, platform in enumerate(platforms):
-        if i == n - 1:
+        if i == platforms_number - 1:
             continue
         neighbour_platforms = rnd.choices(platforms[i+1:], k=rnd.randint(1, math.ceil(len(platforms[i+1:]) / 3)))
 
@@ -160,13 +162,16 @@ def wg_with_platforms(wg: WorkGraph, rnd: random.Random) -> WorkGraph:
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1, 20))
+        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(30, 50))
                            for neighbour in neighbour_platforms]
         platform.add_neighbours(neighbour_edges)
 
-    for node in wg_res.nodes:
+    platforms = (wg.vertex_count // platforms_number) * platforms + platforms[:wg.vertex_count % platforms_number]
+    rnd.shuffle(platforms)
+
+    for node, platform in zip(wg_res.nodes, platforms):
         if node.edges_to and node.edges_from:
-            node.platform = rnd.choice(platforms)
+            node.platform = platform
             node.platform.add_works(node)
 
     return wg_res

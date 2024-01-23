@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from sortedcontainers import SortedList
 
-from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoDepots
+from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle, Road, MaterialDelivery
 from sampo.schemas.landscape_graph import LandGraphNode
@@ -83,7 +83,7 @@ class SupplyTimeline:
             not_enough_mat = False
             # check whether remaining materials volume is enough for request
             for mat in materials:
-                right_index = depot_state[mat.name].bisect_right(finish_delivery_time) - 1
+                right_index = depot_state[mat.name].bisect_right(finish_delivery_time)
                 if depot_state[mat.name][right_index].available_workers_count < mat.count:
                     not_enough_mat = True
                     break
@@ -156,7 +156,8 @@ class SupplyTimeline:
             material_available = [False] * len(materials)
             for mat_ind in range(len(materials)):
                 if not self._timeline[holder_id].get(materials[mat_ind].name, None) is None:
-                    if self._timeline[holder_id][materials[mat_ind].name][-1].available_workers_count >= materials[mat_ind].count:
+                    ind = self._timeline[holder_id][materials[mat_ind].name].bisect_left((Time.inf())) - 1
+                    if self._timeline[holder_id][materials[mat_ind].name][ind].available_workers_count >= materials[mat_ind].count:
                         material_available[mat_ind] = True
             if all(material_available):
                 count += 1
@@ -187,7 +188,6 @@ class SupplyTimeline:
         :param materials: material resources that are required to start
         :return: material deliveries, the time when resources are ready
         """
-        print(f'node {node.id}')
         delivery = MaterialDelivery(node.id)
         mat_request = self._request_materials(node, materials, deadline)
         land_node = node.platform
@@ -234,6 +234,9 @@ class SupplyTimeline:
                     self._get_route_time(self._holder_id2holder[depot].node,
                                          land_node, vehicles, landscape, depot_time)
 
+                if not deliveries[0]:
+                    raise NoAvailableResources()
+
                 depot_time = max(depot_time, self._find_earliest_start_time(vehicle_state,
                                                                             vehicle_count_need,
                                                                             depot_time,
@@ -251,6 +254,8 @@ class SupplyTimeline:
 
         if not update:
             return delivery, finish_delivery_time
+
+        print(f'node {node.id}')
 
         update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
 
@@ -289,13 +294,20 @@ class SupplyTimeline:
         current_start_time = parent_time
         base_ind = state.bisect_right(parent_time) - 1
 
-        last_time = state[-1].time
+        ind = state.bisect_left((Time.inf())) - 1
+        last_time = state[ind].time
 
         while current_start_time < last_time:
-            end_ind = state.bisect_right((current_start_time + exec_time, -1, EventType.INITIAL))
+            end_ind = state.bisect_right((current_start_time + exec_time))
 
-            if not SupplyTimeline._check_resource_availability(state, required_resources, base_ind, end_ind + 1):
-                base_ind += 1
+            not_enough_resources = False
+            for idx in range(end_ind - 1, base_ind - 1, -1):
+                if state[idx].available_workers_count < required_resources:
+                    base_ind = idx + 1
+                    not_enough_resources = True
+                    break
+
+            if not not_enough_resources:
                 break
 
             current_start_time = state[base_ind].time
@@ -315,6 +327,10 @@ class SupplyTimeline:
             available_roads = [road for road in landscape.roads if road.vehicles >= batch_size]
             route = landscape.construct_route(from_node, to_node, available_roads)
 
+            if not route:
+                raise NoAvailableResources(f'there is no chance to construct route with roads '
+                                           f'{[road.name for road in available_roads]}')
+
             # check time availability of each part of 'route'
             for road_id in route:
                 road_overcome_time = _id2road[road_id].overcome_time
@@ -326,6 +342,11 @@ class SupplyTimeline:
                     road_delivery[road_id] = ('vehicles', batch_size,
                                               start_time, start_time + Time(road_overcome_time))
                     finish_time = start_time + road_overcome_time
+
+            if not road_delivery:
+                raise NoAvailableResources(f'there is no available resources of available roads '
+                                           f'{[road.name for road in available_roads]} '
+                                           f'(probably roads have less bandwidth than is required)')
 
             return finish_time, road_delivery, finish_time - parent_time
 
@@ -351,7 +372,7 @@ class SupplyTimeline:
                 res_name, res_count, start_time, end_time = res_info
                 res_state = res_holder_state[res_name]
                 start_idx = res_state.bisect_right(start_time)
-                end_idx = res_state.bisect_left((end_time, -1, EventType.INITIAL))
+                end_idx = res_state.bisect_left((end_time))
                 available_res_count = res_state[start_idx - 1].available_workers_count
 
                 for event in res_state[start_idx: end_idx]:
@@ -360,12 +381,13 @@ class SupplyTimeline:
 
                 assert available_res_count >= res_count
 
+                res_state.add(
+                    ScheduleEvent(int(start_idx), EventType.START, start_time, None, available_res_count - res_count))
+
                 end_idx = res_state.bisect_right(end_time) - 1
                 if res_state[end_idx].time == end_time:
                     end_count = res_state[end_idx].available_workers_count
                 else:
                     end_count = res_state[end_idx].available_workers_count + res_count
 
-                res_state.add(
-                    ScheduleEvent(int(start_idx), EventType.START, start_time, None, available_res_count - res_count))
                 res_state.add(ScheduleEvent(int(start_idx), EventType.END, end_time, None, end_count))

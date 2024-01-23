@@ -4,20 +4,18 @@ import multiprocess as mp
 
 import numpy as np
 
-from sampo.scheduler import GeneticScheduler, HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import PSPlibWorkTimeEstimator
+from psplib_time_estimator import PSPlibWorkTimeEstimator
 from sampo.schemas.works import WorkUnit
-from sampo.utilities.visualization import work_graph
-from sampo.utilities.visualization.base import VisualizationMode
-from sampo.utilities.visualization.resources import resource_employment_fig, EmploymentFigType
-from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
-from sampo.utilities.visualization.work_graph import work_graph_fig
+from sampo.utilities.visualization import (VisualizationMode, resource_employment_fig, EmploymentFigType,
+                                           schedule_gant_chart_fig)
+
 
 instances = [30]
 workers = ['R1', 'R2', 'R3', 'R4']
@@ -25,17 +23,18 @@ workers = ['R1', 'R2', 'R3', 'R4']
 
 def run_scheduler(wg_info):
     adj_matrix, res_matrix, contractor_info = wg_info
-    sum_of_time = 0
+    sum_of_time = res_matrix[:, 0].sum()
 
     nodes = []
+    wu_id2times = {}
 
-    for node_id in range(res_matrix.shape[0]):
-        worker_reqs = [WorkerReq(workers[idx_req - 1], Time(0), res_matrix[node_id][idx_req],
-                                 res_matrix[node_id][idx_req], workers[idx_req - 1]) for idx_req in range(1, 5)]
-        work_unit = WorkUnit(str(node_id), str(node_id), worker_reqs, time_exec=int(res_matrix[node_id][0]))
+    for node_id, res_matrix_row in enumerate(res_matrix):
+        worker_reqs = [WorkerReq(workers[idx_req - 1], Time(0), res_matrix_row[idx_req],
+                                 res_matrix_row[idx_req], workers[idx_req - 1]) for idx_req in range(1, 5)]
+        work_unit = WorkUnit(str(node_id), str(node_id), worker_reqs)
+        wu_id2times[work_unit.id] = Time(int(res_matrix_row[0]))
         node = GraphNode(work_unit, [])
         nodes.append(node)
-        sum_of_time += res_matrix[node_id][0]
 
     for child_id in range(len(adj_matrix)):
         parents = []
@@ -53,12 +52,9 @@ def run_scheduler(wg_info):
     ]
 
     wg = WorkGraph(nodes[0], nodes[-1])
-    times = []
-    for i in range(res_matrix.shape[0]):
-        times.append(res_matrix[i][0])
-    work_estimator = PSPlibWorkTimeEstimator([Time(t) for t in times])
-    # scheduler = HEFTScheduler(work_estimator=work_estimator)
-    # scheduler = HEFTBetweenScheduler(work_estimator=work_estimator)
+
+    work_estimator = PSPlibWorkTimeEstimator(wu_id2times)
+
     scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator,
                                  sgs_type=ScheduleGenerationScheme.Serial, only_lft_initialization=True)
     start = time.time()

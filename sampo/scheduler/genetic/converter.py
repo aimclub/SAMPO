@@ -19,7 +19,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.linked_list import LinkedList
 
-ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
+ChromosomeType = list[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
 
 
 class ScheduleGenerationScheme(Enum):

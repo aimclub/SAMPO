@@ -173,13 +173,6 @@ class DeadlineCostFitness(FitnessFunction):
                 for schedule in evaluated]
 
 
-# create class FitnessMin, the weights = -1 means that fitness - is function for minimum
-
-creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
-creator.create('Individual', list, fitness=creator.FitnessMin)
-Individual = creator.Individual
-
-
 def init_toolbox(wg: WorkGraph,
                  contractors: list[Contractor],
                  worker_pool: WorkerContractorPool,
@@ -214,6 +207,10 @@ def init_toolbox(wg: WorkGraph,
 
     :return: Object, included tools for genetic algorithm
     """
+    creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
+    creator.create('Individual', list, fitness=creator.FitnessMin)
+    Individual = creator.Individual
+
     toolbox = base.Toolbox()
     # generate chromosome
     toolbox.register('generate_chromosome', generate_chromosome, wg=wg, contractors=contractors,
@@ -285,9 +282,10 @@ def generate_population(n: int,
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         rand: random.Random,
+                        individual_constructor,
                         work_estimator: WorkTimeEstimator = None,
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                        only_lft_initialization: bool = False) -> list[Individual]:
+                        only_lft_initialization: bool = False) -> list[ChromosomeType]:
     """
     Generates population.
     Do not use `generate_chromosome` function.
@@ -304,8 +302,8 @@ def generate_population(n: int,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 
     if only_lft_initialization:
-        chromosomes = [Individual(randomized_init(is_topological=False)) for _ in range(n - 1)]
-        chromosomes.append(Individual(init_chromosomes['lft'][0]))
+        chromosomes = [individual_constructor(randomized_init(is_topological=False)) for _ in range(n - 1)]
+        chromosomes.append(individual_constructor(init_chromosomes['lft'][0]))
         return chromosomes
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)
@@ -332,11 +330,11 @@ def generate_population(n: int,
     for generated_type in chromosome_types:
         match generated_type:
             case 'topological':
-                ind = Individual(randomized_init(is_topological=True))
+                ind = individual_constructor(randomized_init(is_topological=True))
             case 'rand_lft':
-                ind = Individual(randomized_init(is_topological=False))
+                ind = individual_constructor(randomized_init(is_topological=False))
             case _:
-                ind = Individual(init_chromosomes[generated_type][0])
+                ind = individual_constructor(init_chromosomes[generated_type][0])
 
         chromosomes.append(ind)
 
@@ -352,8 +350,9 @@ def generate_chromosome(wg: WorkGraph,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         spec: ScheduleSpec,
                         rand: random.Random,
+                        individual_constructor,
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Individual:
+                        landscape: LandscapeConfiguration = LandscapeConfiguration()) -> ChromosomeType:
     """
     It is necessary to generate valid scheduling, which are satisfied to current dependencies
     That's why will be used the approved order of works (HEFT order and Topological sorting)
@@ -386,7 +385,7 @@ def generate_chromosome(wg: WorkGraph,
     else:
         chromosome = randomized_init()
 
-    return Individual(chromosome)
+    return individual_constructor(chromosome)
 
 
 def select_new_population(population: list[ChromosomeType], pop_size: int) -> list[ChromosomeType]:
@@ -452,8 +451,8 @@ def get_order_part(order: np.ndarray, other_order: np.ndarray) -> np.ndarray:
     return np.array([node for node in other_order if node not in order])
 
 
-def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random, copy: bool = True) \
-        -> tuple[ChromosomeType, ChromosomeType]:
+def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
+                          individual_constructor, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
     """
     Two-Point crossover for order.
 
@@ -464,7 +463,8 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
 
     :return: two mated individuals
     """
-    child1, child2 = (Individual(copy_chromosome(ind1)), Individual(copy_chromosome(ind2))) if copy else (ind1, ind2)
+    child1, child2 = (individual_constructor(copy_chromosome(ind1)),
+                      individual_constructor(copy_chromosome(ind2))) if copy else (ind1, ind2)
 
     order1, order2 = child1[0], child2[0]
     parent1 = ind1[0].copy()
@@ -563,7 +563,7 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
     return ind
 
 
-def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
+def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random, individual_constructor,
                    optimize_resources: bool, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
     """
     One-Point crossover for resources.
@@ -576,7 +576,7 @@ def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
 
     :return: two mated individuals
     """
-    child1, child2 = (Individual(copy_chromosome(ind1)), Individual(copy_chromosome(ind2))) if copy else (ind1, ind2)
+    child1, child2 = (individual_constructor(copy_chromosome(ind1)), individual_constructor(copy_chromosome(ind2))) if copy else (ind1, ind2)
 
     res1, res2 = child1[1], child2[1]
     num_works = len(res1)
@@ -778,8 +778,8 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]
 
 
-def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType,
-                   rand: random.Random, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
+def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random, individual_constructor,
+                   copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
     """
     CxOnePoint for zones
 
@@ -790,7 +790,7 @@ def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType,
 
     :return: two mated individuals
     """
-    child1, child2 = (Individual(copy_chromosome(ind1)), Individual(copy_chromosome(ind2))) if copy else (ind1, ind2)
+    child1, child2 = (individual_constructor(copy_chromosome(ind1)), individual_constructor(copy_chromosome(ind2))) if copy else (ind1, ind2)
 
     zones1 = child1[4]
     zones2 = child2[4]

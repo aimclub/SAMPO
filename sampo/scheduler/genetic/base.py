@@ -40,14 +40,16 @@ class GeneticScheduler(Scheduler):
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
-                 weights: list[int] = None,
+                 weights: Optional[list[int] or None] = None,
                  fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                 fitness_weights: tuple = (-1,),
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
                  only_lft_initialization: bool = False,
+                 use_pareto_domination: bool = False,
                  verbose: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
@@ -59,6 +61,7 @@ class GeneticScheduler(Scheduler):
         self.size_of_population = size_of_population
         self.rand = rand or random.Random(seed)
         self.fitness_constructor = fitness_constructor
+        self.fitness_weights = fitness_weights
         self.work_estimator = work_estimator
         self.sgs_type = sgs_type
 
@@ -66,6 +69,7 @@ class GeneticScheduler(Scheduler):
         self._n_cpu = n_cpu
         self._weights = weights
         self._only_lft_initialization = only_lft_initialization
+        self._use_pareto_domination = use_pareto_domination
         self._verbose = verbose
 
         self._time_border = None
@@ -143,6 +147,9 @@ class GeneticScheduler(Scheduler):
 
     def set_only_lft_initialization(self, only_lft_initialization: bool):
         self._only_lft_initialization = only_lft_initialization
+
+    def set_use_pareto_domination(self, use_pareto_domination: bool):
+        self._use_pareto_domination = use_pareto_domination
 
     @staticmethod
     def generate_first_population(wg: WorkGraph,
@@ -252,6 +259,7 @@ class GeneticScheduler(Scheduler):
                                                                                      spec,
                                                                                      landscape,
                                                                                      self.fitness_constructor,
+                                                                                     self.fitness_weights,
                                                                                      self.work_estimator,
                                                                                      self.sgs_type,
                                                                                      self._n_cpu,

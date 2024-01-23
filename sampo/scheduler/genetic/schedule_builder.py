@@ -32,11 +32,13 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                            str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
+                                       fitness_weights: tuple = (-1,),
                                        work_estimator: WorkTimeEstimator = None,
                                        sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                        only_lft_initialization: bool = False,
+                                       use_pareto_domination: bool = False,
                                        verbose: bool = True) \
         -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, set[int]]]:
     start = time.time()
@@ -139,6 +141,7 @@ def build_schedule(wg: WorkGraph,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[
                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                   fitness_weights: tuple = (-1,),
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                    n_cpu: int = 1,
@@ -149,6 +152,7 @@ def build_schedule(wg: WorkGraph,
                    optimize_resources: bool = False,
                    deadline: Time | None = None,
                    only_lft_initialization: bool = False,
+                   use_pareto_domination: bool = False,
                    verbose: bool = True) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
@@ -170,9 +174,10 @@ def build_schedule(wg: WorkGraph,
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                                                                   rand, spec, work_estimator, sgs_type,
-                                                                   assigned_parent_time, landscape,
-                                                                   only_lft_initialization, verbose)
+                                                                   rand, spec, fitness_weights, work_estimator,
+                                                                   sgs_type, assigned_parent_time, landscape,
+                                                                   only_lft_initialization, use_pareto_domination,
+                                                                   verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 

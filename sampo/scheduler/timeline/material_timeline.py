@@ -71,7 +71,7 @@ class SupplyTimeline:
         platform_state = self._timeline[node.platform.id]
         for mat in mat_request:
             start_ind = platform_state[mat.name].bisect_right(finish_delivery_time)
-            finish_ind = platform_state[mat.name].bisect_right(Time.inf()) - 1
+            finish_ind = platform_state[mat.name].bisect_left((Time.inf(), -1, EventType.INITIAL))
             if not self._check_resource_availability(platform_state[mat.name], mat.count, start_ind, finish_ind):
                 return False
 
@@ -187,6 +187,7 @@ class SupplyTimeline:
         :param materials: material resources that are required to start
         :return: material deliveries, the time when resources are ready
         """
+        print(f'node {node.id}')
         delivery = MaterialDelivery(node.id)
         mat_request = self._request_materials(node, materials, deadline)
         land_node = node.platform
@@ -293,14 +294,8 @@ class SupplyTimeline:
         while current_start_time < last_time:
             end_ind = state.bisect_right((current_start_time + exec_time, -1, EventType.INITIAL))
 
-            not_enough_resources = False
-            for idx in range(end_ind - 1, base_ind - 1, -1):
-                if state[idx].available_workers_count < required_resources:
-                    base_ind = idx + 1
-                    not_enough_resources = True
-                    break
-
-            if not not_enough_resources:
+            if not SupplyTimeline._check_resource_availability(state, required_resources, base_ind, end_ind + 1):
+                base_ind += 1
                 break
 
             current_start_time = state[base_ind].time

@@ -23,6 +23,7 @@ def test_init_resource_structure(setup_timeline):
         for state in res_holder_info.values():
             assert len(state) == 1
 
+
 def test_supply_resources(setup_scheduler_parameters, setup_rand):
     wg, contractors, landscape = setup_scheduler_parameters
     if wg.vertex_count > 20:
@@ -39,8 +40,8 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
     for node in ordered_nodes[-1::-1]:
         materials = [Material(str(uuid.uuid4()), req.kind, req.count) for req in node.work_unit.material_reqs]
         delivery, parent_time = timeline.supply_resources(node,
-                                                landscape,
-                                                parent_time,
-                                                materials, True)
+                                                          landscape,
+                                                          parent_time,
+                                                          materials, True)
 
     assert not parent_time.is_inf()

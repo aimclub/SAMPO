@@ -2,12 +2,10 @@ import math
 import random
 import uuid
 from collections import defaultdict
-from copy import deepcopy
 
 from sampo.schemas import Material, WorkGraph
 from sampo.schemas.landscape import ResourceHolder, Vehicle, LandscapeConfiguration
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
-from sampo.structurator.prepare_wg_copy import prepare_work_graph_copy
 
 
 def setup_landscape(platforms_info: dict[str, dict[str, int]],
@@ -72,6 +70,7 @@ def setup_landscape(platforms_info: dict[str, dict[str, int]],
         lg=LandGraph(nodes=platforms)
     )
 
+
 def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfiguration:
     holders_number = math.ceil(math.sqrt(math.log(wg.vertex_count)))
     holders_node = []
@@ -92,15 +91,22 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
     platforms = list(platforms)
 
     for i in range(holders_number):
-        materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(0, len(max_materials)))
+        materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(1, len(max_materials)))
         holders_node.append(LandGraphNode(str(uuid.uuid4()), f'holder{i}',
                                           ResourceStorageUnit(
                                               {
-                                                  name: max_materials[name] * wg.vertex_count
+                                                  name: max(max_materials[name], 1) * wg.vertex_count
                                                   for name in materials_name
                                               }
                                           )))
         neighbour_platforms = rnd.choices(holders_node[:-1] + platforms, k=rnd.randint(1, len(holders_node[:-1] + platforms)))
+
+        neighbour_platforms_tmp = neighbour_platforms.copy()
+        for neighbour in neighbour_platforms:
+            if neighbour in holders_node[-1].neighbours:
+                neighbour_platforms_tmp.remove(neighbour)
+        neighbour_platforms = neighbour_platforms_tmp
+
         neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1, 20))
                            for neighbour in neighbour_platforms]
         holders_node[-1].add_neighbours(neighbour_edges)
@@ -116,6 +122,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
     lg = LandGraph(nodes=platforms + holders_node)
     return LandscapeConfiguration(holders, lg)
+
 
 def wg_with_platforms(wg: WorkGraph, rnd: random.Random) -> WorkGraph:
     nodes = wg.nodes
@@ -136,7 +143,7 @@ def wg_with_platforms(wg: WorkGraph, rnd: random.Random) -> WorkGraph:
         platforms.append(LandGraphNode(str(uuid.uuid4()), f'platform{i}',
                                        ResourceStorageUnit(
                                            {
-                                                name: rnd.randint(max_materials[name], 3 * max_materials[name])
+                                                name: rnd.randint(max(max_materials[name], 1), 3 * max(max_materials[name], 1))
                                                 for name in materials_name
                                            }
                                        )))

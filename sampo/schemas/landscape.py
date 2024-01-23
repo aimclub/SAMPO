@@ -172,18 +172,20 @@ class LandscapeConfiguration:
 
         from_ind = self._node2ind[from_node]
         to_ind = self._node2ind[to_node]
-        dijkstra(from_ind)
+        dijkstra(to_ind)
 
-        path = []
-        if path_mx[from_ind][to_ind] == -1:
+        if path_mx[to_ind][from_ind] == -1:
             return []
+
+        path_tmp = []
         fr = from_ind
-        while path_mx[fr][to_ind] != to_ind:
-            path.append(path_mx[fr][to_ind])
-            fr = path_mx[fr][to_ind]
-        path_res = [from_ind]
-        path_res.extend(path)
-        path_res.append(to_ind)
+        while path_mx[to_ind][fr] != to_ind:
+            path_tmp.append(path_mx[to_ind][fr])
+            fr = path_mx[to_ind][fr]
+        path = []
+        path.append(from_ind)
+        path.extend(path_tmp)
+        path.append(to_ind)
         return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 
     @cached_property

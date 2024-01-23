@@ -1,4 +1,4 @@
-from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler import GeneticScheduler
 
 
 def test_multiprocessing(setup_scheduler_parameters):

@@ -6,7 +6,7 @@ import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.native_wrapper import NativeWrapper
 from sampo.scheduler.timeline.base import Timeline
@@ -33,10 +33,12 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
                                        work_estimator: WorkTimeEstimator = None,
+                                       sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                       only_lft_initialization: bool = False,
                                        verbose: bool = True) \
-        -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, list[int]]]:
+        -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, set[int]]]:
     start = time.time()
 
     # preparing access-optimized data structures
@@ -118,7 +120,9 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         children,
                         resources_border,
                         assigned_parent_time,
-                        work_estimator), worker_name2index, worker_pool_indices, parents
+                        work_estimator,
+                        sgs_type,
+                        only_lft_initialization), worker_name2index, worker_pool_indices, parents
 
 
 def build_schedule(wg: WorkGraph,
@@ -136,12 +140,15 @@ def build_schedule(wg: WorkGraph,
                    fitness_constructor: Callable[
                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                   sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                    n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None,
-                   time_border: int = None,
+                   time_border: int | None = None,
+                   max_plateau_steps: int | None = None,
                    optimize_resources: bool = False,
-                   deadline: Time = None,
+                   deadline: Time | None = None,
+                   only_lft_initialization: bool = False,
                    verbose: bool = True) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
@@ -163,8 +170,9 @@ def build_schedule(wg: WorkGraph,
 
     toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                                                                   rand, spec, work_estimator, assigned_parent_time,
-                                                                   landscape, verbose)
+                                                                   rand, spec, work_estimator, sgs_type,
+                                                                   assigned_parent_time, landscape,
+                                                                   only_lft_initialization, verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
 
@@ -211,7 +219,7 @@ def build_schedule(wg: WorkGraph,
         generation = 1
         plateau_steps = 0
         new_generation_number = generation_number if not have_deadline else generation_number // 2
-        max_plateau_steps = new_generation_number // 2
+        max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
         while generation <= new_generation_number and plateau_steps < max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
@@ -302,7 +310,7 @@ def build_schedule(wg: WorkGraph,
 
                 plateau_steps = 0
                 new_generation_number = generation_number - generation + 1
-                max_plateau_steps = new_generation_number // 2
+                max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
                 best_fitness = hof[0].fitness.values[0]
 
                 if len(pop) < population_size:

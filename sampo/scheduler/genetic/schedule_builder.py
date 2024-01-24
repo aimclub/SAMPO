@@ -235,18 +235,7 @@ def build_schedule(wg: WorkGraph,
 
             rand.shuffle(pop)
 
-            offspring = []
-
-            for ind1, ind2 in zip(pop[::2], pop[1::2]):
-                # mate
-                offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
-
-            for mutant in offspring:
-                # mutation
-                if optimize_resources:
-                    # resource borders mutation
-                    toolbox.mutate_resource_borders(mutant)
-                toolbox.mutate(mutant)
+            offspring = make_offspring(toolbox, pop, optimize_resources)
 
             evaluation_start = time.time()
 
@@ -264,10 +253,7 @@ def build_schedule(wg: WorkGraph,
 
             prev_best_fitness = best_fitness
             best_fitness = hof[0].fitness.values[0]
-            if best_fitness == prev_best_fitness:
-                plateau_steps += 1
-            else:
-                plateau_steps = 0
+            plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
             if have_deadline and best_fitness <= deadline:
                 if all([ind.fitness.values[0] <= deadline for ind in pop]):
@@ -332,19 +318,10 @@ def build_schedule(wg: WorkGraph,
                         and (time_border is None or time.time() - global_start < time_border):
                     if verbose:
                         print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+
                     rand.shuffle(pop)
 
-                    offspring = []
-
-                    for ind1, ind2 in zip(pop[::2], pop[1::2]):
-                        # mate
-                        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
-
-                    for mutant in offspring:
-                        # resource borders mutation
-                        toolbox.mutate_resource_borders(mutant)
-                        # other mutation
-                        toolbox.mutate(mutant)
+                    offspring = make_offspring(toolbox, pop, optimize_resources)
 
                     evaluation_start = time.time()
 
@@ -369,10 +346,7 @@ def build_schedule(wg: WorkGraph,
 
                     prev_best_fitness = best_fitness
                     best_fitness = hof[0].fitness.values[0]
-                    if best_fitness == prev_best_fitness:
-                        plateau_steps += 1
-                    else:
-                        plateau_steps = 0
+                    plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
                     generation += 1
 
@@ -393,5 +367,21 @@ def build_schedule(wg: WorkGraph,
     return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
 
 
-def compare_individuals(first: tuple[ChromosomeType], second: tuple[ChromosomeType]) -> bool:
+def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
     return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()
+
+
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) -> list[ChromosomeType]:
+    offspring = []
+
+    for ind1, ind2 in zip(population[::2], population[1::2]):
+        # mate
+        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+
+    for mutant in offspring:
+        # resource borders mutation
+        toolbox.mutate_resource_borders(mutant)
+        # other mutation
+        toolbox.mutate(mutant)
+
+    return offspring

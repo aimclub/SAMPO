@@ -76,24 +76,14 @@ class JustInTimeTimeline(Timeline):
         else:
             # grab from whole sequence
             # for each resource type
-            for worker in worker_team:
-                needed_count = worker.count
-                offer_stack = self._timeline[worker.get_agent_id()]
-                # traverse list while not enough resources and grab it
-                ind = len(offer_stack) - 1
-                while needed_count > 0:
-                    offer_time, offer_count = offer_stack[ind]
-                    max_agent_time = max(max_agent_time, offer_time)
-
-                    if needed_count < offer_count:
-                        offer_count = needed_count
-                    needed_count -= offer_count
-                    ind -= 1
+            max_agent_time = self._find_min_start_time(worker_team, max_agent_time)
 
         c_st = max(max_agent_time, max_parent_time)
 
+        inseparable_chain = node.get_inseparable_chain_with_self()
+
         new_finish_time = c_st
-        for dep_node in node.get_inseparable_chain_with_self():
+        for dep_node in inseparable_chain:
             # set start time as finish time of original work
             # set finish time as finish time + working time of current node with identical resources
             # (the same as in original work)
@@ -107,15 +97,50 @@ class JustInTimeTimeline(Timeline):
 
         exec_time = new_finish_time - c_st
 
-        max_material_time = self._material_timeline.find_min_material_time(node, self.landscape, c_st,
+        # we can't just use max() of all times we found from different constraints
+        # because start time shifting can corrupt time slots we found from every constraint
+        # so let's find the time that is agreed with all constraints
+        cur_start_time = max_parent_time
+        found_earliest_time = False
+        while not found_earliest_time:
+            cur_start_time = self._find_min_start_time(worker_team, cur_start_time)
+
+            material_time = self._material_timeline.find_min_material_time(node,
+                                                                           self.landscape,
+                                                                           cur_start_time,
                                                                            node.work_unit.need_materials())
+            if material_time > cur_start_time:
+                cur_start_time = material_time
+                continue
 
-        max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
+            zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
+                                                               exec_time)
+            if zone_time > cur_start_time:
+                cur_start_time = zone_time
+            else:
+                found_earliest_time = True
 
-        c_st = max(c_st, max_material_time, max_zone_time)
+        c_st = cur_start_time
 
         c_ft = c_st + exec_time
         return c_st, c_ft, None
+
+    def _find_min_start_time(self, worker_team: list[Worker], parent_time: Time):
+        max_agent_time = parent_time
+        for worker in worker_team:
+            needed_count = worker.count
+            offer_stack = self._timeline[worker.get_agent_id()]
+            # traverse list while not enough resources and grab it
+            ind = len(offer_stack) - 1
+            while needed_count > 0:
+                offer_time, offer_count = offer_stack[ind]
+                max_agent_time = max(max_agent_time, offer_time)
+
+                if needed_count < offer_count:
+                    offer_count = needed_count
+                needed_count -= offer_count
+                ind -= 1
+        return max_agent_time
 
     def can_schedule_at_the_moment(self,
                                    node: GraphNode,

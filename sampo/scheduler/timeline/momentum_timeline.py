@@ -361,6 +361,7 @@ class MomentumTimeline(Timeline):
         # of the chosen contractor.
 
         task_index = self._task_index
+        task_index = self._task_index
         self._task_index += 1
 
         # experimental logics lightening. debugging showed its efficiency.

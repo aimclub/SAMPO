@@ -177,12 +177,12 @@ class DeadlineCostFitness(FitnessFunction):
 
 
 class Individual(list):
-    def __init__(self, individual_fitness_constructor: Callable[[], base.Fitness], *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, individual_fitness_constructor: Callable[[], base.Fitness], chromosome: ChromosomeType):
+        super().__init__(chromosome)
         self.fitness = individual_fitness_constructor()
 
     @staticmethod
-    def prepare(individual_fitness_constructor: Callable[[], base.Fitness]) -> Callable[[Iterable], list]:
+    def prepare(individual_fitness_constructor: Callable[[], base.Fitness]) -> Callable[[ChromosomeType], list]:
         """
         Returns the constructor of Individual prepared to use in Genetic algorithm
         """

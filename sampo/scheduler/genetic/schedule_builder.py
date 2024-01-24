@@ -122,9 +122,11 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         children,
                         resources_border,
                         assigned_parent_time,
+                        fitness_weights,
                         work_estimator,
                         sgs_type,
-                        only_lft_initialization), worker_name2index, worker_pool_indices, parents
+                        only_lft_initialization,
+                        use_pareto_domination), worker_name2index, worker_pool_indices, parents
 
 
 def build_schedule(wg: WorkGraph,

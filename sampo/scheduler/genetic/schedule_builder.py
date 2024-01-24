@@ -32,13 +32,13 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                            str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                        rand: random.Random,
                                        spec: ScheduleSpec = ScheduleSpec(),
-                                       fitness_weights: tuple = (-1,),
+                                       fitness_weights: tuple[int | float] = (-1,),
                                        work_estimator: WorkTimeEstimator = None,
                                        sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                        assigned_parent_time: Time = Time(0),
                                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                        only_lft_initialization: bool = False,
-                                       use_pareto_domination: bool = False,
+                                       is_multiobjective: bool = False,
                                        verbose: bool = True) \
         -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, set[int]]]:
     start = time.time()
@@ -126,7 +126,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         work_estimator,
                         sgs_type,
                         only_lft_initialization,
-                        use_pareto_domination), worker_name2index, worker_pool_indices, parents
+                        is_multiobjective), worker_name2index, worker_pool_indices, parents
 
 
 def build_schedule(wg: WorkGraph,
@@ -143,7 +143,7 @@ def build_schedule(wg: WorkGraph,
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[
                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
-                   fitness_weights: tuple = (-1,),
+                   fitness_weights: tuple[int | float] = (-1,),
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                    sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                    n_cpu: int = 1,
@@ -154,7 +154,7 @@ def build_schedule(wg: WorkGraph,
                    optimize_resources: bool = False,
                    deadline: Time | None = None,
                    only_lft_initialization: bool = False,
-                   use_pareto_domination: bool = False,
+                   is_multiobjective: bool = False,
                    verbose: bool = True) \
         -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
     """
@@ -178,7 +178,7 @@ def build_schedule(wg: WorkGraph,
                                                                    mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                                                    rand, spec, fitness_weights, work_estimator,
                                                                    sgs_type, assigned_parent_time, landscape,
-                                                                   only_lft_initialization, use_pareto_domination,
+                                                                   only_lft_initialization, is_multiobjective,
                                                                    verbose)
 
     worker_name2index, worker_pool_indices, parents = mapping_objects
@@ -186,37 +186,39 @@ def build_schedule(wg: WorkGraph,
     native = NativeWrapper(toolbox, wg, contractors, worker_name2index, worker_pool_indices,
                            parents, work_estimator)
     # create population of a given size
-    pop = toolbox.population(n=population_size)
+    chromosomes = toolbox.population_chromosomes(n=population_size)
 
     if verbose:
         print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     if native.native:
         native_start = time.time()
-        best_chromosome = native.run_genetic(pop, mutpb_order, mutpb_order, mutpb_res, mutpb_res, mutpb_res, mutpb_res,
-                                             population_size)
+        best_chromosome = native.run_genetic(chromosomes, mutpb_order, mutpb_order, mutpb_res, mutpb_res, mutpb_res,
+                                             mutpb_res, population_size)
         if verbose:
             print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
     else:
         have_deadline = deadline is not None
         # save best individuals
-        hof = tools.HallOfFame(1, similar=compare_individuals)
+        hof = tools.ParetoFront(similar=compare_individuals)
 
         fitness_f = fitness_constructor(native.evaluate) if not have_deadline else TimeFitness(native.evaluate)
+        if have_deadline:
+            toolbox.register_individual_constructor((-1,))
+        pop = [toolbox.Individual(chromosome) for chromosome in chromosomes if toolbox.validate(chromosome)]
 
         evaluation_start = time.time()
 
         # map to each individual fitness function
-        pop = [ind for ind in pop if toolbox.validate(ind)]
         fitness = fitness_f.evaluate(pop)
 
         evaluation_time = time.time() - evaluation_start
 
         for ind, fit in zip(pop, fitness):
-            ind.fitness.values = [fit]
+            ind.fitness.values = fit
 
         hof.update(pop)
-        best_fitness = hof[0].fitness.values[0]
+        best_fitness = hof[0].fitness.values
 
         if verbose:
             print(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -235,27 +237,28 @@ def build_schedule(wg: WorkGraph,
 
             rand.shuffle(pop)
 
-            offspring = make_offspring(toolbox, pop, optimize_resources)
+            offspring_chromosomes = make_offspring(toolbox, pop, optimize_resources)
+            offspring = [toolbox.Individual(chromosome) for chromosome in offspring_chromosomes]
 
             evaluation_start = time.time()
 
             offspring_fitness = fitness_f.evaluate(offspring)
 
             for ind, fit in zip(offspring, offspring_fitness):
-                ind.fitness.values = [fit]
+                ind.fitness.values = fit
 
             evaluation_time += time.time() - evaluation_start
 
             # renewing population
             pop += offspring
             pop = toolbox.select(pop)
-            hof.update([pop[0]])
+            hof.update(pop)
 
             prev_best_fitness = best_fitness
-            best_fitness = hof[0].fitness.values[0]
+            best_fitness = hof[0].fitness.values
             plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
-            if have_deadline and best_fitness <= deadline:
+            if have_deadline and best_fitness[0] <= deadline:
                 if all([ind.fitness.values[0] <= deadline for ind in pop]):
                     break
 
@@ -265,52 +268,53 @@ def build_schedule(wg: WorkGraph,
 
         if have_deadline:
 
-            fitness_resource = fitness_constructor(native.evaluate)
+            fitness_resource_f = fitness_constructor(native.evaluate)
+            toolbox.register_individual_constructor(fitness_weights)
+            # save best individuals
+            del hof
+            hof = tools.ParetoFront(similar=compare_individuals)
 
-            if best_fitness > deadline:
-                print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
-                # save best individuals
-                hof = tools.HallOfFame(1, similar=compare_individuals)
-                pop = [ind for ind in pop if ind.fitness.values[0] == best_fitness]
+            for ind in pop:
+                ind.time = ind.fitness.values[0]
 
-                evaluation_start = time.time()
-
-                fitness = fitness_resource.evaluate(pop)
-                for ind, res_peak in zip(pop, fitness):
-                    ind.time = ind.fitness.values[0]
-                    ind.fitness.values = [res_peak]
-
-                evaluation_time += time.time() - evaluation_start
-
-                hof.update(pop)
+            if best_fitness[0] > deadline:
+                print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness[0]}')
+                pop = [ind for ind in pop if ind.time == best_fitness[0]]
             else:
                 optimize_resources = True
-                # save best individuals
-                hof = tools.HallOfFame(1, similar=compare_individuals)
+                pop = [ind for ind in pop if ind.time <= deadline]
 
-                pop = [ind for ind in pop if ind.fitness.values[0] <= deadline]
+            new_pop = []
+            for ind in pop:
+                ind_time = ind.time
+                new_ind = toolbox.copy_individual(ind)
+                new_ind.time = ind_time
+                new_pop.append(new_ind)
+            del pop
+            pop = new_pop
 
-                evaluation_start = time.time()
+            evaluation_start = time.time()
 
-                fitness = fitness_resource.evaluate(pop)
-                for ind, res_peak in zip(pop, fitness):
-                    ind.time = ind.fitness.values[0]
-                    ind.fitness.values = [res_peak]
+            fitness = fitness_resource_f.evaluate(pop)
+            for ind, res_fit in zip(pop, fitness):
+                ind.fitness.values = res_fit
 
-                evaluation_time += time.time() - evaluation_start
+            evaluation_time += time.time() - evaluation_start
 
-                hof.update(pop)
+            hof.update(pop)
 
+            if best_fitness[0] <= deadline:
+                # Optimizing resources
                 plateau_steps = 0
                 new_generation_number = generation_number - generation + 1
                 max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
-                best_fitness = hof[0].fitness.values[0]
+                best_fitness = hof[0].fitness.values
 
                 if len(pop) < population_size:
                     individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
                     copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
                     for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
-                        copied_ind.fitness.values = [ind.fitness.values[0]]
+                        copied_ind.fitness.values = ind.fitness.values
                         copied_ind.time = ind.time
                     pop += copied_individuals
 
@@ -321,31 +325,32 @@ def build_schedule(wg: WorkGraph,
 
                     rand.shuffle(pop)
 
-                    offspring = make_offspring(toolbox, pop, optimize_resources)
+                    offspring_chromosomes = make_offspring(toolbox, pop, optimize_resources)
+                    offspring = [toolbox.Individual(chromosome) for chromosome in offspring_chromosomes]
 
                     evaluation_start = time.time()
 
                     fitness = fitness_f.evaluate(offspring)
 
                     for ind, t in zip(offspring, fitness):
-                        ind.time = t
+                        ind.time = t[0]
 
                     offspring = [ind for ind in offspring if ind.time <= deadline]
 
-                    fitness_res = fitness_resource.evaluate(offspring)
+                    fitness_res = fitness_resource_f.evaluate(offspring)
 
-                    for ind, res_peak in zip(offspring, fitness_res):
-                        ind.fitness.values = [res_peak]
+                    for ind, res_fit in zip(offspring, fitness_res):
+                        ind.fitness.values = res_fit
 
                     evaluation_time += time.time() - evaluation_start
 
                     # renewing population
                     pop += offspring
                     pop = toolbox.select(pop)
-                    hof.update([pop[0]])
+                    hof.update(pop)
 
                     prev_best_fitness = best_fitness
-                    best_fitness = hof[0].fitness.values[0]
+                    best_fitness = hof[0].fitness.values
                     plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
                     generation += 1
@@ -353,7 +358,7 @@ def build_schedule(wg: WorkGraph,
         native.close()
 
         if verbose:
-            print(f'Final time: {best_fitness}')
+            print(f'Final fitness: {best_fitness}')
             print(f'Generations processing took {(time.time() - start) * 1000} ms')
             print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
             print(f'Evaluation time: {evaluation_time * 1000}')
@@ -371,7 +376,8 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
     return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) -> list[ChromosomeType]:
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \
+        -> list[ChromosomeType]:
     offspring = []
 
     for ind1, ind2 in zip(population[::2], population[1::2]):

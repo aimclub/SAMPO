@@ -288,7 +288,7 @@ def init_toolbox(wg: WorkGraph,
     return toolbox
 
 
-def copy_individual(ind: Individual, individual_constructor: Callable[[Iterable], Individual]) -> Individual:
+def copy_individual(ind: Individual, individual_constructor: Callable[[ChromosomeType], Individual]) -> Individual:
     return individual_constructor((ind[0].copy(), ind[1].copy(), ind[2].copy(), deepcopy(ind[3]), ind[4].copy()))
 
 
@@ -302,7 +302,7 @@ def generate_population(n: int,
                         contractor_borders: np.ndarray,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         rand: random.Random,
-                        individual_constructor: Callable[[Iterable], Individual],
+                        individual_constructor: Callable[[ChromosomeType], Individual],
                         work_estimator: WorkTimeEstimator = None,
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
                         only_lft_initialization: bool = False) -> list[Individual]:
@@ -370,7 +370,7 @@ def generate_chromosome(wg: WorkGraph,
                         init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                         spec: ScheduleSpec,
                         rand: random.Random,
-                        individual_constructor: Callable[[Iterable], Individual],
+                        individual_constructor: Callable[[ChromosomeType], Individual],
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Individual:
     """
@@ -472,7 +472,7 @@ def get_order_part(order: np.ndarray, other_order: np.ndarray) -> np.ndarray:
 
 
 def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Random,
-                          individual_constructor: Callable[[Iterable], Individual],
+                          individual_constructor: Callable[[ChromosomeType], Individual],
                           copy: bool = True) -> tuple[Individual, Individual]:
     """
     Two-Point crossover for order.
@@ -586,7 +586,7 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
 
 
 def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
-                   individual_constructor: Callable[[Iterable], Individual],
+                   individual_constructor: Callable[[ChromosomeType], Individual],
                    optimize_resources: bool, copy: bool = True) -> tuple[Individual, Individual]:
     """
     One-Point crossover for resources.
@@ -687,7 +687,7 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
 
 
 def mate(ind1: Individual, ind2: Individual, optimize_resources: bool, rand: random.Random,
-         individual_constructor: Callable[[Iterable], Individual]) \
+         individual_constructor: Callable[[ChromosomeType], Individual]) \
         -> tuple[Individual, Individual]:
     """
     Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
@@ -806,7 +806,7 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
 
 
 def mate_for_zones(ind1: Individual, ind2: Individual, rand: random.Random,
-                   individual_constructor: Callable[[Iterable], Individual],
+                   individual_constructor: Callable[[ChromosomeType], Individual],
                    copy: bool = True) -> tuple[Individual, Individual]:
     """
     CxOnePoint for zones

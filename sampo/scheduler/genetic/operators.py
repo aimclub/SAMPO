@@ -37,7 +37,7 @@ class FitnessFunction(ABC):
         self._evaluator = evaluator
 
     @abstractmethod
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[tuple[int | float]]:
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[tuple[int | float, ...]]:
         """
         Calculate the value of fitness function of the all chromosomes.
         It is better when value is less.
@@ -174,6 +174,30 @@ class DeadlineCostFitness(FitnessFunction):
         # TODO Integrate cost calculation to native module
         return [(resources_costs_sum(schedule, self._resources_names)
                 * max(1.0, schedule.execution_time.value / self._deadline.value),)
+                for schedule in evaluated]
+
+
+class TimeAndResourcesFitness(FitnessFunction):
+    """
+    Bi-objective fitness function of finish time and sum of resources peaks.
+    """
+
+    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
+                 resources_names: Iterable[str] | None = None):
+        super().__init__(evaluator)
+        self._resources_names = list(resources_names) if resources_names is not None else None
+
+    @staticmethod
+    def prepare(resources_names: Iterable[str]) \
+            -> Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction]:
+        """
+        Returns the constructor of that fitness function prepared to use in Genetic algorithm
+        """
+        return partial(TimeAndResourcesFitness, resources_names=resources_names)
+
+    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[tuple[int, int]]:
+        evaluated = self._evaluator(chromosomes)
+        return [(schedule.execution_time.value, resources_peaks_sum(schedule, self._resources_names))
                 for schedule in evaluated]
 
 

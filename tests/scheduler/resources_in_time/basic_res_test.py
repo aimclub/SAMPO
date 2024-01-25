@@ -1,8 +1,7 @@
 import pytest
 import math
 
-from sampo.scheduler.genetic.base import GeneticScheduler
-from sampo.scheduler.genetic.operators import DeadlineResourcesFitness, SumOfResourcesPeaksFitness
+from sampo.scheduler.genetic import GeneticScheduler, DeadlineResourcesFitness, SumOfResourcesPeaksFitness
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.utilities.resource_usage import resources_costs_sum, resources_peaks_sum

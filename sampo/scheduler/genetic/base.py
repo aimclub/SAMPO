@@ -43,7 +43,7 @@ class GeneticScheduler(Scheduler):
                  weights: Optional[list[int] or None] = None,
                  fitness_constructor: Callable[
                      [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
-                 fitness_weights: tuple[int | float] = (-1,),
+                 fitness_weights: tuple[int | float, ...] = (-1,),
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),

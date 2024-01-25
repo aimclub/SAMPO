@@ -239,7 +239,7 @@ def init_toolbox(wg: WorkGraph,
                  children: dict[int, set[int]],
                  resources_border: np.ndarray,
                  assigned_parent_time: Time = Time(0),
-                 fitness_weights: tuple[int | float] = (-1,),
+                 fitness_weights: tuple[int | float, ...] = (-1,),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  only_lft_initialization: bool = False,
@@ -309,7 +309,7 @@ def init_toolbox(wg: WorkGraph,
     return toolbox
 
 
-def register_individual_constructor(fitness_weights: tuple[int | float], toolbox: base.Toolbox):
+def register_individual_constructor(fitness_weights: tuple[int | float, ...], toolbox: base.Toolbox):
     class IndividualFitness(base.Fitness):
         weights = fitness_weights
 

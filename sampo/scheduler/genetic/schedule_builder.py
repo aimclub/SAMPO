@@ -374,7 +374,8 @@ def build_schedules(wg: WorkGraph,
 
 
 def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
-    return (first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()
+    return ((first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()
+            or first.fitness == second.fitness)
 
 
 def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \

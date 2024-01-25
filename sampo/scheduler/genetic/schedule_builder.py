@@ -386,8 +386,9 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
         offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
 
     for mutant in offspring:
-        # resource borders mutation
-        toolbox.mutate_resource_borders(mutant)
+        if optimize_resources:
+            # resource borders mutation
+            toolbox.mutate_resource_borders(mutant)
         # other mutation
         toolbox.mutate(mutant)
 

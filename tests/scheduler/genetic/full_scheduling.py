@@ -1,7 +1,7 @@
 from sampo.scheduler import GeneticScheduler
 
 
-def test_multiprocessing(setup_scheduler_parameters):
+def test_genetic_scheduling(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
     genetic = GeneticScheduler(number_of_generation=10,
@@ -9,4 +9,4 @@ def test_multiprocessing(setup_scheduler_parameters):
                                mutate_resources=0.005,
                                size_of_population=50)
 
-    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    genetic.schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape)

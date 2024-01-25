@@ -96,7 +96,7 @@ class GeneticScheduler(Scheduler):
 
         mutate_resources = self.mutate_resources
         if mutate_resources is None:
-            mutate_resources = 0.005
+            mutate_resources = 0.05
 
         mutate_zones = self.mutate_zones
         if mutate_zones is None:

@@ -228,9 +228,9 @@ def build_schedules(wg: WorkGraph,
         generation = 1
         plateau_steps = 0
         new_generation_number = generation_number if not have_deadline else generation_number // 2
-        max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
+        new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
-        while generation <= new_generation_number and plateau_steps < max_plateau_steps \
+        while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
                 and (time_border is None or time.time() - global_start < time_border):
             if verbose:
                 print(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
@@ -306,7 +306,7 @@ def build_schedules(wg: WorkGraph,
                 # Optimizing resources
                 plateau_steps = 0
                 new_generation_number = generation_number - generation + 1
-                max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
+                new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
                 best_fitness = hof[0].fitness.values
 
                 if len(pop) < population_size:
@@ -317,7 +317,7 @@ def build_schedules(wg: WorkGraph,
                         copied_ind.time = ind.time
                     pop += copied_individuals
 
-                while generation <= generation_number and plateau_steps < max_plateau_steps \
+                while generation <= generation_number and plateau_steps < new_max_plateau_steps \
                         and (time_border is None or time.time() - global_start < time_border):
                     if verbose:
                         print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')

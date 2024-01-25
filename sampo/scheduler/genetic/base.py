@@ -3,7 +3,7 @@ from typing import Optional, Callable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.schedule_builder import build_schedule
+from sampo.scheduler.genetic.schedule_builder import build_schedules
 from sampo.scheduler.genetic.converter import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.lft.base import LFTScheduler
@@ -41,7 +41,8 @@ class GeneticScheduler(Scheduler):
                  seed: Optional[float or None] = None,
                  n_cpu: int = 1,
                  weights: Optional[list[int] or None] = None,
-                 fitness_constructor: Callable[[Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                 fitness_constructor: Callable[
+                     [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
                  fitness_weights: tuple[int | float] = (-1,),
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
@@ -234,6 +235,68 @@ class GeneticScheduler(Scheduler):
         :param timeline:
         :return:
         """
+        schedule, schedule_start_time, timeline, order_nodes = self._build_schedules(wg, contractors, landscape, spec,
+                                                                                     assigned_parent_time, timeline,
+                                                                                     is_multiobjective=False)[0]
+
+        if validate:
+            validate_schedule(schedule, wg, contractors)
+
+        return schedule, schedule_start_time, timeline, order_nodes
+
+    def schedule_multiobjective(self,
+                                wg: WorkGraph,
+                                contractors: list[Contractor],
+                                spec: ScheduleSpec = ScheduleSpec(),
+                                validate: bool = False,
+                                start_time: Time = Time(0),
+                                timeline: Timeline | None = None,
+                                landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+            -> list[Schedule]:
+        """
+        Implementation of a multiobjective scheduling process
+
+        :return: list of pareto-efficient Schedules
+        """
+        if wg is None or len(wg.nodes) == 0:
+            raise ValueError('None or empty WorkGraph')
+        if contractors is None or len(contractors) == 0:
+            raise ValueError('None or empty contractor list')
+        schedules = self.schedule_multiobjective_with_cache(wg, contractors, landscape, spec, validate, start_time,
+                                                            timeline)
+        schedules = [schedule for schedule, _, _, _ in schedules]
+        return schedules
+
+    def schedule_multiobjective_with_cache(self,
+                                           wg: WorkGraph,
+                                           contractors: list[Contractor],
+                                           landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                           spec: ScheduleSpec = ScheduleSpec(),
+                                           validate: bool = False,
+                                           assigned_parent_time: Time = Time(0),
+                                           timeline: Timeline | None = None) \
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+        """
+        Build pareto-efficient schedules for received graph of workers and return their current states
+        """
+        schedules = self._build_schedules(wg, contractors, landscape, spec, assigned_parent_time, timeline,
+                                          is_multiobjective=True)
+
+        if validate:
+            for schedule, _, _, _ in schedules:
+                validate_schedule(schedule, wg, contractors)
+
+        return schedules
+
+    def _build_schedules(self,
+                         wg: WorkGraph,
+                         contractors: list[Contractor],
+                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                         spec: ScheduleSpec = ScheduleSpec(),
+                         assigned_parent_time: Time = Time(0),
+                         timeline: Timeline | None = None,
+                         is_multiobjective: bool = False) \
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, spec,
                                                                     self.work_estimator, self._deadline, self._weights)
 
@@ -241,34 +304,34 @@ class GeneticScheduler(Scheduler):
         worker_pool = get_worker_contractor_pool(contractors)
         deadline = None if self._optimize_resources else self._deadline
 
-        scheduled_works, schedule_start_time, timeline, order_nodes = build_schedule(wg,
-                                                                                     contractors,
-                                                                                     worker_pool,
-                                                                                     size_of_population,
-                                                                                     self.number_of_generation,
-                                                                                     mutate_order,
-                                                                                     mutate_resources,
-                                                                                     mutate_zones,
-                                                                                     init_schedules,
-                                                                                     self.rand,
-                                                                                     spec,
-                                                                                     landscape,
-                                                                                     self.fitness_constructor,
-                                                                                     self.fitness_weights,
-                                                                                     self.work_estimator,
-                                                                                     self.sgs_type,
-                                                                                     self._n_cpu,
-                                                                                     assigned_parent_time,
-                                                                                     timeline,
-                                                                                     self._time_border,
-                                                                                     self._max_plateau_steps,
-                                                                                     self._optimize_resources,
-                                                                                     deadline,
-                                                                                     self._only_lft_initialization,
-                                                                                     self._verbose)
-        schedule = Schedule.from_scheduled_works(scheduled_works.values(), wg)
+        schedules = build_schedules(wg,
+                                    contractors,
+                                    worker_pool,
+                                    size_of_population,
+                                    self.number_of_generation,
+                                    mutate_order,
+                                    mutate_resources,
+                                    mutate_zones,
+                                    init_schedules,
+                                    self.rand,
+                                    spec,
+                                    landscape,
+                                    self.fitness_constructor,
+                                    self.fitness_weights,
+                                    self.work_estimator,
+                                    self.sgs_type,
+                                    self._n_cpu,
+                                    assigned_parent_time,
+                                    timeline,
+                                    self._time_border,
+                                    self._max_plateau_steps,
+                                    self._optimize_resources,
+                                    deadline,
+                                    self._only_lft_initialization,
+                                    is_multiobjective,
+                                    self._verbose)
+        schedules = [
+            (Schedule.from_scheduled_works(scheduled_works.values(), wg), schedule_start_time, timeline, order_nodes)
+            for scheduled_works, schedule_start_time, timeline, order_nodes in schedules]
 
-        if validate:
-            validate_schedule(schedule, wg, contractors)
-
-        return schedule, schedule_start_time, timeline, order_nodes
+        return schedules

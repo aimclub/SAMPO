@@ -91,7 +91,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                                                contractor2index, contractor_borders, schedule, chromosome_spec,
                                                landscape, order),
                 importance, chromosome_spec)
-         if schedule is not None else None
+        if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
     if verbose:
@@ -129,34 +129,34 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         is_multiobjective), worker_name2index, worker_pool_indices, parents
 
 
-def build_schedule(wg: WorkGraph,
-                   contractors: list[Contractor],
-                   worker_pool: WorkerContractorPool,
-                   population_size: int,
-                   generation_number: int,
-                   mutpb_order: float,
-                   mutpb_res: float,
-                   mutpb_zones: float,
-                   init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                   rand: random.Random,
-                   spec: ScheduleSpec,
-                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                   fitness_constructor: Callable[
-                       [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
-                   fitness_weights: tuple[int | float] = (-1,),
-                   work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                   sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
-                   n_cpu: int = 1,
-                   assigned_parent_time: Time = Time(0),
-                   timeline: Timeline | None = None,
-                   time_border: int | None = None,
-                   max_plateau_steps: int | None = None,
-                   optimize_resources: bool = False,
-                   deadline: Time | None = None,
-                   only_lft_initialization: bool = False,
-                   is_multiobjective: bool = False,
-                   verbose: bool = True) \
-        -> tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]:
+def build_schedules(wg: WorkGraph,
+                    contractors: list[Contractor],
+                    worker_pool: WorkerContractorPool,
+                    population_size: int,
+                    generation_number: int,
+                    mutpb_order: float,
+                    mutpb_res: float,
+                    mutpb_zones: float,
+                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
+                    rand: random.Random,
+                    spec: ScheduleSpec,
+                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                    fitness_constructor: Callable[
+                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                    fitness_weights: tuple[int | float] = (-1,),
+                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                    sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                    n_cpu: int = 1,
+                    assigned_parent_time: Time = Time(0),
+                    timeline: Timeline | None = None,
+                    time_border: int | None = None,
+                    max_plateau_steps: int | None = None,
+                    optimize_resources: bool = False,
+                    deadline: Time | None = None,
+                    only_lft_initialization: bool = False,
+                    is_multiobjective: bool = False,
+                    verbose: bool = True) \
+        -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     """
     Genetic algorithm.
     Structure of chromosome:
@@ -193,8 +193,8 @@ def build_schedule(wg: WorkGraph,
 
     if native.native:
         native_start = time.time()
-        best_chromosome = native.run_genetic(chromosomes, mutpb_order, mutpb_order, mutpb_res, mutpb_res, mutpb_res,
-                                             mutpb_res, population_size)
+        best_chromosomes = [native.run_genetic(chromosomes, mutpb_order, mutpb_order, mutpb_res, mutpb_res, mutpb_res,
+                                               mutpb_res, population_size)]
         if verbose:
             print(f'Native evaluated in {(time.time() - native_start) * 1000} ms')
     else:
@@ -270,9 +270,8 @@ def build_schedule(wg: WorkGraph,
 
             fitness_resource_f = fitness_constructor(native.evaluate)
             toolbox.register_individual_constructor(fitness_weights)
-            # save best individuals
-            del hof
-            hof = tools.ParetoFront(similar=compare_individuals)
+            # clear best individuals
+            hof.clear()
 
             for ind in pop:
                 ind.time = ind.fitness.values[0]
@@ -363,13 +362,15 @@ def build_schedule(wg: WorkGraph,
             print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
             print(f'Evaluation time: {evaluation_time * 1000}')
 
-        best_chromosome = hof[0]
+        best_chromosomes = [chromosome for chromosome in hof]
 
-    scheduled_works, schedule_start_time, timeline, order_nodes = toolbox.chromosome_to_schedule(best_chromosome,
-                                                                                                 landscape=landscape,
-                                                                                                 timeline=timeline)
+    best_schedules = [toolbox.chromosome_to_schedule(best_chromosome, landscape=landscape, timeline=timeline)
+                      for best_chromosome in best_chromosomes]
+    best_schedules = [({node.id: work for node, work in scheduled_works.items()},
+                       schedule_start_time, timeline, order_nodes)
+                      for scheduled_works, schedule_start_time, timeline, order_nodes in best_schedules]
 
-    return {node.id: work for node, work in scheduled_works.items()}, schedule_start_time, timeline, order_nodes
+    return best_schedules
 
 
 def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:

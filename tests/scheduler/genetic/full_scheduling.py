@@ -1,6 +1,6 @@
 import time
 
-from sampo.backend import DefaultComputationalBackend
+from sampo.backend.default import DefaultComputationalBackend
 from sampo.backend.multiproc import MultiprocessingComputationalBackend
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.base import GeneticScheduler

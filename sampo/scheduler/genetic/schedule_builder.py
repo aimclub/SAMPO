@@ -5,7 +5,6 @@ from typing import Callable
 from deap import tools
 from deap.base import Toolbox
 
-from sampo.backend import BackendActions
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
@@ -126,8 +125,8 @@ def build_schedule(wg: WorkGraph,
                              rand, spec, work_estimator, assigned_parent_time,
                              landscape)
 
-    SAMPO.backend.run(BackendActions.CACHE_SCHEDULER_INFO, wg, contractors, landscape, spec)
-    SAMPO.backend.run(BackendActions.CACHE_GENETIC_INFO, population_size,
+    SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec)
+    SAMPO.backend.cache_genetic_info(population_size,
                       mutpb_order, mutpb_res, mutpb_zones,
                       init_schedules, assigned_parent_time)
 
@@ -150,7 +149,7 @@ def build_schedule(wg: WorkGraph,
     # map to each individual fitness function
     pop = [ind for ind in pop if toolbox.validate(ind)]
 
-    fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, pop)
+    fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
 
     evaluation_time = time.time() - evaluation_start
 
@@ -192,7 +191,7 @@ def build_schedule(wg: WorkGraph,
 
         evaluation_start = time.time()
 
-        offspring_fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, offspring)
+        offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
 
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = [fit]
@@ -230,7 +229,7 @@ def build_schedule(wg: WorkGraph,
 
             evaluation_start = time.time()
 
-            fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, pop)
+            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
             for ind, res_peak in zip(pop, fitness):
                 ind.time = ind.fitness.values[0]
                 ind.fitness.values = [res_peak]
@@ -247,7 +246,7 @@ def build_schedule(wg: WorkGraph,
 
             evaluation_start = time.time()
 
-            fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, pop)
+            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
             for ind, res_peak in zip(pop, fitness):
                 ind.time = ind.fitness.values[0]
                 ind.fitness.values = [res_peak]
@@ -289,14 +288,14 @@ def build_schedule(wg: WorkGraph,
 
                 evaluation_start = time.time()
 
-                fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, offspring)
+                fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
 
                 for ind, t in zip(offspring, fitness):
                     ind.time = t
 
                 offspring = [ind for ind in offspring if ind.time <= deadline]
 
-                fitness_res = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, offspring)
+                fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource, offspring)
 
                 for ind, res_peak in zip(offspring, fitness_res):
                     ind.fitness.values = [res_peak]

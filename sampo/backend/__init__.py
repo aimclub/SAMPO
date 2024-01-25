@@ -47,7 +47,13 @@ class ComputationalBackend(ABC):
         cls._actions[action_type] = action
 
     def run(self, action_type: BackendActions, *args) -> Any:
-        return self.__class__._actions[action_type](self, *args)
+        if action_type == BackendActions.CACHE_SCHEDULER_INFO:
+            self.cache_scheduler_info(*args)
+        if action_type == BackendActions.CACHE_GENETIC_INFO:
+            self.cache_genetic_info(*args)
+        if action_type == BackendActions.COMPUTE_CHROMOSOMES:
+            return self.compute_chromosomes(*args)
+        # return self.__class__._actions[action_type](self, *args)
 
     def map(self, action: Callable[[T], R], values: list[T]) -> list[R]:
         return self._context.map(action, values)
@@ -59,5 +65,38 @@ class ComputationalBackend(ABC):
     def new_context(self) -> ComputationalContext:
         ...
 
+    @abstractmethod
+    def cache_scheduler_info(self,
+                             wg: WorkGraph,
+                             contractors: list[Contractor],
+                             landscape: LandscapeConfiguration,
+                             spec: ScheduleSpec,
+                             rand: Random | None = None,
+                             work_estimator: WorkTimeEstimator | None = None):
+        ...
 
-from sampo.backend.default import DefaultComputationalBackend
+    @abstractmethod
+    def cache_genetic_info(self,
+                           population_size: int,
+                           mutate_order: float,
+                           mutate_resources: float,
+                           mutate_zones: float,
+                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
+                           assigned_parent_time: Time):
+        ...
+
+    @abstractmethod
+    def compute_chromosomes(self,
+                            fitness: FitnessFunction,
+                            chromosomes: list[ChromosomeType]) -> list[float]:
+        ...
+
+
+# from sampo.backend.default import DefaultComputationalBackend
+#
+# from sampo.backend.registry import register_default_computational_backend, \
+#         register_multiprocessing_computational_backend
+#
+# # Initialize backends
+# register_default_computational_backend()
+# register_multiprocessing_computational_backend()

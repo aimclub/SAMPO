@@ -1,4 +1,5 @@
-from sampo.backend import DefaultComputationalBackend
+import sampo.scheduler
+from sampo.backend.default import DefaultComputationalBackend
 
 
 class SAMPO:

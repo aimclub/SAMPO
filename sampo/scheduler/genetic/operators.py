@@ -1,6 +1,5 @@
 import math
 import random
-from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import partial
 from operator import attrgetter
@@ -11,8 +10,7 @@ from deap import creator, base
 from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction
-from sampo.scheduler.genetic.converter import convert_chromosome_to_schedule
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from operator import attrgetter
 from random import Random
-from typing import Optional
+from typing import Optional, Type
 
 import numpy.random
 import math
@@ -42,6 +42,10 @@ class WorkTimeEstimator(ABC):
 
     @abstractmethod
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]):
+        ...
+
+    @abstractmethod
+    def get_recreate_info(self) -> tuple[Type, tuple]:
         ...
 
 
@@ -115,6 +119,9 @@ class DefaultWorkEstimator(WorkTimeEstimator):
             self._productivity[name]['__ALL__'] = productivity
             return
         self._productivity[name][contractor] = productivity
+
+    def get_recreate_info(self) -> tuple[Type, tuple]:
+        return DefaultWorkEstimator, ()
 
 
 def communication_coefficient(groups_count: int, max_groups: int) -> float:

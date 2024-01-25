@@ -1,10 +1,10 @@
 import random
 from typing import Optional, Callable
 
+from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedule
-from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer

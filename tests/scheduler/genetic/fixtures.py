@@ -3,7 +3,7 @@ from random import Random
 import numpy as np
 from pytest import fixture
 
-from sampo.scheduler.genetic.schedule_builder import create_toolbox_and_mapping_objects
+from sampo.scheduler.genetic.schedule_builder import create_toolbox
 from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
@@ -46,16 +46,16 @@ def setup_toolbox(setup_default_schedules) -> tuple:
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
 
-    return (create_toolbox_and_mapping_objects(setup_wg,
-                                               setup_contractors,
-                                               setup_worker_pool,
-                                               size_of_population,
-                                               mutate_order,
-                                               mutate_resources,
-                                               mutate_zones,
-                                               setup_default_schedules,
-                                               rand,
-                                               work_estimator=work_estimator,
-                                               landscape=setup_landscape_many_holders,
-                                               verbose=False)[0], resources_border,
+    return (create_toolbox(setup_wg,
+                           setup_contractors,
+                           setup_worker_pool,
+                           size_of_population,
+                           mutate_order,
+                           mutate_resources,
+                           mutate_zones,
+                           setup_default_schedules,
+                           rand,
+                           work_estimator=work_estimator,
+                           landscape=setup_landscape_many_holders,
+                           verbose=False)[0], resources_border,
             setup_wg, setup_contractors, setup_default_schedules, setup_landscape_many_holders)

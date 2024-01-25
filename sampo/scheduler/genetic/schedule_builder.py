@@ -2,92 +2,51 @@ import random
 import time
 from typing import Callable
 
-import numpy as np
 from deap import tools
 from deap.base import Toolbox
 
+from sampo.backend import BackendActions
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
-def create_toolbox_and_mapping_objects(wg: WorkGraph,
-                                       contractors: list[Contractor],
-                                       worker_pool: WorkerContractorPool,
-                                       population_size: int,
-                                       mutate_order: float,
-                                       mutate_resources: float,
-                                       mutate_zones: float,
-                                       init_schedules: dict[
-                                           str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                                       rand: random.Random,
-                                       spec: ScheduleSpec = ScheduleSpec(),
-                                       work_estimator: WorkTimeEstimator = None,
-                                       assigned_parent_time: Time = Time(0),
-                                       landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                                       verbose: bool = True) \
-        -> tuple[Toolbox, dict[str, int], dict[int, dict[int, Worker]], dict[int, list[int]]]:
+def create_toolbox(wg: WorkGraph,
+                   contractors: list[Contractor],
+                   population_size: int,
+                   mutate_order: float,
+                   mutate_resources: float,
+                   mutate_zones: float,
+                   init_schedules: dict[
+                       str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
+                   rand: random.Random,
+                   spec: ScheduleSpec = ScheduleSpec(),
+                   work_estimator: WorkTimeEstimator = None,
+                   assigned_parent_time: Time = Time(0),
+                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                   verbose: bool = True) -> Toolbox:
     start = time.time()
 
-    # preparing access-optimized data structures
-    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
-
-    index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
-    work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
-    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
-    index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
-    index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
-    contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}
-    worker_pool_indices = {worker_name2index[worker_name]: {
-        contractor2index[contractor_id]: worker for contractor_id, worker in workers_of_type.items()
-    } for worker_name, workers_of_type in worker_pool.items()}
-    node_indices = list(range(len(nodes)))
-
-    # construct inseparable_child -> inseparable_parent mapping
-    inseparable_parents = {}
-    for node in nodes:
-        for child in node.get_inseparable_chain_with_self():
-            inseparable_parents[child] = node
-
-    # here we aggregate information about relationships from the whole inseparable chain
-    children = {work_id2index[node.id]: set([work_id2index[inseparable_parents[child].id]
-                                             for inseparable in node.get_inseparable_chain_with_self()
-                                             for child in inseparable.children])
-                for node in nodes}
-
-    parents = {work_id2index[node.id]: set() for node in nodes}
-    for node, node_children in children.items():
-        for child in node_children:
-            parents[child].add(node)
-
-    resources_border = np.zeros((2, len(worker_pool), len(index2node)))
-    for work_index, node in index2node.items():
-        for req in node.work_unit.worker_reqs:
-            worker_index = worker_name2index[req.kind]
-            resources_border[0, worker_index, work_index] = req.min_count
-            resources_border[1, worker_index, work_index] = req.max_count
-
-    contractor_borders = np.zeros((len(contractor2index), len(worker_name2index)), dtype=int)
-    for ind, contractor in enumerate(contractors):
-        for ind_worker, worker in enumerate(contractor.workers.values()):
-            contractor_borders[ind, ind_worker] = worker.count
+    worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
+        worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
+        resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
         {name: (convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                                contractor2index, contractor_borders, schedule, chromosome_spec,
                                                landscape, order),
                 importance, chromosome_spec)
-         if schedule is not None else None
+        if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
     if verbose:
@@ -118,7 +77,7 @@ def create_toolbox_and_mapping_objects(wg: WorkGraph,
                         children,
                         resources_border,
                         assigned_parent_time,
-                        work_estimator), worker_name2index, worker_pool_indices, parents
+                        work_estimator)
 
 
 def build_schedule(wg: WorkGraph,
@@ -162,12 +121,15 @@ def build_schedule(wg: WorkGraph,
 
     print('000')
 
-    toolbox, *mapping_objects = create_toolbox_and_mapping_objects(wg, contractors, worker_pool, population_size,
-                                                                   mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                                                                   rand, spec, work_estimator, assigned_parent_time,
-                                                                   landscape, verbose)
+    toolbox = create_toolbox(wg, contractors, population_size,
+                             mutpb_order, mutpb_res, mutpb_zones, init_schedules,
+                             rand, spec, work_estimator, assigned_parent_time,
+                             landscape)
 
-    SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec, toolbox)
+    SAMPO.backend.run(BackendActions.CACHE_SCHEDULER_INFO, wg, contractors, landscape, spec)
+    SAMPO.backend.run(BackendActions.CACHE_GENETIC_INFO, population_size,
+                      mutpb_order, mutpb_res, mutpb_zones,
+                      init_schedules, assigned_parent_time)
 
     # create population of a given size
     pop = toolbox.population(n=population_size)
@@ -188,7 +150,7 @@ def build_schedule(wg: WorkGraph,
     # map to each individual fitness function
     pop = [ind for ind in pop if toolbox.validate(ind)]
 
-    fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
+    fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, pop)
 
     evaluation_time = time.time() - evaluation_start
 
@@ -230,7 +192,7 @@ def build_schedule(wg: WorkGraph,
 
         evaluation_start = time.time()
 
-        offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+        offspring_fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, offspring)
 
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = [fit]
@@ -268,7 +230,7 @@ def build_schedule(wg: WorkGraph,
 
             evaluation_start = time.time()
 
-            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
+            fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, pop)
             for ind, res_peak in zip(pop, fitness):
                 ind.time = ind.fitness.values[0]
                 ind.fitness.values = [res_peak]
@@ -285,7 +247,7 @@ def build_schedule(wg: WorkGraph,
 
             evaluation_start = time.time()
 
-            fitness = SAMPO.backend.compute_chromosomes(fitness_resource, pop)
+            fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, pop)
             for ind, res_peak in zip(pop, fitness):
                 ind.time = ind.fitness.values[0]
                 ind.fitness.values = [res_peak]
@@ -327,14 +289,14 @@ def build_schedule(wg: WorkGraph,
 
                 evaluation_start = time.time()
 
-                fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+                fitness = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_f, offspring)
 
                 for ind, t in zip(offspring, fitness):
                     ind.time = t
 
                 offspring = [ind for ind in offspring if ind.time <= deadline]
 
-                fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource, offspring)
+                fitness_res = SAMPO.backend.run(BackendActions.COMPUTE_CHROMOSOMES, fitness_resource, offspring)
 
                 for ind, res_peak in zip(offspring, fitness_res):
                     ind.fitness.values = [res_peak]

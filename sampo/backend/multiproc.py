@@ -1,12 +1,11 @@
+from enum import Enum, auto
+from random import Random
 from typing import Callable
 
 import pathos.multiprocessing
-from deap.base import Toolbox
 
-from sampo.api.genetic_api import FitnessFunction, ChromosomeType
-from sampo.backend import ComputationalBackend, T, R, ComputationalContext
-from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration
-from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.backend import T, R, ComputationalContext, DefaultComputationalBackend
+
 
 # logger = pathos.logger()
 # logger.setLevel(0)
@@ -17,7 +16,6 @@ class MultiprocessingComputationalContext(ComputationalContext):
         self._pool = pathos.multiprocessing.Pool(n_cpus, initializer=initializer, initargs=args)
 
     def map(self, action: Callable[[T], R], values: list[T]) -> list[R]:
-        # return list(map(action, values))
         try:
             return self._pool.map(action, values)
         except Exception as e:
@@ -25,42 +23,30 @@ class MultiprocessingComputationalContext(ComputationalContext):
             pass
 
 
-def scheduler_info_initializer(wg: WorkGraph,
-                               contractors: list[Contractor],
-                               landscape: LandscapeConfiguration,
-                               spec: ScheduleSpec,
-                               toolbox: Toolbox):
-    global g_wg, g_contractors, g_landscape, g_spec, g_toolbox
-    g_wg = wg
-    g_contractors = contractors
-    g_landscape = landscape
-    g_spec = spec
-    g_toolbox = toolbox
-
-    # logger.info('I\'m here!')
-
-class MultiprocessingComputationalBackend(ComputationalBackend):
+class MultiprocessingComputationalBackend(DefaultComputationalBackend):
+    _actions = {}
 
     def __init__(self, n_cpus: int):
         self._n_cpus = n_cpus
+        self._init_chromosomes = None
         super().__init__()
 
     def new_context(self) -> ComputationalContext:
         return MultiprocessingComputationalContext(self._n_cpus)
 
-    def cache_scheduler_info(self,
-                             wg: WorkGraph,
-                             contractors: list[Contractor],
-                             landscape: LandscapeConfiguration,
-                             spec: ScheduleSpec,
-                             toolbox: Toolbox):
-        self.set_context(MultiprocessingComputationalContext(self._n_cpus,
-                                                             scheduler_info_initializer,
-                                                             (wg, contractors, landscape, spec, toolbox)))
-
-    def compute_chromosomes(self, fitness: FitnessFunction, chromosomes: list[ChromosomeType]) -> list[float]:
-        def mapper(chromosome):
-            return fitness.evaluate(chromosome, g_toolbox.evaluate_chromosome)
-
-        return self._context.map(mapper, chromosomes)
-        # return [1 for _ in range(len(chromosomes))]
+    def recreate_pool(self):
+        # self.set_context(MultiprocessingComputationalContext(self._n_cpus,
+        #                                                      scheduler_info_initializer,
+        #                                                      (self._wg,
+        #                                                       self._contractors,
+        #                                                       self._landscape,
+        #                                                       self._spec,
+        #                                                       self._population_size,
+        #                                                       self._mutate_order,
+        #                                                       self._mutate_resources,
+        #                                                       self._mutate_zones,
+        #                                                       self._init_chromosomes,
+        #                                                       self._assigned_parent_time,
+        #                                                       self._rand,
+        #                                                       self._work_estimator.get_recreate_info())))
+        pass

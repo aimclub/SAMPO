@@ -6,8 +6,10 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, SchedulerType, Scheduler
+from sampo.scheduler import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft import HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler.topological import TopologicalScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType

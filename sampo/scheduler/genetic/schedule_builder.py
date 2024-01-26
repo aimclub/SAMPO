@@ -118,8 +118,6 @@ def build_schedule(wg: WorkGraph,
     """
     global_start = start = time.time()
 
-    print('000')
-
     toolbox = create_toolbox(wg, contractors, population_size,
                              mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                              rand, spec, work_estimator, assigned_parent_time,
@@ -133,8 +131,7 @@ def build_schedule(wg: WorkGraph,
     # create population of a given size
     pop = toolbox.population(n=population_size)
 
-    if verbose:
-        print(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
+    SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     have_deadline = deadline is not None
     # save best individuals
@@ -144,11 +141,7 @@ def build_schedule(wg: WorkGraph,
 
     evaluation_start = time.time()
 
-    print('1111111')
-
     # map to each individual fitness function
-    pop = [ind for ind in pop if toolbox.validate(ind)]
-
     fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
 
     evaluation_time = time.time() - evaluation_start
@@ -171,8 +164,7 @@ def build_schedule(wg: WorkGraph,
 
     while generation <= new_generation_number and plateau_steps < max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
-        if verbose:
-            print(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
+        SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
 
         rand.shuffle(pop)
 
@@ -222,7 +214,7 @@ def build_schedule(wg: WorkGraph,
         fitness_resource = fitness_constructor()
 
         if best_fitness > deadline:
-            print(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
+            SAMPO.logger.info(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
             # save best individuals
             hof = tools.HallOfFame(1, similar=compare_individuals)
             pop = [ind for ind in pop if ind.fitness.values[0] == best_fitness]
@@ -270,8 +262,7 @@ def build_schedule(wg: WorkGraph,
 
             while generation <= generation_number and plateau_steps < max_plateau_steps \
                     and (time_border is None or time.time() - global_start < time_border):
-                if verbose:
-                    print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+                SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
                 rand.shuffle(pop)
 
                 offspring = []
@@ -316,11 +307,10 @@ def build_schedule(wg: WorkGraph,
 
                 generation += 1
 
-    if verbose:
-        print(f'Final time: {best_fitness}')
-        print(f'Generations processing took {(time.time() - start) * 1000} ms')
-        print(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
-        print(f'Evaluation time: {evaluation_time * 1000}')
+    SAMPO.logger.info(f'Final time: {best_fitness}')
+    SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
+    SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
+    SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
 
     best_chromosome = hof[0]
 

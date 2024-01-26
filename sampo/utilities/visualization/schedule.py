@@ -52,8 +52,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     sworks = schedule_dataframe['scheduled_work_object'].copy()
     idx = schedule_dataframe['idx'].copy()
 
-    a = sworks[0].materials.delivery.values()
-
     def get_delivery_info(swork) -> str:
         return '<br>' + '<br>'.join([f'{mat[0][0]}: {mat[0][1]}' for mat in swork.materials.delivery.values()])
 
@@ -113,18 +111,9 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                                                                      r['task_name'].split(':')[0]]['idx'].iloc[0]
                                  if ':' in r['task_name'] else r['idx'], axis=1))
 
-    # add one time unit to the end should remove hole within the immediately close tasks
-    schedule_dataframe['vis_finish'] = schedule_dataframe[['start', 'finish', 'duration']] \
-        .apply(lambda r: r['finish'] + timedelta(1) if r['duration'] > 0 else r['finish'], axis=1)
-    schedule_dataframe['vis_start'] = schedule_dataframe['start']
-    schedule_dataframe['finish'] = schedule_dataframe['finish'].apply(lambda x: x.strftime('%e %b %Y'))
-    schedule_dataframe['start'] = schedule_dataframe['start'].apply(lambda x: x.strftime('%e %b %Y'))
-
-    fig = px.timeline(schedule_dataframe, x_start='vis_start', x_end='vis_finish', y='idx', hover_name='task_name',
+    fig = px.timeline(schedule_dataframe, x_start='start', x_end='finish', y='idx', hover_name='task_name',
                       color=schedule_dataframe.loc[:, 'color'],
-                      hover_data={'vis_start': False,
-                                  'vis_finish': False,
-                                  'start': True,
+                      hover_data={'start': True,
                                   'finish': True,
                                   'task_name_mapped': True,
                                   'cost': True,

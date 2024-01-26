@@ -11,7 +11,6 @@ import pandas as pd
 from scipy.sparse import dok_matrix
 
 from sampo.schemas import uuid_str
-from sampo.schemas.landscape_graph import LandGraphNode
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.time import Time
@@ -54,13 +53,11 @@ class GraphNode(JSONSerializable['GraphNode']):
     """
 
     def __init__(self, work_unit: WorkUnit,
-                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]],
-                 platform: LandGraphNode = None):
+                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
         self._work_unit = work_unit
         self._parent_edges = []
         self.add_parents(parent_works)
         self._children_edges = []
-        self.platform = platform
 
     def __hash__(self) -> int:
         return hash(self.id)

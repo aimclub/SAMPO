@@ -20,8 +20,9 @@ def setup_empty_contractors(setup_empty_req_work_graph) -> list[Contractor]:
 
 
 def test_empty_graph_empty_contractor(setup_empty_req_work_graph, setup_empty_contractors, setup_scheduler):
-    schedule = setup_scheduler.schedule(setup_empty_req_work_graph,
-                                        setup_empty_contractors,
-                                        validate=False)
+    scheduler, scheduler_type = setup_scheduler
+    schedule = scheduler.schedule(setup_empty_req_work_graph,
+                                  setup_empty_contractors,
+                                  validate=False)
 
     assert not schedule.execution_time.is_inf()

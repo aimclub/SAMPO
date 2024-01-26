@@ -103,6 +103,12 @@ class LandscapeConfiguration:
         self.zone_config = zone_config
         if self.lg is None:
             return
+        self.works2platform = {}
+        for platform in self.platforms:
+            for work in platform.works:
+                self.works2platform[work] = platform
+        # self.works2platform: dict['GraphNode', LandGraphNode] = {work: platform for platform in self.platforms
+        #                                                          for work in platform.works}
         self._build_routes()
         self._node2ind = self.lg.node2ind
 
@@ -134,7 +140,8 @@ class LandscapeConfiguration:
 
         return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]
 
-    def construct_route(self, from_node: LandGraphNode, to_node: LandGraphNode, roads_available: list[Road]) -> list[str]:
+    def construct_route(self, from_node: LandGraphNode, to_node: LandGraphNode,
+                        roads_available: list[Road]) -> list[str]:
         """
         Construct the route from the list of available roads whether it is possible.
         :param roads_available: list of available roads
@@ -182,8 +189,7 @@ class LandscapeConfiguration:
         while path_mx[to_ind][fr] != to_ind:
             path_tmp.append(path_mx[to_ind][fr])
             fr = path_mx[to_ind][fr]
-        path = []
-        path.append(from_ind)
+        path = [from_ind]
         path.extend(path_tmp)
         path.append(to_ind)
         return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]

@@ -55,7 +55,6 @@ class MomentumTimeline(Timeline):
         # to efficiently search for time slots for tasks to be scheduled
         # we need to keep track of starts and ends of previously scheduled tasks
         # and remember how many workers of a certain type is available at this particular moment
-        self.landscape = landscape
         self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {}
         for worker_name, worker_counts in worker_pool.items():
             for contractor, worker in worker_counts.items():
@@ -123,7 +122,7 @@ class MomentumTimeline(Timeline):
             exec_time += lag + node_exec_time
 
         if len(worker_team) == 0:
-            max_material_time = self._material_timeline.find_min_material_time(node, self.landscape, max_parent_time,
+            max_material_time = self._material_timeline.find_min_material_time(node, max_parent_time,
                                                                                node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
@@ -142,9 +141,7 @@ class MomentumTimeline(Timeline):
                 cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
                                                            cur_start_time, exec_time, worker_team)
 
-                material_time = self._material_timeline.find_min_material_time(node,
-                                                                               self.landscape,
-                                                                               cur_start_time,
+                material_time = self._material_timeline.find_min_material_time(node, cur_start_time,
                                                                                node.work_unit.need_materials())
                 if material_time > cur_start_time:
                     cur_start_time = material_time
@@ -334,7 +331,7 @@ class MomentumTimeline(Timeline):
                     if not state[0].available_workers_count >= available_workers_count:
                         return False
 
-            if not self._material_timeline.can_schedule_at_the_moment(node, self.landscape, start_time,
+            if not self._material_timeline.can_schedule_at_the_moment(node, start_time,
                                                                       node.work_unit.need_materials(), exec_time):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
@@ -437,7 +434,6 @@ class MomentumTimeline(Timeline):
 
             start_work = curr_time + node_lag
             deliveries, mat_del_time = self._material_timeline.supply_resources(chain_node,
-                                                                                self.landscape,
                                                                                 start_work,
                                                                                 chain_node.work_unit.need_materials(),
                                                                                 True)

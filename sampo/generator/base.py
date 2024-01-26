@@ -2,7 +2,7 @@ from random import Random
 
 from sampo.generator import SyntheticGraphType
 from sampo.generator.environment import get_contractor
-from sampo.generator.environment.landscape import get_landscape_by_wg, wg_with_platforms
+from sampo.generator.environment.landscape import get_landscape_by_wg
 from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.generator.pipeline.project import get_small_graph, get_graph
 from sampo.schemas import LandscapeConfiguration
@@ -73,9 +73,6 @@ class SimpleSynthetic:
         wg = extend_names(uniq_works, wg, self._rand)
         wg = extend_resources(uniq_resources, wg, self._rand)
         return wg
-
-    def get_wg_with_platforms(self, wg: WorkGraph) -> WorkGraph:
-        return wg_with_platforms(wg, self._rand)
 
     def simple_synthetic_landscape(self, wg: WorkGraph) -> LandscapeConfiguration:
         return get_landscape_by_wg(wg, self._rand)

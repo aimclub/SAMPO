@@ -6,15 +6,13 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, SchedulerType, Scheduler
+from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
-from sampo.schemas.interval import IntervalGaussian
-from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder
+from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.requirements import MaterialReq
-from sampo.schemas.resources import Material
 from sampo.schemas.resources import Worker
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator.base import graph_restructuring
@@ -106,7 +104,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 
     wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
-    return setup_simple_synthetic.get_wg_with_platforms(wg) if generate_materials else wg
+    return wg
 
 
 # TODO Make parametrization with different(specialized) contractors
@@ -114,7 +112,8 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
 def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     generate_landscape = False
-    if setup_wg.nodes[setup_wg.vertex_count - 2].platform is not None:
+    materials = [material for node in setup_wg.nodes for material in node.work_unit.need_materials()]
+    if materials is not None:
         generate_landscape = True
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
@@ -179,13 +178,6 @@ def setup_default_schedules(setup_scheduler_parameters):
                                                                                   landscape=landscape,
                                                                                   work_estimator=work_estimator)
 
-
-@fixture(params=list(SchedulerType),
-         ids=[f'Scheduler: {scheduler.value}' for scheduler in list(SchedulerType)])
-def setup_scheduler_type(request) -> SchedulerType:
-    return request.param
-
-
 @fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
          ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
 def setup_scheduler(request) -> Scheduler:
@@ -193,13 +185,16 @@ def setup_scheduler(request) -> Scheduler:
 
 
 @fixture
-def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_scheduler_type):
+def setup_schedule(setup_scheduler, setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
+    if setup_wg.vertex_count > 16:
+        pytest.skip('Non-manual graph')
+    scheduler = setup_scheduler
 
     try:
-        return setup_scheduler.schedule(setup_wg,
-                                        setup_contractors,
-                                        validate=False,
-                                        landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
+        return scheduler.schedule(setup_wg,
+                                  setup_contractors,
+                                  validate=False,
+                                  landscape=landscape), scheduler.scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

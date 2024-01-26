@@ -4,7 +4,7 @@ from itertools import chain
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import SchedulingPipeline
-from sampo.scheduler import HEFTBetweenScheduler
+from sampo.scheduler import GeneticScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -12,31 +12,32 @@ from sampo.utilities.sampler import Sampler
 from sampo.utilities.visualization import VisualizationMode
 
 
-def setup_lg():
+def setup_lg(wg: WorkGraph):
+    nodes = wg.nodes
     platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
                               ResourceStorageUnit({
                                   'mat1': 60,
                                   'mat2': 150,
                                   'mat3': 120
-                              }))
+                              }), works=nodes[1:3])
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
                               ResourceStorageUnit({
                                   'mat1': 60,
                                   'mat2': 80,
                                   'mat3': 90
-                              }))
+                              }), works=nodes[3:5])
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
                               ResourceStorageUnit({
                                   'mat1': 60,
                                   'mat2': 130,
                                   'mat3': 170
-                              }))
+                              }), works=nodes[5:7])
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
                               ResourceStorageUnit({
                                   'mat1': 60,
                                   'mat2': 190,
                                   'mat3': 200
-                              }))
+                              }), works=nodes[7:9])
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
                             ResourceStorageUnit({
                                 'mat1': 12000,
@@ -60,8 +61,7 @@ def setup_lg():
 
 def setup_landscape_many_holders(lg_info):
     lg, holders = lg_info
-    return LandscapeConfiguration(holders=[
-        ResourceHolder(str(uuid.uuid4()), 'holder1',
+    holders = [ResourceHolder(str(uuid.uuid4()), 'holder1',
                        [
                            Vehicle(str(uuid.uuid4()), 'vehicle1', [
                                Material('111', 'mat1', 100),
@@ -88,44 +88,36 @@ def setup_landscape_many_holders(lg_info):
                                Material('333', 'mat3', 140)
                            ])
                        ],
-                       holders[1]),
-        ], lg=lg)
+                       holders[1])]
+    landscape = LandscapeConfiguration(holders=holders, lg=lg)
+    return landscape
 
-def setup_wg(landscape):
-    platforms = landscape.lg.nodes
+def setup_wg():
     sr = Sampler(1e-1)
 
     l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
-    l1n1.platform = platforms[0]
     l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
-    l1n2.platform = platforms[0]
     l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
     l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
-    l2n1.platform = platforms[1]
     l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                   (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-    l2n2.platform = platforms[1]
     l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
-    l2n3.platform = platforms[2]
     l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
     l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                   (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
-    l3n1.platform = platforms[2]
     l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
-    l3n2.platform = platforms[3]
     l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                   (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
-    l3n3.platform = platforms[3]
     l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-    return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3]), landscape
+    return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
 
 if __name__ == '__main__':
     # Set up attributes for the generated synthetic graph
@@ -134,11 +126,6 @@ if __name__ == '__main__':
     synth_resources = 100
 
     # Set up scheduling algorithm and project's start date
-    scheduler = HEFTBetweenScheduler()
-    # scheduler = GeneticScheduler(number_of_generation=10,
-    #                              mutate_order=0.05,
-    #                              mutate_resources=0.005,
-    #                              size_of_population=50)
     start_date = "2023-01-01"
 
     # Set up visualization mode (ShowFig or SaveFig) and the gant chart file's name (if SaveFig mode is chosen)
@@ -148,7 +135,14 @@ if __name__ == '__main__':
     # Generate synthetic graph with the given approximate works count,
     # number of unique works names and number of unique resources
     srand = SimpleSynthetic(rand=31)
-    wg, landscape = setup_wg(setup_landscape_many_holders(setup_lg()))
+    wg = setup_wg()
+    landscape = setup_landscape_many_holders(setup_lg(wg))
+
+    # scheduler = HEFTBetweenScheduler()
+    scheduler = GeneticScheduler(number_of_generation=2,
+                                 mutate_order=0.05,
+                                 mutate_resources=0.005,
+                                 size_of_population=2)
 
     # Get information about created WorkGraph's attributes
     works_count = len(wg.nodes)

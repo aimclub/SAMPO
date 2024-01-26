@@ -11,8 +11,8 @@ from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 
 @fixture(scope='function')
-def setup_timeline(setup_landscape_many_holders):
-    return SupplyTimeline(landscape_config=setup_landscape_many_holders)
+def setup_timeline(setup_scheduler_parameters):
+    return SupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
 
 
 def test_init_resource_structure(setup_timeline):
@@ -40,7 +40,6 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
     for node in ordered_nodes[-1::-1]:
         materials = [Material(str(uuid.uuid4()), req.kind, req.count) for req in node.work_unit.material_reqs]
         delivery, parent_time = timeline.supply_resources(node,
-                                                          landscape,
                                                           parent_time,
                                                           materials, True)
 

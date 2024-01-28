@@ -24,9 +24,6 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.resource_usage import resources_peaks_sum, resources_costs_sum, resources_sum
 
 
-# logger = mp.log_to_stderr(logging.DEBUG)
-
-
 class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
@@ -185,7 +182,7 @@ def init_toolbox(wg: WorkGraph,
                  mut_res_pb: float,
                  mut_zone_pb: float,
                  statuses_available: int,
-                 population_size: int,
+                 selection_size: int,
                  rand: random.Random,
                  spec: ScheduleSpec,
                  worker_pool_indices: dict[int, dict[int, Worker]],
@@ -211,13 +208,12 @@ def init_toolbox(wg: WorkGraph,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create population
-    # toolbox.register('population', tools.initRepeat, list, lambda: toolbox.generate_chromosome())
     toolbox.register('population', generate_population, wg=wg, contractors=contractors,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
     # selection
-    toolbox.register('select', select_new_population, pop_size=population_size)
+    toolbox.register('select', select_new_population, pop_size=selection_size)
     # combined crossover
     toolbox.register('mate', mate, rand=rand)
     # combined mutation

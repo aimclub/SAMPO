@@ -22,7 +22,7 @@ from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
-                   population_size: int,
+                   selection_size: int,
                    mutate_order: float,
                    mutate_resources: float,
                    mutate_zones: float,
@@ -65,7 +65,7 @@ def create_toolbox(wg: WorkGraph,
                         mutate_resources,
                         mutate_zones,
                         landscape.zone_config.statuses.statuses_available(),
-                        population_size,
+                        selection_size,
                         rand,
                         spec,
                         worker_pool_indices,
@@ -90,10 +90,10 @@ def build_schedule(wg: WorkGraph,
                    init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                    rand: random.Random,
                    spec: ScheduleSpec,
+                   weights: list[int],
                    landscape: LandscapeConfiguration = LandscapeConfiguration(),
                    fitness_constructor: Callable[[], FitnessFunction] = TimeFitness,
                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                   n_cpu: int = 1,
                    assigned_parent_time: Time = Time(0),
                    timeline: Timeline | None = None,
                    time_border: int = None,
@@ -126,10 +126,11 @@ def build_schedule(wg: WorkGraph,
     SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec)
     SAMPO.backend.cache_genetic_info(population_size,
                       mutpb_order, mutpb_res, mutpb_zones,
+                      deadline, weights,
                       init_schedules, assigned_parent_time)
 
     # create population of a given size
-    pop = toolbox.population(n=population_size)
+    pop = SAMPO.backend.generate_first_population(population_size)
 
     SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
@@ -152,8 +153,7 @@ def build_schedule(wg: WorkGraph,
     hof.update(pop)
     best_fitness = hof[0].fitness.values[0]
 
-    if verbose:
-        print(f'First population evaluation took {evaluation_time * 1000} ms')
+    SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
 
     start = time.time()
 

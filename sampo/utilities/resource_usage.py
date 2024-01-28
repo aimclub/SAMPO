@@ -9,7 +9,7 @@ from sampo.schemas.time import Time
 
 def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str] | None = None) -> dict[str, np.ndarray]:
     df = schedule.full_schedule_df
-    points = df[['start', 'finish']].to_numpy().copy()
+    points = df[['start', 'finish']].to_numpy()
     points = SortedList(set(points.flatten()))
     usage = defaultdict(lambda: np.zeros_like(points))
 
@@ -20,7 +20,7 @@ def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str]
         start = points.bisect_left(swork.start_time)
         finish = points.bisect_left(swork.finish_time)
         for worker in swork.workers:
-            if worker.name in resources_names or is_none:
+            if is_none or worker.name in resources_names:
                 usage[worker.name][start: finish] += worker.count
 
     return usage

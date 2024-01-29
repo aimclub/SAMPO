@@ -320,7 +320,7 @@ def build_schedules(wg: WorkGraph,
                 while generation <= generation_number and plateau_steps < new_max_plateau_steps \
                         and (time_border is None or time.time() - global_start < time_border):
                     if verbose:
-                        print(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+                        print(f'-- Generation {generation}, population={len(pop)}, best res_fitness={best_fitness} --')
 
                     rand.shuffle(pop)
 

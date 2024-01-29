@@ -4,7 +4,7 @@ from itertools import chain
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import SchedulingPipeline
-from sampo.scheduler import GeneticScheduler
+from sampo.scheduler import GeneticScheduler, HEFTScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -19,25 +19,25 @@ def setup_lg(wg: WorkGraph):
                                   'mat1': 50,
                                   'mat2': 150,
                                   'mat3': 120
-                              }), works=nodes[1:3])
+                              }), works=nodes[1:5])
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
                               ResourceStorageUnit({
                                   'mat1': 50,
                                   'mat2': 80,
                                   'mat3': 90
-                              }), works=nodes[3:5])
+                              }), works=nodes[5:9])
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
                               ResourceStorageUnit({
                                   'mat1': 50,
                                   'mat2': 130,
                                   'mat3': 170
-                              }), works=nodes[5:7])
+                              }), works=nodes[9:13])
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
                               ResourceStorageUnit({
                                   'mat1': 50,
                                   'mat2': 190,
                                   'mat3': 200
-                              }), works=nodes[7:9])
+                              }), works=nodes[13:16])
     holder1 = LandGraphNode(str(uuid.uuid4()), 'holder1',
                             ResourceStorageUnit({
                                 'mat1': 12000,
@@ -50,11 +50,11 @@ def setup_lg(wg: WorkGraph):
                                 'mat2': 750,
                                 'mat3': 800
                             }))
-    platform1.add_neighbours([(platform3, 1.0, 2)])
-    platform2.add_neighbours([(platform4, 2.0, 1)])
-    platform3.add_neighbours([(holder1, 4.0, 2), (holder2, 3.0, 3)])
-    platform4.add_neighbours([(holder1, 5.0, 1), (holder2, 7.0, 2)])
-    holder1.add_neighbours([(holder2, 6.0, 2)])
+    platform1.add_neighbours([(platform3, 1.0, 10)])
+    platform2.add_neighbours([(platform4, 2.0, 10)])
+    platform3.add_neighbours([(holder1, 4.0, 10), (holder2, 3.0, 9)])
+    platform4.add_neighbours([(holder1, 5.0, 8), (holder2, 7.0, 8)])
+    holder1.add_neighbours([(holder2, 6.0, 8)])
 
     return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]
 
@@ -96,28 +96,53 @@ def setup_wg():
     sr = Sampler(1e-1)
 
     l1n1 = sr.graph_node('l1n1', [], group='0', work_id='000001')
-    l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l1n2 = sr.graph_node('l1n2', [], group='0', work_id='000002')
-    l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
     l2n1 = sr.graph_node('l2n1', [(l1n1, 0, EdgeType.FinishStart)], group='1', work_id='000011')
-    l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l2n2 = sr.graph_node('l2n2', [(l1n1, 0, EdgeType.FinishStart),
                                   (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000012')
-    l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l2n3 = sr.graph_node('l2n3', [(l1n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000013')
-    l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
     l3n1 = sr.graph_node('l3n1', [(l2n1, 0, EdgeType.FinishStart),
                                   (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000021')
-    l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
-    l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                   (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
+
+    l4n1 = sr.graph_node('l4n1', [], group='0', work_id='000003')
+    l4n2 = sr.graph_node('l4n2', [], group='0', work_id='000004')
+
+    l5n1 = sr.graph_node('l5n1', [(l4n1, 0, EdgeType.FinishStart)], group='1', work_id='000051')
+    l5n2 = sr.graph_node('l5n2', [(l4n1, 0, EdgeType.FinishStart),
+                                  (l1n2, 0, EdgeType.FinishStart)], group='1', work_id='000052')
+    l5n3 = sr.graph_node('l5n3', [(l4n2, 1, EdgeType.LagFinishStart)], group='1', work_id='000053')
+
+    l6n1 = sr.graph_node('l6n1', [(l5n1, 0, EdgeType.FinishStart),
+                                  (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000061')
+    l6n2 = sr.graph_node('l6n2', [(l5n2, 0, EdgeType.FinishStart)], group='2', work_id='000062')
+
+    l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+    l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+    l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
-    return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
+    l4n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l4n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+    l5n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l5n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l5n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+    l6n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l6n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+
+    return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3, l4n1, l4n2, l5n1, l5n2, l5n3, l6n1, l6n2])
 
 if __name__ == '__main__':
     # Set up attributes for the generated synthetic graph
@@ -138,7 +163,7 @@ if __name__ == '__main__':
     wg = setup_wg()
     landscape = setup_landscape_many_holders(setup_lg(wg))
 
-    # scheduler = HEFTBetweenScheduler()
+    # scheduler = HEFTScheduler()
     scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,

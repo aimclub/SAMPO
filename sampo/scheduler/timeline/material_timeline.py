@@ -65,39 +65,41 @@ class SupplyTimeline:
 
     def _can_deliver_to_time(self, platform: LandGraphNode, finish_delivery_time: Time, materials: list[Material]) -> bool:
         holders = self._find_best_holders_by_dist(platform, materials)
-        start_delivery_time = Time(0)
-        for depot_id in holders:
-            depot_state = self._timeline[depot_id]
+        start_delivery_time = Time(-1)
+        while start_delivery_time < finish_delivery_time:
+            start_delivery_time += 1
+            for depot_id in holders:
+                depot_state = self._timeline[depot_id]
 
-            not_enough_mat = False
-            # check whether remaining materials volume is enough for request
-            for mat in materials:
-                right_index = depot_state[mat.name].bisect_right(finish_delivery_time) - 1
-                if depot_state[mat.name][right_index].available_workers_count < mat.count:
-                    not_enough_mat = True
-                    break
-            if not_enough_mat:
-                continue
+                not_enough_mat = False
+                # check whether remaining materials volume is enough for request
+                for mat in materials:
+                    right_index = depot_state[mat.name].bisect_right(finish_delivery_time) - 1
+                    if depot_state[mat.name][right_index].available_workers_count < mat.count:
+                        not_enough_mat = True
+                        break
+                if not_enough_mat:
+                    continue
 
-            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot_id, materials)
-            start_ind = vehicle_state.bisect_right(start_delivery_time) - 1
-            finish_ind = vehicle_state.bisect_right(finish_delivery_time)
+                vehicle_state, vehicle_count_need = self._get_vehicle_info(depot_id, materials)
+                start_ind = vehicle_state.bisect_right(start_delivery_time) - 1
+                finish_ind = vehicle_state.bisect_right(finish_delivery_time)
 
-            if not self._check_resource_availability(vehicle_state, vehicle_count_need, start_ind, finish_ind):
-                continue
+                if not self._check_resource_availability(vehicle_state, vehicle_count_need, start_ind, finish_ind):
+                    continue
 
-            road_available = []
-            for road in self._landscape.roads:
-                road_state = self._timeline[road.id]['vehicles']
-                start_ind = road_state.bisect_right(start_delivery_time) - 1
-                finish_ind = road_state.bisect_right(finish_delivery_time)
-                if self._check_resource_availability(road_state, vehicle_count_need, start_ind, finish_ind):
-                    road_available.append(road)
+                road_available = []
+                for road in self._landscape.roads:
+                    road_state = self._timeline[road.id]['vehicles']
+                    start_ind = road_state.bisect_right(start_delivery_time) - 1
+                    finish_ind = road_state.bisect_right(finish_delivery_time)
+                    if self._check_resource_availability(road_state, vehicle_count_need, start_ind, finish_ind):
+                        road_available.append(road)
 
-            if not self._landscape.construct_route(self._holder_id2holder[depot_id].node, platform, road_available):
-                continue
+                if not self._landscape.construct_route(self._holder_id2holder[depot_id].node, platform, road_available):
+                    continue
 
-            return True
+                return True
         return False
 
     def can_schedule_at_the_moment(self, node: GraphNode, start_time: Time,
@@ -169,7 +171,7 @@ class SupplyTimeline:
 
         for mat in materials:
             start = platform_state[mat.name].bisect_right(start_time) - 1
-            finish = platform_state[mat.name].bisect_left(Time.inf()) - 1
+            finish = platform_state[mat.name].bisect_left((Time.inf(), -1, EventType.INITIAL)) - 1
 
             if not self._check_resource_availability(platform_state[mat.name], mat.count, start, finish):
                 if finish - start > 1:
@@ -238,7 +240,7 @@ class SupplyTimeline:
             material_available = [False] * len(materials)
             for mat_ind in range(len(materials)):
                 if not self._timeline[holder_id].get(materials[mat_ind].name, None) is None:
-                    ind = self._timeline[holder_id][materials[mat_ind].name].bisect_left(Time.inf()) - 1
+                    ind = self._timeline[holder_id][materials[mat_ind].name].bisect_left((Time.inf(), -1, EventType.INITIAL)) - 1
                     if self._timeline[holder_id][materials[mat_ind].name][ind].available_workers_count >= materials[
                         mat_ind].count:
                         material_available[mat_ind] = True
@@ -276,6 +278,7 @@ class SupplyTimeline:
 
             return MaterialDelivery(node.id), deadline
 
+        print(f'Node {node.id} was scheduled')
         return self._supply_resources(node, deadline, mat_request, update)
 
     def _supply_resources(self, node: GraphNode,
@@ -384,7 +387,7 @@ class SupplyTimeline:
         current_start_time = parent_time
         base_ind = state.bisect_right(parent_time) - 1
 
-        ind = min(state.bisect_left(Time.inf()), len(state) - 1)
+        ind = min(state.bisect_left((Time.inf(), -1, EventType)), len(state) - 1)
         last_time = state[ind].time
 
         while current_start_time < last_time:

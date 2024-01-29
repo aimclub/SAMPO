@@ -171,8 +171,8 @@ class GeneticScheduler(Scheduler):
         if weights is None:
             weights = [2, 2, 2, 1, 1, 1, 1]
 
-        init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
-                                                                                  landscape=landscape), None, spec)
+        # init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
+        #                                                                           landscape=landscape), None, spec)
 
         def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
             try:
@@ -204,7 +204,7 @@ class GeneticScheduler(Scheduler):
                     return None, None, None
 
         return {
-            "lft": (*init_lft_schedule, weights[0]),
+            # "lft": (*init_lft_schedule, weights[0]),
             "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
             "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
             "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),

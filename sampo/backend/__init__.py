@@ -3,6 +3,7 @@ from random import Random
 from typing import TypeVar
 
 import sampo.scheduler
+import sampo.scheduler.genetic
 
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction
 from sampo.scheduler.genetic.operators import Individual

@@ -9,7 +9,7 @@ import numpy as np
 from deap import creator, base
 from deap.base import Toolbox
 
-from sampo.api.genetic_api import ChromosomeType, FitnessFunction
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, convert_chromosome_to_schedule
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.scheduler.utils import WorkerContractorPool
@@ -159,13 +159,6 @@ class DeadlineCostFitness(FitnessFunction):
             return Time.inf().value
         return resources_costs_sum(schedule, self._resources_names) \
                 * max(1.0, schedule.execution_time.value / self._deadline.value)
-
-
-# create class FitnessMin, the weights = -1 means that fitness - is function for minimum
-
-creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
-creator.create('Individual', list, fitness=creator.FitnessMin)
-Individual = creator.Individual
 
 
 def init_toolbox(wg: WorkGraph,

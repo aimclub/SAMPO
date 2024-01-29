@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable
 
 import numpy as np
+from deap import base, creator
 
 from sampo.schemas import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -20,4 +21,11 @@ class FitnessFunction(ABC):
         It is better when value is less.
         """
         ...
+
+
+# create class FitnessMin, the weights = -1 means that fitness - is function for minimum
+
+creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
+creator.create('Individual', list, fitness=creator.FitnessMin)
+Individual = creator.Individual
 

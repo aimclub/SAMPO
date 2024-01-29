@@ -62,6 +62,11 @@ class GraphNode(JSONSerializable['GraphNode']):
     def __hash__(self) -> int:
         return hash(self.id)
 
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        return self.id == other.id
+
     def __repr__(self) -> str:
         return self.id
 

@@ -39,8 +39,8 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
     parent_time = Time(0)
     for node in ordered_nodes[-1::-1]:
         materials = [Material(str(uuid.uuid4()), req.kind, req.count) for req in node.work_unit.material_reqs]
-        delivery, parent_time = timeline.supply_resources(node,
-                                                          parent_time,
-                                                          materials, True)
+        delivery, parent_time = timeline._supply_resources(node,
+                                                           parent_time,
+                                                           materials, True)
 
     assert not parent_time.is_inf()

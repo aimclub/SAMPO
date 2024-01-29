@@ -309,7 +309,7 @@ class JustInTimeTimeline(Timeline):
                 lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
 
-            deliveries, mat_del_time = self._material_timeline.supply_resources(dep_node,
+            deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
                                                                                 c_st,
                                                                                 dep_node.work_unit.need_materials(),
                                                                                 True)

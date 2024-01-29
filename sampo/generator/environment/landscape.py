@@ -110,7 +110,11 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                            for neighbour in neighbour_platforms]
         platform.add_neighbours(neighbour_edges)
 
-    platforms_tmp = (wg.vertex_count // platforms_number) * platforms + platforms[:wg.vertex_count % platforms_number]
+    # nodes_without_ins_child = [node for node in nodes if node.inseparable_parent is None]
+    # number_of_nodes_without_ins_child = len(nodes_without_ins_child)
+
+    platforms_tmp = ((wg.vertex_count // platforms_number) * platforms +
+                     platforms[:wg.vertex_count % platforms_number])
     rnd.shuffle(platforms_tmp)
 
     for node, platform in zip(wg.nodes, platforms_tmp):

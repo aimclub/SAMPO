@@ -123,7 +123,7 @@ class MomentumTimeline(Timeline):
 
         if len(worker_team) == 0:
             max_material_time = self._material_timeline.find_min_material_time(node, max_parent_time,
-                                                                               node.work_unit.need_materials())
+                                                                               node.work_unit.need_materials(), exec_time)
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
@@ -142,7 +142,7 @@ class MomentumTimeline(Timeline):
                                                            cur_start_time, exec_time, worker_team)
 
                 material_time = self._material_timeline.find_min_material_time(node, cur_start_time,
-                                                                               node.work_unit.need_materials())
+                                                                               node.work_unit.need_materials(), exec_time)
                 if material_time > cur_start_time:
                     cur_start_time = material_time
                     continue
@@ -433,7 +433,8 @@ class MomentumTimeline(Timeline):
             # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
-            deliveries, mat_del_time = self._material_timeline.supply_resources(chain_node,
+            previous_chain_node = inseparable_chain[max(i - 1, 0)]
+            deliveries, mat_del_time = self._material_timeline.deliver_resources(chain_node,
                                                                                 start_work,
                                                                                 chain_node.work_unit.need_materials(),
                                                                                 True)

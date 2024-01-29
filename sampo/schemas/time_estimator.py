@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from operator import attrgetter
 from random import Random
-from typing import Optional
 
 import numpy.random
 import math

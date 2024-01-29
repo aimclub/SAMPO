@@ -154,7 +154,7 @@ class JustInTimeTimeline(Timeline):
             for worker in worker_team:
                 worker_timeline = self._timeline[(worker.contractor_id, worker.name)]
                 last_cpkt_time, _ = worker_timeline[0]
-                if last_cpkt_time >= start_time:
+                if last_cpkt_time > start_time:
                     return False
             return True
         else:
@@ -163,7 +163,7 @@ class JustInTimeTimeline(Timeline):
                 for p in dep_node.parents:
                     if p != dep_node.inseparable_parent:
                         swork = node2swork.get(p, None)
-                        if swork is None or swork.finish_time >= start_time:
+                        if swork is None or swork.finish_time > start_time:
                             return False
 
             max_agent_time = Time(0)

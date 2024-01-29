@@ -1,8 +1,7 @@
 import pytest
 import math
 
-from sampo.scheduler.genetic.base import GeneticScheduler
-from sampo.scheduler.genetic.operators import DeadlineResourcesFitness, SumOfResourcesPeaksFitness
+from sampo.scheduler.genetic import GeneticScheduler, DeadlineResourcesFitness, SumOfResourcesPeaksFitness
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.utilities.resource_usage import resources_costs_sum, resources_peaks_sum
@@ -89,7 +88,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler_combined = GeneticScheduler(number_of_generation=5,
                                           mutate_order=0.05,
-                                          mutate_resources=0.005,
+                                          mutate_resources=0.05,
                                           size_of_population=50,
                                           fitness_constructor=DeadlineResourcesFitness.prepare(deadline),
                                           optimize_resources=True,
@@ -99,7 +98,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler_lexicographic = GeneticScheduler(number_of_generation=5,
                                                mutate_order=0.05,
-                                               mutate_resources=0.005,
+                                               mutate_resources=0.05,
                                                size_of_population=50,
                                                fitness_constructor=SumOfResourcesPeaksFitness,
                                                verbose=False)

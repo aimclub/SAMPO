@@ -17,12 +17,10 @@ def run_test(args) -> list[tuple[Time, Time]]:
 
         baseline_genetic = GeneticScheduler(mutate_order=1.0,
                                             mutate_resources=1.0,
-                                            size_selection=200,
                                             size_of_population=200)
 
         optimized_genetic = GeneticScheduler(mutate_order=1.0,
                                              mutate_resources=1.0,
-                                             size_selection=200,
                                              size_of_population=200)
         optimized_genetic.set_weights([14, 11, 1, 1, 1, 1, 10])
 

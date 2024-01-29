@@ -8,15 +8,15 @@ from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.utilities.validation import validate_schedule
 from tests.conftest import setup_default_schedules
 
-# def test_empty_node_find_start_time(setup_default_schedules):
-#     wg, _, landscape = setup_default_schedules[0]
-#     if wg.vertex_count > 14:
-#         pytest.skip('Non-material graph')
-#
-#     timeline = SupplyTimeline(landscape)
-#     delivery_time = timeline.find_min_material_time(wg.start, landscape, Time(0), wg.start.work_unit.need_materials())
-#
-#     assert delivery_time == Time(0)
+def test_empty_node_find_start_time(setup_default_schedules):
+    wg, _, landscape = setup_default_schedules[0]
+    if wg.vertex_count > 14:
+        pytest.skip('Non-material graph')
+
+    timeline = SupplyTimeline(landscape)
+    delivery_time = timeline.find_min_material_time(wg.start, Time(0), wg.start.work_unit.need_materials())
+
+    assert delivery_time == Time(0)
 #
 #
 # def test_ordered_nodes_of_one_platform(setup_default_schedules):

@@ -343,7 +343,8 @@ def generate_chromosomes(n: int,
             schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
                 .schedule(wg, contractors, landscape=landscape)
         else:
-            schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors, spec,
+            schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors,
+                                                                                                 spec=spec,
                                                                                                  landscape=landscape)
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, landscape)

@@ -16,25 +16,25 @@ def setup_lg(wg: WorkGraph):
     nodes = wg.nodes
     platform1 = LandGraphNode(str(uuid.uuid4()), 'platform1',
                               ResourceStorageUnit({
-                                  'mat1': 60,
+                                  'mat1': 50,
                                   'mat2': 150,
                                   'mat3': 120
                               }), works=nodes[1:3])
     platform2 = LandGraphNode(str(uuid.uuid4()), 'platform2',
                               ResourceStorageUnit({
-                                  'mat1': 60,
+                                  'mat1': 50,
                                   'mat2': 80,
                                   'mat3': 90
                               }), works=nodes[3:5])
     platform3 = LandGraphNode(str(uuid.uuid4()), 'platform3',
                               ResourceStorageUnit({
-                                  'mat1': 60,
+                                  'mat1': 50,
                                   'mat2': 130,
                                   'mat3': 170
                               }), works=nodes[5:7])
     platform4 = LandGraphNode(str(uuid.uuid4()), 'platform4',
                               ResourceStorageUnit({
-                                  'mat1': 60,
+                                  'mat1': 50,
                                   'mat2': 190,
                                   'mat3': 200
                               }), works=nodes[7:9])
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     landscape = setup_landscape_many_holders(setup_lg(wg))
 
     # scheduler = HEFTBetweenScheduler()
-    scheduler = GeneticScheduler(number_of_generation=2,
+    scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=2)

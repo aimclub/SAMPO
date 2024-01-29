@@ -171,7 +171,7 @@ class GeneticScheduler(Scheduler):
         if weights is None:
             weights = [2, 2, 2, 1, 1, 1, 1]
 
-        init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec,
+        init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
                                                                                   landscape=landscape), None, spec)
 
         def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
@@ -187,7 +187,7 @@ class GeneticScheduler(Scheduler):
         if deadline is None:
             def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
-                    return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors, spec,
+                    return scheduler_class(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
                                                                                    landscape=landscape), \
                         list(reversed(prioritization(wg, work_estimator))), spec
                 except NoSufficientContractorError:

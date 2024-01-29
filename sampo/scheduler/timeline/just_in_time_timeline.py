@@ -103,14 +103,13 @@ class JustInTimeTimeline(Timeline):
         cur_start_time = max_parent_time
         found_earliest_time = False
         while not found_earliest_time:
-            cur_start_time = self._find_min_start_time(worker_team, cur_start_time)
-
             material_time = self._material_timeline.find_min_material_time(node,
                                                                            cur_start_time,
                                                                            node.work_unit.need_materials(),
                                                                            exec_time)
-            if material_time > cur_start_time:
-                cur_start_time = material_time
+
+            cur_start_time = self._find_min_start_time(worker_team, material_time)
+            if material_time < cur_start_time:
                 continue
 
             zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
@@ -310,8 +309,9 @@ class JustInTimeTimeline(Timeline):
             c_st = max(c_ft + lag, max_parent_time)
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
-                                                                                c_st,
+                                                                                c_st - lag,
                                                                                 dep_node.work_unit.need_materials(),
+                                                                                working_time,
                                                                                 True)
 
             c_st = max(mat_del_time, c_st)

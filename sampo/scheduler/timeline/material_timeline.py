@@ -169,7 +169,7 @@ class SupplyTimeline:
 
         for mat in materials:
             start = platform_state[mat.name].bisect_right(start_time) - 1
-            finish = platform_state[mat.name].bisect_left(Time.inf()) - 1
+            finish = platform_state[mat.name].bisect_left((Time.inf(), -1, EventType.INITIAL)) - 1
 
             if not self._check_resource_availability(platform_state[mat.name], mat.count, start, finish):
                 if finish - start > 1:
@@ -216,6 +216,8 @@ class SupplyTimeline:
             return start_time
 
         _, time = self._supply_resources(node, start_time, materials)
+        # for mat in mat_request:
+        #     self._validate(self._timeline[self._landscape.works2platform[node].id][mat.name], start_time, time, mat.count)
         return time
 
     def _find_best_holders_by_dist(self, node: LandGraphNode,
@@ -260,23 +262,36 @@ class SupplyTimeline:
     def deliver_resources(self, node: GraphNode,
                           deadline: Time,
                           materials: list[Material],
+                          exec_time: Time,
                           update: bool = False) -> tuple[MaterialDelivery, Time]:
         if node.work_unit.is_service_unit or not node.work_unit.need_materials():
             return MaterialDelivery(node.id), deadline
-        mat_request = self._request_materials(node, materials, deadline)
+        start_time = deadline
+        can_deliver_to_next_node = False
+        if self._check_platform_availability(self._landscape.works2platform[node], materials, start_time,
+                                             exec_time):
+            can_deliver_to_next_node = True
+        else:
+            while not self._check_platform_availability(self._landscape.works2platform[node], materials, start_time,
+                                                        exec_time):
+                start_time += 1
+        mat_request = self._request_materials(node, materials, start_time)
         platform = self._landscape.works2platform[node]
         # if a job doesn't need materials
         if not mat_request or sum([mat.count for mat in mat_request]) == 0:
             if update and platform is not None:
                 update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
                 for mat in materials:
-                    update_timeline_info[platform.id].append((mat.name, mat.count, deadline, Time.inf()))
+                    if can_deliver_to_next_node or start_time != deadline:
+                        update_timeline_info[platform.id].append((mat.name, mat.count, start_time, start_time))
+                    else:
+                        update_timeline_info[platform.id].append((mat.name, mat.count, start_time, Time.inf()))
 
                 self._update_timeline(update_timeline_info)
 
-            return MaterialDelivery(node.id), deadline
+            return MaterialDelivery(node.id), start_time
 
-        return self._supply_resources(node, deadline, mat_request, update)
+        return self._supply_resources(node, start_time, mat_request, update)
 
     def _supply_resources(self, node: GraphNode,
                           deadline: Time,
@@ -302,42 +317,40 @@ class SupplyTimeline:
 
         vehicles = []
         finish_vehicle_time = Time(0)
-        start_delivery_time = Time(-1)
+        start_delivery_time = deadline
         finish_delivery_time = Time(-1)
 
         road_deliveries = []
 
         # find time, that depot could provide resources
-        while finish_delivery_time < deadline:
-            start_delivery_time += 1
-            local_min_start_time = Time.inf()
-            for depot in depots:
-                depot_mat_start_time = start_delivery_time
-                for mat in materials:
-                    depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
-                                                                              mat.count,
-                                                                              depot_mat_start_time,
-                                                                              Time.inf()), depot_mat_start_time)
-                # get vehicles from the depot
-                vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, materials)
-                vehicles: list[Vehicle] = self._holder_id2holder[depot].vehicles[:vehicle_count_need]
+        local_min_start_time = Time.inf()
+        for depot in depots:
+            depot_mat_start_time = start_delivery_time
+            for mat in materials:
+                depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
+                                                                          mat.count,
+                                                                          depot_mat_start_time,
+                                                                          Time.inf()), depot_mat_start_time)
+            # get vehicles from the depot
+            vehicle_state, vehicle_count_need = self._get_vehicle_info(depot, materials)
+            vehicles: list[Vehicle] = self._holder_id2holder[depot].vehicles[:vehicle_count_need]
 
-                road_start_time, deliveries, exec_ahead_time, exec_return_time = \
-                    self._get_route_time(self._holder_id2holder[depot].node,
-                                         land_node, vehicles, depot_mat_start_time)
+            road_start_time, deliveries, exec_ahead_time, exec_return_time = \
+                self._get_route_time(self._holder_id2holder[depot].node,
+                                     land_node, vehicles, depot_mat_start_time)
 
-                depot_vehicle_start_time = self._find_earliest_start_time(vehicle_state,
-                                                                          vehicle_count_need,
-                                                                          road_start_time,
-                                                                          exec_return_time + exec_ahead_time)
+            depot_vehicle_start_time = self._find_earliest_start_time(vehicle_state,
+                                                                      vehicle_count_need,
+                                                                      road_start_time,
+                                                                      exec_return_time + exec_ahead_time)
 
-                if local_min_start_time > depot_vehicle_start_time:
-                    finish_vehicle_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
-                    min_depot_time = local_min_start_time = depot_vehicle_start_time
-                    finish_delivery_time = road_start_time + exec_ahead_time
-                    depot_id = depot
+            if local_min_start_time > depot_vehicle_start_time:
+                finish_vehicle_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
+                min_depot_time = local_min_start_time = depot_vehicle_start_time
+                finish_delivery_time = road_start_time + exec_ahead_time
+                depot_id = depot
 
-                    road_deliveries = deliveries
+                road_deliveries = deliveries
 
         for mat in materials:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time,
@@ -375,7 +388,6 @@ class SupplyTimeline:
         self._update_timeline(update_timeline_info)
 
         return delivery, finish_delivery_time
-
     @staticmethod
     def _find_earliest_start_time(state: SortedList[ScheduleEvent],
                                   required_resources: int,
@@ -403,7 +415,6 @@ class SupplyTimeline:
             current_start_time = state[base_ind].time
 
         return current_start_time
-
     def _get_route_time(self, holder_node: LandGraphNode, node: LandGraphNode, vehicles: list[Vehicle],
                         start_holder_time: Time) -> tuple[
         Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
@@ -484,3 +495,15 @@ class SupplyTimeline:
                     end_count = res_state[end_idx].available_workers_count + res_count
 
                 res_state.add(ScheduleEvent(task_index, EventType.END, end_time, None, end_count))
+    @staticmethod
+    def _validate(state: SortedList[ScheduleEvent], start: Time, finish: Time, res_count_req: int):
+        st = state.bisect_right(start)
+        ed = state.bisect_right(finish)
+
+        for event in state[st: ed]:
+            assert event.available_workers_count >= res_count_req
+
+        assert state[st - 1].available_workers_count >= res_count_req
+
+
+

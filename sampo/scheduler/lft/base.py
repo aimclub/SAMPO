@@ -91,7 +91,7 @@ class LFTScheduler(GenericScheduler):
                                        worker_pool: WorkerContractorPool, spec: ScheduleSpec = ScheduleSpec()
                                        ) -> dict[str, int]:
         nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
-        contractors_assignments_count = np.zeros_like(contractors)
+        contractors_assignments_count = np.zeros_like(contractors) + 1
         self._node_id2workers = {}
         node_id2duration = {}
         for node in nodes:
@@ -139,7 +139,8 @@ class LFTScheduler(GenericScheduler):
             else:
                 min_duration = durations.min()
                 max_duration = durations.max()
-                scores = (durations - min_duration) / (max_duration - min_duration)
+                scores = (durations - min_duration) / (max_duration - min_duration) \
+                    if max_duration != min_duration else np.zeros_like(durations)
                 scores = scores + contractors_assignments_count / contractors_assignments_count.sum()
                 contractor_index = self._get_contractor_index(scores)
 

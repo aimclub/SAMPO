@@ -4,8 +4,9 @@ from itertools import chain
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import SchedulingPipeline
+from sampo.pipeline.default import DefaultSchedulePipeline, DefaultInputPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
-from sampo.scheduler import GeneticScheduler, HEFTScheduler
+from sampo.scheduler import GeneticScheduler, HEFTScheduler, HEFTBetweenScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -51,11 +52,11 @@ def setup_lg(wg: WorkGraph):
                                 'mat2': 750,
                                 'mat3': 800
                             }))
-    platform1.add_neighbours([(platform3, 1.0, 2)])
-    platform2.add_neighbours([(platform4, 2.0, 1)])
-    platform3.add_neighbours([(holder1, 4.0, 2), (holder2, 3.0, 3)])
-    platform4.add_neighbours([(holder1, 5.0, 1), (holder2, 7.0, 2)])
-    holder1.add_neighbours([(holder2, 6.0, 2)])
+    platform1.add_neighbours([(platform3, 1.0, 10)])
+    platform2.add_neighbours([(platform4, 2.0, 8)])
+    platform3.add_neighbours([(holder1, 4.0, 10), (holder2, 3.0, 9)])
+    platform4.add_neighbours([(holder1, 5.0, 9), (holder2, 7.0, 10)])
+    holder1.add_neighbours([(holder2, 6.0, 10)])
 
     return LandGraph(nodes=[platform1, platform2, platform3, platform4, holder1, holder2]), [holder1, holder2]
 
@@ -164,11 +165,11 @@ if __name__ == '__main__':
     wg = setup_wg()
     landscape = setup_landscape_many_holders(setup_lg(wg))
 
-    scheduler = HEFTScheduler()
-    # scheduler = GeneticScheduler(number_of_generation=10,
-    #                              mutate_order=0.05,
-    #                              mutate_resources=0.005,
-    #                              size_of_population=3)
+    # scheduler = HEFTBetweenScheduler()
+    scheduler = GeneticScheduler(number_of_generation=10,
+                                 mutate_order=0.05,
+                                 mutate_resources=0.005,
+                                 size_of_population=3)
 
     # Get information about created WorkGraph's attributes
     works_count = len(wg.nodes)
@@ -184,7 +185,7 @@ if __name__ == '__main__':
     # Get list with the Contractor object, which can satisfy the created WorkGraph's resources requirements
     contractors = [get_contractor_by_wg(wg)]
 
-    project = SchedulingPipeline.create() \
+    project = DefaultInputPipeline() \
         .wg(wg) \
         .contractors(contractors) \
         .lag_optimize(LagOptimizationStrategy.FALSE) \

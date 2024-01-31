@@ -147,6 +147,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
         if generate_landscape else LandscapeConfiguration()
     return setup_wg, contractors, landscape
 
+
 @fixture
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()

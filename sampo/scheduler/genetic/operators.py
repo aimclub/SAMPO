@@ -412,7 +412,7 @@ def generate_chromosome(wg: WorkGraph,
     def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, spec, landscape=landscape)
+            .schedule(wg, contractors, landscape, spec)
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 

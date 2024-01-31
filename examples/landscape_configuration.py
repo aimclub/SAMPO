@@ -169,7 +169,7 @@ if __name__ == '__main__':
     scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
-                                 size_of_population=3)
+                                 size_of_population=50)
 
     # Get information about created WorkGraph's attributes
     works_count = len(wg.nodes)

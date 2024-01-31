@@ -48,10 +48,11 @@ class SupplyTimeline:
     def _get_vehicle_info(self, depot_id: str, materials: list[Material]):
         vehicle_capacity = self._holder_id2holder[depot_id].vehicles[0].capacity
         need_mat = {mat.name: mat.count for mat in materials}
-        return (self._timeline[depot_id]['vehicles'],
+        result = (self._timeline[depot_id]['vehicles'],
                 max(math.ceil(count / mat.count) for name, count in need_mat.items()
                     for mat in vehicle_capacity
                     if mat.name == name))
+        return result
 
     def can_schedule_at_the_moment(self, node: GraphNode, start_time: Time,
                                    materials: list[Material], exec_time: Time) -> bool:
@@ -402,6 +403,10 @@ class SupplyTimeline:
         :return: material deliveries, the time when resources are ready
         """
         delivery = MaterialDelivery(node.id)
+
+        if len(materials) == 0:
+            return delivery, deadline
+
         land_node = self._landscape.works2platform[node]
 
         # get the best depot that has enough materials and get its access start time (absolute value)

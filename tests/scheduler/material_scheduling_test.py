@@ -14,7 +14,7 @@ def test_empty_node_find_start_time(setup_default_schedules):
         pytest.skip('Non-material graph')
 
     timeline = SupplyTimeline(landscape)
-    delivery_time = timeline.find_min_material_time(wg.start, Time(0), wg.start.work_unit.need_materials())
+    delivery_time = timeline.find_min_material_time(wg.start, Time(0), wg.start.work_unit.need_materials(), Time(0))
 
     assert delivery_time == Time(0)
 #

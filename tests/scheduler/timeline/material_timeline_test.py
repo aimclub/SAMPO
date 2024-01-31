@@ -31,13 +31,15 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
     timeline = SupplyTimeline(landscape)
 
     ordered_nodes = prioritization(wg, DefaultWorkEstimator())
-    for nd in ordered_nodes:
-        if nd.work_unit.is_service_unit:
+    for node in ordered_nodes:
+        if node.work_unit.is_service_unit:
             continue
-        nd.platform = landscape.platforms[setup_rand.randint(0, len(landscape.platforms) - 1)]
+        node.platform = landscape.platforms[setup_rand.randint(0, len(landscape.platforms) - 1)]
 
     parent_time = Time(0)
     for node in ordered_nodes[-1::-1]:
+        if node.work_unit.is_service_unit:
+            continue
         materials = [Material(str(uuid.uuid4()), req.kind, req.count) for req in node.work_unit.material_reqs]
         delivery, parent_time = timeline._supply_resources(node,
                                                            parent_time,

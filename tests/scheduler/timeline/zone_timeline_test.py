@@ -56,7 +56,6 @@ def setup_landscape_config(request) -> LandscapeConfiguration:
 
 
 def test_zoned_scheduling(setup_zoned_wg, setup_landscape_config, setup_scheduler):
-    scheduler, scheduler_type = setup_scheduler
     contractors = [get_contractor_by_wg(setup_zoned_wg, scaler=1000)]
-    schedule = scheduler.schedule(wg=setup_zoned_wg, contractors=contractors, landscape=setup_landscape_config)
+    schedule = setup_scheduler.schedule(wg=setup_zoned_wg, contractors=contractors, landscape=setup_landscape_config)
     print(schedule.execution_time)

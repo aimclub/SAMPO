@@ -1,3 +1,4 @@
+import math
 from copy import deepcopy
 from typing import Optional
 from operator import itemgetter
@@ -100,12 +101,18 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         otherwise considers lags equal to zero and LagFinishStart edges as FinishStart edges
     :return: Nothing
         """
+    from sampo.schemas import Time
+
+    def custom_ceil(v):
+        if isinstance(v, Time):
+            return Time(math.ceil(v.value))
+        return math.ceil(v)
 
     def get_reqs_amounts(volume_proportion: float, reqs_amounts_accum: dict[str, list[int]]):
         reqs_amounts = {}
         for reqs in reqs2classes:
             attr = 'volume' if reqs == 'worker_reqs' else 'count'
-            new_amounts = [int(volume_proportion * getattr(req, attr)) for req in getattr(wu, reqs)]
+            new_amounts = [custom_ceil(volume_proportion * getattr(req, attr)) for req in getattr(wu, reqs)]
             reqs_amounts[reqs] = new_amounts
             reqs_amounts_accum[reqs] = [accum_amount + amount
                                         for accum_amount, amount in zip(reqs_amounts_accum[reqs], new_amounts)]

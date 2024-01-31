@@ -24,7 +24,7 @@ class ResourceSupply(ABC):
 class Road(ResourceSupply):
     def __init__(self, name: str,
                  edge: LandEdge,
-                 speed: float = 50):
+                 speed: float = 5):
         """
         :param name: name of road
         :param edge: the edge in LandGraph

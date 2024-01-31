@@ -133,7 +133,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
         holders_node.append(LandGraphNode(str(uuid.uuid4()), f'holder{i}',
                                           ResourceStorageUnit(
                                               {
-                                                  name: max(max_materials[name], 1) * wg.vertex_count
+                                                  name: max(max_materials[name], 1) * wg.vertex_count * wg.vertex_count
                                                   for name in materials_name
                                               }
                                           )))

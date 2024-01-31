@@ -1,11 +1,10 @@
-import sampo.scheduler
-
 from random import Random
 from typing import Callable
 
-from sampo.api.genetic_api import FitnessFunction, ChromosomeType
+import sampo.scheduler
+
+from sampo.api.genetic_api import FitnessFunction, ChromosomeType, Individual
 from sampo.backend import ComputationalBackend, T, R
-from sampo.scheduler.genetic.operators import Individual
 from sampo.scheduler.genetic.utils import init_chromosomes_f, create_toolbox_using_cached_chromosomes
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, WorkTimeEstimator, Schedule, GraphNode, Time
 from sampo.schemas.schedule_spec import ScheduleSpec

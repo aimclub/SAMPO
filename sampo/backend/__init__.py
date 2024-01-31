@@ -3,10 +3,9 @@ from random import Random
 from typing import TypeVar
 
 import sampo.scheduler
-import sampo.scheduler.genetic
+# import sampo.scheduler.genetic
 
-from sampo.api.genetic_api import ChromosomeType, FitnessFunction
-from sampo.scheduler.genetic.operators import Individual
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, Schedule, GraphNode, Time, WorkTimeEstimator
 from sampo.schemas.schedule_spec import ScheduleSpec
 

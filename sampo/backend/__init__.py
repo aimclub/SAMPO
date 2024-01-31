@@ -3,7 +3,6 @@ from random import Random
 from typing import TypeVar
 
 import sampo.scheduler
-# import sampo.scheduler.genetic
 
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, Schedule, GraphNode, Time, WorkTimeEstimator
@@ -19,7 +18,7 @@ class ComputationalBackend(ABC):
         self._contractors = None
         self._landscape = None
         self._spec = None
-        self._rand = None
+        self._rand = Random()
         self._work_estimator = None
 
         self._toolbox = None

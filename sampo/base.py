@@ -1,10 +1,12 @@
-from logging import Logger
+import logging
 
 import sampo.scheduler
 
 from sampo.backend.default import DefaultComputationalBackend
 
+logging.basicConfig(format='[%(name)s] [%(levelname)s] %(message)s', level=logging.NOTSET)
+
 
 class SAMPO:
     backend = DefaultComputationalBackend()
-    logger = Logger('SAMPO')
+    logger = logging.getLogger('SAMPO')

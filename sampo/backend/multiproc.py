@@ -45,8 +45,8 @@ def scheduler_info_initializer(wg: WorkGraph,
     g_spec = spec
     g_deadline = deadline
     g_weights = weights
+    g_rand = rand
 
-    g_rand = rand or Random()
     assigned_parent_time = assigned_parent_time or Time(0)
 
     g_work_estimator = work_estimator_recreate_params[0](*work_estimator_recreate_params[1])
@@ -114,7 +114,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                            assigned_parent_time: Time):
         super().cache_genetic_info(selection_size, mutate_order, mutate_resources,
-                                   mutate_zones, deadline, init_schedules, assigned_parent_time)
+                                   mutate_zones, deadline, weights, init_schedules, assigned_parent_time)
         self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
         self._recreate_pool()
 
@@ -125,14 +125,11 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         return self.map(mapper, chromosomes)
 
     def generate_first_population(self, size_population: int) -> list[Individual]:
-
-        weights = g_weights or [2, 2, 1, 1, 1, 1]
-
         def mapper(key: str):
             def randomized_init() -> ChromosomeType:
-                schedule = RandomizedTopologicalScheduler(g_work_estimator, int(g_rand.random() * 1000000)) \
-                    .schedule(g_wg, g_contractors, landscape=g_landscape)
-                return g_toolbox.schedule_to_chromosome(schedule, g_spec, g_landscape)
+                schedule, _, _, order = RandomizedTopologicalScheduler(g_work_estimator, int(g_rand.random() * 1000000)) \
+                    .schedule_with_cache(g_wg, g_contractors, landscape=g_landscape)
+                return schedule, order, g_spec
 
             def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
@@ -164,7 +161,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                         return None, None, None
 
             def convert(schedule: Schedule, priority_list: list[GraphNode], spec: ScheduleSpec):
-                return g_toolbox.schedule_to_chromosome(schedule, spec, priority_list)
+                return g_toolbox.schedule_to_chromosome(schedule=schedule, spec=spec, order=priority_list)
 
             match key:
                 case 'heft_end':
@@ -182,10 +179,12 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                 case 'randomized':
                     return convert(*randomized_init())
 
+        weights = self._weights or [2, 2, 1, 1, 1, 1]
+
         count_for_specified_types = (size_population // 3) // len(weights)
         count_for_specified_types = count_for_specified_types if count_for_specified_types > 0 else 1
         sum_counts_for_specified_types = count_for_specified_types * len(weights)
-        counts = [count_for_specified_types * importance for importance in weights.values()]
+        counts = [count_for_specified_types * importance for importance in weights]
 
         weights_multiplier = math.ceil(sum_counts_for_specified_types / sum(counts))
         counts = [count * weights_multiplier for count in counts]
@@ -195,7 +194,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         counts += [count_for_topological]
 
         chromosome_keys = ['heft_end', 'heft_between', '12.5%', '25%', '75%', '87.5%', 'randomized']
-        chromosome_types = g_rand.sample(chromosome_keys, k=size_population, counts=counts)
+        chromosome_types = self._rand.sample(chromosome_keys, k=size_population, counts=counts)
 
         chromosomes = self._pool.map(mapper, chromosome_types)
         return [Individual(chromosome) for chromosome in chromosomes]

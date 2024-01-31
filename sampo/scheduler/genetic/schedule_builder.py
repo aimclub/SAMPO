@@ -123,7 +123,7 @@ def build_schedule(wg: WorkGraph,
                              rand, spec, work_estimator, assigned_parent_time,
                              landscape)
 
-    SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec)
+    SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
     SAMPO.backend.cache_genetic_info(population_size,
                       mutpb_order, mutpb_res, mutpb_zones,
                       deadline, weights,

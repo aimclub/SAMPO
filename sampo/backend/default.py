@@ -5,7 +5,6 @@ import sampo.scheduler
 
 from sampo.api.genetic_api import FitnessFunction, ChromosomeType, Individual
 from sampo.backend import ComputationalBackend, T, R
-from sampo.scheduler.genetic.utils import init_chromosomes_f, create_toolbox_using_cached_chromosomes
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, WorkTimeEstimator, Schedule, GraphNode, Time
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time_estimator import DefaultWorkEstimator
@@ -50,6 +49,8 @@ class DefaultComputationalBackend(ComputationalBackend):
 
     def _ensure_toolbox_created(self):
         if self._toolbox is None:
+            from sampo.scheduler.genetic.utils import init_chromosomes_f, create_toolbox_using_cached_chromosomes
+
             init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._init_schedules,
                                                   self._landscape)
 

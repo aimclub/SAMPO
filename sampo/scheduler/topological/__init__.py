@@ -1,1 +1,1 @@
-from sampo.scheduler.topological.base import TopologicalScheduler
+from sampo.scheduler.topological.base import TopologicalScheduler, RandomizedTopologicalScheduler

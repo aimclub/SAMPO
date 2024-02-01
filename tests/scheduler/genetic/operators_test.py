@@ -51,7 +51,7 @@ def test_mate_order(setup_toolbox, setup_wg):
     tb, _, _, _, _, _ = setup_toolbox
     _, _, _, population_size = get_params(setup_wg.vertex_count)
 
-    population = tb.population(n=population_size)
+    population = tb.population_chromosomes(n=population_size)
 
     for i in range(TEST_ITERATIONS):
         individual1, individual2 = population[:2]
@@ -71,7 +71,7 @@ def test_mate_resources(setup_toolbox, setup_wg):
     tb, resources_border, _, _, _, _ = setup_toolbox
     _, _, _, population_size = get_params(setup_wg.vertex_count)
 
-    population = tb.population(n=population_size)
+    population = tb.population_chromosomes(n=population_size)
 
     for i in range(TEST_ITERATIONS):
         individual1, individual2 = random.sample(population, 2)

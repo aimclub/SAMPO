@@ -25,7 +25,7 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     c1, c_nodes, _ = get_cluster_works(cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
                                        pipe_net_count=pipe_net_count, light_masts_count=light_masts_count,
                                        borehole_counts=[borehole_count], rand=rand)
-    return WorkGraph.from_nodes(list(c_nodes.values()))
+    return WorkGraph.from_nodes(list(c_nodes.values()) + [c1])
 
 
 def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,

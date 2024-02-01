@@ -3,7 +3,7 @@ import time
 from sampo.backend.default import DefaultComputationalBackend
 from sampo.backend.multiproc import MultiprocessingComputationalBackend
 from sampo.base import SAMPO
-from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler import GeneticScheduler
 
 
 def test_multiprocessing(setup_scheduler_parameters):
@@ -13,12 +13,11 @@ def test_multiprocessing(setup_scheduler_parameters):
 
     genetic = GeneticScheduler(number_of_generation=10,
                                mutate_order=0.05,
-                               mutate_resources=0.005,
-                               size_of_population=50,
-                               verbose=True)
+                               mutate_resources=0.05,
+                               size_of_population=50)
 
     start_default = time.time()
-    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    genetic.schedule(setup_wg, setup_contractors, validate=True, landscape=setup_landscape)
     time_default = time.time() - start_default
 
     n_cpus = 10

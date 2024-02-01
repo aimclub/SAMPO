@@ -6,6 +6,7 @@ from sampo.schemas.types import WorkerName, ContractorName
 
 WorkerContractorPool = dict[WorkerName, dict[ContractorName, Worker]]
 
+
 def get_worker_contractor_pool(contractors: Iterable[Contractor]) -> WorkerContractorPool:
     """
     Gets worker-contractor dictionary from contractors list.

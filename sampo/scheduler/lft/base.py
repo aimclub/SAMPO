@@ -5,24 +5,82 @@ from typing import Type, Callable
 
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generic import GenericScheduler, get_finish_time_default
-from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.scheduler.timeline import Timeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
 from sampo.scheduler.lft.time_computaion import work_duration
 
-from sampo.scheduler.timeline.base import Timeline
-from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import WorkGraph, GraphNode
-from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.resources import Worker
-from sampo.schemas.schedule import Schedule
+from sampo.schemas import (Contractor, WorkGraph, GraphNode, LandscapeConfiguration, Worker, Schedule, ScheduledWork,
+                           Time, WorkUnit)
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
-from sampo.schemas.scheduled_work import ScheduledWork
-from sampo.schemas.time import Time
 from sampo.utilities.validation import validate_schedule
 
 from sampo.schemas.exceptions import IncorrectAmountOfWorker, NoSufficientContractorError
+
+
+def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractors: list[Contractor],
+                                                 spec: ScheduleSpec, worker_pool: WorkerContractorPool) \
+        -> tuple[list[Contractor], np.ndarray]:
+    """
+    This function selects contractors that can perform the work.
+    For each selected contractor, the maximum possible amount of workers is assigned,
+    if they are not specified in the ScheduleSpec, otherwise the amount from the ScheduleSpec is used.
+    """
+    work_reqs = work_unit.worker_reqs
+    work_spec = spec.get_work_spec(work_unit.id)
+    # get assigned amounts of workers in schedule spec
+    work_spec_amounts = np.array([work_spec.assigned_workers.get(req.kind, -1) for req in work_reqs])
+    # make bool mask of unassigned amounts of workers
+    in_spec_mask = work_spec_amounts != -1
+
+    # get min amounts of workers
+    min_req_amounts = np.array([req.min_count for req in work_reqs])
+    # check validity of assigned in schedule spec amounts of workers
+    if (work_spec_amounts[in_spec_mask] < min_req_amounts[in_spec_mask]).any():
+        raise IncorrectAmountOfWorker(f"ScheduleSpec assigns not enough workers for work {work_unit.id}")
+
+    # get max amounts of workers
+    max_req_amounts = np.array([req.max_count for req in work_reqs])
+    # check validity of assigned in schedule spec amounts of workers
+    if (work_spec_amounts[in_spec_mask] > max_req_amounts[in_spec_mask]).any():
+        raise IncorrectAmountOfWorker(f"ScheduleSpec assigns too many workers for work {work_unit.id}")
+
+    # get contractors borders
+    contractors_amounts = np.array([[worker_pool[req.kind][contractor.id].count
+                                     if contractor.id in worker_pool[req.kind] else -1
+                                     for req in work_reqs]
+                                    for contractor in contractors])
+
+    # make bool mask of contractors that satisfy min amounts of workers
+    contractors_mask = (contractors_amounts >= min_req_amounts).all(axis=1)
+    # update bool mask of contractors to satisfy amounts of workers assigned in schedule spec
+    contractors_mask &= (contractors_amounts[:, in_spec_mask] >= work_spec_amounts[in_spec_mask]).all(axis=1)
+    # check that there is at least one contractor that satisfies all the constraints
+    if not contractors_mask.any():
+        raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
+                                          f'{contractors}')
+
+    # get contractors that satisfy all the constraints
+    accepted_contractors = [contractor for contractor, is_satisfying in zip(contractors, contractors_mask)
+                            if is_satisfying]
+    if in_spec_mask.all():
+        # if all workers are assigned in schedule spec
+        # broadcast these amounts on all accepted contractors
+        workers_amounts = np.broadcast_to(work_spec_amounts,
+                                          (len(accepted_contractors), len(work_spec_amounts)))
+    else:
+        # if some workers are not assigned in schedule spec
+        # then we should assign maximum to them for each contractor
+        max_amounts = contractors_amounts[contractors_mask]  # get max amounts of accepted contractors
+        # bring max amounts of accepted contractors and max amounts of workers to the same size
+        # and take the minimum of them to satisfy all constraints
+        max_amounts = np.stack(np.broadcast_arrays(max_amounts, max_req_amounts), axis=0).min(axis=0)
+        workers_amounts = max_amounts
+        # assign to all accepted contractors assigned in schedule spec amounts of workers
+        workers_amounts[:, in_spec_mask] = work_spec_amounts[in_spec_mask]
+
+    return accepted_contractors, workers_amounts
 
 
 class LFTScheduler(GenericScheduler):
@@ -47,7 +105,9 @@ class LFTScheduler(GenericScheduler):
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator) \
                 -> tuple[Time, Time, Contractor, list[Worker]]:
+            # get assigned contractor and workers
             contractor, workers = self._node_id2workers[node.id]
+            # find start time
             start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, workers, node2swork,
                                                                                       spec, None, assigned_parent_time,
                                                                                       work_estimator)
@@ -62,17 +122,21 @@ class LFTScheduler(GenericScheduler):
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+                            timeline: Timeline | None = None) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+        # get contractors borders
         worker_pool = get_worker_contractor_pool(contractors)
 
+        # first of all assign workers and contractors to nodes
+        # and estimate nodes' durations
         node_id2duration = self._contractor_workers_assignment(wg, contractors, worker_pool, spec)
 
+        # order nodes based on estimated nodes' durations
         ordered_nodes = self.prioritization(wg, node_id2duration)
 
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
+        # make schedule based on assigned workers, contractors and order
         schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, contractors, landscape, spec,
                                                                        self.work_estimator, assigned_parent_time,
                                                                        timeline)
@@ -90,48 +154,25 @@ class LFTScheduler(GenericScheduler):
     def _contractor_workers_assignment(self, wg: WorkGraph, contractors: list[Contractor],
                                        worker_pool: WorkerContractorPool, spec: ScheduleSpec = ScheduleSpec()
                                        ) -> dict[str, int]:
+        # get only heads of chains from work graph nodes
         nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
-        contractors_assignments_count = np.zeros_like(contractors)
+        # counter for contractors assignments to the works
+        contractors_assignments_count = np.ones_like(contractors)
+        # mapper of nodes and assigned workers
         self._node_id2workers = {}
+        # mapper of nodes and estimated duration
         node_id2duration = {}
         for node in nodes:
             work_unit = node.work_unit
             work_reqs = work_unit.worker_reqs
-            work_spec = spec.get_work_spec(work_unit.id)
-            work_spec_amounts = np.array([work_spec.assigned_workers.get(req.kind, -1) for req in work_reqs])
-            workers_mask = work_spec_amounts != -1
 
-            min_req_amounts = np.array([req.min_count for req in work_reqs])
-            if (work_spec_amounts[workers_mask] < min_req_amounts[workers_mask]).any():
-                raise IncorrectAmountOfWorker(f"ScheduleSpec assigns not enough workers for work {node.id}")
+            # get contractors that can perform this work and workers amounts for them
+            accepted_contractors, workers_amounts = get_contractors_and_workers_amounts_for_work(work_unit,
+                                                                                                 contractors,
+                                                                                                 spec,
+                                                                                                 worker_pool)
 
-            max_req_amounts = np.array([req.max_count for req in work_reqs])
-            if (work_spec_amounts[workers_mask] > max_req_amounts[workers_mask]).any():
-                raise IncorrectAmountOfWorker(f"ScheduleSpec assigns too many workers for work {node.id}")
-
-            contractors_amounts = np.array([[worker_pool[req.kind][contractor.id].count
-                                             if contractor.id in worker_pool[req.kind] else -1
-                                             for req in work_reqs]
-                                            for contractor in contractors])
-
-            contractors_mask = ((contractors_amounts >= min_req_amounts) & (contractors_amounts != -1)).all(axis=1)
-            contractors_mask &= (contractors_amounts[:, workers_mask] >= work_spec_amounts[workers_mask]).all(axis=1)
-            if not any(contractors_mask):
-                raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
-                                                  f'{contractors}')
-
-            accepted_contractors = [contractor for contractor, is_accepted in zip(contractors, contractors_mask)
-                                    if is_accepted]
-            if workers_mask.all():
-                assigned_amounts = np.broadcast_to(work_spec_amounts, (len(accepted_contractors),
-                                                                       len(work_spec_amounts)))
-            else:
-                max_amounts = contractors_amounts[contractors_mask]
-                max_amounts = np.stack(np.broadcast_arrays(max_amounts, max_req_amounts), axis=0).min(axis=0)
-                assigned_amounts = max_amounts
-                assigned_amounts[:, workers_mask] = work_spec_amounts[workers_mask]
-
-            durations_for_chain = [work_duration(node, amounts, self.work_estimator) for amounts in assigned_amounts]
+            durations_for_chain = [work_duration(node, amounts, self.work_estimator) for amounts in workers_amounts]
             durations = np.array([sum(chain_durations) for chain_durations in durations_for_chain])
 
             if durations.size == 1:
@@ -139,19 +180,19 @@ class LFTScheduler(GenericScheduler):
             else:
                 min_duration = durations.min()
                 max_duration = durations.max()
-                scores = (durations - min_duration) / (max_duration - min_duration)
+                scores = (durations - min_duration) / (max_duration - min_duration) \
+                    if max_duration != min_duration else np.zeros_like(durations)
                 scores = scores + contractors_assignments_count / contractors_assignments_count.sum()
                 contractor_index = self._get_contractor_index(scores)
 
-            assigned_amount = assigned_amounts[contractor_index]
+            assigned_amount = workers_amounts[contractor_index]
             assigned_contractor = accepted_contractors[contractor_index]
             contractors_assignments_count[contractor_index] += 1
 
             workers = [worker_pool[req.kind][assigned_contractor.id].copy().with_count(amount)
                        for req, amount in zip(work_reqs, assigned_amount)]
             self._node_id2workers[node.id] = (assigned_contractor, workers)
-            for duration, dep_node in zip(durations_for_chain[contractor_index],
-                                          node.get_inseparable_chain_with_self()):
+            for duration, dep_node in zip(durations_for_chain[contractor_index], node.get_inseparable_chain_with_self()):
                 node_id2duration[dep_node.id] = duration
 
         return node_id2duration

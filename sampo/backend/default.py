@@ -37,7 +37,8 @@ class DefaultComputationalBackend(ComputationalBackend):
                            deadline: Time | None,
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time):
+                           assigned_parent_time: Time,
+                           fitness_weights: tuple[int | float, ...]):
         self._selection_size = population_size
         self._mutate_order = mutate_order
         self._mutate_resources = mutate_resources
@@ -46,6 +47,7 @@ class DefaultComputationalBackend(ComputationalBackend):
         self._weights = weights
         self._init_schedules = init_schedules
         self._assigned_parent_time = assigned_parent_time
+        self._fitness_weights = fitness_weights
 
     def _ensure_toolbox_created(self):
         if self._toolbox is None:
@@ -69,6 +71,7 @@ class DefaultComputationalBackend(ComputationalBackend):
                                                                     self._spec,
                                                                     work_estimator,
                                                                     assigned_parent_time,
+                                                                    self._fitness_weights,
                                                                     self._landscape)
 
     def compute_chromosomes(self,

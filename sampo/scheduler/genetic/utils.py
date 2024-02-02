@@ -94,6 +94,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                                             spec: ScheduleSpec = ScheduleSpec(),
                                             work_estimator: WorkTimeEstimator = None,
                                             assigned_parent_time: Time = Time(0),
+                                            fitness_weights: tuple[int | float, ...] = (-1,),
                                             landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Toolbox:
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
@@ -124,4 +125,5 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         children,
                         resources_border,
                         assigned_parent_time,
+                        fitness_weights,
                         work_estimator)

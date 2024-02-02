@@ -5,6 +5,7 @@ from typing import Callable
 from deap import tools
 from deap.base import Toolbox
 
+from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
@@ -100,8 +101,7 @@ def build_schedules(wg: WorkGraph,
                     spec: ScheduleSpec,
                     weights: list[int],
                     landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                    fitness_constructor: Callable[
-                        [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                    fitness_constructor: Callable[[], FitnessFunction] = TimeFitness,
                     fitness_weights: tuple[int | float, ...] = (-1,),
                     work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                     sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
@@ -133,18 +133,18 @@ def build_schedules(wg: WorkGraph,
     """
     global_start = start = time.time()
 
-    toolbox = create_toolbox(wg, contractors, worker_pool, population_size,
+    toolbox = create_toolbox(wg, contractors, population_size,
                              mutpb_order, mutpb_res, mutpb_zones, init_schedules,
-                             rand, spec, fitness_weights, work_estimator, assigned_parent_time,
+                             rand, spec, fitness_weights, work_estimator,
                              sgs_type, assigned_parent_time, landscape,
                              only_lft_initialization, is_multiobjective,
                              verbose)
 
     SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
     SAMPO.backend.cache_genetic_info(population_size,
-                      mutpb_order, mutpb_res, mutpb_zones,
-                      deadline, weights,
-                      init_schedules, assigned_parent_time)
+                                     mutpb_order, mutpb_res, mutpb_zones,
+                                     deadline, weights,
+                                     init_schedules, assigned_parent_time, fitness_weights)
 
     # create population of a given size
     pop = SAMPO.backend.generate_first_population(population_size)
@@ -185,8 +185,7 @@ def build_schedules(wg: WorkGraph,
 
         rand.shuffle(pop)
 
-        offspring_chromosomes = make_offspring(toolbox, pop, optimize_resources)
-        offspring= [toolbox.Individual(chromosome) for chromosome in offspring_chromosomes]
+        offspring = make_offspring(toolbox, pop, optimize_resources)
 
         evaluation_start = time.time()
 
@@ -252,54 +251,54 @@ def build_schedules(wg: WorkGraph,
             hof.update(pop)
 
             if best_fitness[0] <= deadline:
-                # Optimizing resourcesplateau_steps = 0
-            new_generation_number = generation_number - generation + 1
-            new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
-            best_fitness = hof[0].fitness.values
-
-            if len(pop) < population_size:
-                individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
-                copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
-                for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
-                    copied_ind.fitness.values = ind.fitness.values
-                    copied_ind.time = ind.time
-                pop += copied_individuals
-
-            while generation <= generation_number and plateau_steps < new_max_plateau_steps \
-                    and (time_border is None or time.time() - global_start < time_border):
-                SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
-
-                rand.shuffle(pop)
-
-                offspring_chromosomes = make_offspring(toolbox, pop, optimize_resources)
-                offspring= [toolbox.Individual(chromosome) for chromosome in offspring_chromosomes]
-
-                evaluation_start = time.time()
-
-                fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
-
-                for ind, t in zip(offspring, fitness):
-                    ind.time = t[0]
-
-                offspring = [ind for ind in offspring if ind.time <= deadline]
-
-                fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource_f, offspring)
-
-                for ind, res_fit in zip(offspring, fitness_res):
-                    ind.fitness.values = res_fit
-
-                evaluation_time += time.time() - evaluation_start
-
-                # renewing population
-                pop += offspring
-                pop = toolbox.select(pop)
-                hof.update(pop)
-
-                prev_best_fitness = best_fitness
+                # Optimizing resources
+                plateau_steps = 0
+                new_generation_number = generation_number - generation + 1
+                new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
                 best_fitness = hof[0].fitness.values
-                plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
-                generation += 1
+                if len(pop) < population_size:
+                    individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
+                    copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
+                    for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
+                        copied_ind.fitness.values = ind.fitness.values
+                        copied_ind.time = ind.time
+                    pop += copied_individuals
+
+                while generation <= generation_number and plateau_steps < new_max_plateau_steps \
+                        and (time_border is None or time.time() - global_start < time_border):
+                    SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+
+                    rand.shuffle(pop)
+
+                    offspring = make_offspring(toolbox, pop, optimize_resources)
+
+                    evaluation_start = time.time()
+
+                    fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+
+                    for ind, t in zip(offspring, fitness):
+                        ind.time = t[0]
+
+                    offspring = [ind for ind in offspring if ind.time <= deadline]
+
+                    fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource_f, offspring)
+
+                    for ind, res_fit in zip(offspring, fitness_res):
+                        ind.fitness.values = res_fit
+
+                    evaluation_time += time.time() - evaluation_start
+
+                    # renewing population
+                    pop += offspring
+                    pop = toolbox.select(pop)
+                    hof.update(pop)
+
+                    prev_best_fitness = best_fitness
+                    best_fitness = hof[0].fitness.values
+                    plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
+
+                    generation += 1
 
     SAMPO.logger.info(f'Final fitness: {best_fitness}')
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
@@ -323,7 +322,7 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
 
 
 def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \
-        -> list[ChromosomeType]:
+        -> list[Individual]:
     offspring = []
 
     for ind1, ind2 in zip(population[::2], population[1::2]):

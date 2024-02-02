@@ -35,6 +35,7 @@ def scheduler_info_initializer(wg: WorkGraph,
                                weights: list[int] | None,
                                init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                                assigned_parent_time: Time,
+                               fitness_weights: tuple[int | float, ...],
                                rand: Random | None = None,
                                work_estimator_recreate_params: tuple | None = None):
     global g_wg, g_contractors, g_landscape, g_spec, g_toolbox, g_work_estimator, g_deadline, g_rand, g_weights
@@ -63,6 +64,7 @@ def scheduler_info_initializer(wg: WorkGraph,
                                                             spec,
                                                             g_work_estimator,
                                                             assigned_parent_time,
+                                                            fitness_weights,
                                                             landscape)
 
 
@@ -91,6 +93,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                                                            self._weights,
                                                            self._init_chromosomes,
                                                            self._assigned_parent_time,
+                                                           self._fitness_weights,
                                                            self._rand,
                                                            self._work_estimator.get_recreate_info()))
 
@@ -112,9 +115,10 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                            deadline: Time | None,
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time):
-        super().cache_genetic_info(selection_size, mutate_order, mutate_resources,
-                                   mutate_zones, deadline, weights, init_schedules, assigned_parent_time)
+                           assigned_parent_time: Time,
+                           fitness_weights: tuple[int | float, ...]):
+        super().cache_genetic_info(selection_size, mutate_order, mutate_resources, mutate_zones, deadline,
+                                   weights, init_schedules, assigned_parent_time, fitness_weights)
         self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
         self._recreate_pool()
 
@@ -125,6 +129,8 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         return self.map(mapper, chromosomes)
 
     def generate_first_population(self, size_population: int) -> list[Individual]:
+        self._ensure_toolbox_created()
+
         def mapper(key: str):
             def randomized_init() -> ChromosomeType:
                 schedule, _, _, order = RandomizedTopologicalScheduler(g_work_estimator, int(g_rand.random() * 1000000)) \
@@ -197,4 +203,4 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         chromosome_types = self._rand.sample(chromosome_keys, k=size_population, counts=counts)
 
         chromosomes = self._pool.map(mapper, chromosome_types)
-        return [Individual(chromosome) for chromosome in chromosomes]
+        return [self._toolbox.Individual(chromosome) for chromosome in chromosomes]

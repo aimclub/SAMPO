@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from random import Random
 from typing import TypeVar
 
-import sampo.scheduler
+# import sampo.scheduler
 
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, Schedule, GraphNode, Time, WorkTimeEstimator
@@ -30,6 +30,7 @@ class ComputationalBackend(ABC):
         self._weights = None
         self._init_schedules = None
         self._assigned_parent_time = None
+        self._fitness_weights = None
 
     @abstractmethod
     def cache_scheduler_info(self,
@@ -50,7 +51,8 @@ class ComputationalBackend(ABC):
                            deadline: Time | None,
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time):
+                           assigned_parent_time: Time,
+                           fitness_weights: tuple[int | float, ...]):
         ...
 
     @abstractmethod

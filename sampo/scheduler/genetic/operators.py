@@ -7,6 +7,7 @@ from typing import Callable, Iterable
 
 import numpy as np
 from deap import base, tools
+from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
 from sampo.scheduler.genetic.converter import (convert_schedule_to_chromosome, convert_chromosome_to_schedule,
@@ -29,11 +30,12 @@ class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
+            -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return schedule.execution_time.value
+            return (Time.inf().value, )
+        return (schedule.execution_time.value, )
 
 
 class SumOfResourcesPeaksFitness(FitnessFunction):
@@ -129,12 +131,13 @@ class DeadlineResourcesFitness(FitnessFunction):
         """
         return partial(DeadlineResourcesFitness, deadline, resources_names=resources_names)
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
+            -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return resources_peaks_sum(schedule, self._resources_names) \
-                    * max(1.0, schedule.execution_time.value / self._deadline.value)
+            return (Time.inf().value, )
+        return (resources_peaks_sum(schedule, self._resources_names) \
+                    * max(1.0, schedule.execution_time.value / self._deadline.value), )
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -157,12 +160,13 @@ class DeadlineCostFitness(FitnessFunction):
         """
         return partial(DeadlineCostFitness, deadline, resources_names=resources_names)
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
+            -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return resources_costs_sum(schedule, self._resources_names) \
-                * max(1.0, schedule.execution_time.value / self._deadline.value)
+            return (Time.inf().value, )
+        return (resources_costs_sum(schedule, self._resources_names) \
+                * max(1.0, schedule.execution_time.value / self._deadline.value), )
 
 
 class TimeAndResourcesFitness(FitnessFunction):
@@ -183,23 +187,12 @@ class TimeAndResourcesFitness(FitnessFunction):
         """
         return partial(TimeAndResourcesFitness, resources_names=resources_names)
 
-    def evaluate(self, chromosomes: list[ChromosomeType]) -> list[tuple[int, int]]:
-        evaluated = self._evaluator(chromosomes)
-        return [(schedule.execution_time.value, resources_peaks_sum(schedule, self._resources_names))
-                for schedule in evaluated]
-
-
-class Individual(list):
-    def __init__(self, individual_fitness_constructor: Callable[[], base.Fitness], chromosome: ChromosomeType):
-        super().__init__(chromosome)
-        self.fitness = individual_fitness_constructor()
-
-    @staticmethod
-    def prepare(individual_fitness_constructor: Callable[[], base.Fitness]) -> Callable[[ChromosomeType], list]:
-        """
-        Returns the constructor of Individual prepared to use in Genetic algorithm
-        """
-        return partial(Individual, individual_fitness_constructor)
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
+            -> tuple[int, int]:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value, Time.inf().value
+        return schedule.execution_time.value, resources_peaks_sum(schedule, self._resources_names)
 
 
 def init_toolbox(wg: WorkGraph,
@@ -248,36 +241,36 @@ def init_toolbox(wg: WorkGraph,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape)
 
     # create population
-    toolbox.register('population_chromosomes', generate_chromosomes, wg=wg, contractors=contractors,
+    toolbox.register('population', generate_chromosomes, wg=wg, contractors=contractors,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
                      init_chromosomes=init_chromosomes, rand=rand, work_estimator=work_estimator, landscape=landscape,
-                     only_lft_initialization=only_lft_initialization)
+                     only_lft_initialization=only_lft_initialization, toolbox=toolbox)
     # selection
     selection = tools.selNSGA2 if is_multiobjective else select_new_population
     toolbox.register('select', selection, k=selection_size)
     # combined crossover
-    toolbox.register('mate', mate, rand=rand)
+    toolbox.register('mate', mate, rand=rand, toolbox=toolbox)
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
-                     statuses_available=statuses_available)
+                     statuses_available=statuses_available, toolbox=toolbox)
     # crossover for order
-    toolbox.register('mate_order', mate_scheduling_order, rand=rand)
+    toolbox.register('mate_order', mate_scheduling_order, rand=rand, toolbox=toolbox)
     # mutation for order
     toolbox.register('mutate_order', mutate_scheduling_order, mutpb=mut_order_pb, rand=rand, parents=parents,
-                     children=children)
+                     children=children, toolbox=toolbox)
     # crossover for resources
-    toolbox.register('mate_resources', mate_resources, rand=rand)
+    toolbox.register('mate_resources', mate_resources, rand=rand, toolbox=toolbox)
     # mutation for resources
     toolbox.register('mutate_resources', mutate_resources, resources_border=resources_border,
-                     mutpb=mut_res_pb, rand=rand)
+                     mutpb=mut_res_pb, rand=rand, toolbox=toolbox)
     # mutation for resource borders
     toolbox.register('mutate_resource_borders', mutate_resource_borders, contractor_borders=contractor_borders,
-                     mutpb=mut_res_pb, rand=rand)
-    toolbox.register('mate_post_zones', mate_for_zones, rand=rand)
+                     mutpb=mut_res_pb, rand=rand, toolbox=toolbox)
+    toolbox.register('mate_post_zones', mate_for_zones, rand=rand, toolbox=toolbox)
     toolbox.register('mutate_post_zones', mutate_for_zones, rand=rand, mutpb=mut_zone_pb,
-                     statuses_available=landscape.zone_config.statuses.statuses_available())
+                     statuses_available=landscape.zone_config.statuses.statuses_available(), toolbox=toolbox)
 
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents,
                      contractor_borders=contractor_borders)
@@ -292,7 +285,7 @@ def init_toolbox(wg: WorkGraph,
                      work_estimator=work_estimator, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, index2zone=index2zone,
                      landscape=landscape, sgs_type=sgs_type)
-    toolbox.register('copy_individual', lambda ind: toolbox.Individual(copy_chromosome(ind)))
+    toolbox.register('copy_individual', lambda ind: toolbox.Individual(copy_individual(ind)))
 
     return toolbox
 
@@ -312,7 +305,7 @@ def register_individual_constructor(fitness_weights: tuple[int | float, ...], to
     toolbox.register('Individual', Individual.prepare(IndividualFitness))
 
 
-def copy_chromosome(ind: ChromosomeType) -> ChromosomeType:
+def copy_individual(ind: Individual) -> ChromosomeType:
     return ind[0].copy(), ind[1].copy(), ind[2].copy(), deepcopy(ind[3]), ind[4].copy()
 
 
@@ -326,6 +319,7 @@ def generate_chromosomes(n: int,
                          contractor_borders: np.ndarray,
                          init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                          rand: random.Random,
+                         toolbox: Toolbox,
                          work_estimator: WorkTimeEstimator = None,
                          landscape: LandscapeConfiguration = LandscapeConfiguration(),
                          only_lft_initialization: bool = False) -> list[ChromosomeType]:
@@ -379,6 +373,7 @@ def generate_chromosomes(n: int,
             case _:
                 ind = init_chromosomes[generated_type][0]
 
+        ind = toolbox.Individual(ind)
         chromosomes.append(ind)
 
     return chromosomes[:n]
@@ -439,20 +434,20 @@ def select_new_population(population: list[Individual], k: int) -> list[Individu
     return population[:k]
 
 
-def is_chromosome_correct(chromosome: ChromosomeType, node_indices: list[int], parents: dict[int, set[int]],
+def is_chromosome_correct(ind: Individual, node_indices: list[int], parents: dict[int, set[int]],
                           contractor_borders: np.ndarray) -> bool:
     """
     Check correctness of works order and contractors borders.
     """
-    return is_chromosome_order_correct(chromosome, parents) and \
-        is_chromosome_contractors_correct(chromosome, node_indices, contractor_borders)
+    return is_chromosome_order_correct(ind, parents) and \
+        is_chromosome_contractors_correct(ind, node_indices, contractor_borders)
 
 
-def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, set[int]]) -> bool:
+def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]]) -> bool:
     """
     Checks that assigned order of works are topologically correct.
     """
-    work_order = chromosome[0]
+    work_order = ind[0]
     used = set()
     for work_index in work_order:
         used.add(work_index)
@@ -462,20 +457,20 @@ def is_chromosome_order_correct(chromosome: ChromosomeType, parents: dict[int, s
     return True
 
 
-def is_chromosome_contractors_correct(chromosome: ChromosomeType, work_indices: Iterable[int],
+def is_chromosome_contractors_correct(ind: Individual, work_indices: Iterable[int],
                                       contractor_borders: np.ndarray) -> bool:
     """
     Checks that assigned contractors can supply assigned workers.
     """
     if not work_indices:
         return True
-    resources = chromosome[1][work_indices]
+    resources = ind[1][work_indices]
     # sort resource part of chromosome by contractor ids
     resources = resources[resources[:, -1].argsort()]
     # get unique contractors and indexes where they start
     contractors, indexes = np.unique(resources[:, -1], return_index=True)
     # get borders of received contractors from chromosome
-    chromosome_borders = chromosome[2][contractors]
+    chromosome_borders = ind[2][contractors]
     # split resources to get parts grouped by contractor parts
     res_grouped_by_contractor = np.split(resources[:, :-1], indexes[1:])
     # for each grouped parts take maximum for each resource
@@ -493,19 +488,20 @@ def get_order_part(order: np.ndarray, other_order: np.ndarray) -> np.ndarray:
     return np.array([node for node in other_order if node not in order])
 
 
-def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
-                          copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
+def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Random,
+                          toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     Two-Point crossover for order.
 
     :param ind1: first individual
     :param ind2: second individual
     :param rand: the rand object used for randomized operations
+    :param toolbox: toolbox
     :param copy: if True individuals will be copied before mating so as not to change them
 
     :return: two mated individuals
     """
-    child1, child2 = (copy_chromosome(ind1), copy_chromosome(ind2)) if copy else (ind1, ind2)
+    child1, child2 = (copy_individual(ind1), copy_individual(ind2)) if copy else (ind1, ind2)
 
     order1, order2 = child1[0], child2[0]
     parent1 = ind1[0].copy()
@@ -515,7 +511,7 @@ def mate_scheduling_order(ind1: ChromosomeType, ind2: ChromosomeType, rand: rand
     two_point_order_crossover(order1, order2, min_mating_amount, rand)
     two_point_order_crossover(order2, parent1, min_mating_amount, rand)
 
-    return child1, child2
+    return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
 def two_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_mating_amount: int, rand: random.Random):
@@ -545,8 +541,9 @@ def two_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_m
     return child
 
 
-def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Random,
-                            parents: dict[int, set[int]], children: dict[int, set[int]]) -> ChromosomeType:
+def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random,
+                            parents: dict[int, set[int]], children: dict[int, set[int]],
+                            toolbox: Toolbox) -> Individual:
     """
     Mutation operator for works scheduling order.
 
@@ -555,6 +552,7 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
     :param rand: the rand object used for randomized operations
     :param parents: mapping object of works and their parent-works to create valid order
     :param children: mapping object of works and their children-works to create valid order
+    :param toolbox: toolbox
 
     :return: mutated individual
     """
@@ -603,11 +601,11 @@ def mutate_scheduling_order(ind: ChromosomeType, mutpb: float, rand: random.Rand
                 # after the current work insertion in new generated index
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
 
-    return ind
+    return toolbox.Individual(ind)
 
 
-def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
-                   optimize_resources: bool, copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
+def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
+                   optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     One-Point crossover for resources.
 
@@ -619,7 +617,7 @@ def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
 
     :return: two mated individuals
     """
-    child1, child2 = (copy_chromosome(ind1), copy_chromosome(ind2)) if copy else (ind1, ind2)
+    child1, child2 = (copy_individual(ind1), copy_individual(ind2)) if copy else (ind1, ind2)
 
     res1, res2 = child1[1], child2[1]
     num_works = len(res1)
@@ -638,11 +636,11 @@ def mate_resources(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
             # and update current child borders on received maximum
             child[2][contractors] = np.stack((child1[2][contractors], child2[2][contractors]), axis=0).max(axis=0)
 
-    return child1, child2
+    return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
-def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
-                     resources_border: np.ndarray) -> ChromosomeType:
+def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
+                     resources_border: np.ndarray, toolbox: Toolbox) -> Individual:
     """
     Mutation function for resources.
     It changes selected numbers of workers in random work in a certain interval for this work.
@@ -651,6 +649,7 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
     :param resources_border: low and up borders of resources amounts
     :param mutpb: probability of gene mutation
     :param rand: the rand object used for randomized operations
+    :param toolbox: toolbox
 
     :return: mutated individual
     """
@@ -682,7 +681,7 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
 
     if not mask.any():
         # if no True value in mask then no mutation can be done
-        return ind
+        return toolbox.Individual(ind)
 
     # get works indexes where mutation should be done and their masks of resources to be mutated
     works_indexes, masks = works_indexes[mask], masks[mask]
@@ -698,14 +697,14 @@ def mutate_resources(ind: ChromosomeType, mutpb: float, rand: random.Random,
     mask = masks.any(axis=1)
 
     # make mutation of resources
-    mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask], res_up_borders[mask], masks[mask], -1,
-                  rand)
+    mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask],
+                  res_up_borders[mask], masks[mask], -1, rand)
 
-    return ind
+    return toolbox.Individual(ind)
 
 
-def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, rand: random.Random) \
-        -> tuple[ChromosomeType, ChromosomeType]:
+def mate(ind1: Individual, ind2: Individual, optimize_resources: bool, rand: random.Random, toolbox: Toolbox) \
+        -> tuple[Individual, Individual]:
     """
     Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
     and One-Point crossover for zones.
@@ -714,21 +713,22 @@ def mate(ind1: ChromosomeType, ind2: ChromosomeType, optimize_resources: bool, r
     :param ind2: second individual
     :param optimize_resources: if True resource borders should be changed after mating
     :param rand: the rand object used for randomized operations
+    :param toolbox: toolbox
 
     :return: two mated individuals
     """
-    child1, child2 = mate_scheduling_order(ind1, ind2, rand, copy=True)
-    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, copy=False)
+    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, copy=True)
+    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
     # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
-    return child1, child2
+    return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
-def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int, set[int]],
+def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set[int]],
            children: dict[int, set[int]], statuses_available: int,
            order_mutpb: float, res_mutpb: float, zone_mutpb: float,
-           rand: random.Random) -> ChromosomeType:
+           rand: random.Random, toolbox: Toolbox) -> Individual:
     """
     Combined mutation function of mutation for order, mutation for resources and mutation for zones.
 
@@ -741,19 +741,20 @@ def mutate(ind: ChromosomeType, resources_border: np.ndarray, parents: dict[int,
     :param res_mutpb: probability of resources' gene mutation
     :param zone_mutpb: probability of zones' gene mutation
     :param rand: the rand object used for randomized operations
+    :param toolbox: toolbox
 
     :return: mutated individual
     """
-    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
+    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children, toolbox)
+    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, toolbox)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 
     return mutant
 
 
-def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Random,
-                            contractor_borders: np.ndarray) -> ChromosomeType:
+def mutate_resource_borders(ind: Individual, mutpb: float, rand: random.Random,
+                            contractor_borders: np.ndarray, toolbox: Toolbox) -> Individual:
     """
     Mutation function for contractors' resource borders.
 
@@ -780,7 +781,7 @@ def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Rand
 
     if not mask.any():
         # if no True value in mask then no mutation can be done
-        return ind
+        return toolbox.Individual(ind)
 
     # get contractors where mutation should be done and their masks of resource borders to be mutated
     contractors, masks = contractors[mask], masks[mask]
@@ -796,10 +797,11 @@ def mutate_resource_borders(ind: ChromosomeType, mutpb: float, rand: random.Rand
     mask = masks.any(axis=1)
 
     # make mutation of resource borders
-    mutate_values(borders, contractors[mask], res_indexes, contractor_low_borders[mask], contractor_up_borders[mask],
+    mutate_values(borders, contractors[mask], res_indexes,
+                  contractor_low_borders[mask], contractor_up_borders[mask],
                   masks[mask], len(res_indexes), rand)
 
-    return ind
+    return toolbox.Individual(ind)
 
 
 def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_indexes: np.ndarray,
@@ -821,8 +823,8 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]
 
 
-def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Random,
-                   copy: bool = True) -> tuple[ChromosomeType, ChromosomeType]:
+def mate_for_zones(ind1: Individual, ind2: Individual, rand: random.Random,
+                   toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     CxOnePoint for zones
 
@@ -830,13 +832,15 @@ def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
     :param ind2: second individual
     :param rand: the rand object used for randomized operations
     :param copy: if True individuals will be copied before mating so as not to change them
+    :param toolbox: toolbox
 
     :return: two mated individuals
     """
-    child1, child2 = (copy_chromosome(ind1), copy_chromosome(ind2)) if copy else (ind1, ind2)
+    child1, child2 = (copy_individual(ind1), copy_individual(ind2)) if copy else (ind1, ind2)
 
     zones1 = child1[4]
     zones2 = child2[4]
+
     if zones1.size:
         num_works = len(zones1)
         border = num_works // 4
@@ -846,10 +850,11 @@ def mate_for_zones(ind1: ChromosomeType, ind2: ChromosomeType, rand: random.Rand
 
         zones1[mate_positions], zones2[mate_positions] = zones2[mate_positions], zones1[mate_positions]
 
-    return child1, child2
+    return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
-def mutate_for_zones(ind: ChromosomeType, mutpb: float, rand: random.Random, statuses_available: int) -> ChromosomeType:
+def mutate_for_zones(ind: Individual, mutpb: float, rand: random.Random, statuses_available: int,
+                     toolbox: Toolbox) -> Individual:
     """
     Mutation function for zones.
     It changes selected numbers of zones in random work in a certain interval from available statuses.
@@ -858,6 +863,7 @@ def mutate_for_zones(ind: ChromosomeType, mutpb: float, rand: random.Random, sta
     :param mutpb: probability of gene mutation
     :param rand: the rand object used for randomized operations
     :param statuses_available: number of statuses available
+    :param toolbox: toolbox
 
     :return: mutated individual
     """
@@ -868,4 +874,4 @@ def mutate_for_zones(ind: ChromosomeType, mutpb: float, rand: random.Random, sta
         new_zones = np.array([rand.randint(0, statuses_available - 1) for _ in range(mask.sum())])
         zones[mask] = new_zones
 
-    return ind
+    return toolbox.Individual(ind)

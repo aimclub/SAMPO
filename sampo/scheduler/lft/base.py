@@ -9,7 +9,7 @@ from sampo.scheduler.timeline import Timeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
-from sampo.scheduler.lft.time_computaion import work_duration
+from sampo.scheduler.lft.time_computaion import work_chain_durations
 
 from sampo.schemas import (Contractor, WorkGraph, GraphNode, LandscapeConfiguration, Worker, Schedule, ScheduledWork,
                            Time, WorkUnit)
@@ -164,41 +164,49 @@ class LFTScheduler(GenericScheduler):
         node_id2duration = {}
         for node in nodes:
             work_unit = node.work_unit
-            work_reqs = work_unit.worker_reqs
-
             # get contractors that can perform this work and workers amounts for them
             accepted_contractors, workers_amounts = get_contractors_and_workers_amounts_for_work(work_unit,
                                                                                                  contractors,
                                                                                                  spec,
                                                                                                  worker_pool)
 
-            durations_for_chain = [work_duration(node, amounts, self.work_estimator) for amounts in workers_amounts]
+            # estimate chain durations for each accepted contractor
+            durations_for_chain = [work_chain_durations(node, amounts, self.work_estimator)
+                                   for amounts in workers_amounts]
+            # get the sum of the estimated durations for each contractor
             durations = np.array([sum(chain_durations) for chain_durations in durations_for_chain])
 
-            if durations.size == 1:
-                contractor_index = 0
-            else:
-                min_duration = durations.min()
-                max_duration = durations.max()
-                scores = (durations - min_duration) / (max_duration - min_duration) \
-                    if max_duration != min_duration else np.zeros_like(durations)
-                scores = scores + contractors_assignments_count / contractors_assignments_count.sum()
-                contractor_index = self._get_contractor_index(scores)
+            # assign a score for each contractor equal to the sum of the ratios of
+            # the duration of this work for this contractor to all durations
+            # and the number of assignments of this contractor to the total amount of contractors assignments
+            scores = durations / durations.sum() + contractors_assignments_count / contractors_assignments_count.sum()
+            # since the maximum possible score value is 2 subtract the resulting scores from 2,
+            # so that the higher the score, the more suitable the contractor is for the assignment
+            scores = 2 - scores
 
-            assigned_amount = workers_amounts[contractor_index]
+            # assign contractor based on received scores by implemented strategy
+            contractor_index = self._get_contractor_index(scores)
             assigned_contractor = accepted_contractors[contractor_index]
+
+            # get workers amounts of the assigned contractor
+            assigned_amount = workers_amounts[contractor_index]
+
+            # increase the counter for the assigned contractor
             contractors_assignments_count[contractor_index] += 1
 
+            # get workers of the assigned contractor and assign them to the node in mapper
             workers = [worker_pool[req.kind][assigned_contractor.id].copy().with_count(amount)
-                       for req, amount in zip(work_reqs, assigned_amount)]
+                       for req, amount in zip(work_unit.worker_reqs, assigned_amount)]
             self._node_id2workers[node.id] = (assigned_contractor, workers)
+
+            # assign the received durations to each node in the chain
             for duration, dep_node in zip(durations_for_chain[contractor_index], node.get_inseparable_chain_with_self()):
                 node_id2duration[dep_node.id] = duration
 
         return node_id2duration
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
-        return np.argmin(scores)
+        return np.argmax(scores)
 
 
 class RandomizedLFTScheduler(LFTScheduler):
@@ -217,6 +225,4 @@ class RandomizedLFTScheduler(LFTScheduler):
         self.prioritization = partial(lft_randomized_prioritization, rand=self._random)
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
-        indexes = np.arange(len(scores))
-        scores = 2 - scores
-        return self._random.choices(indexes, weights=scores)[0]
+        return self._random.choices(np.arange(len(scores)), weights=scores)[0]

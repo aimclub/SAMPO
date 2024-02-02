@@ -224,81 +224,81 @@ def build_schedules(wg: WorkGraph,
         for ind in pop:
             ind.time = ind.fitness.values[0]
 
-            if best_fitness[0] > deadline:
-                SAMPO.logger.info(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness[0]}')
+        if best_fitness[0] > deadline:
+            SAMPO.logger.info(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness[0]}')
             pop = [ind for ind in pop if ind.time == best_fitness[0]]
         else:
             optimize_resources = True
             pop = [ind for ind in pop if ind.time <= deadline]
 
-            new_pop = []
-            for ind in pop:
-                ind_time = ind.time
-                new_ind = toolbox.copy_individual(ind)
-                new_ind.time = ind_time
-                new_pop.append(new_ind)
-            del pop
-            pop = new_pop
+        new_pop = []
+        for ind in pop:
+            ind_time = ind.time
+            new_ind = toolbox.copy_individual(ind)
+            new_ind.time = ind_time
+            new_pop.append(new_ind)
+        del pop
+        pop = new_pop
 
-            evaluation_start = time.time()
+        evaluation_start = time.time()
 
-            fitness = SAMPO.backend.compute_chromosomes(fitness_resource_f, pop)
-            for ind, res_fit in zip(pop, fitness):
-                ind.fitness.values = res_fit
+        fitness = SAMPO.backend.compute_chromosomes(fitness_resource_f, pop)
+        for ind, res_fit in zip(pop, fitness):
+            ind.fitness.values = res_fit
 
-            evaluation_time += time.time() - evaluation_start
+        evaluation_time += time.time() - evaluation_start
 
-            hof.update(pop)
+        hof.update(pop)
 
-            if best_fitness[0] <= deadline:
-                # Optimizing resources
-                plateau_steps = 0
-                new_generation_number = generation_number - generation + 1
-                new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
+        if best_fitness[0] <= deadline:
+            # Optimizing resources
+            plateau_steps = 0
+            new_generation_number = generation_number - generation + 1
+            new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
+            best_fitness = hof[0].fitness.values
+
+            if len(pop) < population_size:
+                individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
+                copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
+                for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
+                    copied_ind.fitness.values = ind.fitness.values
+                    copied_ind.time = ind.time
+                pop += copied_individuals
+
+            while generation <= generation_number and plateau_steps < new_max_plateau_steps \
+                    and (time_border is None or time.time() - global_start < time_border):
+                SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
+
+                rand.shuffle(pop)
+
+                offspring = make_offspring(toolbox, pop, optimize_resources)
+
+                evaluation_start = time.time()
+
+                fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+
+                for ind, t in zip(offspring, fitness):
+                    ind.time = t[0]
+
+                offspring = [ind for ind in offspring if ind.time <= deadline]
+
+                fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource_f, offspring)
+
+                for ind, res_fit in zip(offspring, fitness_res):
+                    ind.fitness.values = res_fit
+
+                evaluation_time += time.time() - evaluation_start
+
+                # renewing population
+                pop += offspring
+                pop = toolbox.select(pop)
+                hof.update(pop)
+
+                prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
+                plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
 
-                if len(pop) < population_size:
-                    individuals_to_copy = rand.choices(pop, k=population_size - len(pop))
-                    copied_individuals = [toolbox.copy_individual(ind) for ind in individuals_to_copy]
-                    for copied_ind, ind in zip(copied_individuals, individuals_to_copy):
-                        copied_ind.fitness.values = ind.fitness.values
-                        copied_ind.time = ind.time
-                    pop += copied_individuals
-
-                while generation <= generation_number and plateau_steps < new_max_plateau_steps \
-                        and (time_border is None or time.time() - global_start < time_border):
-                    SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best peak={best_fitness} --')
-
-                    rand.shuffle(pop)
-
-                    offspring = make_offspring(toolbox, pop, optimize_resources)
-
-                    evaluation_start = time.time()
-
-                    fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
-
-                    for ind, t in zip(offspring, fitness):
-                        ind.time = t[0]
-
-                    offspring = [ind for ind in offspring if ind.time <= deadline]
-
-                    fitness_res = SAMPO.backend.compute_chromosomes(fitness_resource_f, offspring)
-
-                    for ind, res_fit in zip(offspring, fitness_res):
-                        ind.fitness.values = res_fit
-
-                    evaluation_time += time.time() - evaluation_start
-
-                    # renewing population
-                    pop += offspring
-                    pop = toolbox.select(pop)
-                    hof.update(pop)
-
-                    prev_best_fitness = best_fitness
-                    best_fitness = hof[0].fitness.values
-                    plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
-
-                    generation += 1
+                generation += 1
 
     SAMPO.logger.info(f'Final fitness: {best_fitness}')
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')

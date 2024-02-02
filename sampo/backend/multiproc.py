@@ -73,12 +73,15 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
     def __init__(self, n_cpus: int):
         self._n_cpus = n_cpus
         self._init_chromosomes = None
+        self._pool = None
         super().__init__()
 
     def map(self, action: Callable[[T], R], values: list[T]) -> list[R]:
         return self._pool.map(action, values)
 
-    def _recreate_pool(self):
+    def _ensure_pool_created(self):
+        if self._pool is not None:
+            return
         self._pool = pathos.multiprocessing.Pool(self._n_cpus,
                                                  initializer=scheduler_info_initializer,
                                                  initargs=(self._wg,
@@ -105,7 +108,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                              rand: Random | None = None,
                              work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
-        self._recreate_pool()
+        self._pool = None
 
     def cache_genetic_info(self,
                            selection_size: int,
@@ -120,9 +123,11 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         super().cache_genetic_info(selection_size, mutate_order, mutate_resources, mutate_zones, deadline,
                                    weights, init_schedules, assigned_parent_time, fitness_weights)
         self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
-        self._recreate_pool()
+        self._pool = None
 
     def compute_chromosomes(self, fitness: FitnessFunction, chromosomes: list[ChromosomeType]) -> list[float]:
+        self._ensure_pool_created()
+
         def mapper(chromosome):
             return fitness.evaluate(chromosome, g_toolbox.evaluate_chromosome)
 
@@ -130,6 +135,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
 
     def generate_first_population(self, size_population: int) -> list[Individual]:
         self._ensure_toolbox_created()
+        self._ensure_pool_created()
 
         def mapper(key: str):
             def randomized_init() -> ChromosomeType:

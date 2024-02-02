@@ -54,11 +54,11 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
         """
         return partial(SumOfResourcesPeaksFitness, resources_names=resources_names)
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return resources_peaks_sum(schedule, self._resources_names)
+            return (Time.inf().value, )
+        return (resources_peaks_sum(schedule, self._resources_names), )
 
 
 class SumOfResourcesFitness(FitnessFunction):
@@ -66,9 +66,7 @@ class SumOfResourcesFitness(FitnessFunction):
     Fitness function that relies on sum of resources usage.
     """
 
-    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
-                 resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
+    def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
@@ -91,9 +89,7 @@ class TimeWithResourcesFitness(FitnessFunction):
     Fitness function that relies on finish time and the set of resources.
     """
 
-    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
-                 resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
+    def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod
@@ -116,10 +112,9 @@ class DeadlineResourcesFitness(FitnessFunction):
     The fitness function is dependent on the set of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
+    def __init__(self,
                  deadline: Time,
                  resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
         self._deadline = deadline
         self._resources_names = list(resources_names) if resources_names is not None else None
 
@@ -145,10 +140,9 @@ class DeadlineCostFitness(FitnessFunction):
     The fitness function is dependent on the cost of resources and requires the end time to meet the deadline.
     """
 
-    def __init__(self, evaluator: Callable[[ChromosomeType], Schedule],
+    def __init__(self,
                  deadline: Time,
                  resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
         self._deadline = deadline
         self._resources_names = list(resources_names) if resources_names is not None else None
 
@@ -174,9 +168,7 @@ class TimeAndResourcesFitness(FitnessFunction):
     Bi-objective fitness function of finish time and sum of resources peaks.
     """
 
-    def __init__(self, evaluator: Callable[[list[ChromosomeType]], list[Schedule]],
-                 resources_names: Iterable[str] | None = None):
-        super().__init__(evaluator)
+    def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     @staticmethod

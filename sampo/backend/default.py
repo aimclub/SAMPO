@@ -28,6 +28,7 @@ class DefaultComputationalBackend(ComputationalBackend):
         self._spec = spec
         self._rand = rand
         self._work_estimator = work_estimator
+        self._toolbox = None
 
     def cache_genetic_info(self,
                            population_size: int,
@@ -48,6 +49,7 @@ class DefaultComputationalBackend(ComputationalBackend):
         self._init_schedules = init_schedules
         self._assigned_parent_time = assigned_parent_time
         self._fitness_weights = fitness_weights
+        self._toolbox = None
 
     def _ensure_toolbox_created(self):
         if self._toolbox is None:

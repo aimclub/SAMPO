@@ -3,7 +3,7 @@ from typing import Callable
 
 import sampo.scheduler
 
-from sampo.api.genetic_api import FitnessFunction, ChromosomeType, Individual
+from sampo.api.genetic_api import FitnessFunction, ChromosomeType, Individual, ScheduleGenerationScheme
 from sampo.backend import ComputationalBackend, T, R
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, WorkTimeEstimator, Schedule, GraphNode, Time
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -39,7 +39,10 @@ class DefaultComputationalBackend(ComputationalBackend):
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                            assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...]):
+                           fitness_weights: tuple[int | float, ...],
+                           sgs_type: ScheduleGenerationScheme,
+                           only_lft_initialization: bool,
+                           is_multiobjective: bool):
         self._selection_size = population_size
         self._mutate_order = mutate_order
         self._mutate_resources = mutate_resources
@@ -49,6 +52,9 @@ class DefaultComputationalBackend(ComputationalBackend):
         self._init_schedules = init_schedules
         self._assigned_parent_time = assigned_parent_time
         self._fitness_weights = fitness_weights
+        self._sgs_type = sgs_type
+        self._only_lft_initialization = only_lft_initialization
+        self._is_multiobjective = is_multiobjective
         self._toolbox = None
 
     def _ensure_toolbox_created(self):
@@ -74,11 +80,14 @@ class DefaultComputationalBackend(ComputationalBackend):
                                                                     work_estimator,
                                                                     assigned_parent_time,
                                                                     self._fitness_weights,
-                                                                    self._landscape)
+                                                                    self._landscape,
+                                                                    self._sgs_type,
+                                                                    self._only_lft_initialization,
+                                                                    self._is_multiobjective)
 
     def compute_chromosomes(self,
                             fitness: FitnessFunction,
-                            chromosomes: list[ChromosomeType]) -> list[float]:
+                            chromosomes: list[ChromosomeType]) -> list[tuple[int | float]]:
         self._ensure_toolbox_created()
         return [fitness.evaluate(chromosome, self._toolbox.evaluate_chromosome) for chromosome in chromosomes]
 

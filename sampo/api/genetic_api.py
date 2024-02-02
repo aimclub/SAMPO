@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 from functools import partial
 from typing import Callable
 
@@ -9,6 +10,10 @@ from sampo.schemas import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
+
+class ScheduleGenerationScheme(Enum):
+    Parallel = 'Parallel'
+    Serial = 'Serial'
 
 
 class FitnessFunction(ABC):

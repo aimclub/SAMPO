@@ -4,7 +4,7 @@ from typing import TypeVar
 
 # import sampo.scheduler
 
-from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual, ScheduleGenerationScheme
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, Schedule, GraphNode, Time, WorkTimeEstimator
 from sampo.schemas.schedule_spec import ScheduleSpec
 
@@ -14,6 +14,7 @@ R = TypeVar('R')
 
 class ComputationalBackend(ABC):
     def __init__(self):
+        # scheduler parameters
         self._wg = None
         self._contractors = None
         self._landscape = None
@@ -21,6 +22,7 @@ class ComputationalBackend(ABC):
         self._rand = Random()
         self._work_estimator = None
 
+        # additional genetic parameters
         self._toolbox = None
         self._selection_size = None
         self._mutate_order = None
@@ -31,6 +33,9 @@ class ComputationalBackend(ABC):
         self._init_schedules = None
         self._assigned_parent_time = None
         self._fitness_weights = None
+        self._sgs_type = None
+        self._only_lft_initialization = None
+        self._is_multiobjective = None
 
     @abstractmethod
     def cache_scheduler_info(self,
@@ -52,7 +57,10 @@ class ComputationalBackend(ABC):
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                            assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...]):
+                           fitness_weights: tuple[int | float, ...],
+                           sgs_type: ScheduleGenerationScheme,
+                           only_lft_initialization: bool,
+                           is_multiobjective: bool):
         ...
 
     @abstractmethod

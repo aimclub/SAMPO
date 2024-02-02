@@ -7,7 +7,7 @@ from random import Random
 
 import pathos.multiprocessing
 
-from sampo.api.genetic_api import ChromosomeType, FitnessFunction
+from sampo.api.genetic_api import ChromosomeType, FitnessFunction, ScheduleGenerationScheme
 from sampo.backend import T, R
 from sampo.backend.default import DefaultComputationalBackend
 from sampo.scheduler.genetic.operators import Individual
@@ -36,9 +36,13 @@ def scheduler_info_initializer(wg: WorkGraph,
                                init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]],
                                assigned_parent_time: Time,
                                fitness_weights: tuple[int | float, ...],
-                               rand: Random | None = None,
-                               work_estimator_recreate_params: tuple | None = None):
-    global g_wg, g_contractors, g_landscape, g_spec, g_toolbox, g_work_estimator, g_deadline, g_rand, g_weights
+                               rand: Random | None,
+                               work_estimator_recreate_params: tuple | None,
+                               sgs_type: ScheduleGenerationScheme,
+                               only_lft_initialization: bool,
+                               is_multiobjective: bool):
+    global g_wg, g_contractors, g_landscape, g_spec, g_toolbox, g_work_estimator, g_deadline, g_rand, g_weights, \
+           g_sgs_type, g_only_lft_initialization, g_is_multiobjective
 
     g_wg = wg
     g_contractors = contractors
@@ -47,6 +51,9 @@ def scheduler_info_initializer(wg: WorkGraph,
     g_deadline = deadline
     g_weights = weights
     g_rand = rand
+    g_sgs_type = sgs_type
+    g_only_lft_initialization = only_lft_initialization
+    g_is_multiobjective = is_multiobjective
 
     assigned_parent_time = assigned_parent_time or Time(0)
 
@@ -65,7 +72,10 @@ def scheduler_info_initializer(wg: WorkGraph,
                                                             g_work_estimator,
                                                             assigned_parent_time,
                                                             fitness_weights,
-                                                            landscape)
+                                                            landscape,
+                                                            sgs_type,
+                                                            only_lft_initialization,
+                                                            is_multiobjective)
 
 
 class MultiprocessingComputationalBackend(DefaultComputationalBackend):
@@ -98,7 +108,10 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                                                            self._assigned_parent_time,
                                                            self._fitness_weights,
                                                            self._rand,
-                                                           self._work_estimator.get_recreate_info()))
+                                                           self._work_estimator.get_recreate_info(),
+                                                           self._sgs_type,
+                                                           self._only_lft_initialization,
+                                                           self._is_multiobjective))
 
     def cache_scheduler_info(self,
                              wg: WorkGraph,
@@ -119,9 +132,13 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                            weights: list[int] | None,
                            init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                            assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...]):
+                           fitness_weights: tuple[int | float, ...],
+                           sgs_type: ScheduleGenerationScheme,
+                           only_lft_initialization: bool,
+                           is_multiobjective: bool):
         super().cache_genetic_info(selection_size, mutate_order, mutate_resources, mutate_zones, deadline,
-                                   weights, init_schedules, assigned_parent_time, fitness_weights)
+                                   weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
+                                   only_lft_initialization, is_multiobjective)
         self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
         self._pool = None
 
@@ -138,7 +155,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         self._ensure_pool_created()
 
         def mapper(key: str):
-            def randomized_init() -> ChromosomeType:
+            def randomized_init():
                 schedule, _, _, order = RandomizedTopologicalScheduler(g_work_estimator, int(g_rand.random() * 1000000)) \
                     .schedule_with_cache(g_wg, g_contractors, landscape=g_landscape)
                 return schedule, order, g_spec
@@ -208,5 +225,5 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         chromosome_keys = ['heft_end', 'heft_between', '12.5%', '25%', '75%', '87.5%', 'randomized']
         chromosome_types = self._rand.sample(chromosome_keys, k=size_population, counts=counts)
 
-        chromosomes = self._pool.map(mapper, chromosome_types)
+        chromosomes = self.map(mapper, chromosome_types)
         return [self._toolbox.Individual(chromosome) for chromosome in chromosomes]

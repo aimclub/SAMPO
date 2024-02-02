@@ -4,7 +4,7 @@ import numpy as np
 from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType
-from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome
+from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas import WorkGraph, Contractor, Schedule, GraphNode, LandscapeConfiguration, WorkTimeEstimator, Time
@@ -95,7 +95,10 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                                             work_estimator: WorkTimeEstimator = None,
                                             assigned_parent_time: Time = Time(0),
                                             fitness_weights: tuple[int | float, ...] = (-1,),
-                                            landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Toolbox:
+                                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                            sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                                            only_lft_initialization: bool = False,
+                                            is_multiobjective: bool = False) -> Toolbox:
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
@@ -126,4 +129,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         resources_border,
                         assigned_parent_time,
                         fitness_weights,
-                        work_estimator)
+                        work_estimator,
+                        sgs_type,
+                        only_lft_initialization,
+                        is_multiobjective)

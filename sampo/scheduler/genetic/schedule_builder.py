@@ -90,7 +90,6 @@ def create_toolbox(wg: WorkGraph,
 
 def build_schedules(wg: WorkGraph,
                     contractors: list[Contractor],
-                    worker_pool: WorkerContractorPool,
                     population_size: int,
                     generation_number: int,
                     mutpb_order: float,
@@ -101,11 +100,10 @@ def build_schedules(wg: WorkGraph,
                     spec: ScheduleSpec,
                     weights: list[int],
                     landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                    fitness_constructor: Callable[[], FitnessFunction] = TimeFitness,
+                    fitness_constructor: FitnessFunction = TimeFitness(),
                     fitness_weights: tuple[int | float, ...] = (-1,),
                     work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                     sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
-                    n_cpu: int = 1,
                     assigned_parent_time: Time = Time(0),
                     timeline: Timeline | None = None,
                     time_border: int | None = None,
@@ -113,8 +111,7 @@ def build_schedules(wg: WorkGraph,
                     optimize_resources: bool = False,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
-                    is_multiobjective: bool = False,
-                    verbose: bool = True) \
+                    is_multiobjective: bool = False) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     """
     Genetic algorithm.
@@ -137,14 +134,14 @@ def build_schedules(wg: WorkGraph,
                              mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                              rand, spec, fitness_weights, work_estimator,
                              sgs_type, assigned_parent_time, landscape,
-                             only_lft_initialization, is_multiobjective,
-                             verbose)
+                             only_lft_initialization, is_multiobjective)
 
     SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
     SAMPO.backend.cache_genetic_info(population_size,
                                      mutpb_order, mutpb_res, mutpb_zones,
                                      deadline, weights,
-                                     init_schedules, assigned_parent_time, fitness_weights)
+                                     init_schedules, assigned_parent_time, fitness_weights,
+                                     sgs_type, only_lft_initialization, is_multiobjective)
 
     # create population of a given size
     pop = SAMPO.backend.generate_first_population(population_size)
@@ -152,7 +149,7 @@ def build_schedules(wg: WorkGraph,
     SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     have_deadline = deadline is not None
-    fitness_f = fitness_constructor() if not have_deadline else TimeFitness()
+    fitness_f = fitness_constructor if not have_deadline else TimeFitness()
     if have_deadline:
         toolbox.register_individual_constructor((-1,))
     evaluation_start = time.time()

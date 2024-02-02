@@ -100,26 +100,13 @@ class JustInTimeTimeline(Timeline):
         # we can't just use max() of all times we found from different constraints
         # because start time shifting can corrupt time slots we found from every constraint
         # so let's find the time that is agreed with all constraints
-        cur_start_time = max_parent_time
-        found_earliest_time = False
-        while not found_earliest_time:
-            material_time = self._material_timeline.find_min_material_time(node,
-                                                                           cur_start_time,
+        max_material_time = self._material_timeline.find_min_material_time(node, c_st,
                                                                            node.work_unit.need_materials(),
                                                                            exec_time)
 
-            cur_start_time = self._find_min_start_time(worker_team, material_time)
-            if material_time < cur_start_time:
-                continue
+        max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
 
-            zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
-                                                               exec_time)
-            if zone_time > cur_start_time:
-                cur_start_time = zone_time
-            else:
-                found_earliest_time = True
-
-        c_st = cur_start_time
+        c_st = max(c_st, max_material_time, max_zone_time)
 
         c_ft = c_st + exec_time
         return c_st, c_ft, None
@@ -309,10 +296,10 @@ class JustInTimeTimeline(Timeline):
             c_st = max(c_ft + lag, max_parent_time)
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
-                                                                                c_st - lag,
-                                                                                dep_node.work_unit.need_materials(),
-                                                                                working_time,
-                                                                                True)
+                                                                                 c_st,
+                                                                                 dep_node.work_unit.need_materials(),
+                                                                                 working_time,
+                                                                                 True)
 
             c_st = max(mat_del_time, c_st)
 

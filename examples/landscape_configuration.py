@@ -3,10 +3,9 @@ from itertools import chain
 
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
-from sampo.pipeline import SchedulingPipeline
-from sampo.pipeline.default import DefaultSchedulePipeline, DefaultInputPipeline
+from sampo.pipeline.default import DefaultInputPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
-from sampo.scheduler import GeneticScheduler, HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler import GeneticScheduler
 from sampo.schemas import LandscapeConfiguration, ResourceHolder, Material, MaterialReq, EdgeType, WorkGraph
 from sampo.schemas.landscape import Vehicle
 from sampo.schemas.landscape_graph import LandGraphNode, ResourceStorageUnit, LandGraph
@@ -146,6 +145,7 @@ def setup_wg():
 
     return WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3, l4n1, l4n2, l5n1, l5n2, l5n3, l6n1, l6n2])
 
+
 if __name__ == '__main__':
     # Set up attributes for the generated synthetic graph
     synth_works_top_border = 2000
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     wg = setup_wg()
     landscape = setup_landscape_many_holders(setup_lg(wg))
 
-    # scheduler = HEFTBetweenScheduler()
+    # scheduler = HEFTScheduler()
     scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
@@ -184,6 +184,10 @@ if __name__ == '__main__':
 
     # Get list with the Contractor object, which can satisfy the created WorkGraph's resources requirements
     contractors = [get_contractor_by_wg(wg)]
+
+    # TODO Here we are clearing worker reqs to drop the scheduling task into material delivery task
+    for node in wg.nodes:
+        node.work_unit.worker_reqs.clear()
 
     project = DefaultInputPipeline() \
         .wg(wg) \

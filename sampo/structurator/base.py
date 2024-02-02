@@ -211,8 +211,17 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
             -> list[tuple[GraphEdge, bool]]:
         return [(edge, is_edge_to_node) for edge in edges if edge.type is edge_type]
 
+    # mapper of IDs of new nodes and the new nodes themselves that represent the restructured graph
     id2new_nodes: dict[str, GraphNode] = dict()
+    # mapper of edges that will be removed and IDs of new nodes that should be connected after this removal.
+    # edge is specified by two IDs of the nodes that this edge connects.
+    # the order of the node IDs determines (based on the first ID) on which side of the edge the new node ID is written.
+    # used only if the use_lag_edge_optimization is True, since otherwise the connection is trivial
     restructuring_edges2new_nodes_id: dict[tuple[str, str], str] = dict()
+    # iterate over each node,
+    # keeping all the edges that need to be removed and which will break the node into stages,
+    # creating a new node (possibly with stage nodes) that will be in the final restructured graph,
+    # and connecting to parent nodes that have already been created since the nodes in wg.nodes are topological sorted
     for node in wg.nodes:
         restructuring_edges = get_restructuring_edges(node.edges_from, EdgeType.StartStart, False) + \
                               get_restructuring_edges(node.edges_to, EdgeType.FinishFinish, True)

@@ -225,4 +225,4 @@ class RandomizedLFTScheduler(LFTScheduler):
         self.prioritization = partial(lft_randomized_prioritization, rand=self._random)
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
-        return self._random.choices(np.arange(len(scores)), weights=scores)[0]
+        return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0

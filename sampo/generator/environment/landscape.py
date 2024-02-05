@@ -110,16 +110,16 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                            for neighbour in neighbour_platforms]
         platform.add_neighbours(neighbour_edges)
 
-    # nodes_without_ins_child = [node for node in nodes if node.inseparable_parent is None]
-    # number_of_nodes_without_ins_child = len(nodes_without_ins_child)
+    inseparable_heads = [node for node in nodes if not node.is_inseparable_son()]
 
-    platforms_tmp = ((wg.vertex_count // platforms_number) * platforms +
-                     platforms[:wg.vertex_count % platforms_number])
+    platforms_tmp = ((len(inseparable_heads) // platforms_number) * platforms +
+                     platforms[:len(inseparable_heads) % platforms_number])
     rnd.shuffle(platforms_tmp)
 
-    for node, platform in zip(wg.nodes, platforms_tmp):
-        if node.edges_to and node.edges_from:
-            platform.add_works(node)
+    for node, platform in zip(inseparable_heads, platforms_tmp):
+        if not node.work_unit.is_service_unit:
+            for ins_child in node.get_inseparable_chain_with_self():
+                platform.add_works(ins_child)
 
     holders_number = math.ceil(math.sqrt(math.log(wg.vertex_count)))
     holders_node = []
@@ -145,7 +145,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(50, 100))
+        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1000, 10000))
                            for neighbour in neighbour_platforms]
         holders_node[-1].add_neighbours(neighbour_edges)
 

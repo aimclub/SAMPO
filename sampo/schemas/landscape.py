@@ -200,6 +200,8 @@ class LandscapeConfiguration:
 
     @cached_property
     def platforms(self) -> list[LandGraphNode]:
+        if self.lg is None:
+            return []
         platform_ids = set([node.id for node in self.lg.nodes]).difference(
             set([holder.node_id for holder in self._holders]))
         return [node for node in self.lg.nodes if node.id in platform_ids]
@@ -223,11 +225,13 @@ class LandscapeConfiguration:
             for holder in self.holders}
         roads = {road.id: {'vehicles': road.vehicles}
                  for road in self.roads}
-        platforms = {node.id: {name: count for name, count in node.resource_storage_unit.capacity.items()}
-                     for node in self.platforms}
 
-        resources = [holders, roads, platforms]
+        resources = [holders, roads]
         return resources
+
+    def get_platforms_resources(self) -> dict[str, dict[str, int]]:
+        return {node.id: {name: count for name, count in node.resource_storage_unit.capacity.items()}
+                for node in self.platforms}
 
     def _build_routes(self):
         count = self.lg.vertex_count

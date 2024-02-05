@@ -1,9 +1,9 @@
 import math
-import uuid
 from collections import defaultdict
 
 from sortedcontainers import SortedList
 
+from sampo.scheduler.timeline.platform_timeline import PlatformTimeline
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration, ResourceHolder, Vehicle, Road, MaterialDelivery
@@ -32,6 +32,7 @@ class SupplyTimeline:
 
             raise ValueError(f'Incorrect type of value: {type(event)}')
 
+        self._platform_timeline = PlatformTimeline(landscape_config)
         self._timeline: dict[str, dict[str, SortedList[ScheduleEvent]]] = {}
         self._task_index = 0
         self._node_id2holder: dict[str, ResourceHolder] = landscape_config.holder_node_id2resource_holder
@@ -69,16 +70,15 @@ class SupplyTimeline:
         return time == finish_delivery_time
 
     def can_schedule_at_the_moment(self, node: GraphNode, start_time: Time,
-                                   materials: list[Material], exec_time: Time) -> bool:
+                                   materials: list[Material]) -> bool:
         if not node.work_unit.need_materials():
             return True
 
-        platform = self._landscape.works2platform[node]
-        if not self._check_material_availability_on_platform(platform, materials, start_time):
+        if not self._platform_timeline.can_schedule_at_the_moment(node, start_time, materials):
             return False
 
         delivery_finish_time = start_time
-        materials_for_delivery = self._get_material_for_delivery(node, materials, delivery_finish_time)
+        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, delivery_finish_time)
         if sum((mat.count for mat in materials_for_delivery), 0) == 0:
             # there are no materials to be delivered
             return True
@@ -103,43 +103,12 @@ class SupplyTimeline:
 
         return True
 
-    def _get_material_for_delivery(self, node: GraphNode, materials: list[Material], work_start_time: Time) \
-            -> list[Material]:
-        """
-        Returns `Material`s that should be delivered to the `node`'s platform to start the corresponding work
-        """
-        request: list[Material] = []
-        platform = self._landscape.works2platform[node]
-        platform_state = self._timeline[platform.id]
-        for need_mat in materials:
-            start = platform_state[need_mat.name].bisect_right(work_start_time) - 1
-            available_count_material = platform_state[need_mat.name][start].available_workers_count
-
-            if available_count_material < need_mat.count:
-                request.append(
-                    Material(str(uuid.uuid4()), need_mat.name,
-                             self._landscape.works2platform[node].resource_storage_unit.capacity[need_mat.name] -
-                             available_count_material)
-                )
-            else:
-                request.append(Material(str(uuid.uuid4()), need_mat.name, 0))
-
-            return request
-
     def find_min_material_time(self, node: GraphNode, start_time: Time,
-                               materials: list[Material], exec_time: Time) -> Time:
+                               materials: list[Material]) -> Time:
         if node.work_unit.is_service_unit or not materials:
             return start_time
-        platform = self._landscape.works2platform[node]
-        platform_state = self._timeline[platform.id]
-        if not self._check_material_availability_on_platform(platform, materials, start_time):
-            for mat in materials:
-                ind = platform_state[mat.name].bisect_left((Time.inf(), -1, EventType.INITIAL)) - 1
-                mat_last_time = platform_state[mat.name][ind].time
-                start_time = max(mat_last_time, start_time)
 
-        # start_time += 1
-        mat_request = self._get_material_for_delivery(node, materials, start_time)
+        start_time, mat_request = self._platform_timeline.find_min_material_time_with_additional(node, start_time, materials)
         if sum(mat.count for mat in mat_request) == 0:
             return start_time
 
@@ -184,28 +153,19 @@ class SupplyTimeline:
                           node: GraphNode,
                           deadline: Time,
                           materials: list[Material],
-                          exec_time: Time,
                           update: bool = False) -> tuple[MaterialDelivery, Time]:
         if not node.work_unit.need_materials():
             return MaterialDelivery(node.id), deadline
 
         start_time = deadline
 
-        materials_for_delivery = self._get_material_for_delivery(node, materials, start_time)
-        platform = self._landscape.works2platform[node]
-        # TODO Simplify OR because it checks emptiness of materials for delivery
-        if (not materials_for_delivery or sum([mat.count for mat in materials_for_delivery]) == 0) \
-                and self._check_material_availability_on_platform(platform, materials_for_delivery, start_time):
-            # work doesn't need materials
-            if update:
-                update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
-                for mat in materials:
-                    update_timeline_info[platform.id].append((mat.name, mat.count, start_time, Time.inf()))
-                self._update_timeline(update_timeline_info)
-
+        if self._platform_timeline.can_provide_resources(node, deadline, materials, update):
             return MaterialDelivery(node.id), start_time
 
-        return self._supply_resources(node, start_time, materials_for_delivery, update)
+        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
+        delivery, time = self._supply_resources(node, start_time, materials_for_delivery, update)
+
+        return delivery, time
 
     def _supply_resources(self, node: GraphNode,
                           deadline: Time,
@@ -270,7 +230,6 @@ class SupplyTimeline:
                                                                           route_start_time,
                                                                           exec_return_time + exec_ahead_time)
 
-                # assert depot_vehicle_start_time <= deadline
 
                 if local_min_start_time > depot_vehicle_start_time:
                     depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
@@ -301,15 +260,9 @@ class SupplyTimeline:
             for road_id, res_info in delivery_dict.items():
                 update_timeline_info[road_id].append(res_info)
 
-        # add update info about the platform
-        platform_state = self._timeline[platform.id]
-        for mat in materials:
-            # keypoint contains materials available at `finish_delivery_time`
-            ind = platform_state[mat.name].bisect_right(finish_delivery_time) - 1
-            available_mat = platform_state[mat.name][ind].available_workers_count
-
-            end_count = available_mat - platform.resource_storage_unit.capacity[mat.name] + mat.count
-            update_timeline_info[platform.id].append((mat.name, end_count, finish_delivery_time, Time.inf()))
+        node_mat_req = {mat.name: mat.count for mat in node.work_unit.need_materials()}
+        update_mat_req_info = [(mat.name, node_mat_req[mat.name] - mat.count, finish_delivery_time) for mat in materials]
+        self._platform_timeline.update_timeline(platform.id, update_mat_req_info)
 
         self._update_timeline(update_timeline_info)
 
@@ -346,8 +299,7 @@ class SupplyTimeline:
         return current_start_time
 
     def _get_route_info(self, holder_node: LandGraphNode, node: LandGraphNode, vehicles: list[Vehicle],
-                        start_holder_time: Time) -> tuple[
-        Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
+                        start_holder_time: Time) -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
         def move_vehicles(from_node: LandGraphNode,
                           to_node: LandGraphNode,
                           parent_time: Time,
@@ -421,12 +373,11 @@ class SupplyTimeline:
                 )
 
                 end_idx = res_state.bisect_right(end_time) - 1
-
                 # TODO Check correctness
-                # if res_state[end_idx].time == end_time:
-                #     end_count = res_state[end_idx].available_workers_count
-                # else:
-                end_count = res_state[end_idx].available_workers_count + res_count
+                if res_state[end_idx].time == end_time:
+                    end_count = res_state[end_idx].available_workers_count
+                else:
+                    end_count = res_state[end_idx].available_workers_count + res_count
 
                 res_state.add(ScheduleEvent(task_index, EventType.END, end_time, None, end_count))
 

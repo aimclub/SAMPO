@@ -122,12 +122,12 @@ def setup_wg():
                                   (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000061')
     l6n2 = sr.graph_node('l3n2', [(l5n2, 0, EdgeType.FinishStart)], group='2', work_id='000062')
 
-    l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-    l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l1n1.work_unit.material_reqs = [MaterialReq('mat1', 20)]
+    l1n2.work_unit.material_reqs = [MaterialReq('mat1', 20)]
 
-    l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-    l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-    l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
+    l2n1.work_unit.material_reqs = [MaterialReq('mat1', 20)]
+    l2n2.work_unit.material_reqs = [MaterialReq('mat1', 20)]
+    l2n3.work_unit.material_reqs = [MaterialReq('mat1', 20)]
 
     l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
     l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     wg = setup_wg()
     landscape = setup_landscape_many_holders(setup_lg(wg))
 
-    # scheduler = HEFTScheduler()
+    # scheduler = HEFTScheduler(work_estimator=DefaultWorkEstimator())
     scheduler = GeneticScheduler(number_of_generation=10,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
@@ -186,8 +186,8 @@ if __name__ == '__main__':
     contractors = [get_contractor_by_wg(wg)]
 
     # TODO Here we are clearing worker reqs to drop the scheduling task into material delivery task
-    for node in wg.nodes:
-        node.work_unit.worker_reqs.clear()
+    # for node in wg.nodes:
+    #     node.work_unit.worker_reqs.clear()
 
     project = DefaultInputPipeline() \
         .wg(wg) \

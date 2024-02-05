@@ -2,14 +2,15 @@ import time
 
 from sampo.backend.default import DefaultComputationalBackend
 from sampo.backend.multiproc import MultiprocessingComputationalBackend
+from sampo.backend.native import NativeComputationalBackend
 from sampo.base import SAMPO
 from sampo.scheduler import GeneticScheduler
 
 
-def _test_multiprocessing(setup_scheduler_parameters):
+def test_multiprocessing(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
-    SAMPO.backend = DefaultComputationalBackend()
+    SAMPO.backend = NativeComputationalBackend()
 
     genetic = GeneticScheduler(number_of_generation=10,
                                mutate_order=0.05,

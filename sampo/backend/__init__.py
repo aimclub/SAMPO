@@ -37,7 +37,10 @@ class ComputationalBackend(ABC):
         self._only_lft_initialization = None
         self._is_multiobjective = None
 
-    @abstractmethod
+        from sampo.backend.default import DefaultComputationalBackend
+        if self.__class__ != DefaultComputationalBackend:
+            self._default = DefaultComputationalBackend()
+
     def cache_scheduler_info(self,
                              wg: WorkGraph,
                              contractors: list[Contractor],
@@ -45,9 +48,11 @@ class ComputationalBackend(ABC):
                              spec: ScheduleSpec,
                              rand: Random | None = None,
                              work_estimator: WorkTimeEstimator | None = None):
-        ...
+        from sampo.base import SAMPO
+        SAMPO.logger.debug(f'Function cache_scheduler_info for {self.__class__.__name__} '
+                           f'is not implemented yet, setting fallback')
+        return self._default.cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
 
-    @abstractmethod
     def cache_genetic_info(self,
                            population_size: int,
                            mutate_order: float,
@@ -61,14 +66,23 @@ class ComputationalBackend(ABC):
                            sgs_type: ScheduleGenerationScheme,
                            only_lft_initialization: bool,
                            is_multiobjective: bool):
-        ...
+        from sampo.base import SAMPO
+        SAMPO.logger.debug(f'Function cache_genetic_info for {self.__class__.__name__} '
+                           f'is not implemented yet, setting fallback')
+        return self._default.cache_genetic_info(population_size, mutate_order, mutate_resources, mutate_zones,
+                                                deadline, weights, init_schedules, assigned_parent_time,
+                                                fitness_weights, sgs_type, only_lft_initialization, is_multiobjective)
 
-    @abstractmethod
     def compute_chromosomes(self,
                             fitness: FitnessFunction,
                             chromosomes: list[ChromosomeType]) -> list[float]:
-        ...
+        from sampo.base import SAMPO
+        SAMPO.logger.debug(f'Function compute_chromosomes for {self.__class__.__name__} '
+                           f'is not implemented yet, setting fallback')
+        return self._default.compute_chromosomes(fitness, chromosomes)
 
-    @abstractmethod
     def generate_first_population(self, size_population: int) -> list[Individual]:
-        ...
+        from sampo.base import SAMPO
+        SAMPO.logger.debug(f'Function generate_first)population for {self.__class__.__name__} '
+                           f'is not implemented yet, setting fallback')
+        return self._default.generate_first_population(size_population)

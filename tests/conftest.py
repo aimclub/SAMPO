@@ -6,8 +6,10 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, Scheduler
+from sampo.scheduler import SchedulerType, Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft import HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler.topological import TopologicalScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -152,7 +154,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
-    num_contractors= 1
+    num_contractors = 1
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
@@ -188,10 +190,7 @@ def setup_scheduler(request) -> Scheduler:
 @fixture
 def setup_schedule(setup_scheduler, setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
-    if setup_wg.vertex_count > 16:
-        pytest.skip('Non-manual graph')
     scheduler = setup_scheduler
-
     try:
         return scheduler.schedule(setup_wg,
                                   setup_contractors,

@@ -100,7 +100,7 @@ def build_schedules(wg: WorkGraph,
                     spec: ScheduleSpec,
                     weights: list[int],
                     landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                    fitness_constructor: FitnessFunction = TimeFitness(),
+                    fitness_object: FitnessFunction = TimeFitness(),
                     fitness_weights: tuple[int | float, ...] = (-1,),
                     work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                     sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
@@ -149,7 +149,7 @@ def build_schedules(wg: WorkGraph,
     SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     have_deadline = deadline is not None
-    fitness_f = fitness_constructor if not have_deadline else TimeFitness()
+    fitness_f = fitness_object if not have_deadline else TimeFitness()
     if have_deadline:
         toolbox.register_individual_constructor((-1,))
     evaluation_start = time.time()
@@ -211,7 +211,7 @@ def build_schedules(wg: WorkGraph,
     # Second stage to optimize resources if deadline is assigned
 
     if have_deadline:
-        fitness_resource_f = fitness_constructor()
+        fitness_resource_f = fitness_object
         toolbox.register_individual_constructor(fitness_weights)
 
         SAMPO.logger.info(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')

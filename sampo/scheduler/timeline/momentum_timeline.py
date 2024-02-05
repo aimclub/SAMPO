@@ -139,7 +139,7 @@ class MomentumTimeline(Timeline):
             found_earliest_time = False
             while not found_earliest_time:
                 material_time = self._material_timeline.find_min_material_time(node,
-                                                                               cur_start_time - lag,
+                                                                               cur_start_time,
                                                                                node.work_unit.need_materials())
                 cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
                                                            material_time, exec_time, worker_team)

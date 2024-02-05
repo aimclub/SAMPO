@@ -9,7 +9,7 @@ def test_multiobjective_genetic_scheduling(setup_scheduler_parameters):
                                mutate_order=0.05,
                                mutate_resources=0.05,
                                size_of_population=20,
-                               fitness_constructor=TimeAndResourcesFitness,
+                               fitness_constructor=TimeAndResourcesFitness(),
                                fitness_weights=(-1, -1),
                                optimize_resources=True,
                                sgs_type=ScheduleGenerationScheme.Serial)

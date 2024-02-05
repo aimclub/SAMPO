@@ -165,7 +165,93 @@ class SupplyTimeline:
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
         delivery, time = self._supply_resources(node, start_time, materials_for_delivery, update)
 
-        return delivery, time
+        print(node.id)
+
+        delivery = MaterialDelivery(node.id)
+
+        if not materials:
+            return delivery, deadline
+
+        platform = self._landscape.works2platform[node]
+
+        # get the best depot that has enough materials and get its access start time (absolute value)
+        depots = [self._holder_id2holder[depot] for depot in self._find_best_holders_by_dist(platform, materials)]
+        selected_depot = None
+        # TODO Rename
+        min_depot_time = Time.inf()
+
+        selected_vehicles = []
+        depot_vehicle_finish_time = Time(0)
+
+        start_delivery_time = deadline
+        finish_delivery_time = Time(-1)
+
+        road_deliveries = []
+
+        # find time, that depot could provide resources
+        while finish_delivery_time < start_time:
+            start_delivery_time += 1
+            local_min_start_time = Time.inf()
+
+            for depot in depots:
+                depot_mat_start_time = start_delivery_time
+                # TODO Check that is necessary
+                # for mat in materials:
+                #     depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
+                #                                                               mat.count,
+                #                                                               depot_mat_start_time,
+                #                                                               Time.inf()), depot_mat_start_time)
+
+                # get vehicles from the depot
+                vehicle_count_need = self._get_vehicles_need(depot, materials)
+                vehicle_state = self._timeline[depot.id]['vehicles']
+                selected_vehicles = depot.vehicles[:vehicle_count_need]
+
+                route_start_time, deliveries, exec_ahead_time, exec_return_time = \
+                    self._get_route_info(depot.node, platform, selected_vehicles, depot_mat_start_time)
+
+                depot_vehicle_start_time = self._find_earliest_start_time(vehicle_state,
+                                                                          vehicle_count_need,
+                                                                          route_start_time,
+                                                                          exec_return_time + exec_ahead_time)
+
+                if local_min_start_time > depot_vehicle_start_time:
+                    depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
+                    # FIXME min_depot_time and local_min_start_time have the same value when while ends
+                    min_depot_time = depot_vehicle_start_time
+                    local_min_start_time = depot_vehicle_start_time
+                    finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
+                    selected_depot = depot
+
+                    road_deliveries = deliveries
+
+        for mat in materials:
+            delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, selected_depot.name)
+
+        if not update:
+            return delivery, finish_delivery_time
+
+        update_timeline_info: dict[str, list[tuple[str, int, Time, Time]]] = defaultdict(list)
+
+        # add update info about holder
+        update_timeline_info[selected_depot.id] = [(mat.name, mat.count, min_depot_time, min_depot_time + Time.inf())
+                                                   for mat in materials]
+        update_timeline_info[selected_depot.id].append(('vehicles', len(selected_vehicles),
+                                                        min_depot_time, depot_vehicle_finish_time))
+
+        # add update info about roads
+        for delivery_dict in road_deliveries:
+            for road_id, res_info in delivery_dict.items():
+                update_timeline_info[road_id].append(res_info)
+
+        node_mat_req = {mat.name: mat.count for mat in node.work_unit.need_materials()}
+        update_mat_req_info = [(mat.name, node_mat_req[mat.name] - mat.count, finish_delivery_time) for mat in
+                               materials]
+        self._platform_timeline.update_timeline(platform.id, update_mat_req_info)
+
+        self._update_timeline(update_timeline_info)
+
+        return delivery, finish_delivery_time
 
     def _supply_resources(self, node: GraphNode,
                           deadline: Time,
@@ -197,49 +283,45 @@ class SupplyTimeline:
         selected_vehicles = []
         depot_vehicle_finish_time = Time(0)
 
-        start_delivery_time = Time(-1)
+        start_delivery_time = deadline
         finish_delivery_time = Time(-1)
 
         road_deliveries = []
 
-        # find time, that depot could provide resources
-        while finish_delivery_time < deadline:
-            start_delivery_time += 1
-            # min start time found on this iteration
-            local_min_start_time = Time.inf()
+        local_min_start_time = Time.inf()
 
-            for depot in depots:
-                depot_mat_start_time = start_delivery_time
-                # TODO Check that is necessary
-                # for mat in materials:
-                #     depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
-                #                                                               mat.count,
-                #                                                               depot_mat_start_time,
-                #                                                               Time.inf()), depot_mat_start_time)
+        for depot in depots:
+            depot_mat_start_time = start_delivery_time
+            # TODO Check that is necessary
+            # for mat in materials:
+            #     depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
+            #                                                               mat.count,
+            #                                                               depot_mat_start_time,
+            #                                                               Time.inf()), depot_mat_start_time)
 
-                # get vehicles from the depot
-                vehicle_count_need = self._get_vehicles_need(depot, materials)
-                vehicle_state = self._timeline[depot.id]['vehicles']
-                selected_vehicles = depot.vehicles[:vehicle_count_need]
+            # get vehicles from the depot
+            vehicle_count_need = self._get_vehicles_need(depot, materials)
+            vehicle_state = self._timeline[depot.id]['vehicles']
+            selected_vehicles = depot.vehicles[:vehicle_count_need]
 
-                route_start_time, deliveries, exec_ahead_time, exec_return_time = \
-                    self._get_route_info(depot.node, platform, selected_vehicles, depot_mat_start_time)
+            route_start_time, deliveries, exec_ahead_time, exec_return_time = \
+                self._get_route_info(depot.node, platform, selected_vehicles, depot_mat_start_time)
 
-                depot_vehicle_start_time = self._find_earliest_start_time(vehicle_state,
-                                                                          vehicle_count_need,
-                                                                          route_start_time,
-                                                                          exec_return_time + exec_ahead_time)
+            depot_vehicle_start_time = self._find_earliest_start_time(vehicle_state,
+                                                                      vehicle_count_need,
+                                                                      route_start_time,
+                                                                      exec_return_time + exec_ahead_time)
 
 
-                if local_min_start_time > depot_vehicle_start_time:
-                    depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
-                    # FIXME min_depot_time and local_min_start_time have the same value when while ends
-                    min_depot_time = depot_vehicle_start_time
-                    local_min_start_time = depot_vehicle_start_time
-                    finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
-                    selected_depot = depot
+            if local_min_start_time > depot_vehicle_start_time:
+                depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
+                # FIXME min_depot_time and local_min_start_time have the same value when while ends
+                min_depot_time = depot_vehicle_start_time
+                local_min_start_time = depot_vehicle_start_time
+                finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
+                selected_depot = depot
 
-                    road_deliveries = deliveries
+                road_deliveries = deliveries
 
         for mat in materials:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, selected_depot.name)

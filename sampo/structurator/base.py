@@ -127,22 +127,43 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
                             wu_attrs: dict,
                             reqs2attrs: dict[str, list[dict]]) -> GraphNode:
         """
+        This function updates the requirements attributes of the original node with new pre-calculated amounts.
+        Using these updated attributes, new requirement instances are created
+        and the work unit attributes are updated accordingly. Also, in the attributes of the work unit, the id, name
+        and volume are updated. Volume calculates based on volume_proportion.
+        The resulting attributes are then used to create new Work Unit to make returned new stage Node.
 
+        :param volume_proportion: proportion of volume for new stage
+        :param edge_with_prev_stage_node: list with edge to previous stage node
+        :param wu_attrs: copied attributes of work unit of original node
+        :param reqs2attrs: copied attributes of requirements of original node
+
+        :return: created Graph Node of new stage
         """
+        # new requirements to update work unit attributes
         new_reqs = {}
         for reqs, req_class in reqs2classes.items():
+            # define a name of the amount attribute of the requirement
             attr = 'volume' if reqs == 'worker_reqs' else 'count'
             for req_attrs, amount in zip(reqs2attrs[reqs], reqs2amounts[reqs]):
+                # update amount attribute in requirement attributes
                 req_attrs[attr] = amount
+            # make new requirement instances
             new_reqs[reqs] = [req_class(**attrs) for attrs in reqs2attrs[reqs]]
+        # update work unit attributes with created requirements
         wu_attrs.update(new_reqs)
+        # update id attribute with current stage node id
         wu_attrs['id'] = stage_node_id
+        # update name attribute with current index of stage
         wu_attrs['name'] = f'{wu.name}{STAGE_SEP}{stage_i}'
+        # update volume attribute with passed proportion
         wu_attrs['volume'] = wu.volume * volume_proportion
+        # make new work unit for new stage node with updated attributes
         new_wu = WorkUnit(**wu_attrs)
+        # make new graph node for new stage with created work unit and with passed edge to previous stage node
         return GraphNode(new_wu, edge_with_prev_stage_node)
 
-    def match_prev_restructuring_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id: dict[tuple[str, str], str]):
+    def match_prev_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id: dict[tuple[str, str], str]):
         """
         Matches the original edges, along which a previous stage node has been created,
         and IDs of the previous and current stage nodes.
@@ -190,7 +211,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
                          for edge, is_edge_to_node in restructuring_edges]
     # sort the resulting proportions in ascending order so that they represent a list of accumulations
     proportions_accum.sort(key=itemgetter(0))
-    # initialize index of stages
+    # initialize index of stages for creating name and id of stage nodes
     stage_i = 0
 
     # Create first stage node
@@ -201,7 +222,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     reqs2amounts, reqs2amounts_accum = get_reqs_amounts(accum, reqs2amounts_accum)
     # make id for first stage node
     stage_node_id = make_new_node_id(wu.id, stage_i)
-    # make new stage node and add it to id2new_nodes
+    # make first stage node and add it to id2new_nodes
     id2new_nodes[stage_node_id] = make_new_stage_node(accum, [], wu_attrs, reqs2attrs)
 
     # initialize a list that stores the edges along which a stage node has already been created.
@@ -211,42 +232,69 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
 
     # Create intermediate stage nodes
 
+    # iterate over the accumulations following the first, checking the difference with the previous accumulation
     for value, prev_value in zip(proportions_accum[1:], proportions_accum):
         accum, edge, is_edge_to_node = value
         prev_accum, _, _ = prev_value
         if accum == prev_accum:
+            # the difference is zero, therefore the corresponding division into the stage has already been made
             if use_lag_edge_optimization:
+                # if the use_lag_edge_optimization is True,
+                # then add this edge for further matching with IDs of stage nodes
+                # when the next stage node will be created
                 edges_to_match_with_stage_nodes.append((edge, is_edge_to_node))
             continue
+        # increase the stage index for creating name and id of stage node
         stage_i += 1
+        # remember the ID of the previous stage node for matching with stored edges
         prev_stage_node_id = stage_node_id
+        # make id for new stage node
         stage_node_id = make_new_node_id(wu.id, stage_i)
+        # calculate difference between accumulations to obtain the proportion for splitting into the next stage
         proportion = accum - prev_accum
+        # get amounts of requirements for the new stage node
         reqs2amounts, reqs2amounts_accum = get_reqs_amounts(proportion, reqs2amounts_accum)
+        # make new stage node with InseparableFinishStart edge to previous stage node and add it to id2new_nodes
         id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[prev_stage_node_id], 0,
                                                                         EdgeType.InseparableFinishStart)],
                                                           wu_attrs, reqs2attrs
                                                           )
         if use_lag_edge_optimization:
-            match_prev_restructuring_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id)
+            # if the use_lag_edge_optimization is True,
+            # match stored edges with stage node IDs since a new stage node has been created
+            match_prev_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id)
+            # store this edge for further matching with IDs of stage nodes
+            # when the next stage node will be created
             edges_to_match_with_stage_nodes = [(edge, is_edge_to_node)]
 
     # Create last stage node
 
+    # increase the stage index for name of last stage node
     stage_i += 1
+    # remember the ID of the previous stage node for matching with stored edges
     prev_stage_node_id = stage_node_id
+    # ID of the last stage node is equal to the ID of the original node,
+    # so that it is more convenient to restore the parent edges
     stage_node_id = wu.id
+    # proportion for the last stage is calculated as one minus the last accumulation
     proportion = 1 - accum
+    # iterate over the requirements and calculate their amounts for the last stage
     for reqs in reqs2classes:
+        # define a name of the amount attribute of the requirement
         attr = 'volume' if reqs == 'worker_reqs' else 'count'
+        # amount of requirements for the last stage is calculated
+        # as the difference between the amounts of the original node and the accumulated requirement amounts
         reqs2amounts[reqs] = [getattr(req, attr) - req_accum
                               for req, req_accum in zip(getattr(wu, reqs), reqs2amounts_accum[reqs])]
+    # make last stage node with InseparableFinishStart edge to previous stage node and add it to id2new_nodes
     id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[prev_stage_node_id], 0,
                                                                     EdgeType.InseparableFinishStart)],
                                                       wu_attrs, reqs2attrs
                                                       )
     if use_lag_edge_optimization:
-        match_prev_restructuring_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id)
+        # if the use_lag_edge_optimization is True,
+        # match stored edges with stage node IDs since the last stage node has been created
+        match_prev_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id)
 
 
 def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool] = False) -> WorkGraph:
@@ -284,10 +332,13 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
     for node in wg.nodes:
         restructuring_edges = get_restructuring_edges(node.edges_from, EdgeType.StartStart, False) + \
                               get_restructuring_edges(node.edges_to, EdgeType.FinishFinish, True)
+
         if use_lag_edge_optimization:
             restructuring_edges += get_restructuring_edges(node.edges_to, EdgeType.LagFinishStart, True) + \
                                    get_restructuring_edges(node.edges_from, EdgeType.LagFinishStart, False)
+
         split_node_into_stages(node, restructuring_edges, id2new_nodes, restructuring_edges2new_nodes_id,
                                use_lag_edge_optimization)
         fill_parents_to_new_nodes(node, id2new_nodes, restructuring_edges2new_nodes_id, use_lag_edge_optimization)
+
     return WorkGraph(id2new_nodes[wg.start.id], id2new_nodes[wg.finish.id])

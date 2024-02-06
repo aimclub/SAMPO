@@ -109,11 +109,15 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         of work unit requirement names and amounts calculated based on volume_proportion.
         Updates the accumulated amounts in reqs2amounts_accum by adding calculated for the new stage node amounts
         """
+        # make a mapper of requirement names and amounts for the new stage node
         reqs2amounts = {}
         for reqs in reqs2classes:
+            # define a name of the amount attribute of the requirement
             attr = 'volume' if reqs == 'worker_reqs' else 'count'
+            # calculate requirement amounts for the new stage node based on volume_proportion
             new_amounts = [int(volume_proportion * getattr(req, attr)) for req in getattr(wu, reqs)]
             reqs2amounts[reqs] = new_amounts
+            # update the accumulated amounts of the requirement
             reqs2amounts_accum[reqs] = [accum_amount + amount
                                         for accum_amount, amount in zip(reqs2amounts_accum[reqs], new_amounts)]
         return reqs2amounts, reqs2amounts_accum
@@ -140,11 +144,11 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
 
     def match_prev_restructuring_edges_with_stage_nodes_id(restructuring_edges2new_nodes_id: dict[tuple[str, str], str]):
         """
-        Matches the original edges,along which a previous stage node has been created,
+        Matches the original edges, along which a previous stage node has been created,
         and IDs of the previous and current stage nodes.
-        It is needed because the edges leaving the node must refer to the next stage node
+        It is needed because the edges entering the node must refer to the next stage node
         for further filling of parent nodes, so matching can be done only after creating the next stage node.
-        Edges that enter the node matches to the previous stage node.
+        Edges that leave the node matches to the previous stage node.
         """
         for prev_edge, prev_is_edge_to_node in edges_to_match_with_stage_nodes:
             start, finish = prev_edge.start.id, prev_edge.finish.id

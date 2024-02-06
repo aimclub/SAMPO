@@ -1,4 +1,4 @@
-from sampo.scheduler.heft.time_computaion import work_priority, calculate_working_time_cascade
+from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.time_estimator import WorkTimeEstimator
 

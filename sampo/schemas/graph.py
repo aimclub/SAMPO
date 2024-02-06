@@ -2,11 +2,15 @@ from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import cached_property, cache
+from random import Random
 from typing import Optional
 
+import dill
 import numpy as np
+import pandas as pd
 from scipy.sparse import dok_matrix
 
+from sampo.schemas import uuid_str
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.serializable import JSONSerializable, T, JS
 from sampo.schemas.time import Time
@@ -55,28 +59,23 @@ class GraphNode(JSONSerializable['GraphNode']):
         self.add_parents(parent_works)
         self._children_edges = []
 
-    def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
-
     def __hash__(self) -> int:
         return hash(self.id)
 
     def __repr__(self) -> str:
         return self.id
 
-    def __getstate__(self):
-        # custom method to avoid calling __hash__() on GraphNode objects
-        return self._work_unit._serialize(), \
-            [(e.start.id, e.lag, e.type.value) for e in self._parent_edges]
-
-    def __setstate__(self, state):
-        # custom method to avoid calling __hash__() on GraphNode objects
-        s_work_unit, s_parent_edges = state
-        self.__init__(WorkUnit._deserialize(s_work_unit),
-                      s_parent_edges)
-        # self._work_unit = representation['work_unit']
-        # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
+    # def __getstate__(self):
+    #     # custom method to avoid calling __hash__() on GraphNode objects
+    #     return self._serialize()
+    #
+    # def __setstate__(self, state):
+    #     # custom method to avoid calling __hash__() on GraphNode objects
+    #     representation = self._deserialize(state)
+    #     self.__init__(representation['work_unit'],
+    #                   representation['parent_edges'])
+    #     # self._work_unit = representation['work_unit']
+    #     # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
 
     def _serialize(self) -> T:
         return {
@@ -104,11 +103,13 @@ class GraphNode(JSONSerializable['GraphNode']):
         edges: list[GraphEdge] = []
         if parent_works:
             if isinstance(parent_works[0], GraphNode):
-                edges = [GraphEdge(p, self, 1, EdgeType.FinishStart) for p in parent_works]
+                edges = [GraphEdge(p, self, 0, EdgeType.FinishStart) for p in parent_works]
             elif isinstance(parent_works[0], tuple):
                 edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
         for edge, parent in zip(edges, parent_works):
+            if isinstance(parent[0] if isinstance(parent, tuple) else parent, str):
+                print(f'{parent} {edge}')
             parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
             parent._add_child_edge(edge)
             parent.invalidate_children_cache()
@@ -154,7 +155,6 @@ class GraphNode(JSONSerializable['GraphNode']):
                 yield v
 
     @cached_property
-    # @property
     def inseparable_son(self) -> Optional['GraphNode']:
         """
         Return inseparable son (amount of inseparable sons at most 1)
@@ -165,7 +165,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return inseparable_children[0] if inseparable_children else None
 
     @cached_property
-    # @property
     def inseparable_parent(self) -> Optional['GraphNode']:
         """
         Return predecessor of current vertex in inseparable chain
@@ -175,7 +174,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return inseparable_parents[0] if inseparable_parents else None
 
     @cached_property
-    # @property
     def parents(self) -> list['GraphNode']:
         """
         Return list of predecessors of current vertex
@@ -184,7 +182,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
     @cached_property
-    # @property
     def parents_set(self) -> set['GraphNode']:
         """
         Return unique predecessors of current vertex
@@ -193,7 +190,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return set(self.parents)
 
     @cached_property
-    # @property
     def children(self) -> list['GraphNode']:
         """
         Return list of successors of current vertex
@@ -202,7 +198,6 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
     @cached_property
-    # @property
     def children_set(self) -> set['GraphNode']:
         """
         Return unique successors of current vertex
@@ -258,7 +253,8 @@ class GraphNode(JSONSerializable['GraphNode']):
 
         :return: list of `inseparable chain` with starting node
         """
-        return self.get_inseparable_chain() if self.get_inseparable_chain() else [self]
+        chain = self.get_inseparable_chain()
+        return chain if chain else [self]
 
     def _get_inseparable_children(self) -> list['GraphNode']:
         """
@@ -287,7 +283,32 @@ class GraphNode(JSONSerializable['GraphNode']):
                     for edge in self.edges_to if edge.start in node2swork), default=Time(0))
 
 
-GraphNodeDict = dict[str, GraphNode]
+def get_start_stage(work_id: str | None = None, rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without a parent in the graph
+    :param work_id: id for the start node
+    :param rand: number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(work_id, 'start of project', [], group='service_works', is_service_unit=True)
+    return GraphNode(work, [])
+
+
+def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = None,
+                     rand: Random | None = None) -> GraphNode:
+    """
+    Creates a service vertex necessary for constructing the graph of works,
+    which is the only vertex without children in the graph
+    :param parents: a list of all non-service nodes that do not have children
+    :param work_id: id for the start node
+    :param rand: number generator with a fixed seed, or None for no fixed seed
+    :return: desired node
+    """
+    work_id = work_id or uuid_str(rand)
+    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works', is_service_unit=True)
+    return GraphNode(work, parents)
 
 
 # TODO Make property for list of GraphEdges??
@@ -303,7 +324,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     # list of works (i.e. GraphNode)
     nodes: list[GraphNode] = field(init=False)
     adj_matrix: dok_matrix = field(init=False)
-    dict_nodes: GraphNodeDict = field(init=False)
+    dict_nodes: dict[str, GraphNode] = field(init=False)
     vertex_count: int = field(init=False)
 
     def __post_init__(self) -> None:
@@ -317,13 +338,83 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
 
-    def __hash__(self):
+    @classmethod
+    def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
+        start = get_start_stage(rand=rand)
+        for node in nodes:
+            if len(node.parents) == 0:
+                node.add_parents([(start, 0, EdgeType.FinishStart)])
+        without_successors = [node for node in nodes if len(node.children) == 0]
+        finish = get_finish_stage(parents=without_successors, rand=rand)
+        return WorkGraph(start, finish)
+
+    def to_frame(self, save_req=False) -> pd.DataFrame:
+        # Define the format of the output DataFrame
+        graph_df_structure = {'activity_id': [],
+                              'activity_name': [],
+                              'granular_name': [],
+                              'volume': [],
+                              'measurement': [],
+                              'predecessor_ids': [],
+                              'connection_types': [],
+                              'lags': []}
+
+        if save_req:
+            graph_df_structure['min_req'] = []
+            graph_df_structure['max_req'] = []
+            graph_df_structure['req_volume'] = []
+
+        # List of service 'start' and 'finish' nodes, which will not be included to the project's DataFrame
+        start_finish_service_nodes = [self.start.id, self.finish.id]
+
+        for node in self.nodes:
+            if node.id not in start_finish_service_nodes:
+                node_info_dict = node.dumpd()
+
+                # Get information about tasks from graph nodes (work units)
+                graph_df_structure['activity_id'].append(node_info_dict['work_unit']['id'])
+                graph_df_structure['activity_name'].append(node_info_dict['work_unit']['display_name'])
+                graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
+                graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
+                graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
+
+                if save_req:
+                    min_req_dict = dict()
+                    max_req_dict = dict()
+                    req_volume_dict = dict()
+
+                    for req in node_info_dict['work_unit']['worker_reqs']:
+                        min_req_dict[req['kind']] = req['min_count']
+                        max_req_dict[req['kind']] = req['max_count']
+                        req_volume_dict[req['kind']] = req['volume']['value']
+
+                    graph_df_structure['min_req'].append(min_req_dict)
+                    graph_df_structure['max_req'].append(max_req_dict)
+                    graph_df_structure['req_volume'].append(req_volume_dict)
+
+                # Get information about connections between tasks from parent edges
+                predecessors_lst = []
+                connection_types_lst = []
+                lags_lst = []
+                for predecessor_info in node_info_dict['parent_edges']:
+                    if predecessor_info[0] not in start_finish_service_nodes:
+                        predecessors_lst.append(str(predecessor_info[0]))
+                        lags_lst.append(str(predecessor_info[1]))
+                        connection_types_lst.append(str(predecessor_info[2]))
+
+                graph_df_structure['predecessor_ids'].append(','.join(predecessors_lst))
+                graph_df_structure['lags'].append(','.join(lags_lst))
+                graph_df_structure['connection_types'].append(','.join(connection_types_lst))
+
+        return pd.DataFrame.from_dict(graph_df_structure)
+
+    def __hash__(self) -> int:
         return hash(self.start) + 17 * hash(self.finish)
 
     def __getitem__(self, item: str) -> GraphNode:
         return self.dict_nodes[item]
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict:
         # custom method to avoid calling __hash__() on GraphNode objects
         representation = self._serialize()
         representation['start'] = self.start.id
@@ -338,8 +429,12 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.__post_init__()
 
     def __del__(self):
-        for attr in self.__dict__.values():
-            del attr
+        self.dict_nodes = None
+        self.start = None
+        self.finish = None
+        for node in self.nodes:
+            node._parent_edges = None
+            node._children_edges = None
 
     def _serialize(self) -> T:
         return {
@@ -379,3 +474,13 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 adj_mx[i, c_i] = weight
 
         return ordered_nodes, adj_mx, id2node
+
+
+def recreate(state):
+    # custom method to avoid calling __hash__() on GraphNode objects
+    return WorkGraph._deserialize(state)
+
+# TODO Check all types for dill-serializability and make dedicated file with serializers
+@dill.register(WorkGraph)
+def serialize_wg(pickler, obj):
+    pickler.save_reduce(recreate, (obj._serialize(),), obj=obj)

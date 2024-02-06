@@ -1,6 +1,28 @@
+from datetime import datetime
+from functools import partial
+
+import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 from sampo.structurator import STAGE_SEP
+from sampo.utilities.datetime_util import add_time_delta
+
+
+def offset_schedule(schedule: DataFrame, offset: datetime | str) -> DataFrame:
+    """
+    Returns full schedule object with `start` and `finish` columns pushed by date in `offset` argument.
+    :param schedule: the schedule itself
+    :param offset: Start of schedule, to add as an offset.
+    :return: Shifted schedule DataFrame.
+    """
+    r = schedule.loc[:, :]
+    r['start_offset'] = r['start'].apply(partial(add_time_delta, offset))
+    r['finish_offset'] = r['finish'].apply(partial(add_time_delta, offset))
+    r = r.rename({'start': 'start_', 'finish': 'finish_',
+                  'start_offset': 'start', 'finish_offset': 'finish'}, axis=1) \
+        .drop(['start_', 'finish_'], axis=1)
+    return r
 
 
 def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
@@ -20,7 +42,7 @@ def fix_split_tasks(baps_schedule_df: pd.DataFrame) -> pd.DataFrame:
         task_stages_df = baps_schedule_df.loc[
             baps_schedule_df.task_id.str.startswith(f'{task_id}{STAGE_SEP}')
             | (baps_schedule_df.task_id == task_id)
-        ]
+            ]
         task_series = merge_split_stages(task_stages_df.reset_index(drop=True))
         df.loc[df.shape[0]] = task_series  # append
 
@@ -37,62 +59,33 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     :param task_df: pd.DataFrame: one real task's stages dataframe, sorted by start time
     :return: pd.Series with the full information about the task
     """
-    if len(task_df) == 1:
+
+    def get_stage_num(name: str):
+        split_name = name.split(STAGE_SEP)
+        return int(split_name[-1]) if len(split_name) > 1 else -1
+
+    if len(task_df) > 1:
         df = task_df.copy()
-        df['successors'] = [[tuple([x[0].split(STAGE_SEP)[0], x[1]]) for x in df.loc[0, 'successors']]]
-        return df.loc[0, :]
-    else:
-        task_df = task_df.sort_values(by='task_name_mapped')
-        task_df = task_df.reset_index(drop=True)
-        df = task_df.copy()
+        df['stage_num'] = df['task_name_mapped'].apply(get_stage_num)
+        df = df.sort_values(by='stage_num')
+        df = df.reset_index(drop=True)
+
         df = df.iloc[-1:].reset_index(drop=True)
-        for column in ['task_id', 'task_name']:
+        for column in ['task_id', 'task_name', 'task_name_mapped']:
             df.loc[0, column] = df.loc[0, column].split(STAGE_SEP)[0]  # fix task id and name
 
         # sum up volumes through all stages
         df.loc[0, 'volume'] = sum(task_df.loc[:, 'volume'])
         df.loc[0, 'workers'] = task_df.loc[0, 'workers']
 
-        # fix connections through all stages
-        fixed_connections_lst = []
-        for connections_lst in task_df.loc[:, 'successors']:
-            for connection in connections_lst:
-                if connection[1] != 'IFS':
-                    fixed_connections_lst.append(tuple([connection[0].split('_')[0], connection[1]]))
-        fixed_connections_lst = list(set(fixed_connections_lst))
-        df.loc[:, 'successors'] = [fixed_connections_lst]
-
         # fix task's start time and duration
         df.loc[0, 'start'] = task_df.loc[0, 'start']
         df.loc[0, 'finish'] = task_df.loc[len(task_df) - 1, 'finish']
-        df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
+        if isinstance(df.loc[0, 'start'], np.int64) or isinstance(df.loc[0, 'start'], np.int32):
+            df.loc[0, 'duration'] = df.loc[0, 'finish'] - df.loc[0, 'start'] + 1
+        else:
+            df.loc[0, 'duration'] = (df.loc[0, 'finish'] - df.loc[0, 'start']).days + 1
+    else:
+        df = task_df.copy()
 
-        return df.loc[0, :]
-
-
-def remove_service_tasks(service_schedule_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Remove 'start', 'finish' and milestone tasks from the schedule
-
-    :param service_schedule_df: pd.DataFrame: schedule (with merges stages in the case of baps) with service tasks
-    :return: pd.DataFrame: schedule without information about service tasks
-    """
-    schedule_df = service_schedule_df.copy()
-
-    service_df = schedule_df.loc[:, 'task_name'].str.contains('start|finish')
-
-    # Prepare list with service tasks ids
-    service_tasks_ids = set(schedule_df.loc[service_df].loc[:, 'task_id'])
-
-    # Remove rows with service tasks from DataFrame
-    schedule_df = schedule_df.loc[~service_df]
-
-    # Fix connections linked to the service tasks
-    fixed_connections_lst = []
-    for connections_lst in schedule_df.loc[:, 'successors']:
-        fixed_connections_lst.append([])
-        for connection in connections_lst:
-            if connection[0] not in service_tasks_ids:
-                fixed_connections_lst[-1].append(connection)
-    schedule_df.loc[:, 'successors'] = pd.Series(fixed_connections_lst)
-    return schedule_df
+    return df.loc[0, :]

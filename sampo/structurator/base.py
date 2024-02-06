@@ -3,7 +3,7 @@ from typing import Optional
 from operator import itemgetter
 from math import ceil
 
-from sampo.schemas.graph import GraphNode, GraphNodeDict, GraphEdge, WorkGraph, EdgeType
+from sampo.schemas.graph import GraphNode, GraphEdge, WorkGraph, EdgeType
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.requirements import WorkerReq, MaterialReq, ConstructionObjectReq, EquipmentReq
 
@@ -22,7 +22,7 @@ def make_new_node_id(work_unit_id: str, ind: int) -> str:
     return f'{work_unit_id}{STAGE_SEP}{ind}'
 
 
-def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: GraphNodeDict,
+def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: dict[str, GraphNode],
                               restructuring_edges2new_nodes_id: dict[tuple[str, str], str],
                               use_lag_edge_optimization: bool):
     """
@@ -41,13 +41,18 @@ def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: GraphNodeDic
     zero_stage_id = make_new_node_id(origin_node.id, 0)
     zero_stage_id = zero_stage_id if zero_stage_id in id2new_nodes else last_stage_id
 
+    indent = 0
+
     parents_zero_stage: list[tuple[GraphNode, float, EdgeType]] = []
     parents_last_stage: list[tuple[GraphNode, float, EdgeType]] = []
     for edge in origin_node.edges_to:
-        indent = 1 if not (edge.start.work_unit.is_service_unit or edge.finish.work_unit.is_service_unit) else 0
+        # TODO Check indent application
         if edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]:
-            lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
-            lag = lag if lag > 0 else indent
+            if edge.type is EdgeType.InseparableFinishStart:
+                lag = indent
+            else:
+                lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
+                # lag = lag if lag > 0 else indent
             parents_zero_stage.append((id2new_nodes[edge.start.id], lag, edge.type))
         elif not use_lag_edge_optimization:
             match edge.type:
@@ -76,7 +81,7 @@ def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: GraphNodeDic
 
 
 def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tuple[GraphEdge, bool]],
-                           id2new_nodes: GraphNodeDict,
+                           id2new_nodes: dict[str, GraphNode],
                            restructuring_edges2new_nodes_id: dict[tuple[str, str], str],
                            use_lag_edge_optimization: bool):
     """
@@ -167,7 +172,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         stage_node_id = make_new_node_id(wu.id, stage_i)
         proportion = accum - accum_pred
         reqs_amounts, reqs_amounts_accum = get_reqs_amounts(proportion, reqs_amounts_accum)
-        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
+        id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
                                                                         EdgeType.InseparableFinishStart)],
                                                           wu_attrs, reqs2attrs
                                                           )
@@ -182,7 +187,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         attr = 'volume' if reqs == 'worker_reqs' else 'count'
         reqs_amounts[reqs] = [getattr(req, attr) - req_accum
                               for req, req_accum in zip(getattr(wu, reqs), reqs_amounts_accum[reqs])]
-    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 1,
+    id2new_nodes[stage_node_id] = make_new_stage_node(proportion, [(id2new_nodes[pred_stage_node_id], 0,
                                                                     EdgeType.InseparableFinishStart)],
                                                       wu_attrs, reqs2attrs
                                                       )
@@ -202,10 +207,11 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
         new_work_graph: WorkGraph - restructured graph
     """
 
-    def get_restructuring_edges(edges: list[GraphEdge], edge_type: EdgeType, is_edge_to_node: bool):
+    def get_restructuring_edges(edges: list[GraphEdge], edge_type: EdgeType, is_edge_to_node: bool) \
+            -> list[tuple[GraphEdge, bool]]:
         return [(edge, is_edge_to_node) for edge in edges if edge.type is edge_type]
 
-    id2new_nodes: GraphNodeDict = dict()
+    id2new_nodes: dict[str, GraphNode] = dict()
     restructuring_edges2new_nodes_id: dict[tuple[str, str], str] = dict()
     for node in wg.nodes:
         restructuring_edges = get_restructuring_edges(node.edges_from, EdgeType.StartStart, False) + \

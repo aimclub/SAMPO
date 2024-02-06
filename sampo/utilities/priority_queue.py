@@ -7,16 +7,13 @@ T = TypeVar('T')
 
 class PriorityQueue(Generic[T]):
 
-    _h: SortedKeyList
-    _key_getter: Callable[[T], float]
-
     def __init__(self, lst: list[T], descending: bool = False, key_getter: Callable[[T], float] = lambda x: x):
         comparator = (lambda x: -key_getter(x[1])) if descending else (lambda x: key_getter(x[1]))
         self._h = SortedKeyList([(key_getter(v), v) for v in lst], comparator)
         self._key_getter = key_getter
 
     @staticmethod
-    def empty(descending: bool = False, key_getter: Callable[[T], float] = lambda x: x):
+    def empty(descending: bool = False, key_getter: Callable[[T], float] = lambda x: x) -> 'PriorityQueue':
         return PriorityQueue([], descending, key_getter)
 
     def add(self, value: T):
@@ -32,5 +29,5 @@ class PriorityQueue(Generic[T]):
     def decrease_key(self, value: T):
         self.replace(value, value)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._h)

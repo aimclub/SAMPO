@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from sampo.schemas.contractor import WorkerContractorPool
+from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 

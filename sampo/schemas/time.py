@@ -20,7 +20,7 @@ class Time(AutoJSONSerializable['Time']):
         self.set_time(value)
 
     @staticmethod
-    def inf():
+    def inf() -> 'Time':
         """
         Return time, that is obviously longer
         """
@@ -52,22 +52,22 @@ class Time(AutoJSONSerializable['Time']):
     def __truediv__(self, other: 'Time' or int) -> float:
         return self.value / (other.value if isinstance(other, Time) else other)
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.value < other
 
-    def __le__(self, other):
+    def __le__(self, other) -> bool:
         return self.value <= other
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         return self.value > other
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool:
         return self.value >= other
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.value == other
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.value != 0
 
     def __int__(self) -> int:

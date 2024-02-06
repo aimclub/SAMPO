@@ -4,10 +4,6 @@ from typing import Union, Optional
 from sampo.schemas.time import Time
 
 
-def ftime(dt: datetime, date_format: str = '%y-%m-%d %H:%M:%S') -> str:
-    return dt.strftime(date_format)
-
-
 def parse_datetime(dts: str, date_format: Optional[str] = None) -> datetime:
     """
     Parses datetime from string

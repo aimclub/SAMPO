@@ -2,11 +2,12 @@ from functools import partial
 from random import Random
 from typing import IO
 
-from sampo.generator import SimpleSynthetic
+from sampo.generator.base import SimpleSynthetic
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.multi_agency.block_generator import SyntheticBlockGraphType, generate_block_graph
 from sampo.scheduler.multi_agency.multi_agency import Agent, Manager
 from sampo.scheduler.topological.base import TopologicalScheduler
+from sampo.scheduler.utils.obstruction import Obstruction
 from sampo.schemas.time import Time
 
 r_seed = 231
@@ -14,7 +15,7 @@ p_rand = SimpleSynthetic(rand=r_seed)
 rand = Random(r_seed)
 
 
-def obstruction_getter(i: int):
+def obstruction_getter(i: int) -> Obstruction | None:
     return None
 
 

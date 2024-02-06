@@ -59,7 +59,7 @@ class PlatformTimeline:
         platform_state = self._timeline[platform.id]
 
         for mat in materials:
-            start = platform_state[mat.name].bisect_right(start_time) - 1
+            start = platform_state[mat.name].bisect_right(start_time)
             finish = len(platform_state[mat.name])
 
             if finish - start > 1:

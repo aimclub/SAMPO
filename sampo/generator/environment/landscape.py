@@ -107,7 +107,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(30, 50))
+        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
                            for neighbour in neighbour_platforms]
         platform.add_neighbours(neighbour_edges)
 
@@ -150,7 +150,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1000, 10000))
+        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
                            for neighbour in neighbour_platforms]
         holders_node[-1].add_neighbours(neighbour_edges)
 
@@ -158,7 +158,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
         holders.append(ResourceHolder(str(uuid.uuid4()), holders_node[-1].name,
                                       vehicles=[
                                           Vehicle(str(uuid.uuid4()), f'vehicle{j}',
-                                                  [Material(name, name, math.ceil(math.sqrt(count)))
+                                                  [Material(name, name, count)
                                                    for name, count in max_materials.items()])
                                           for j in range(vehicles_number)
                                       ], node=holders_node[-1]))

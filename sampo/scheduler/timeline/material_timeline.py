@@ -165,6 +165,8 @@ class SupplyTimeline:
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
         delivery, time = self._supply_resources(node, start_time, materials_for_delivery, update)
 
+        print(node.id)
+
         return delivery, time
 
     def _supply_resources(self, node: GraphNode,

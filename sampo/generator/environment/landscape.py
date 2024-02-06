@@ -84,13 +84,14 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
     platforms_number = math.ceil(math.log(wg.vertex_count))
     platforms = []
+    materials_name = list(max_materials.keys())
+
     for i in range(platforms_number):
-        materials_name = list(max_materials.keys())
         platforms.append(LandGraphNode(str(uuid.uuid4()), f'platform{i}',
                                        ResourceStorageUnit(
                                            {
                                                name: rnd.randint(max(max_materials[name], 1),
-                                                                 3 * max(max_materials[name], 1))
+                                                                 2 * max(max_materials[name], 1))
                                                for name in materials_name
                                            }
                                        )))
@@ -125,16 +126,20 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
     holders_node = []
     holders = []
 
+    sample_materials_for_holders = materials_name * holders_number
+    # random.shuffle(sample_materials_for_holders)
+    materials_number = len(materials_name)
+
     for i in range(holders_number):
         if not max_materials:
-            materials_name = []
+            materials_name_for_holder = []
         else:
-            materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(min(len(max_materials), 1), max(len(max_materials), 1)))
+            materials_name_for_holder = sample_materials_for_holders[i * materials_number: (i + 1) * materials_number]
         holders_node.append(LandGraphNode(str(uuid.uuid4()), f'holder{i}',
                                           ResourceStorageUnit(
                                               {
-                                                  name: max(max_materials[name], 1) * wg.vertex_count * wg.vertex_count
-                                                  for name in materials_name
+                                                  name: max(max_materials[name], 1) * wg.vertex_count
+                                                  for name in materials_name_for_holder
                                               }
                                           )))
         neighbour_platforms = rnd.choices(holders_node[:-1] + platforms, k=rnd.randint(1, len(holders_node[:-1] + platforms)))

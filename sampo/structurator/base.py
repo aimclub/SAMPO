@@ -3,9 +3,9 @@ from typing import Optional
 from operator import itemgetter
 from math import ceil
 
-from sampo.schemas.graph import GraphEdge
-from sampo.schemas import (GraphNode, WorkGraph, EdgeType, WorkUnit, WorkerReq, MaterialReq, ConstructionObjectReq,
-                           EquipmentReq)
+from sampo.schemas.graph import GraphNode, GraphEdge, WorkGraph, EdgeType
+from sampo.schemas.works import WorkUnit
+from sampo.schemas.requirements import WorkerReq, MaterialReq, ConstructionObjectReq, EquipmentReq
 
 STAGE_SEP = '_stage_'
 

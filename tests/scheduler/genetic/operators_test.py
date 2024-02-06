@@ -10,7 +10,7 @@ def test_generate_individual(setup_toolbox):
     tb, _, _, _, _, _ = setup_toolbox
 
     for i in range(TEST_ITERATIONS):
-        chromosome: ChromosomeType = tb.generate_chromosome()
+        chromosome = tb.generate_chromosome()
         assert tb.validate(chromosome)
 
 

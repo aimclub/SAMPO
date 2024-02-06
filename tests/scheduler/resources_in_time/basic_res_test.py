@@ -37,9 +37,8 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=50,
-                                 fitness_constructor=DeadlineResourcesFitness.prepare(deadline),
-                                 optimize_resources=True,
-                                 verbose=False)
+                                 fitness_constructor=DeadlineResourcesFitness(deadline),
+                                 optimize_resources=True)
 
     scheduler.set_deadline(deadline)
 
@@ -90,9 +89,8 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
                                           mutate_order=0.05,
                                           mutate_resources=0.05,
                                           size_of_population=50,
-                                          fitness_constructor=DeadlineResourcesFitness.prepare(deadline),
-                                          optimize_resources=True,
-                                          verbose=False)
+                                          fitness_constructor=DeadlineResourcesFitness(deadline),
+                                          optimize_resources=True)
 
     scheduler_combined.set_deadline(deadline)
 
@@ -100,8 +98,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
                                                mutate_order=0.05,
                                                mutate_resources=0.05,
                                                size_of_population=50,
-                                               fitness_constructor=SumOfResourcesPeaksFitness,
-                                               verbose=False)
+                                               fitness_constructor=SumOfResourcesPeaksFitness())
 
     scheduler_lexicographic.set_deadline(deadline)
 

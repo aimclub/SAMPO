@@ -37,47 +37,76 @@ def fill_parents_to_new_nodes(origin_node: GraphNode, id2new_nodes: dict[str, Gr
         otherwise considers lags equal to zero and LagFinishStart edges as FinishStart edges
     :return: Nothing
     """
+    # last stage id is equal to original node id
     last_stage_id = origin_node.id
-    zero_stage_id = make_new_node_id(origin_node.id, 0)
-    zero_stage_id = zero_stage_id if zero_stage_id in id2new_nodes else last_stage_id
+    # make first stage id
+    first_stage_id = make_new_node_id(origin_node.id, 0)
+    # if first stage id not in id2new_nodes then there are no stages, so then first stage id is equal to last stage id
+    first_stage_id = first_stage_id if first_stage_id in id2new_nodes else last_stage_id
 
+    # basic time lag of FinishStart or InseparableFinishStart edges
     indent = 0
 
-    parents_zero_stage: list[tuple[GraphNode, float, EdgeType]] = []
+    # list of edges to parent nodes of first stage
+    parents_first_stage: list[tuple[GraphNode, float, EdgeType]] = []
+    # list of edges to parent nodes of last stage
     parents_last_stage: list[tuple[GraphNode, float, EdgeType]] = []
+    # iterate over edges to parent nodes of original node
     for edge in origin_node.edges_to:
         # TODO Check indent application
         if edge.type in [EdgeType.FinishStart, EdgeType.InseparableFinishStart]:
             if edge.type is EdgeType.InseparableFinishStart:
+                # if edge type is InseparableFinishStart then lag is equal to basic time lag
                 lag = indent
             else:
+                # if edge type is FinishStart then use time lag of original edge
                 lag = edge.lag if not edge.lag % 1 else ceil(edge.lag)
                 # lag = lag if lag > 0 else indent
-            parents_zero_stage.append((id2new_nodes[edge.start.id], lag, edge.type))
+            # edges of types FinishStart or InseparableFinishStart must enter the first stage node
+            parents_first_stage.append((id2new_nodes[edge.start.id], lag, edge.type))
         elif not use_lag_edge_optimization:
+            # if the use_lag_edge_optimization is False, then adding edges is trivial,
+            # since a node can be divided into a maximum of three stages,
+            # with the intermediate one not being used in creating edges
             match edge.type:
                 case EdgeType.StartStart:
+                    # make id of created first stage node of original parent node
                     new_parent_node_id = make_new_node_id(edge.start.id, 0)
-                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
+                    # add edge between parent's first stage node and first stage of current node
+                    parents_first_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
                 case EdgeType.FinishFinish:
+                    # add edge between parent's created last stage node and last stage of current node
                     parents_last_stage.append((id2new_nodes[edge.start.id], indent, EdgeType.FinishStart))
                 case EdgeType.LagFinishStart:
-                    parents_zero_stage.append((id2new_nodes[edge.start.id], indent, EdgeType.FinishStart))
+                    # if the use_lag_edge_optimization is False,
+                    # then edge of type LagFinishStart is just replaced by an edge of type FinishStart
+                    # so, add edge between parent's created last stage node and first stage of current node
+                    parents_first_stage.append((id2new_nodes[edge.start.id], indent, EdgeType.FinishStart))
         else:
             match edge.type:
                 case EdgeType.StartStart:
+                    # get id of corresponding created stage node of original parent node
                     new_parent_node_id = restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))
-                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
+                    # get parent's stage node by received id and add edge between it and first stage of current node
+                    parents_first_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
                 case EdgeType.FinishFinish:
+                    # get id of corresponding stage of current node and get the stage node itself
                     stage_node = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
+                    # add edge between parent's created last stage node and received stage node
                     stage_node.add_parents([(id2new_nodes[edge.start.id], indent, EdgeType.FinishStart)])
                 case EdgeType.LagFinishStart:
+                    # get id of corresponding created stage node of original parent node
                     new_parent_node_id = restructuring_edges2new_nodes_id.pop((edge.start.id, edge.finish.id))
-                    parents_zero_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
+                    # get parent's stage node by received id and add edge between it and first stage of current node
+                    parents_first_stage.append((id2new_nodes[new_parent_node_id], indent, EdgeType.FinishStart))
+                    # get id of corresponding stage of current node and get the stage node itself
                     stage_node = id2new_nodes[restructuring_edges2new_nodes_id.pop((edge.finish.id, edge.start.id))]
+                    # add edge between parent's created last stage node and received stage node
                     stage_node.add_parents([(id2new_nodes[edge.start.id], indent, EdgeType.FinishStart)])
 
-    id2new_nodes[zero_stage_id].add_parents(parents_zero_stage)
+    # add parents to first stage of current node
+    id2new_nodes[first_stage_id].add_parents(parents_first_stage)
+    # add parents to last stage of current node
     id2new_nodes[last_stage_id].add_parents(parents_last_stage)
 
 

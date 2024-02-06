@@ -1,5 +1,6 @@
 from deap.base import Toolbox
 
+from sampo.api.genetic_api import ChromosomeType
 from sampo.schemas.schedule import Schedule
 
 native = True
@@ -17,7 +18,6 @@ except ImportError:
     native = False
 
 
-from sampo.scheduler.genetic.converter import ChromosomeType
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.resources import Worker

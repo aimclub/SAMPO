@@ -1,20 +1,18 @@
 import random
-from typing import Optional, Callable
+from typing import Optional
 
-from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedules
-from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
-from sampo.scheduler.lft.base import LFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.lft.base import LFTScheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -155,8 +153,8 @@ class GeneticScheduler(Scheduler):
         if weights is None:
             weights = [2, 2, 2, 1, 1, 1, 1]
 
-        # init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
-        #                                                                           landscape=landscape), None, spec)
+        init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
+                                                                                  landscape=landscape), None, spec)
 
         def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
             try:
@@ -188,7 +186,7 @@ class GeneticScheduler(Scheduler):
                     return None, None, None
 
         return {
-            # "lft": (*init_lft_schedule, weights[0]),
+            "lft": (*init_lft_schedule, weights[0]),
             "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
             "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
             "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),

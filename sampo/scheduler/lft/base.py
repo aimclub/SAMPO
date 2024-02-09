@@ -122,7 +122,7 @@ class LFTScheduler(GenericScheduler):
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+                            timeline: Timeline | None = None) -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         # get contractors borders
         worker_pool = get_worker_contractor_pool(contractors)
 
@@ -149,7 +149,7 @@ class LFTScheduler(GenericScheduler):
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline, ordered_nodes
+        return [(schedule, schedule_start_time, timeline, ordered_nodes)]
 
     def _contractor_workers_assignment(self, wg: WorkGraph, contractors: list[Contractor],
                                        worker_pool: WorkerContractorPool, spec: ScheduleSpec = ScheduleSpec()

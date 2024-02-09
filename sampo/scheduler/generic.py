@@ -106,7 +106,7 @@ class GenericScheduler(Scheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
         schedule, schedule_start_time, timeline = \
@@ -120,7 +120,7 @@ class GenericScheduler(Scheduler):
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return schedule, schedule_start_time, timeline, ordered_nodes
+        return [(schedule, schedule_start_time, timeline, ordered_nodes)]
 
     def build_scheduler(self,
                         ordered_nodes: list[GraphNode],

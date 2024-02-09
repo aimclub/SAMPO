@@ -53,7 +53,7 @@ class Scheduler(ABC):
                  start_time: Time = Time(0),
                  timeline: Timeline | None = None,
                  landscape: LandscapeConfiguration = LandscapeConfiguration()) \
-            -> Schedule:
+            -> list[Schedule]:
         """
         Implementation of a scheduling process. 'schedule' version returns only Schedule.
 
@@ -63,9 +63,10 @@ class Scheduler(ABC):
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedule = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)[0]
+        schedules = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)
+        schedules = [schedule[0] for schedule in schedules]
         # print(f'Schedule exec time: {schedule.execution_time} days')
-        return schedule
+        return schedules
 
     @abstractmethod
     def schedule_with_cache(self,
@@ -76,7 +77,7 @@ class Scheduler(ABC):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         """
         Extended version of 'schedule' method. Returns much inner info
         about a scheduling process, not only Schedule.

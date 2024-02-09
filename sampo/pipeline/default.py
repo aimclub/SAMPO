@@ -57,7 +57,7 @@ class DefaultInputPipeline(InputPipeline):
         self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int] | None \
             = ContractorGenerationMethod.AVG, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
-        self._node_order: list[GraphNode] | None = None
+        self._node_orders: list[list[GraphNode]] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
@@ -180,8 +180,8 @@ class DefaultInputPipeline(InputPipeline):
         self._work_estimator = work_estimator
         return self
 
-    def node_order(self, node_order: list[GraphNode]) -> 'InputPipeline':
-        self._node_order = node_order
+    def node_order(self, node_orders: list[list[GraphNode]]) -> 'InputPipeline':
+        self._node_orders = node_orders
         return self
 
     def optimize_local(self, optimizer: OrderLocalOptimizer, area: range) -> 'InputPipeline':
@@ -230,72 +230,84 @@ class DefaultInputPipeline(InputPipeline):
         match self._lag_optimize:
             case LagOptimizationStrategy.NONE:
                 wg = self._wg
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
-                                                                           self._landscape_config,
-                                                                           self._spec,
-                                                                           assigned_parent_time=self._assigned_parent_time)
-                self._node_order = node_order
+                schedules = scheduler.schedule_with_cache(wg, self._contractors,
+                                                          self._landscape_config,
+                                                          self._spec,
+                                                          assigned_parent_time=self._assigned_parent_time)
+                node_orders = [node_order for _, _, _, node_order in schedules]
+                schedules = [schedule for schedule, _, _, _ in schedules]
+                self._node_orders = node_orders
 
             case LagOptimizationStrategy.AUTO:
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
-                schedule1, _, _, node_order1 = scheduler.schedule_with_cache(wg1, self._contractors,
-                                                                             self._landscape_config,
-                                                                             self._spec,
-                                                                             assigned_parent_time=self._assigned_parent_time)
-                wg2 = graph_restructuring(self._wg, True)
-                schedule2, _, _, node_order2 = scheduler.schedule_with_cache(wg2, self._contractors,
-                                                                             self._landscape_config,
-                                                                             self._spec,
-                                                                             assigned_parent_time=self._assigned_parent_time)
+                schedules = scheduler.schedule_with_cache(wg1, self._contractors,
+                                                          self._landscape_config,
+                                                          self._spec,
+                                                          assigned_parent_time=self._assigned_parent_time)
+                node_orders1 = [node_order for _, _, _, node_order in schedules]
+                schedules1 = [schedule for schedule, _, _, _ in schedules]
+                min_time1 = min([schedule.execution_time for schedule in schedules1])
 
-                if schedule1.execution_time < schedule2.execution_time:
-                    self._node_order = node_order1
+                wg2 = graph_restructuring(self._wg, True)
+                schedules = scheduler.schedule_with_cache(wg2, self._contractors,
+                                                          self._landscape_config,
+                                                          self._spec,
+                                                          assigned_parent_time=self._assigned_parent_time)
+                node_orders2 = [node_order for _, _, _, node_order in schedules]
+                schedules2 = [schedule for schedule, _, _, _ in schedules]
+                min_time2 = min([schedule.execution_time for schedule in schedules2])
+
+                if min_time1 < min_time2:
+                    self._node_orders = node_orders1
                     wg = wg1
-                    schedule = schedule1
+                    schedules = schedules1
                 else:
-                    self._node_order = node_order2
+                    self._node_orders = node_orders2
                     wg = wg2
-                    schedule = schedule2
+                    schedules = schedules2
 
             case _:
                 wg = graph_restructuring(self._wg, self._lag_optimize.value)
-                schedule, _, _, node_order = scheduler.schedule_with_cache(wg, self._contractors,
-                                                                           self._landscape_config,
-                                                                           self._spec,
-                                                                           assigned_parent_time=self._assigned_parent_time)
-                self._node_order = node_order
+                schedules = scheduler.schedule_with_cache(wg, self._contractors,
+                                                          self._landscape_config,
+                                                          self._spec,
+                                                          assigned_parent_time=self._assigned_parent_time)
+                node_orders = [node_order for _, _, _, node_order in schedules]
+                schedules = [schedule for schedule, _, _, _ in schedules]
+                self._node_orders = node_orders
 
-        return DefaultSchedulePipeline(self, wg, schedule)
+        return DefaultSchedulePipeline(self, wg, schedules)
 
 
 # noinspection PyProtectedMember
 class DefaultSchedulePipeline(SchedulePipeline):
 
-    def __init__(self, s_input: DefaultInputPipeline, wg: WorkGraph, schedule: Schedule):
+    def __init__(self, s_input: DefaultInputPipeline, wg: WorkGraph, schedules: list[Schedule]):
         self._input = s_input
         self._wg = wg
         self._worker_pool = get_worker_contractor_pool(s_input._contractors)
-        self._schedule = schedule
-        self._scheduled_works = {wg[swork.id]:
-                                     swork for swork in schedule.to_schedule_work_dict.values()}
+        self._schedules = schedules
+        self._scheduled_works = [{wg[swork.id]: swork for swork in schedule.to_schedule_work_dict.values()}
+                                 for schedule in schedules]
         self._local_optimize_stack = ApplyQueue()
         self._start_date = None
 
     def optimize_local(self, optimizer: ScheduleLocalOptimizer, area: range) -> 'SchedulePipeline':
         self._local_optimize_stack.add(optimizer.optimize,
-                                       (
-                                           self._input._node_order, self._input._contractors,
-                                           self._input._landscape_config,
-                                           self._input._spec, self._worker_pool, self._input._work_estimator,
-                                           self._input._assigned_parent_time, area))
+                                       self._input._contractors, self._input._landscape_config,
+                                       self._input._spec, self._worker_pool, self._input._work_estimator,
+                                       self._input._assigned_parent_time, area)
         return self
 
-    def finish(self) -> ScheduledProject:
-        processed_sworks = self._local_optimize_stack.apply(self._scheduled_works)
-        schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
-        return ScheduledProject(self._input._wg, self._wg, self._input._contractors, schedule)
+    def finish(self) -> list[ScheduledProject]:
+        scheduled_projects = []
+        for scheduled_works, node_order in zip(self._scheduled_works, self._input._node_orders):
+            processed_sworks = self._local_optimize_stack.apply(scheduled_works, node_order)
+            schedule = Schedule.from_scheduled_works(processed_sworks.values(), self._wg)
+            scheduled_projects.append(ScheduledProject(self._input._wg, self._wg, self._input._contractors, schedule))
+        return scheduled_projects
 
-    def visualization(self, start_date: str) -> 'Visualization':
+    def visualization(self, start_date: str) -> list['Visualization']:
         from sampo.utilities.visualization import Visualization
-        return Visualization.from_project(self.finish(), start_date)
+        return [Visualization.from_project(project, start_date) for project in self.finish()]

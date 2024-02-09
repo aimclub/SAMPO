@@ -101,11 +101,11 @@ class GenericScheduler(Scheduler):
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration() = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) \
+                            timeline: Timeline | None = None,
+                            landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 

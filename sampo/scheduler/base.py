@@ -63,7 +63,7 @@ class Scheduler(ABC):
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedules = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)
+        schedules = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline, landscape)
         schedules = [schedule[0] for schedule in schedules]
         # print(f'Schedule exec time: {schedule.execution_time} days')
         return schedules
@@ -72,11 +72,11 @@ class Scheduler(ABC):
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) \
+                            timeline: Timeline | None = None,
+                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         """
         Extended version of 'schedule' method. Returns much inner info

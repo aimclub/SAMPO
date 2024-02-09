@@ -1,6 +1,5 @@
 import random
 import time
-from typing import Callable
 
 from deap import tools
 from deap.base import Toolbox
@@ -11,7 +10,6 @@ from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, Sc
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -50,7 +48,7 @@ def create_toolbox(wg: WorkGraph,
                                                contractor2index, contractor_borders, schedule, chromosome_spec,
                                                landscape, order),
                 importance, chromosome_spec)
-        if schedule is not None else None
+         if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
     if verbose:

@@ -21,7 +21,7 @@ class ApplyQueue:
         res = first_args
         for f, args in self.stack:
             res = (f(*res, *args),)
-        return res
+        return res[0]
 
     def empty(self) -> bool:
         return len(self.stack) == 0

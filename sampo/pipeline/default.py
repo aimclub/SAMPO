@@ -231,8 +231,8 @@ class DefaultInputPipeline(InputPipeline):
             case LagOptimizationStrategy.NONE:
                 wg = self._wg
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
-                                                          self._landscape_config,
                                                           self._spec,
+                                                          landscape=self._landscape_config,
                                                           assigned_parent_time=self._assigned_parent_time)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]
@@ -242,8 +242,8 @@ class DefaultInputPipeline(InputPipeline):
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
                 schedules = scheduler.schedule_with_cache(wg1, self._contractors,
-                                                          self._landscape_config,
                                                           self._spec,
+                                                          landscape=self._landscape_config,
                                                           assigned_parent_time=self._assigned_parent_time)
                 node_orders1 = [node_order for _, _, _, node_order in schedules]
                 schedules1 = [schedule for schedule, _, _, _ in schedules]
@@ -251,8 +251,8 @@ class DefaultInputPipeline(InputPipeline):
 
                 wg2 = graph_restructuring(self._wg, True)
                 schedules = scheduler.schedule_with_cache(wg2, self._contractors,
-                                                          self._landscape_config,
                                                           self._spec,
+                                                          landscape=self._landscape_config,
                                                           assigned_parent_time=self._assigned_parent_time)
                 node_orders2 = [node_order for _, _, _, node_order in schedules]
                 schedules2 = [schedule for schedule, _, _, _ in schedules]
@@ -270,8 +270,8 @@ class DefaultInputPipeline(InputPipeline):
             case _:
                 wg = graph_restructuring(self._wg, self._lag_optimize.value)
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
-                                                          self._landscape_config,
                                                           self._spec,
+                                                          landscape=self._landscape_config,
                                                           assigned_parent_time=self._assigned_parent_time)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]

@@ -211,6 +211,6 @@ def setup_schedule(setup_scheduler, setup_scheduler_parameters, setup_landscape_
         return setup_scheduler.schedule(setup_wg,
                                         setup_contractors,
                                         validate=False,
-                                        landscape=landscape), setup_scheduler_type, setup_scheduler_parameters
+                                        landscape=landscape)[0], setup_scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

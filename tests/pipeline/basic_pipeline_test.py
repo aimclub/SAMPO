@@ -19,7 +19,7 @@ def test_plain_scheduling(setup_scheduler_parameters):
         .contractors(setup_contractors) \
         .landscape(setup_landscape) \
         .schedule(HEFTScheduler()) \
-        .finish()
+        .finish()[0]
 
     print(f'Scheduled {len(project.schedule.to_schedule_work_dict)} works')
 
@@ -34,7 +34,7 @@ def test_local_optimize_scheduling(setup_scheduler_parameters):
         .optimize_local(SwapOrderLocalOptimizer(), range(0, setup_wg.vertex_count // 2)) \
         .schedule(HEFTScheduler()) \
         .optimize_local(ParallelizeScheduleLocalOptimizer(JustInTimeTimeline), range(0, setup_wg.vertex_count // 2)) \
-        .finish()
+        .finish()[0]
 
     print(f'Scheduled {len(project.schedule.to_schedule_work_dict)} works')
 
@@ -63,7 +63,7 @@ def test_plain_scheduling_with_parse_data():
         .wg(wg=wg, sep=';', all_connections=True) \
         .lag_optimize(LagOptimizationStrategy.TRUE) \
         .schedule(HEFTScheduler()) \
-        .finish()
+        .finish()[0]
 
     schedule = project.schedule
     schedule = schedule.merged_stages_datetime_df('2022-01-01')

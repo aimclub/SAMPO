@@ -185,7 +185,7 @@ class DefaultInputPipeline(InputPipeline):
         return self
 
     def optimize_local(self, optimizer: OrderLocalOptimizer, area: range) -> 'InputPipeline':
-        self._local_optimize_stack.add(optimizer.optimize, (area,))
+        self._local_optimize_stack.add(optimizer.optimize, area)
         return self
 
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':

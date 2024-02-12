@@ -1,7 +1,6 @@
 import math
 import random
 from copy import deepcopy
-from functools import partial
 from operator import attrgetter
 from typing import Callable, Iterable
 

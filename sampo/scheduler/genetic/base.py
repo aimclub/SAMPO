@@ -1,5 +1,5 @@
 import random
-from typing import Optional, Callable
+from typing import Optional
 
 from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler, SchedulerType
@@ -8,13 +8,11 @@ from sampo.scheduler.genetic.schedule_builder import build_schedules
 from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.lft.base import LFTScheduler
-from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode

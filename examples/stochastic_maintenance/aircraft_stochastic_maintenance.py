@@ -67,7 +67,7 @@ aircraft_project = SchedulingPipeline.create() \
     .work_estimator(work_estimator) \
     .landscape(landscape_config) \
     .schedule(genetic_scheduler) \
-    .finish()
+    .finish()[0]
 
 
 merged_schedule = aircraft_project.schedule.merged_stages_datetime_df('2022-01-01')

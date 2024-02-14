@@ -1,9 +1,6 @@
 import math
-from typing import Callable
-
-import sampo.scheduler
-
 from random import Random
+from typing import Callable
 
 import pathos.multiprocessing
 
@@ -87,6 +84,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         super().__init__()
 
     def map(self, action: Callable[[T], R], values: list[T]) -> list[R]:
+        self._ensure_pool_created()
         return self._pool.map(action, values)
 
     def _ensure_pool_created(self):
@@ -165,7 +163,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                     return scheduler_class(work_estimator=g_work_estimator,
                                            resource_optimizer=AverageReqResourceOptimizer(k)) \
                         .schedule(g_wg, g_contractors,
-                                  g_spec,
+                                  spec=g_spec,
                                   landscape=g_landscape), list(reversed(prioritization(g_wg, g_work_estimator))), g_spec
                 except NoSufficientContractorError:
                     return None, None, None
@@ -184,7 +182,7 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                     try:
                         (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                             scheduler_class(work_estimator=g_work_estimator)
-                        ).schedule_with_cache(g_wg, g_contractors, g_deadline, g_spec, landscape=g_landscape)
+                        ).schedule_with_cache(g_wg, g_contractors, g_deadline, spec=g_spec, landscape=g_landscape)
                         return schedule, list(reversed(prioritization(g_wg, g_work_estimator))), modified_spec
                     except NoSufficientContractorError:
                         return None, None, None

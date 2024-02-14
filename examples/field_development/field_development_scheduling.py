@@ -46,7 +46,7 @@ gant_chart_filename = './output/schedule_gant_chart.png'  # Set up gant chart fi
 start_date = "2023-01-01"  # Set up the project's start date
 
 # Schedule field development tasks
-schedule = scheduler_type.schedule(structured_wg, contractors, validate=True)
+schedule = scheduler_type.schedule(structured_wg, contractors, validate=True)[0]
 schedule_df = schedule.merged_stages_datetime_df(start_date)
 
 # Schedule's gant chart visualization

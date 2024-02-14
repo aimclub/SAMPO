@@ -58,7 +58,7 @@ def run_scheduler(wg_info):
     scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator,
                                  sgs_type=ScheduleGenerationScheme.Serial, only_lft_initialization=True)
     start = time.time()
-    schedule = scheduler.schedule(wg, contractor)
+    schedule = scheduler.schedule(wg, contractor)[0]
     finish = time.time()
 
     # merged_schedule = schedule.merged_stages_datetime_df('2022-01-01')

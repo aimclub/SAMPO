@@ -52,7 +52,7 @@ wg = ss.work_graph(bottom_border=GRAPH_SIZE - BORDER_RADIUS,
                    top_border=GRAPH_SIZE + BORDER_RADIUS)
 contractors = generate_contractors(wg, 1, 0)
 
-baseline_result = BaselineGeneticScheduler().schedule(wg, contractors)
-my_result = GeneticScheduler().schedule(wg, contractors)
+baseline_result = BaselineGeneticScheduler().schedule(wg, contractors)[0]
+my_result = GeneticScheduler().schedule(wg, contractors)[0]
 print(f'Baseline result: {baseline_result.execution_time}')
 print(f'My result: {my_result.execution_time}')

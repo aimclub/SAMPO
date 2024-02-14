@@ -4,6 +4,7 @@
 class Time {
 private:
     int value;
+
 public:
     explicit Time(int value);
 
@@ -48,4 +49,4 @@ public:
     bool operator==(int other) const;
 };
 
-#endif //NATIVE_TIME_H
+#endif    // NATIVE_TIME_H

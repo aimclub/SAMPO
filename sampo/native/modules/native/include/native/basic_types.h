@@ -6,4 +6,3 @@ class Identifiable {
 public:
     std::string id;
 };
-

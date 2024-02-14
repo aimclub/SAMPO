@@ -4,8 +4,8 @@
 
 #include "Python.h"
 
-#include "native/chromosome_evaluator.h"
-#include "native/genetic.h"
+#include "native/scheduler/chromosome_evaluator.h"
+#include "native/scheduler/genetic.h"
 #include "native/pycodec.h"
 #include "native/python_deserializer.h"
 

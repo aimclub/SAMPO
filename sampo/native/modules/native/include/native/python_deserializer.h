@@ -3,9 +3,9 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
-#include "contractor.h"
-#include "evaluator_types.h"
-#include "workgraph.h"
+#include "native/schemas/evaluator_types.h"
+#include "native/schemas/workgraph.h"
+#include "native/schemas/contractor.h"
 
 namespace PythonDeserializer {
 WorkGraph *workGraph(PyObject *pyWorkGraph);

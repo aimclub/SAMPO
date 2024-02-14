@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "Python.h"
-#include "evaluator_types.h"
+#include "native/schemas/evaluator_types.h"
 
 #include "numpy/arrayobject.h"
 

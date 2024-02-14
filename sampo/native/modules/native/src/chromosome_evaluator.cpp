@@ -2,4 +2,4 @@
 // Created by Quarter on 27.02.2023.
 //
 
-#include "native/chromosome_evaluator.h"
+#include "native/scheduler/chromosome_evaluator.h"

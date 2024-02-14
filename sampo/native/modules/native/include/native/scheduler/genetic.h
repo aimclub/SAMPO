@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "Python.h"
-#include "chromosome_evaluator.h"
-#include "evaluator_types.h"
-#include "pycodec.h"
+#include "native/scheduler/chromosome_evaluator.h"
+#include "native/schemas/evaluator_types.h"
+#include "native/pycodec.h"
 
 #include "numpy/arrayobject.h"
 

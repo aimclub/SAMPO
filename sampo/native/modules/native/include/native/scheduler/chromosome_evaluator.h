@@ -19,10 +19,10 @@
 
 #include "DLLoader.h"
 #include "Python.h"
-#include "evaluator_types.h"
-#include "external.h"
-#include "pycodec.h"
-#include "time_estimator.h"
+#include "native/schemas/evaluator_types.h"
+#include "native/schemas/external.h"
+#include "native/schemas/time_estimator.h"
+#include "native/pycodec.h"
 
 #include "numpy/arrayobject.h"
 

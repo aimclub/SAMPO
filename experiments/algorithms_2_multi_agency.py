@@ -56,6 +56,6 @@ if __name__ == '__main__':
 
         print(f'Best algo: {best_algo}')
 
-        schedule = best_algo.schedule(conjuncted, contractors)
+        schedule = best_algo.schedule(conjuncted, contractors)[0]
 
         print(f'Best algo res: {schedule.execution_time}')

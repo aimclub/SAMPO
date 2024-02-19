@@ -10,7 +10,11 @@ public:
 
     static Time inf();
 
-    bool is_inf() const;
+    static Time unassigned();
+
+    bool unassigned() const;
+
+    bool inf() const;
 
     Time operator+(Time &other) const;
 

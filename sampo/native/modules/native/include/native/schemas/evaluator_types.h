@@ -193,4 +193,8 @@ typedef struct {
     bool useExternalWorkEstimator;
 } EvaluateInfo;
 
+typedef unordered_map<string, ScheduledWork> swork_dict_t;
+typedef unordered_map<string, pair<Time, Time>> exec_times_t;
+typedef unordered_map<string, unordered_map<string, Worker*>> worker_pool_t;
+
 #endif    // NATIVE_EVALUATOR_TYPES_H

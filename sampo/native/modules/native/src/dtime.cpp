@@ -17,7 +17,17 @@ Time Time::inf() {
     return inf;
 }
 
-bool Time::is_inf() const {
+Time Time::unassigned() {
+    static Time inf(-1);    // caching the inf instance
+    inf.value = -1;
+    return inf;
+}
+
+bool Time::unassigned() const {
+    return this->value == -1;
+}
+
+bool Time::inf() const {
     return this->value == TIME_INF;
 }
 

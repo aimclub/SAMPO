@@ -6,7 +6,7 @@ private:
     int value;
 
 public:
-    explicit Time(int value);
+    Time(int value);
 
     static Time inf();
 

@@ -6,6 +6,9 @@
 
 #include "basic_types.h"
 #include "dtime.h"
+#include "evaluator_types.h"
+
+using namespace std;
 
 // Attention! Here we have an idiom of fully immutable data types, so
 // it's normal situation that you can't directly map C++ code to the
@@ -38,15 +41,18 @@ public:
 class WorkUnit : public Identifiable {
 public:
     std::vector<WorkerReq> worker_reqs;
+    string name;
     float volume;
     bool isServiceUnit;
 
     explicit WorkUnit(
+        string name,
         const std::vector<WorkerReq> &worker_reqs = std::vector<WorkerReq>(),
         float volume                              = 1,
         bool isServiceUnit                        = false
     )
-        : worker_reqs(worker_reqs),
+        : name(name),
+          worker_reqs(worker_reqs),
           volume(volume),
           isServiceUnit(isServiceUnit) { }
 };
@@ -161,6 +167,18 @@ public:
             chain.insert(chain.end(), subChain.begin(), subChain.end());
         }
         return chain;
+    }
+
+    Time min_start_time(swork_dict_t &node2swork) {
+        Time time;
+        for (auto& edge : this->parentEdges) {
+            auto it = node2swork.find(edge.start->id());
+            if (it == node2swork.end()) {
+                return Time.inf();
+            }
+            time = max(time, it->second.start_time());
+        }
+        return time;
     }
 };
 

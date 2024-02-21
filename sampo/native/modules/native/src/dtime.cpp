@@ -2,7 +2,7 @@
 
 #define TIME_INF 2000000000
 
-Time::Time(int value) {
+Time::Time(int value = 0) {
     if (value > TIME_INF) {
         value = TIME_INF;
     }

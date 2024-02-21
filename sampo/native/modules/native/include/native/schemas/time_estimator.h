@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "workgraph.h"
+
 #define TIME_INF 2000000000
 
 using namespace std;
@@ -31,9 +33,7 @@ public:
         return this->path;
     }
 
-    virtual int estimateTime(
-        const string &work, float volume, vector<pair<string, int>> &resources
-    ) = 0;
+    virtual int estimateTime(const WorkUnit &work, const vector<Worker> &workers) = 0;
 
     virtual ~WorkTimeEstimator() = default;
 };
@@ -67,18 +67,16 @@ public:
 
     //    ~DefaultWorkTimeEstimator() override = default;
 
-    int estimateTime(
-        const string &work, float volume, vector<pair<string, int>> &resources
-    ) override {
+    int estimateTime(const WorkUnit &work, const vector<Worker> &workers) override {
         // the _abstract_estimate from WorkUnit
         int time = 0;
 
-        for (auto &resource : resources) {
-            int minReq = this->minReqs[work][resource.first];
-            if (minReq == 0)
+        for (const auto &worker : workers) {
+            int min_req = this->minReqs[work][worker.get_name()];
+            if (min_req == 0)
                 continue;
-            int actualCount = resource.second;
-            if (actualCount < minReq) {
+            int actual_count = worker.get_count();
+            if (actual_count < min_req) {
                 //        cout << "Not conforms to min_req: " <<
                 //        get_worker(resources, team_target, i) << " < " <<
                 //        minReq << " on work " << work
@@ -93,18 +91,18 @@ public:
                 //        cout << endl;
                 return TIME_INF;
             }
-            int maxReq = this->maxReqs[work][resource.first];
+            int max_req = this->maxReqs[work][resource.first];
 
-            float productivity = get_productivity(actualCount);
-            productivity *= communication_coefficient(actualCount, maxReq);
+            float productivity = get_productivity(actual_count);
+            productivity *= communication_coefficient(actual_count, max_req);
 
             //        if (productivity < 0.000001) {
             //            return TIME_INF;
             //        }
             //        productivity = 0.1;
-            int newTime = ceil(volume / productivity);
-            if (newTime > time) {
-                time = newTime;
+            int new_time = ceil(volume / productivity);
+            if (new_time > time) {
+                time = new_time;
             }
         }
 

@@ -23,7 +23,20 @@ public:
                                                                                 ScheduleSpec &spec,
                                                                                 Time &assigned_start_time,
                                                                                 Time &assigned_parent_time,
-                                                                                WorkTimeEstimator &work_estimator);
+                                                                                WorkTimeEstimator &work_estimator) = 0;
+
+    virtual bool can_schedule_at_the_moment(GraphNode *node,
+                                            vector<Worker>& worker_team,
+                                            swork_dict_t &node2swork,
+                                            ScheduleSpec &spec,
+                                            Time &start_time,
+                                            Time &exec_time) = 0;
+
+    virtual void update_timeline(GraphNode *node,
+                                 vector<Worker>& worker_team,
+                                 ScheduleSpec &spec,
+                                 Time &finish_time,
+                                 Time &exec_time) = 0;
 
     virtual Time schedule(GraphNode *node,
                           vector<Worker>& worker_team,
@@ -33,20 +46,7 @@ public:
                           Time &assigned_start_time,
                           Time &assigned_time,
                           Time &assigned_parent_time,
-                          WorkTimeEstimator &work_estimator);
-
-    virtual bool can_schedule_at_the_moment(GraphNode *node,
-                                            vector<Worker>& worker_team,
-                                            swork_dict_t &node2swork,
-                                            ScheduleSpec &spec,
-                                            Time &start_time,
-                                            Time &exec_time);
-
-    virtual void update_timeline(GraphNode *node,
-                                 vector<Worker>& worker_team,
-                                 ScheduleSpec &spec,
-                                 Time &finish_time,
-                                 Time &exec_time);
+                          WorkTimeEstimator &work_estimator) = 0;
 };
 
 #endif //SAMPO_TIMELINE_H

@@ -14,6 +14,40 @@ using namespace std;
 class JustInTimeTimeline : Timeline {
 private:
     unordered_map<string, unordered_map<string, vector<pair<Time, int>>>> *timeline;
+
+    Time schedule_with_inseparables(GraphNode *node,
+                                    vector<Worker>& worker_team,
+                                    swork_dict_t &node2swork,
+                                    ScheduleSpec &spec,
+                                    Contractor *contractor,
+                                    Time &start_time,
+                                    vector<GraphNode*> &inseparable_chain,
+                                    exec_times_t &exec_times,
+                                    WorkTimeEstimator &work_estimator) {
+        Time c_ft = start_time;
+        for (auto& dep_node : inseparable_chain) {
+            Time max_parent_time = dep_node->min_start_time(node2swork);
+
+            pair<Time, Time>& node_lag_exec_time;
+            auto it = exec_times.find(dep_node->id());
+            if (it == exec_times.end()) {
+                node_lag_exec_time = { Time(0), work_estimator.estimateTime(node->getWorkUnit(), worker_team) };
+            } else {
+                node_lag_exec_time = it->second;
+            }
+
+            Time c_st = max(c_ft + node_lag_exec_time.first, max_parent_time);
+            Time new_finish_time = c_st + node_lag_exec_time.second;
+
+            node2swork.emplace(dep_node->id(), dep_node->getWorkUnit(),
+                               { c_st, new_finish_time },
+                               worker_team, contractor, deliveries);
+            c_ft = new_finish_time;
+        }
+
+        this->update_timeline(node, worker_team, spec, c_ft, c_ft - start_time);
+        return c_ft;
+     }
 public:
     explicit JustInTimeTimeline(worker_pool_t &worker_pool, LandscapeConfiguration &landscape) {
         this->timeline = new unordered_map<string, unordered_map<string, vector<pair<Time, int>>>>();
@@ -29,13 +63,17 @@ public:
         // TODO Add other timelines
     }
 
+    ~JustInTimeTimeline() {
+        delete this->timeline;
+    }
+
     tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(GraphNode *node,
                                                                         vector<Worker>& worker_team,
                                                                         swork_dict_t &node2swork,
                                                                         WorkSpec &spec,
                                                                         Time &assigned_start_time,
                                                                         Time &assigned_parent_time,
-                                                                        WorkTimeEstimator &work_estimator) {
+                                                                        WorkTimeEstimator &work_estimator) override {
         if (node2swork.size() == 0) {
             // first work
             return { assigned_parent_time, assigned_parent_time, exec_times_t() };
@@ -96,7 +134,7 @@ public:
                                     swork_dict_t &node2swork,
                                     WorkSpec &spec,
                                     Time &start_time,
-                                    Time &exec_time) {
+                                    Time &exec_time) override {
         if (worker_team.size() == 0) {
             // empty worker team, passing
             return true;
@@ -157,7 +195,7 @@ public:
                          vector<Worker>& worker_team,
                          WorkSpec &spec,
                          Time &finish_time,
-                         Time &exec_time) {
+                         Time &exec_time) override {
         if (worker_team.size() == 0) {
             // empty worker team, passing
             return true;
@@ -214,7 +252,21 @@ public:
                   Time &assigned_start_time,
                   Time &assigned_time,
                   Time &assigned_parent_time,
-                  WorkTimeEstimator &work_estimator) {
-        // TODO
+                  WorkTimeEstimator &work_estimator) override {
+        auto& inseparable_chain = node->getInseparableChainWithSelf();
+        Time start_time = assigned_start_time;
+        if (start_time.unassigned()) {
+            start_time = this->find_min_start_time(node, worker_team, node2swork, spec, assigned_parent_time, work_estimator);
+        }
+
+        exec_times_t exec_times;
+        if (!assigned_time.unassigned()) {
+            for (auto& n : inseparable_chain) {
+                exec_times[n.id()] = { Time(0), assigned_time / inseparable_chain.size() };
+            }
+        }
+
+        return this->schedule_with_inseparables(node, worker_team, node2swork, spec, contractor, start,
+                                                inseparable_chain, exec_times, work_estimator);
     }
 };

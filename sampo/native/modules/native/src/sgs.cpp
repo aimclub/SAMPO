@@ -2,23 +2,23 @@
 
 swork_dict_t SGS::serial(Chromosome* chromosome,
                          worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
-                         vector<vector<Worker>> &worker_pool_indices,
-                         vector<GraphNode*> &index2node,
-                         vector<Contractor*> &index2contractor,
-                         vector<int> &index2zone,  // TODO
-                         unordered_map<string, int> &worker_name2index,
-                         unordered_map<string, int> &contractor2index,
-                         LandscapeConfiguration &landscape,
+                         const vector<vector<Worker*>> &worker_pool_indices,
+                         const vector<GraphNode*> &index2node,
+                         const vector<Contractor*> &index2contractor,
+                         const vector<int> &index2zone,  // TODO
+                         const unordered_map<string, int> &worker_name2index,
+                         const unordered_map<string, int> &contractor2index,
+                         const LandscapeConfiguration &landscape,
                          Time assigned_parent_time,
                          Timeline &timeline,
-                         WorkTimeEstimator &work_estimator) {
+                         const WorkTimeEstimator &work_estimator) {
     swork_dict_t node2swork;
 
     for (auto& worker_state : worker_pool) {
         for (auto& contractor_state : worker_state.second) {
-            contractor_state.second.with_count(
-                    chromosome->getContractorBorder(contractor2index[contractor_state.first])
-                    [worker_name2index[worker_state.first]]
+            contractor_state.second->with_count(
+                    chromosome->getContractorBorder(contractor2index.at(contractor_state.first))
+                    [worker_name2index.at(worker_state.first)]
             );
         }
     }
@@ -56,7 +56,7 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
 
 swork_dict_t SGS::parallel(Chromosome* chromosome,
                            worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
-                           vector<vector<Worker>> &worker_pool_indices,
+                           vector<vector<Worker*>> &worker_pool_indices,
                            vector<GraphNode*> &index2node,
                            vector<Contractor*> &index2contractor,
                            vector<int> &index2zone,  // TODO

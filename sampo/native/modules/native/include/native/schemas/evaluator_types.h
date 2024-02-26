@@ -10,6 +10,7 @@
 #include "Python.h"
 #include "native/schemas/dtime.h"
 #include "native/schemas/scheduled_work.h"
+#include "native/schemas/time_estimator.h"
 #include "spec.h"
 
 using namespace std;
@@ -86,7 +87,7 @@ private:
     size_t DATA_SIZE;
 
 public:
-    int fitness = INT_MAX;    // infinity
+    float fitness = TIME_INF;    // infinity
 
     Chromosome(int worksCount, int resourcesCount, int contractorsCount, ScheduleSpec spec = ScheduleSpec())
         : worksCount(worksCount),
@@ -208,7 +209,7 @@ public:
             int index = work_id2index[node];
             *chromosome->getOrder()[i] = index;
             for (auto& resource : schedule[node].workers) {
-                int res_index = worker_name2index[resource.name)];
+                int res_index = worker_name2index[resource.name];
                 chromosome->getResources()[index][res_index] = resource.count;
                 chromosome->getContractor(index) = contractor2index[resource.contractor_id];
             }
@@ -228,6 +229,8 @@ public:
 
 typedef struct {
     PyObject *pythonWrapper;
+    WorkGraph *wg;
+    vector<Contractor*> contractors;
     vector<vector<int>> parents;
     vector<vector<int>> headParents;
     vector<vector<int>> inseparables;
@@ -238,6 +241,8 @@ typedef struct {
     vector<string> id2work;
     vector<string> id2res;
     string timeEstimatorPath;
+    LandscapeConfiguration landscape;
+    WorkTimeEstimator *work_estimator;
     int totalWorksCount;
     bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;
@@ -247,4 +252,4 @@ typedef struct {
 
 using swork_dict_t = unordered_map<string, ScheduledWork>;
 using exec_times_t = unordered_map<string, pair<Time, Time>>;
-using worker_pool_t = unordered_map<string, unordered_map<string, Worker>>;
+using worker_pool_t = unordered_map<string, unordered_map<string, Worker*>>;

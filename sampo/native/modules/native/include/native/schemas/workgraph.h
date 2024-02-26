@@ -158,6 +158,14 @@ public:
         return getWorkUnit()->id;
     }
 
+    inline bool is_inseparable_parent() {
+        return inseparableSon() == nullptr;
+    }
+
+    inline bool is_inseparable_son() {
+        return inseparableParent() == nullptr;
+    }
+
     std::vector<GraphNode *> getInseparableChainWithSelf() {
         auto chain = std::vector<GraphNode *>();
         chain.push_back(this);
@@ -174,7 +182,7 @@ public:
         for (auto& edge : this->parentEdges) {
             auto it = node2swork.find(edge.start->id());
             if (it == node2swork.end()) {
-                return Time.is_inf();
+                return Time::inf();
             }
             time = max(time, it->second.start_time());
         }

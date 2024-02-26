@@ -12,6 +12,14 @@ Time::Time(int value) {
     this->value = value;
 }
 
+Time::Time(Time const &other) {
+    this->value = other.value;
+}
+
+int Time::val() const {
+    return this->value;
+}
+
 Time Time::inf() {
     static Time inf(TIME_INF);    // caching the inf instance
     return inf;

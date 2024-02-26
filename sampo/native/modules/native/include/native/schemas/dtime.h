@@ -8,6 +8,8 @@ private:
 public:
     Time(int value = 0);
 
+    Time(Time const &other);
+
     static Time inf();
 
     static Time unassigned();
@@ -15,6 +17,8 @@ public:
     bool is_unassigned() const;
 
     bool is_inf() const;
+
+    int val() const;
 
     Time operator+(Time &other) const;
 

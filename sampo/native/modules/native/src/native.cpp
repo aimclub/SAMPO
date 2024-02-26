@@ -63,7 +63,7 @@ static PyObject *runGenetic(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "LOffffffi",
+            "LOOOffffffi",
             &infoPtr,
             &pyChromosomes,
             &mutateOrderProb,
@@ -105,6 +105,9 @@ static PyObject *runGenetic(PyObject *self, PyObject *args) {
 
 static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
     PyObject *pythonWrapper;
+    PyObject *pyWorkGraph;
+    PyObject *pyContractors;
+    PyObject *pyWorkEstimatorPath;
     PyObject *pyParents;
     PyObject *pyHeadParents;
     PyObject *pyInseparables;
@@ -120,8 +123,11 @@ static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(
             args,
-            "OOOOOippOOOOO",
+            "OOOOOOOOippOOOOO",
             &pythonWrapper,
+            &pyWorkGraph,
+            &pyContractors,
+            &pyWorkEstimatorPath,
             &pyParents,
             &pyHeadParents,
             &pyInseparables,
@@ -140,6 +146,8 @@ static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
 
     auto *info = new EvaluateInfo {
         pythonWrapper,
+        PythonDeserializer::workGraph(pyWorkGraph),
+        PythonDeserializer::contractors(pyContractors),
         PyCodec::fromList(pyParents, decodeIntList),
         PyCodec::fromList(pyHeadParents, decodeIntList),
         PyCodec::fromList(pyInseparables, decodeIntList),
@@ -149,7 +157,9 @@ static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
         PyCodec::fromList(maxReq, decodeIntList),
         PyCodec::fromList(id2work, decodeString),
         PyCodec::fromList(id2res, decodeString),
-        "aaaa",    // TODO Propagate workEstimatorPath from Python
+        PyCodec::fromPrimitive(pyWorkEstimatorPath, ""),
+        LandscapeConfiguration(),
+        new DefaultWorkTimeEstimator(),
         totalWorksCount,
         usePythonWorkEstimator,
         useExternalWorkEstimator
@@ -165,6 +175,7 @@ static PyObject *freeEvaluationInfo(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "L", &infoPtr)) {
         cout << "Can't parse arguments" << endl;
     }
+    delete infoPtr->work_estimator;
     delete infoPtr;
     Py_RETURN_NONE;
 }
@@ -202,81 +213,81 @@ PyMODINIT_FUNC PyInit_native(void) {
 }
 
 // the test function
-int main() {
-    // real data from Python
-    vector<vector<int>> parents = {
-        {},
-        { 0 },
-        { 0 },
-        { 1 },
-        { 2 },
-        { 1, 10 },
-        { 4, 5 },
-        { 3, 5 },
-        { 5 },
-        { 7, 8, 13 },
-        { 2 },
-        { 4 },
-        { 11, 10 },
-        { 6, 12 }
-    };
-    vector<vector<int>> inseparables = {
-        { 0 },
-        { 1 },
-        { 2, 10 },
-        { 3 },
-        { 4, 11, 12 },
-        { 5 },
-        { 6, 13 },
-        { 7 },
-        { 8 },
-        { 9 },
-        { 10 },
-        { 11 },
-        { 12 },
-        { 13 },
-    };
-    vector<vector<int>> workers = {
-        {50, 50, 50, 50, 50, 50}
-    };    // one contractor with 6 types of workers
-
-    vector<int> chromosomeOrder             = { 0, 1, 2, 3, 5, 7, 4, 8, 6, 9 };
-    vector<vector<int>> chromosomeResources = {
-        { 0,  0,  0,  0,  0,  0, 0},
-        {49, 49,  0,  0,  0,  0, 0},
-        {49, 49, 49, 49, 49, 49, 0},
-        { 0, 49, 49,  0,  0, 49, 0},
-        { 0, 49, 49,  0,  0, 49, 0},
-        {49, 49, 49,  0, 49, 49, 0},
-        {49, 49, 49, 49,  0,  0, 0},
-        {49,  0, 49, 49, 49, 49, 0},
-        {49, 49, 49, 49,  0, 49, 0},
-        { 0,  0,  0,  0,  0,  0, 0}
-    };
-
-    string v = "aaaa";
-
-    auto *info =
-        new EvaluateInfo { nullptr,
-                           parents,
-                           vector<vector<int>>(),
-                           inseparables,
-                           workers,
-                           vector<float>(),
-                           vector<vector<int>>(),
-                           vector<vector<int>>(),
-                           vector<string>(),
-                           vector<string>(),
-                           v,    // TODO Propagate workEstimatorPath from Python
-                           0,
-                           false,
-                           true };
-    //
-    ChromosomeEvaluator evaluator(info);
-    //    int res = evaluator.testEvaluate(chromosomeOrder,
-    //    chromosomeResources);
-    //
-    //    cout << "Result: " << res << endl;
-
-    return 0;
-}
+//int main() {
+//    // real data from Python
+//    vector<vector<int>> parents = {
+//        {},
+//        { 0 },
+//        { 0 },
+//        { 1 },
+//        { 2 },
+//        { 1, 10 },
+//        { 4, 5 },
+//        { 3, 5 },
+//        { 5 },
+//        { 7, 8, 13 },
+//        { 2 },
+//        { 4 },
+//        { 11, 10 },
+//        { 6, 12 }
+//    };
+//    vector<vector<int>> inseparables = {
+//        { 0 },
+//        { 1 },
+//        { 2, 10 },
+//        { 3 },
+//        { 4, 11, 12 },
+//        { 5 },
+//        { 6, 13 },
+//        { 7 },
+//        { 8 },
+//        { 9 },
+//        { 10 },
+//        { 11 },
+//        { 12 },
+//        { 13 },
+//    };
+//    vector<vector<int>> workers = {
+//        {50, 50, 50, 50, 50, 50}
+//    };    // one contractor with 6 types of workers
+//
+//    vector<int> chromosomeOrder             = { 0, 1, 2, 3, 5, 7, 4, 8, 6, 9 };
+//    vector<vector<int>> chromosomeResources = {
+//        { 0,  0,  0,  0,  0,  0, 0},
+//        {49, 49,  0,  0,  0,  0, 0},
+//        {49, 49, 49, 49, 49, 49, 0},
+//        { 0, 49, 49,  0,  0, 49, 0},
+//        { 0, 49, 49,  0,  0, 49, 0},
+//        {49, 49, 49,  0, 49, 49, 0},
+//        {49, 49, 49, 49,  0,  0, 0},
+//        {49,  0, 49, 49, 49, 49, 0},
+//        {49, 49, 49, 49,  0, 49, 0},
+//        { 0,  0,  0,  0,  0,  0, 0}
+//    };
+//
+//    string v = "aaaa";
+//
+//    auto *info =
+//        new EvaluateInfo { nullptr,
+//                           parents,
+//                           vector<vector<int>>(),
+//                           inseparables,
+//                           workers,
+//                           vector<float>(),
+//                           vector<vector<int>>(),
+//                           vector<vector<int>>(),
+//                           vector<string>(),
+//                           vector<string>(),
+//                           v,
+//                           0,
+//                           false,
+//                           true };
+//    //
+//    ChromosomeEvaluator evaluator(info);
+//    //    int res = evaluator.testEvaluate(chromosomeOrder,
+//    //    chromosomeResources);
+//    //
+//    //    cout << "Result: " << res << endl;
+//
+//    return 0;
+//}

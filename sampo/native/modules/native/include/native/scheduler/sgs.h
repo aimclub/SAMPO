@@ -15,29 +15,29 @@ namespace SGS {
 
     swork_dict_t serial(Chromosome* chromosome,
                         worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
-                        vector<vector<Worker>> &worker_pool_indices,
-                        vector<GraphNode*> &index2node,
-                        vector<Contractor*> &index2contractor,
-                        vector<int> &index2zone,  // TODO
-                        unordered_map<string, int> &worker_name2index,
-                        unordered_map<string, int> &contractor2index,
-                        LandscapeConfiguration &landscape,
+                        const vector<vector<Worker*>> &worker_pool_indices,
+                        const vector<GraphNode*> &index2node,
+                        const vector<Contractor*> &index2contractor,
+                        const vector<int> &index2zone,  // TODO
+                        const unordered_map<string, int> &worker_name2index,
+                        const unordered_map<string, int> &contractor2index,
+                        const LandscapeConfiguration &landscape,
                         Time assigned_parent_time,
-                        Timeline &timeline,
-                        WorkTimeEstimator &work_estimator);
+                        const Timeline &timeline,
+                        const WorkTimeEstimator &work_estimator);
 
     swork_dict_t parallel(Chromosome* chromosome,
                           worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
-                          vector<vector<Worker>> &worker_pool_indices,
-                          vector<GraphNode*> &index2node,
-                          vector<Contractor*> &index2contractor,
-                          vector<int> &index2zone,  // TODO
-                          unordered_map<string, int> &worker_name2index,
-                          unordered_map<string, int> &contractor2index,
-                          LandscapeConfiguration &landscape,
+                          const vector<vector<Worker*>> &worker_pool_indices,
+                          const vector<GraphNode*> &index2node,
+                          const vector<Contractor*> &index2contractor,
+                          const vector<int> &index2zone,  // TODO
+                          const unordered_map<string, int> &worker_name2index,
+                          const unordered_map<string, int> &contractor2index,
+                          const LandscapeConfiguration &landscape,
                           Time assigned_parent_time,
-                          Timeline &timeline,
-                          WorkTimeEstimator &work_estimator);
+                          const Timeline &timeline,
+                          const WorkTimeEstimator &work_estimator);
 }
 
 #endif //SAMPO_SGS_H

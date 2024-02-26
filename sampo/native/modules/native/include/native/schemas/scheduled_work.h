@@ -8,14 +8,12 @@
 #include "resources.h"
 #include "contractor.h"
 #include "landscape.h"
-//#include "seria"
 
 using namespace std;
 
 class ScheduledWork {
 public:
-	vector<string> ignored_fields = { "equipments", "materials", "object" };
-	WorkUnit work_unit;
+	WorkUnit* work_unit;
 	pair<Time, Time> start_end_time;
 	vector<Worker> workers;
 	Contractor *contractor;
@@ -25,13 +23,13 @@ public:
 	ConstructionObject object;
 	int _cost;
 
-    ScheduledWork() : ScheduledWork(WorkUnit(), { Time(0), Time(0) }, vector<Worker>(), nullptr,
+    ScheduledWork() : ScheduledWork(nullptr, { Time(0), Time(0) }, vector<Worker>(), nullptr,
             vector<Equipment>(),vector<MaterialDelivery>(), ConstructionObject()) {}
 
-	ScheduledWork(WorkUnit work_unit, pair<Time, Time> start_end_time, const vector<Worker>& workers, Contractor *contractor,
+	ScheduledWork(WorkUnit* work_unit, pair<Time, Time> start_end_time, vector<Worker> workers, Contractor *contractor,
 		vector<Equipment> equipments, vector<MaterialDelivery> materials, ConstructionObject object)
-        : work_unit(std::move(work_unit)), start_end_time(start_end_time),
-		  workers(workers), contractor(contractor), equipments(std::move(equipments)),
+        : work_unit(work_unit), start_end_time(std::move(start_end_time)),
+		  workers(std::move(workers)), contractor(contractor), equipments(std::move(equipments)),
           materials(std::move(materials)), object(std::move(object)) {
 
 		//if contractor is not None:
@@ -53,9 +51,10 @@ public:
 
 		_cost = 0;
 
-		for (auto& worker : workers) {
-			_cost += worker.get_cost() * this->duration().get_val();
-		}
+        // TODO
+//		for (auto& worker : workers) {
+//			_cost += worker.get_cost() * this->duration().val();
+//		}
 	}
 
 	Time duration() {
@@ -69,16 +68,13 @@ public:
 //	void __repr__(void) {
 //		this->__str__();
 //	}
-	Time start_time() {
+	Time start_time() const {
 		return start_end_time.first;
 	}
 	void start_time(Time val) {
-		start_end_time = make_pair(val, start_end_time.second);
+		start_end_time = make_pair(std::move(val), start_end_time.second);
 	}
-	Time finish_time(void) {
+	Time finish_time() const {
 		return start_end_time.second;
 	}
-	Time min_child_start_time() {
-        return work_unit.isServiceUnit ? finish_time() : finish_time() + 1;
-    }
 };

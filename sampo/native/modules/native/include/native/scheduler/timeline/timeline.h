@@ -17,10 +17,10 @@ public:
                              vector<Worker>& worker_team,
                              swork_dict_t &node2swork,
                              WorkSpec &spec,
-                             Time &parent_time,
+                             Time parent_time,
                              WorkTimeEstimator &work_estimator) {
         auto t = this->find_min_start_time_with_additional(node, worker_team, node2swork,
-                                                           spec, Time.is_unassigned(),
+                                                           spec, Time::unassigned(),
                                                            parent_time, work_estimator);
         return get<0>(t);
     }
@@ -29,8 +29,8 @@ public:
                                                                                 vector<Worker>& worker_team,
                                                                                 swork_dict_t &node2swork,
                                                                                 WorkSpec &spec,
-                                                                                Time &assigned_start_time,
-                                                                                Time &assigned_parent_time,
+                                                                                Time assigned_start_time,
+                                                                                Time assigned_parent_time,
                                                                                 WorkTimeEstimator &work_estimator) = 0;
 
     virtual bool can_schedule_at_the_moment(GraphNode *node,

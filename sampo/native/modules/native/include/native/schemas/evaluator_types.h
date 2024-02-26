@@ -208,9 +208,9 @@ public:
             int index = work_id2index[node];
             *chromosome->getOrder()[i] = index;
             for (auto& resource : schedule[node].workers) {
-                int res_index = worker_name2index[resource.get_name()];
-                chromosome->getResources()[index][res_index] = resource.get_count();
-                chromosome->getContractor(index) = contractor2index[resource.get_contractor_id()];
+                int res_index = worker_name2index[resource.name)];
+                chromosome->getResources()[index][res_index] = resource.count;
+                chromosome->getContractor(index) = contractor2index[resource.contractor_id];
             }
         }
 

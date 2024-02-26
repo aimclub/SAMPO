@@ -49,13 +49,14 @@ public:
 };
 
 class Worker : public Identifiable {
+
+public:
     string id;
     string name;
     int count;
     string contractor_id;
     IntervalGaussian productivity;
 
-public:
     Worker(
         string id = "",
         string name = "",
@@ -68,6 +69,15 @@ public:
           count(count),
           contractor_id(std::move(contractorId)),
           productivity(productivity) { }
+
+    Worker& with_count(int count) {
+        this->count = count;
+        return *this;
+    }
+
+    inline Worker copy() {
+        return Worker(id, name, count, cost, contractor_id, productivity);
+    }
 };
 
 class Contractor : public Identifiable {

@@ -26,9 +26,6 @@
 
 #include "numpy/arrayobject.h"
 
-// worker -> contractor -> vector<time, count> in descending order
-typedef vector<vector<vector<pair<int, int>>>> Timeline;
-
 #define TIME_INF 2000000000
 
 class ChromosomeEvaluator {

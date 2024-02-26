@@ -25,10 +25,10 @@ Time schedule_with_inseparables(GraphNode *node,
         for (auto& dep_node : inseparable_chain) {
             Time max_parent_time = dep_node->min_start_time(node2swork);
 
-            pair<Time, Time>& node_lag_exec_time;
+            pair<Time, Time> node_lag_exec_time;
             auto it = exec_times.find(dep_node->id());
             if (it == exec_times.end()) {
-                node_lag_exec_time = { Time(0), work_estimator.estimateTime(node->getWorkUnit(), worker_team) };
+                node_lag_exec_time = { Time(0), work_estimator.estimateTime(*node->getWorkUnit(), worker_team) };
             } else {
                 node_lag_exec_time = it->second;
             }
@@ -78,7 +78,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
 
     Time max_agent_time(0);
 
-    auto& contractor_state = this->timeline[worker_team[0].get_contractor_id()];
+    auto& contractor_state = this->timeline[worker_team[0].contractor_id];
 
     if (spec.is_independent) {
         // grab from the end
@@ -90,7 +90,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
         // grab from whole sequence
         // for each resource type
         for (auto& worker : worker_team) {
-            int needed_count = worker.get_count();
+            int needed_count = worker.count;
             vector<pair<Time, int>> &offer_stack = contractor_state[worker];
 
             size_t ind = offer_stack.size() - 1;
@@ -136,11 +136,11 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(GraphNode *node,
         return true;
     }
 
-    unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline[worker_team[0].get_contractor_id()];
+    unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline[worker_team[0].contractor_id];
 
     if (spec.is_independent) {
         for (auto& worker : worker_team) {
-            auto& worker_timeline = contractor_timeline[worker.get_name()];
+            auto& worker_timeline = contractor_timeline[worker.name];
             Time last_cpkt_time = worker_timeline[0].first;
             if (last_cpkt_time > start_time) {
                 return false;
@@ -163,8 +163,8 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(GraphNode *node,
         Time max_agent_time(0);
 
         for (auto& worker : worker_team) {
-            int needed_count = worker.get_count();
-            auto &offer_stack = contractor_timeline[worker.get_name()];
+            int needed_count = worker.count;
+            auto &offer_stack = contractor_timeline[worker.name];
 
             size_t ind = offer_stack.size() - 1;
             while (needed_count > 0) {
@@ -197,12 +197,12 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
         return;
     }
 
-    unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline[worker_team[0].get_contractor_id()];
+    unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline[worker_team[0].contractor_id];
 
     if (spec.is_independent) {
         // squash all the timeline to the last point
         for (auto& worker : worker_team) {
-            auto &worker_timeline = contractor_timeline[worker.get_name()];
+            auto &worker_timeline = contractor_timeline[worker.name];
             int count_workers = 0;
             for (auto& entry : worker_timeline) {
                 count_workers += entry.second;
@@ -215,8 +215,8 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
         // and re-add it to the time when current work should be finished.
         // Addition performed as step in bubble-sort algorithm.
         for (auto& worker : worker_team) {
-            int needed_count = worker.get_count();
-            auto &worker_timeline = contractor_timeline[worker.get_name()];
+            int needed_count = worker.count;
+            auto &worker_timeline = contractor_timeline[worker.name];
 
             // consume needed workers
             while (needed_count > 0) {
@@ -230,7 +230,7 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
             }
 
             // add to the right place
-            worker_timeline.emplace_back(finish_time, worker.get_count());
+            worker_timeline.emplace_back(finish_time, worker.count);
             size_t ind = worker_timeline.size() - 1;
             while (ind > 0 && worker_timeline[ind].first > worker_timeline[ind - 1].first) {
                 std::swap(worker_timeline[ind], worker_timeline[ind - 1]);

@@ -1,5 +1,4 @@
 #pragma once
-/*sheduler/shemas/types - набор нужных типов*/
 #include <string>
 
 std::string ContractorName;

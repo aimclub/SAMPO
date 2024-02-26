@@ -22,11 +22,11 @@ private:
 
 public:
     explicit IntervalGaussian(
-        float mean, float sigma, float min_val, float max_val
+        float mean = 1, float sigma = 0, float min_val = 0, float max_val = 0
     )
-        : min_val(min_val),
-          max_val(max_val),
-          d(normal_distribution<> { mean, sigma }) { }
+        : d(normal_distribution<> { mean, sigma }),
+          min_val(min_val),
+          max_val(max_val) {}
 
     IntervalGaussian(const IntervalGaussian &other)
         : IntervalGaussian(
@@ -57,11 +57,11 @@ class Worker : public Identifiable {
 
 public:
     Worker(
-        string id,
-        string name,
-        int count,
-        string contractorId,
-        const IntervalGaussian &productivity
+        string id = "",
+        string name = "",
+        int count = 0,
+        string contractorId = "",
+        const IntervalGaussian& productivity = IntervalGaussian()
     )
         : id(std::move(id)),
           name(std::move(name)),

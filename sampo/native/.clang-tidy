@@ -1,0 +1,82 @@
+# To run clang-tidy from CMake, build with -DENABLE_CLANG_TIDY=ON
+
+HeaderFilterRegex: '(common|procedures|programs)(/|\\).*(h|hpp)$'
+
+Checks: '
+	  clang-diagnostic-*,
+    clang-analyzer-*,
+    cppcoreguidelines-*,
+    modernize-*,
+    bugprone-*,
+    readability-*,
+    performance-*,
+    -bugprone-exception-escape,
+    -cppcoreguidelines-macro-usage,
+    -cppcoreguidelines-avoid-c-arrays,
+    -cppcoreguidelines-init-variables,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-pro-type-reinterpret-cast,
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-pro-bounds-constant-array-index,
+    -readability-implicit-bool-conversion,
+    -readability-magic-numbers,
+    -readability-identifier-length,
+    -readability-braces-around-statements,
+	  -readability-isolate-declaration,
+    -llvmlibc-restrict-system-libc-headers,
+    -modernize-use-trailing-return-type,
+    -clang-diagnostic-ignored-attributes,
+    -clang-diagnostic-inconsistent-dllimport
+'
+
+WarningsAsErrors: '*'
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.StaticConstantCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.PublicMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.MethodCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMethodPrefix
+    value: ''
+  - key: readability-identifier-naming.ProtectedMethodPrefix
+    value: ''
+  - key: readability-identifier-naming.ParameterPackCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: lower_case
+  - key: readability-identifier-naming.TemplateTemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateUsingCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeTemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: lower_case
+  - key: readability-identifier-naming.UnionCase
+    value: lower_case
+  - key: readability-identifier-naming.UsingCase
+    value: lower_case
+  - key: performance-move-const-arg.CheckTriviallyCopyableMove
+    value: true
+    # Workaround clang-tidy bug: https://github.com/llvm/llvm-project/issues/46097
+  - key: readability-identifier-naming.TypeTemplateParameterIgnoredRegexp
+    value: expr-type
+  - key: readability-uppercase-literal-suffix.NewSuffixes
+    value: l;u;f
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: 5

@@ -6,15 +6,15 @@ private:
     int value;
 
 public:
-    Time(int value);
+    Time(int value = 0);
 
     static Time inf();
 
     static Time unassigned();
 
-    bool unassigned() const;
+    bool is_unassigned() const;
 
-    bool inf() const;
+    bool is_inf() const;
 
     Time operator+(Time &other) const;
 

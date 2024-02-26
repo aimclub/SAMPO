@@ -12,7 +12,7 @@ public:
                              Time &parent_time,
                              WorkTimeEstimator &work_estimator) {
         auto t = this->find_min_start_time_with_additional(node, worker_team, node2swork,
-                                                           spec, Time.unassigned(),
+                                                           spec, Time.is_unassigned(),
                                                            parent_time, work_estimator);
         return get<0>(t);
     }

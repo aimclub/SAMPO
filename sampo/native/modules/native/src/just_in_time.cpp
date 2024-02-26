@@ -255,12 +255,12 @@ public:
                   WorkTimeEstimator &work_estimator) override {
         auto& inseparable_chain = node->getInseparableChainWithSelf();
         Time start_time = assigned_start_time;
-        if (start_time.unassigned()) {
+        if (start_time.is_unassigned()) {
             start_time = this->find_min_start_time(node, worker_team, node2swork, spec, assigned_parent_time, work_estimator);
         }
 
         exec_times_t exec_times;
-        if (!assigned_time.unassigned()) {
+        if (!assigned_time.is_unassigned()) {
             for (auto& n : inseparable_chain) {
                 exec_times[n.id()] = { Time(0), assigned_time / inseparable_chain.size() };
             }

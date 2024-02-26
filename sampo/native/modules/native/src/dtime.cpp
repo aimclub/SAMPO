@@ -2,7 +2,7 @@
 
 #define TIME_INF 2000000000
 
-Time::Time(int value = 0) {
+Time::Time(int value) {
     if (value > TIME_INF) {
         value = TIME_INF;
     }
@@ -23,11 +23,11 @@ Time Time::unassigned() {
     return inf;
 }
 
-bool Time::unassigned() const {
+bool Time::is_unassigned() const {
     return this->value == -1;
 }
 
-bool Time::inf() const {
+bool Time::is_inf() const {
     return this->value == TIME_INF;
 }
 

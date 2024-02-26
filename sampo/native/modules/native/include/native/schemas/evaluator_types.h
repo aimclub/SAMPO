@@ -10,6 +10,7 @@
 #include "Python.h"
 #include "native/schemas/dtime.h"
 #include "native/schemas/scheduled_work.h"
+#include "spec.h"
 
 using namespace std;
 
@@ -46,7 +47,7 @@ public:
 
     // int* to use this operator as 2D array. To use as 1D array, follow this
     // call with '*'.
-    int *operator[](int i) {
+    int *operator[](size_t i) {
         return this->data + i * stride;
     }
 
@@ -81,15 +82,17 @@ private:
     Array2D<int> order;
     Array2D<int> resources;
     Array2D<int> contractors;
+    ScheduleSpec spec;
     size_t DATA_SIZE;
 
 public:
     int fitness = INT_MAX;    // infinity
 
-    Chromosome(int worksCount, int resourcesCount, int contractorsCount)
+    Chromosome(int worksCount, int resourcesCount, int contractorsCount, ScheduleSpec spec = ScheduleSpec())
         : worksCount(worksCount),
           resourcesCount(resourcesCount),
-          contractorsCount(contractorsCount) {
+          contractorsCount(contractorsCount),
+          spec(std::move(spec)) {
         //        cout << worksCount << " " << resourcesCount << " " <<
         //        contractorsCount << endl;
         size_t ORDER_SHIFT     = 0;
@@ -141,16 +144,20 @@ public:
     // Getters/Setters
     // ---------------
 
-    Array2D<int> &getOrder() {
+    Array2D<int>& getOrder() {
         return order;
     }
 
-    Array2D<int> &getResources() {
+    Array2D<int>& getResources() {
         return resources;
     }
 
-    Array2D<int> &getContractors() {
+    Array2D<int>& getContractors() {
         return contractors;
+    }
+
+    ScheduleSpec& getSpec() {
+        return spec;
     }
 
     int &getContractor(int work) {
@@ -176,6 +183,47 @@ public:
     int numContractors() {
         return getContractors().height();
     }
+
+    static Chromosome* from_schedule(unordered_map<string, int> &work_id2index,
+                                     unordered_map<string, int> &worker_name2index,
+                                     unordered_map<string, int> &contractor2index,
+                                     Array2D<int> &contractor_borders,
+                                     unordered_map<string, ScheduledWork> &schedule,
+                                     ScheduleSpec &spec,
+                                     LandscapeConfiguration &landscape,
+                                     vector<string> order = vector<string>()) {
+        auto* chromosome = new Chromosome(work_id2index.size(),
+                                          worker_name2index.size(),
+                                          contractor2index.size());
+
+        if (order.size() == 0) {
+            // if order not specified, create
+            for (auto& entry : work_id2index) {
+                order.emplace_back(entry.first);
+            }
+        }
+
+        for (size_t i = 0; i < order.size(); i++) {
+            auto& node = order[i];
+            int index = work_id2index[node];
+            *chromosome->getOrder()[i] = index;
+            for (auto& resource : schedule[node].workers) {
+                int res_index = worker_name2index[resource.get_name()];
+                chromosome->getResources()[index][res_index] = resource.get_count();
+                chromosome->getContractor(index) = contractor2index[resource.get_contractor_id()];
+            }
+        }
+
+        // TODO Implement this using memcpy
+        auto& contractor_chromosome = chromosome->getContractors();
+        for (int contractor = 0; contractor < contractor_borders.height(); contractor++) {
+            for (int resource = 0; resource < contractor_borders.width(); resource++) {
+                contractor_chromosome[contractor][resource] = contractor_borders[contractor][resource];
+            }
+        }
+
+        return chromosome;
+    }
 };
 
 typedef struct {
@@ -195,8 +243,8 @@ typedef struct {
     bool useExternalWorkEstimator;
 } EvaluateInfo;
 
+#endif    // NATIVE_EVALUATOR_TYPES_H
+
 using swork_dict_t = unordered_map<string, ScheduledWork>;
 using exec_times_t = unordered_map<string, pair<Time, Time>>;
-using worker_pool_t = unordered_map<string, unordered_map<string, Worker*>>;
-
-#endif    // NATIVE_EVALUATOR_TYPES_H
+using worker_pool_t = unordered_map<string, unordered_map<string, Worker>>;

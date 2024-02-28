@@ -25,6 +25,7 @@ class WorkSpec:
     assigned_time: Time | None = None
     is_independent: bool = False
 
+
 @dataclass
 class ScheduleSpec:
     """

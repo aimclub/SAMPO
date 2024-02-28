@@ -54,10 +54,10 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
 
     # resources for works part of chromosome
     # +1 stores contractors line
-    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=int)
+    resource_chromosome = np.zeros((len(order_chromosome), len(worker_name2index) + 1), dtype=np.int32)
 
     # zone status changes after node executing
-    zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=int)
+    zone_changes_chromosome = np.zeros((len(order_chromosome), len(landscape.zone_config.start_statuses)), dtype=np.int32)
 
     for node in order:
         node_id = node.id

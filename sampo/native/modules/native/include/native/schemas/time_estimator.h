@@ -40,36 +40,27 @@ public:
 
 class DefaultWorkTimeEstimator : public WorkTimeEstimator {
 private:
-    unordered_map<string, unordered_map<string, int>>
-        &minReqs;    // work -> worker -> WorkUnit.max_req
-    unordered_map<string, unordered_map<string, int>>
-        &maxReqs;    // work -> worker -> WorkUnit.min_req
-
     inline static float get_productivity(int worker_count) {
         // TODO
         return 1.0F * (float)worker_count;
     }
 
-    inline static float
-    communication_coefficient(int workerCount, int maxWorkerCount) {
+    inline static float communication_coefficient(int workerCount, int maxWorkerCount) {
         int n = workerCount;
         int m = maxWorkerCount;
-        return 1 / (float)(6 * m * m)
-               * (float)(-2 * n * n * n + 3 * n * n + (6 * m * m - 1) * n);
+        return 1 / (float)(6 * m * m) * (float)(-2 * n * n * n + 3 * n * n + (6 * m * m - 1) * n);
     }
 
 public:
-    DefaultWorkTimeEstimator(
-        unordered_map<string, unordered_map<string, int>> &minReqs,
-        unordered_map<string, unordered_map<string, int>> &maxReqs
-    )
-        : WorkTimeEstimator(""), minReqs(minReqs), maxReqs(maxReqs) { }
+    DefaultWorkTimeEstimator() : WorkTimeEstimator("") { }
 
     //    ~DefaultWorkTimeEstimator() override = default;
 
     int estimateTime(const WorkUnit &work, const vector<Worker> &workers) override {
         // the _abstract_estimate from WorkUnit
         int time = 0;
+
+        // TODO Rework with OOP
 
         for (const auto &worker : workers) {
             int min_req = this->minReqs[work][worker.get_name()];

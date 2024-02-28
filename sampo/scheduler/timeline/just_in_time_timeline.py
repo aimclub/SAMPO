@@ -226,7 +226,8 @@ class JustInTimeTimeline(Timeline):
         inseparable_chain = node.get_inseparable_chain_with_self()
 
         start_time = assigned_start_time if assigned_start_time is not None \
-            else self.find_min_start_time(node, workers,
+            else self.find_min_start_time(node,
+                                          workers,
                                           node2swork,
                                           spec,
                                           assigned_parent_time,

@@ -31,8 +31,8 @@ public:
     int min_count;
     int max_count;
 
-    explicit WorkerReq(string &kind, Time volume, int min_count, int max_count)
-        : kind(kind),
+    explicit WorkerReq(string kind, Time volume, int min_count, int max_count)
+        : kind(std::move(kind)),
           volume(volume),
           min_count(min_count),
           max_count(max_count) { }
@@ -46,13 +46,13 @@ public:
     bool isServiceUnit;
 
     explicit WorkUnit(
-        string name,
+        string name = "",
         const std::vector<WorkerReq> &worker_reqs = std::vector<WorkerReq>(),
         float volume                              = 1,
         bool isServiceUnit                        = false
     )
-        : name(name),
-          worker_reqs(worker_reqs),
+        : worker_reqs(worker_reqs),
+          name(std::move(name)),
           volume(volume),
           isServiceUnit(isServiceUnit) { }
 };
@@ -158,6 +158,14 @@ public:
         return getWorkUnit()->id;
     }
 
+    inline bool is_inseparable_parent() {
+        return inseparableSon() == nullptr;
+    }
+
+    inline bool is_inseparable_son() {
+        return inseparableParent() == nullptr;
+    }
+
     std::vector<GraphNode *> getInseparableChainWithSelf() {
         auto chain = std::vector<GraphNode *>();
         chain.push_back(this);
@@ -174,7 +182,7 @@ public:
         for (auto& edge : this->parentEdges) {
             auto it = node2swork.find(edge.start->id());
             if (it == node2swork.end()) {
-                return Time.inf();
+                return Time::inf();
             }
             time = max(time, it->second.start_time());
         }

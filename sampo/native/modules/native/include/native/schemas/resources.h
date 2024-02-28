@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 #include <random>
-#include "interval.h"
-#include "identifiable.h"
+// #include "interval.h"
+// #include "identifiable.h"
 
 using namespace std;
 
@@ -34,7 +34,7 @@ public:
 		std::string contractor_id;
 	} AgentId;*/
 public:
-	Resource(string id, string name, int count, string contractor_id = "") :
+	Resource(string id = "", string name = "", int count = 0, string contractor_id = "") :
 					id(id), /*name(name),*/ _count(count) {
 		AgentId.name = name;
 		AgentId.contractor_id = contractor_id;
@@ -71,41 +71,56 @@ public:
 	}
 };
 
-class Worker : public Identifiable {
-    string id;
-    string name;
-    int count;
-	int cost;
-    string contractor_id;
-    IntervalGaussian productivity;
-
-public:
-    Worker(string id, string name, int count, int cost, string contractorId, const IntervalGaussian& productivity)
-        : id(std::move(id)), name(std::move(name)), count(count), cost(cost),
-        contractor_id(std::move(contractorId)), productivity(productivity) {}
-
-	std::string get_id() {
-		return id;
-	}
-	std::string get_name() {
-		return name;
-	}
-	int get_count() {
-		return count;
-	}
-	int get_cost() {
-		return cost;
-	}
-	std::string get_contractor_id() {
-		return contractor_id;
-	}
-	IntervalGaussian get_productivity() {
-		return productivity;
-	}
-};
+//class Worker : public Identifiable {
+//    string id;
+//    string name;
+//    int count;
+//	int cost;
+//    string contractor_id;
+//    IntervalGaussian productivity;
+//
+//public:
+//    Worker(string id, string name, int count, int cost, string contractorId, const IntervalGaussian productivity)
+//        : id(std::move(id)), name(std::move(name)), count(count), cost(cost),
+//        contractor_id(std::move(contractorId)), productivity(std::move(productivity)) {}
+//
+//	std::string get_id() {
+//		return id;
+//	}
+//
+//	std::string get_name() const {
+//		return name;
+//	}
+//
+//	int get_count() const {
+//		return count;
+//	}
+//
+//	int get_cost() const {
+//		return cost;
+//	}
+//
+//	std::string get_contractor_id() {
+//		return contractor_id;
+//	}
+//
+//	IntervalGaussian get_productivity() {
+//		return productivity;
+//	}
+//
+//    Worker& with_count(int count) {
+//        this->count = count;
+//        return *this;
+//    }
+//
+//    inline Worker copy() {
+//        return Worker(id, name, count, cost, contractor_id, productivity);
+//    }
+//};
 
 class ConstructionObject : public Resource {
-
+public:
+    ConstructionObject() : Resource() {}
 };
 
 class Equipment : public Resource {

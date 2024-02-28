@@ -323,8 +323,6 @@ public:
         applyFunctions[2] = &Genetic::applyContractors;
     }
 
-    // TODO Add multi-criteria optimization (object hierarchy of fitness
-    // functions)
     Chromosome *run(vector<Chromosome *> &initialPopulation) {
         // TODO Ensure this is copy
         auto population = initialPopulation;

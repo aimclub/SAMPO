@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "native/schemas/dtime.h"
 
 #define TIME_INF 2000000000
@@ -12,9 +14,7 @@ Time::Time(int value) {
     this->value = value;
 }
 
-Time::Time(Time const &other) {
-    this->value = other.value;
-}
+Time::Time(const Time &other) = default;
 
 int Time::val() const {
     return this->value;
@@ -43,7 +43,7 @@ bool Time::is_inf() const {
 // is here to avoid functional call overhead. Time instances
 // should be as fast as possible.
 
-Time Time::operator+(Time &other) const {
+Time Time::operator+(const Time &other) const {
     return Time(this->value + other.value);
 }
 
@@ -51,7 +51,7 @@ Time Time::operator+(int other) const {
     return Time(this->value + other);
 }
 
-Time Time::operator-(Time &other) const {
+Time Time::operator-(const Time &other) const {
     return Time(this->value - other.value);
 }
 
@@ -59,7 +59,7 @@ Time Time::operator-(int other) const {
     return Time(this->value - other);
 }
 
-Time Time::operator*(Time &other) const {
+Time Time::operator*(const Time &other) const {
     return Time(this->value * other.value);
 }
 
@@ -67,7 +67,7 @@ Time Time::operator*(int other) const {
     return Time(this->value * other);
 }
 
-Time Time::operator/(Time &other) const {
+Time Time::operator/(const Time &other) const {
     return Time(this->value / other.value);
 }
 
@@ -75,7 +75,7 @@ Time Time::operator/(int other) const {
     return Time(this->value / other);
 }
 
-bool Time::operator<(Time &other) const {
+bool Time::operator<(const Time &other) const {
     return this->value < other.value;
 }
 
@@ -83,7 +83,7 @@ bool Time::operator<(int other) const {
     return this->value < other;
 }
 
-bool Time::operator>(Time &other) const {
+bool Time::operator>(const Time &other) const {
     return this->value > other.value;
 }
 
@@ -91,7 +91,7 @@ bool Time::operator>(int other) const {
     return this->value > other;
 }
 
-bool Time::operator<=(Time &other) const {
+bool Time::operator<=(const Time &other) const {
     return this->value <= other.value;
 }
 
@@ -99,7 +99,7 @@ bool Time::operator<=(int other) const {
     return this->value <= other;
 }
 
-bool Time::operator>=(Time &other) const {
+bool Time::operator>=(const Time &other) const {
     return this->value >= other.value;
 }
 
@@ -107,10 +107,14 @@ bool Time::operator>=(int other) const {
     return this->value >= other;
 }
 
-bool Time::operator==(Time &other) const {
+bool Time::operator==(const Time &other) const {
     return this->value == other.value;
 }
 
 bool Time::operator==(int other) const {
     return this->value == other;
+}
+
+inline Time maxt(const Time &a, const Time &b) {
+    return Time(std::max(a.val(), b.val()));
 }

@@ -1,14 +1,15 @@
-#ifndef WORKGRAPH_H
-#define WORKGRAPH_H
+#pragma once
 
 #include <tuple>
 #include <vector>
 
-#include "basic_types.h"
+#include "works.h"
 #include "dtime.h"
-#include "evaluator_types.h"
+#include "scheduled_work.h"
 
 using namespace std;
+
+using swork_dict_t = unordered_map<string, ScheduledWork>;
 
 // Attention! Here we have an idiom of fully immutable data types, so
 // it's normal situation that you can't directly map C++ code to the
@@ -22,39 +23,6 @@ enum EdgeType {
     FinishFinish,
     FinishStart,
     None
-};
-
-class WorkerReq {
-public:
-    string kind;
-    Time volume;
-    int min_count;
-    int max_count;
-
-    explicit WorkerReq(string kind, Time volume, int min_count, int max_count)
-        : kind(std::move(kind)),
-          volume(volume),
-          min_count(min_count),
-          max_count(max_count) { }
-};
-
-class WorkUnit : public Identifiable {
-public:
-    std::vector<WorkerReq> worker_reqs;
-    string name;
-    float volume;
-    bool isServiceUnit;
-
-    explicit WorkUnit(
-        string name = "",
-        const std::vector<WorkerReq> &worker_reqs = std::vector<WorkerReq>(),
-        float volume                              = 1,
-        bool isServiceUnit                        = false
-    )
-        : worker_reqs(worker_reqs),
-          name(std::move(name)),
-          volume(volume),
-          isServiceUnit(isServiceUnit) { }
 };
 
 class GraphNode;
@@ -184,7 +152,7 @@ public:
             if (it == node2swork.end()) {
                 return Time::inf();
             }
-            time = max(time, it->second.start_time());
+            time = maxt(time, it->second.start_time());
         }
         return time;
     }
@@ -200,5 +168,3 @@ public:
     explicit WorkGraph(const std::vector<GraphNode *> &nodes)
         : start(nodes[0]), finish(nodes[nodes.size() - 1]), nodes(nodes) { }
 };
-
-#endif    // WORKGRAPH_H

@@ -6,6 +6,7 @@
 
 #include "native/schemas/scheduled_work.h"
 #include "native/schemas/workgraph.h"
+#include "native/schemas/chromosome.h"
 #include "native/schemas/time_estimator.h"
 #include "native/scheduler/timeline/timeline.h"
 #include "native/schemas/evaluator_types.h"
@@ -23,7 +24,7 @@ namespace SGS {
                         const unordered_map<string, int> &contractor2index,
                         const LandscapeConfiguration &landscape,
                         Time assigned_parent_time,
-                        const Timeline &timeline,
+                        Timeline &timeline,
                         const WorkTimeEstimator &work_estimator);
 
     swork_dict_t parallel(Chromosome* chromosome,
@@ -36,7 +37,7 @@ namespace SGS {
                           const unordered_map<string, int> &contractor2index,
                           const LandscapeConfiguration &landscape,
                           Time assigned_parent_time,
-                          const Timeline &timeline,
+                          Timeline &timeline,
                           const WorkTimeEstimator &work_estimator);
 }
 

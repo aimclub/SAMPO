@@ -20,41 +20,43 @@ public:
 
     int val() const;
 
-    Time operator+(Time &other) const;
+    Time operator+(const Time &other) const;
 
     Time operator+(int other) const;
 
-    Time operator-(Time &other) const;
+    Time operator-(const Time &other) const;
 
     Time operator-(int other) const;
 
-    Time operator*(Time &other) const;
+    Time operator*(const Time &other) const;
 
     Time operator*(int other) const;
 
-    Time operator/(Time &other) const;
+    Time operator/(const Time &other) const;
 
     Time operator/(int other) const;
 
-    bool operator<(Time &other) const;
+    bool operator<(const Time &other) const;
 
     bool operator<(int other) const;
 
-    bool operator>(Time &other) const;
+    bool operator>(const Time &other) const;
 
     bool operator>(int other) const;
 
-    bool operator<=(Time &other) const;
+    bool operator<=(const Time &other) const;
 
     bool operator<=(int other) const;
 
-    bool operator>=(Time &other) const;
+    bool operator>=(const Time &other) const;
 
     bool operator>=(int other) const;
 
-    bool operator==(Time &other) const;
+    bool operator==(const Time &other) const;
 
     bool operator==(int other) const;
 };
+
+inline Time maxt(const Time &a, const Time &b);
 
 #endif    // NATIVE_TIME_H

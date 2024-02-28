@@ -19,12 +19,14 @@ WorkerReq decodeWorkerReq(PyObject *pyWorkerReq) {
 }
 
 WorkUnit *decodeWorkUnit(PyObject *pyWorkUnit) {
+    string id = PyCodec::getAttrString(pyWorkUnit, "id");
+    string name = PyCodec::getAttrString(pyWorkUnit, "name");
     auto worker_reqs = PyCodec::fromList(
         PyCodec::getAttr(pyWorkUnit, "worker_reqs"), decodeWorkerReq
     );
     float volume       = PyCodec::getAttrFloat(pyWorkUnit, "volume");
     bool isServiceUnit = PyCodec::getAttrBool(pyWorkUnit, "is_service_unit");
-    return new WorkUnit(worker_reqs, volume, isServiceUnit);
+    return new WorkUnit(name, worker_reqs, volume, isServiceUnit);
 }
 
 typedef struct {
@@ -116,10 +118,11 @@ Worker *decodeWorker(PyObject *pyWorker) {
     string id            = PyCodec::getAttrString(pyWorker, "id");
     string name          = PyCodec::getAttrString(pyWorker, "name");
     int count            = PyCodec::getAttrInt(pyWorker, "count");
+    int cost             = PyCodec::getAttrInt(pyWorker, "cost");
     string contractor_id = PyCodec::getAttrString(pyWorker, "contractor_id");
     IntervalGaussian productivity =
         PyCodec::getAttr(pyWorker, "productivity", decodeIntervalGaussian);
-    return new Worker(id, name, count, contractor_id, productivity);
+    return new Worker(id, name, count, cost, contractor_id, productivity);
 }
 
 Contractor *decodeContractor(PyObject *pyContractor) {

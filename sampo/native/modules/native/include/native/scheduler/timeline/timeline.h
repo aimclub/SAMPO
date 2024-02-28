@@ -18,7 +18,7 @@ public:
                              swork_dict_t &node2swork,
                              WorkSpec &spec,
                              Time parent_time,
-                             WorkTimeEstimator &work_estimator) {
+                             const WorkTimeEstimator &work_estimator) {
         auto t = this->find_min_start_time_with_additional(node, worker_team, node2swork,
                                                            spec, Time::unassigned(),
                                                            parent_time, work_estimator);
@@ -33,7 +33,7 @@ public:
                                     Time start_time,
                                     vector<GraphNode*> &inseparable_chain,
                                     exec_times_t &exec_times,
-                                    WorkTimeEstimator &work_estimator) {
+                                    const WorkTimeEstimator &work_estimator) {
         Time c_ft = start_time;
         for (auto& dep_node : inseparable_chain) {
             Time max_parent_time = dep_node->min_start_time(node2swork);
@@ -91,7 +91,7 @@ public:
                           Time assigned_start_time,
                           Time assigned_time,
                           Time assigned_parent_time,
-                          WorkTimeEstimator &work_estimator) = 0;
+                          const WorkTimeEstimator &work_estimator) = 0;
 };
 
 #endif //SAMPO_TIMELINE_H

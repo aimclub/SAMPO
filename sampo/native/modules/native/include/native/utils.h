@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <random>
 
-#include "native/schemas/evaluator_types.h"
+#include "native/schemas/chromosome.h"
 
 using namespace std;
 

@@ -43,10 +43,6 @@ CheckOptions:
     value: aNy_CasE
   - key: readability-identifier-naming.MemberCase
     value: lower_case
-  - key: readability-identifier-naming.PrivateMemberPrefix
-    value: m_
-  - key: readability-identifier-naming.ProtectedMemberPrefix
-    value: m_
   - key: readability-identifier-naming.PublicMemberCase
     value: lower_case
   - key: readability-identifier-naming.MethodCase
@@ -80,3 +76,5 @@ CheckOptions:
     value: l;u;f
   - key: bugprone-easily-swappable-parameters.MinimumLength
     value: 5
+  - key: misc-unused-parameters.StrictMode
+    value: false

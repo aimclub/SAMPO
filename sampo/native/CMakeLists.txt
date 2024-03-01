@@ -47,7 +47,6 @@ set(CONAN_SERVER "https://center.conan.io/" CACHE STRING "Conan server address."
 option(CONAN_VERIFY_SSL "Conan use ssl." ON)
 
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis." OFF)
-option(BUILD_EXAMPLES "Build example libraries/procedures/programms." OFF)
 
 # Enable all все cmake utils
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/)

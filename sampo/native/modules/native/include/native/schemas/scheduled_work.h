@@ -1,10 +1,11 @@
 #pragma once
+
 #include <string>
 #include <utility>
 #include <vector>
 #include <iostream>
 
-#include "workgraph.h"
+#include "works.h"
 #include "resources.h"
 #include "contractor.h"
 #include "landscape.h"
@@ -68,13 +69,15 @@ public:
 //	void __repr__(void) {
 //		this->__str__();
 //	}
-	Time start_time() const {
+	const Time& start_time() const {
 		return start_end_time.first;
 	}
+
 	void start_time(Time val) {
 		start_end_time = make_pair(std::move(val), start_end_time.second);
 	}
-	Time finish_time() const {
+
+	const Time& finish_time() const {
 		return start_end_time.second;
 	}
 };

@@ -22,6 +22,7 @@
 #include "native/schemas/evaluator_types.h"
 #include "native/schemas/external.h"
 #include "native/schemas/time_estimator.h"
+#include "native/schemas/chromosome.h"
 #include "native/pycodec.h"
 
 #include "numpy/arrayobject.h"
@@ -62,81 +63,11 @@ private:
     PyObject *pythonWrapper;
     bool usePythonWorkEstimator;
 
+    // TODO (?) Make interop with Python work estimators like in old NativeWrapper was
     WorkTimeEstimator *timeEstimator;
     dlloader::DLLoader<ITimeEstimatorLibrary> loader {
         External::timeEstimatorLibPath
     };
-
-    int calculate_working_time(
-        int chromosome_ind,
-        int work,
-        int team_target,
-        const int *resources,
-        size_t teamSize
-    ) {
-        if (usePythonWorkEstimator) {
-            auto res = PyObject_CallMethod(
-                pythonWrapper,
-                "calculate_working_time_ind",
-                "(iii)",
-                chromosome_ind,
-                team_target,
-                work
-            );
-            if (res == nullptr) {
-                cerr << "Result is NULL" << endl << flush;
-                return 0;
-            }
-            Py_DECREF(res);
-            return (int)PyLong_AsLong(res);
-        }
-        else {
-            // map resources from indices to names
-            vector<pair<string, int>> resourcesWithNames;
-            for (int i = 0; i < teamSize; i++) {
-                if (resources[i] != 0) {
-                    resourcesWithNames.emplace_back(id2res[i], resources[i]);
-                }
-            }
-            //        cout << "Called WorkTimeEstimator!" << endl;
-            //        return 1;
-            return calculate_working_time(
-                chromosome_ind,
-                id2work[work],
-                id2work[team_target],
-                volumes[work],
-                resourcesWithNames
-            );
-        }
-    }
-
-    // TODO Rework with OOP
-    int calculate_working_time(
-        int chromosome_ind,
-        const string &work,
-        const string &team_target,
-        float volume,
-        vector<pair<string, int>> &resources
-    ) {
-        if (usePythonWorkEstimator) {
-            auto res = PyObject_CallMethod(
-                pythonWrapper,
-                "calculate_working_time",
-                "(iss)",
-                chromosome_ind,
-                team_target.data(),
-                work.data()
-            );
-            if (res == nullptr) {
-                cerr << "Result is NULL" << endl << flush;
-                return 0;
-            }
-            Py_DECREF(res);
-            return (int)PyLong_AsLong(res);
-        } else {
-            return timeEstimator->estimateTime(work, volume, resources);
-        }
-    }
 
 public:
     int numThreads;
@@ -268,12 +199,12 @@ public:
     void evaluate(vector<Chromosome *> &chromosomes) {
         auto fitness = TimeFitness();
 #pragma omp parallel for shared(chromosomes, fitness) default(none) num_threads(this->numThreads)
-        for (size_t i = 0; i < chromosomes.size(); i++) {
-            if (isValid(chromosomes[i])) {
+        for (auto& chromosome : chromosomes) {
+            if (isValid(chromosome)) {
                 // TODO Add sgs_type parametrization
                 JustInTimeTimeline timeline(worker_pool, landscape);
                 Time assigned_parent_time;
-                swork_dict_t schedule = SGS::serial(chromosomes[i],
+                swork_dict_t schedule = SGS::serial(chromosome,
                                                     worker_pool,
                                                     worker_pool_indices,
                                                     index2node,
@@ -285,10 +216,10 @@ public:
                                                     assigned_parent_time,
                                                     timeline,
                                                     work_estimator);
-                chromosomes[i]->fitness = fitness.evaluate(schedule);
+                chromosome->fitness = fitness.evaluate(schedule);
             }
             else {
-                chromosomes[i]->fitness = INT_MAX;
+                chromosome->fitness = INT_MAX;
             }
         }
     }

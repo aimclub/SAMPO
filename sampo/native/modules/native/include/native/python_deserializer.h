@@ -5,6 +5,7 @@
 #include "Python.h"
 #include "native/schemas/evaluator_types.h"
 #include "native/schemas/workgraph.h"
+#include "native/schemas/chromosome.h"
 #include "native/schemas/contractor.h"
 
 namespace PythonDeserializer {

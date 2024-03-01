@@ -55,7 +55,7 @@ public:
                   Time assigned_start_time,
                   Time assigned_time,
                   Time assigned_parent_time,
-                  WorkTimeEstimator &work_estimator) override;
+                  const WorkTimeEstimator &work_estimator) override;
 };
 
 #endif //SAMPO_JUST_IN_TIME_H

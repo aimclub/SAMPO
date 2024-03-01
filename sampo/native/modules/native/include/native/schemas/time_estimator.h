@@ -1,7 +1,3 @@
-//
-// Created by stasb on 15.06.2023.
-//
-
 #ifndef NATIVE_TIME_ESTIMATOR_H
 #define NATIVE_TIME_ESTIMATOR_H
 
@@ -33,7 +29,7 @@ public:
         return this->path;
     }
 
-    virtual int estimateTime(const WorkUnit &work, const vector<Worker> &workers) = 0;
+    virtual Time estimateTime(const WorkUnit &work, const vector<Worker> &workers) const = 0;
 
     virtual ~WorkTimeEstimator() = default;
 };
@@ -56,18 +52,24 @@ public:
 
     //    ~DefaultWorkTimeEstimator() override = default;
 
-    int estimateTime(const WorkUnit &work, const vector<Worker> &workers) override {
+    Time estimateTime(const WorkUnit &work, const vector<Worker> &workers) const override {
         // the _abstract_estimate from WorkUnit
         int time = 0;
 
         // TODO Rework with OOP
 
-        for (const auto &worker : workers) {
-            int min_req = this->minReqs[work][worker.get_name()];
-            if (min_req == 0)
+        // build worker_req index
+        unordered_map<string, WorkerReq> worker_reqs;
+        for (const auto& worker_req : work.worker_reqs) {
+            worker_reqs[worker_req.kind] = worker_req;
+        }
+
+        for (const auto& worker : workers) {
+            const auto& worker_req = worker_reqs[worker.name];
+            if (worker_req.min_count == 0)
                 continue;
-            int actual_count = worker.get_count();
-            if (actual_count < min_req) {
+            int actual_count = worker.count;
+            if (actual_count < worker_req.min_count) {
                 //        cout << "Not conforms to min_req: " <<
                 //        get_worker(resources, team_target, i) << " < " <<
                 //        minReq << " on work " << work
@@ -82,7 +84,7 @@ public:
                 //        cout << endl;
                 return TIME_INF;
             }
-            int max_req = this->maxReqs[work][resource.first];
+            int max_req = worker_req.max_count;
 
             float productivity = get_productivity(actual_count);
             productivity *= communication_coefficient(actual_count, max_req);
@@ -91,13 +93,13 @@ public:
             //            return TIME_INF;
             //        }
             //        productivity = 0.1;
-            int new_time = ceil(volume / productivity);
+            int new_time = ceil((float) worker_req.volume.val() / productivity);
             if (new_time > time) {
                 time = new_time;
             }
         }
 
-        return time;
+        return Time(time);
     }
 };
 

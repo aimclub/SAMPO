@@ -10,6 +10,7 @@
 
 using namespace std;
 
+// TODO Fully rework
 class WorkerProductivityMode {
 public:
 	std::string Static = "static";
@@ -21,7 +22,7 @@ typedef struct {
 	std::string contractor_id;
 } agentId;
 
-class Resource {				//íàäî ñäåëàòü êîíñòðóêòîð
+class Resource {
 //private:
 public:
 	std::string id;
@@ -39,6 +40,10 @@ public:
 		AgentId.name = name;
 		AgentId.contractor_id = contractor_id;
 	}
+
+    const string& name() const {
+        return AgentId.name;
+    }
 	/*void set_id(std::string value) {
 		id = value;
 	}

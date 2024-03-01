@@ -16,7 +16,7 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
 
     for (auto& worker_state : worker_pool) {
         for (auto& contractor_state : worker_state.second) {
-            contractor_state.second->with_count(
+            contractor_state.second.with_count(
                     chromosome->getContractorBorder(contractor2index.at(contractor_state.first))
                     [worker_name2index.at(worker_state.first)]
             );

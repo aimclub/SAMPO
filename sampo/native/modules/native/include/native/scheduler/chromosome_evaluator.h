@@ -128,8 +128,8 @@ public:
 //        }
 
         for (auto* contractor : index2contractor) {
-            for (auto* worker : contractor->workers) {
-                worker_pool[worker->id][contractor->id] = worker;
+            for (const auto& worker : contractor->workers) {
+                worker_pool[worker.id].emplace(contractor->id, worker);
             }
         }
 

@@ -114,7 +114,7 @@ IntervalGaussian decodeIntervalGaussian(PyObject *pyIntervalGaussian) {
     return IntervalGaussian(mean, sigma, min_val, max_val);
 }
 
-Worker *decodeWorker(PyObject *pyWorker) {
+Worker decodeWorker(PyObject *pyWorker) {
     string id            = PyCodec::getAttrString(pyWorker, "id");
     string name          = PyCodec::getAttrString(pyWorker, "name");
     int count            = PyCodec::getAttrInt(pyWorker, "count");
@@ -122,7 +122,7 @@ Worker *decodeWorker(PyObject *pyWorker) {
     string contractor_id = PyCodec::getAttrString(pyWorker, "contractor_id");
     IntervalGaussian productivity =
         PyCodec::getAttr(pyWorker, "productivity", decodeIntervalGaussian);
-    return new Worker(id, name, count, cost, contractor_id, productivity);
+    return Worker(id, name, count, cost, contractor_id, productivity);
 }
 
 Contractor *decodeContractor(PyObject *pyContractor) {

@@ -16,7 +16,7 @@ JustInTimeTimeline::JustInTimeTimeline(const worker_pool_t &worker_pool, const L
         this->timeline.insert(std::make_pair(it.first, unordered_map<string, vector<pair<Time, int>>>()));
         for (const auto& it_contractor : it.second) {
             vector<pair<Time, int>> resource_state;
-            resource_state.emplace_back(0, worker_pool.at(it_contractor.first).at(it.first));
+            resource_state.emplace_back(0, worker_pool.at(it_contractor.first).at(it.first).count);
             this->timeline[it_contractor.first].insert(std::make_pair(it.first, resource_state));
         }
     }
@@ -115,41 +115,41 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(GraphNode *node,
                 return false;
             }
         }
-    } else {
-        // checking edges
-        for (auto& dep_node : node->getInseparableChainWithSelf()) {
-            for (auto& p : dep_node->parents()) {
-                if (p->id() != dep_node->id()) {
-                    auto swork_it = node2swork.find(p->id());
-                    if (swork_it == node2swork.end() || swork_it->second.finish_time() > start_time) {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        // checking workers
-        Time max_agent_time(0);
-
-        for (auto& worker : worker_team) {
-            int needed_count = worker.count;
-            auto &offer_stack = contractor_timeline.at(worker.name);
-
-            size_t ind = offer_stack.size() - 1;
-            while (needed_count > 0) {
-                auto[offer_time, offer_count] = offer_stack[ind];
-                max_agent_time = maxt(max_agent_time, offer_time);
-
-                if (needed_count < offer_count) {
-                    offer_count = needed_count;
-                }
-                needed_count -= offer_count;
-                ind--;
-            }
-        }
-
-        return max_agent_time <= start_time;
+        return true;
     }
+    // checking edges
+    for (auto& dep_node : node->getInseparableChainWithSelf()) {
+        for (auto& p : dep_node->parents()) {
+            if (p->id() != dep_node->id()) {
+                auto swork_it = node2swork.find(p->id());
+                if (swork_it == node2swork.end() || swork_it->second.finish_time() > start_time) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // checking workers
+    Time max_agent_time(0);
+
+    for (auto& worker : worker_team) {
+        int needed_count = worker.count;
+        const auto &offer_stack = contractor_timeline.at(worker.name);
+
+        size_t ind = offer_stack.size() - 1;
+        while (needed_count > 0) {
+            auto[offer_time, offer_count] = offer_stack[ind];
+            max_agent_time = maxt(max_agent_time, offer_time);
+
+            if (needed_count < offer_count) {
+                offer_count = needed_count;
+            }
+            needed_count -= offer_count;
+            ind--;
+        }
+    }
+
+    return max_agent_time <= start_time;
 }
 
 void JustInTimeTimeline::update_timeline(GraphNode *node,

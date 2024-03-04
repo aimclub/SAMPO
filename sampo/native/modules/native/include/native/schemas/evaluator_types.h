@@ -38,4 +38,4 @@ typedef struct {
 
 using swork_dict_t = unordered_map<string, ScheduledWork>;
 using exec_times_t = unordered_map<string, pair<Time, Time>>;
-using worker_pool_t = unordered_map<string, unordered_map<string, Worker*>>;
+using worker_pool_t = unordered_map<string, unordered_map<string, Worker>>;

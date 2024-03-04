@@ -16,7 +16,7 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
 
     for (auto& worker_state : worker_pool) {
         for (auto& contractor_state : worker_state.second) {
-            contractor_state.second->with_count(
+            contractor_state.second.with_count(
                     chromosome->getContractorBorder(contractor2index.at(contractor_state.first))
                     [worker_name2index.at(worker_state.first)]
             );
@@ -66,6 +66,24 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
                            Time assigned_parent_time,
                            Timeline &timeline,
                            const WorkTimeEstimator &work_estimator) {
-    // TODO
-    return swork_dict_t();
+    swork_dict_t node2swork;
+
+    for (auto& worker_state : worker_pool) {
+        for (auto& contractor_state : worker_state.second) {
+            contractor_state.second.with_count(
+                    chromosome->getContractorBorder(contractor2index.at(contractor_state.first))
+                    [worker_name2index.at(worker_state.first)]
+            );
+        }
+    }
+
+    list<GraphNode*> enumerated_works_remaining;
+    for (int i = 0; i < chromosome->numWorks(); i++) {
+        int order_index = *chromosome->getOrder()[i];
+        enumerated_works_remaining.push_back(index2node[order_index]);
+    }
+
+
+
+    return node2swork;
 }

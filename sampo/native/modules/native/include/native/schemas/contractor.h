@@ -33,6 +33,8 @@ public:
           contractor_id(std::move(contractorId)),
           productivity(productivity) { }
 
+    Worker(const Worker& other) = default;
+
     Worker& with_count(int count) {
         this->count = count;
         return *this;
@@ -45,9 +47,9 @@ public:
 
 class Contractor : public Identifiable {
 public:
-    vector<Worker *> workers;
+    vector<Worker> workers;
 
-    explicit Contractor(vector<Worker *> &workers) : workers(workers) { }
+    explicit Contractor(const vector<Worker> &workers) : workers(workers) { }
 };
 
 #endif    // CONTRACTOR_H

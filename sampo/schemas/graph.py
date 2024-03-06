@@ -338,6 +338,10 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         object.__setattr__(self, 'dict_nodes', dict_nodes)
         object.__setattr__(self, 'vertex_count', len(ordered_nodes))
 
+    @property
+    def node_list(self):
+        return list(self.nodes)
+
     @classmethod
     def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
         start = get_start_stage(rand=rand)

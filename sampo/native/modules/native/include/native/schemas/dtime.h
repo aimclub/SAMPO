@@ -57,6 +57,4 @@ public:
     bool operator==(int other) const;
 };
 
-inline Time maxt(const Time &a, const Time &b);
-
 #endif    // NATIVE_TIME_H

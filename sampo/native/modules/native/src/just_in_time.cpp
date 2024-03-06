@@ -38,7 +38,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
         return { assigned_parent_time, assigned_parent_time, exec_times_t() };
     }
 
-    Time max_parent_time = maxt(node->min_start_time(node2swork), assigned_parent_time);
+    Time max_parent_time = max(node->min_start_time(node2swork), assigned_parent_time);
     if (worker_team.empty()) {
         return { max_parent_time, max_parent_time, exec_times_t() };
     }
@@ -51,7 +51,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
         // grab from the end
         for (auto& worker : worker_team) {
             const vector<pair<Time, int>>& offer_stack = contractor_state.at(worker.id);
-            max_agent_time = maxt(max_agent_time, offer_stack[0].first);
+            max_agent_time = max(max_agent_time, offer_stack[0].first);
         }
     } else {
         // grab from whole sequence
@@ -63,7 +63,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
             size_t ind = offer_stack.size() - 1;
             while (needed_count > 0) {
                 auto[offer_time, offer_count] = offer_stack[ind];
-                max_agent_time = maxt(max_agent_time, offer_time);
+                max_agent_time = max(max_agent_time, offer_time);
 
                 if (needed_count < offer_count) {
                     offer_count = needed_count;
@@ -75,12 +75,12 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
     }
 
     // TODO Remove multiple search time instances, replace with one
-    Time c_st = maxt(max_agent_time, max_parent_time);
+    Time c_st = max(max_agent_time, max_parent_time);
     Time new_finish_time = c_st;
     for (auto& dep_node : node->getInseparableChainWithSelf()) {
         Time dep_parent_time = dep_node->min_start_time(node2swork);
 
-        Time dep_st = maxt(new_finish_time, dep_parent_time);
+        Time dep_st = max(new_finish_time, dep_parent_time);
         Time working_time = work_estimator.estimateTime(*dep_node->getWorkUnit(), worker_team);
         new_finish_time = dep_st + working_time;
     }
@@ -139,7 +139,7 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(GraphNode *node,
         size_t ind = offer_stack.size() - 1;
         while (needed_count > 0) {
             auto[offer_time, offer_count] = offer_stack[ind];
-            max_agent_time = maxt(max_agent_time, offer_time);
+            max_agent_time = max(max_agent_time, offer_time);
 
             if (needed_count < offer_count) {
                 offer_count = needed_count;

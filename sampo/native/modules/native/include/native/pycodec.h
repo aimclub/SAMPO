@@ -110,8 +110,7 @@ inline vector<T> fromList(PyObject *incoming, T (*decodeValue)(PyObject *)) {
 }
 
 template <typename T>
-inline vector<T>
-fromList(PyObject *incoming, T typeref) {    // typeref used for T recognition
+inline vector<T>fromList(PyObject *incoming, T typeref) {    // typeref used for T recognition
     return fromList(incoming, [typeref](PyObject *value) {
         return fromPrimitive(value, typeref);
     });

@@ -48,7 +48,6 @@ private:
     WorkUnit *workUnit;
     std::vector<GraphEdge> parentEdges   = std::vector<GraphEdge>();
     std::vector<GraphEdge> childrenEdges = std::vector<GraphEdge>();
-
 public:
     explicit GraphNode(WorkUnit *workUnit) : workUnit(workUnit) {};
 
@@ -68,8 +67,12 @@ public:
         std::vector<tuple<GraphNode *, float, EdgeType>> &parents
     )
         : GraphNode(workUnit) {
+        add_parents(parents);
+    }
+
+    void add_parents(std::vector<tuple<GraphNode *, float, EdgeType>> &parents) {
         for (auto &tuple : parents) {
-            auto p    = get<0>(tuple);
+            auto* p    = get<0>(tuple);
             auto edge = GraphEdge(p, this, get<1>(tuple), get<2>(tuple));
             parentEdges.emplace_back(edge);
             p->childrenEdges.emplace_back(edge);
@@ -152,7 +155,7 @@ public:
             if (it == node2swork.end()) {
                 return Time::inf();
             }
-            time = maxt(time, it->second.start_time());
+            time = max(time, it->second.start_time());
         }
         return time;
     }
@@ -165,6 +168,10 @@ public:
     std::vector<GraphNode *> nodes;
 
     // `nodes` param MUST be a std::vector with topologically-ordered nodes
-    explicit WorkGraph(const std::vector<GraphNode *> &nodes)
-        : start(nodes[0]), finish(nodes[nodes.size() - 1]), nodes(nodes) { }
+    explicit WorkGraph(const std::vector<GraphNode *> &nodes) : nodes(nodes) {
+        if (!nodes.empty()) {
+            start = nodes[0];
+            finish = nodes[nodes.size() - 1];
+        }
+    }
 };

@@ -96,11 +96,29 @@ static PyObject *runGenetic(PyObject *self, PyObject *args) {
     );
     Chromosome *result;
     //    Py_BEGIN_ALLOW_THREADS;
-    result = g.run(chromosomes);
+//    result = g.run(chromosomes);
     //    Py_END_ALLOW_THREADS;
     auto pyResult = PythonDeserializer::encodeChromosome(result);
     delete result;
     return pyResult;
+}
+
+static PyObject *ddd(PyObject *self, PyObject *args) {
+    PyObject *pyWorkGraph;
+
+    if (!PyArg_ParseTuple(
+            args,
+            "O",
+            &pyWorkGraph
+    )) {
+        cout << "Can't parse arguments" << endl;
+        Py_RETURN_NONE;
+    }
+
+    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
+    cout << "Decoded wg size: " << wg->nodes.size() << endl;
+    delete wg;
+    Py_RETURN_NONE;
 }
 
 static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
@@ -142,7 +160,19 @@ static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
             &id2res
         )) {
         cout << "Can't parse arguments" << endl;
+        Py_RETURN_NONE;
     }
+
+//    Py_XINCREF(pyWorkGraph);
+//    Py_XDECREF(pyWorkGraph);
+
+//    cout << pyWorkGraph->ob_refcnt << endl;
+//    cout << pyContractors->ob_refcnt << endl;
+
+//    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
+//    cout << "Decoded wg size: " << wg->nodes.size() << endl;
+//    delete wg;
+//    PythonDeserializer::contractors(pyContractors);
 
     auto *info = new EvaluateInfo {
         pythonWrapper,
@@ -188,6 +218,9 @@ static PyMethodDef nativeMethods[] = {
     {"decodeEvaluationInfo",
      decodeEvaluationInfo, METH_VARARGS,
      "Uploads the scheduling info to C++ memory and caches it"                          },
+    {"ddd",
+            ddd, METH_VARARGS,
+            "Uploads the scheduling info to C++ memory and caches it"                          },
     {  "freeEvaluationInfo",
      freeEvaluationInfo, METH_VARARGS,
      "Frees C++ scheduling cache. Must be called in the end of scheduling to "
@@ -197,8 +230,7 @@ static PyMethodDef nativeMethods[] = {
 
 static PyModuleDef nativeModule = { PyModuleDef_HEAD_INIT,
                                     "native",
-                                    "The high-efficient native implementation "
-                                    "of SAMPO modules",
+                                    "The high-efficient native implementation of SAMPO modules",
                                     -1,
                                     nativeMethods };
 

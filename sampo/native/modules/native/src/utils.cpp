@@ -12,22 +12,6 @@ vector<int> sample_ind(int n, float prob, random_device &rd) {
     return result;
 }
 
-template <typename T>
-vector<T *> sample(vector<T *> &src, float prob, random_device &rd, bool copy) {
-    auto indexes = sample_ind(src.size(), prob, rd);
-
-    vector<T *> result;
-    result.resize(indexes.size());
-
-    for (int i = 0; i < result.size(); i++) {
-        result[i] = src[indexes[i]];
-        if (copy) {
-            result[i] = new T(result[i]);
-        }
-    }
-    return result;
-}
-
 int randInt(int min, int max) {
     // TODO implement using C++ 11 and without re-creating distribution
     // objects each call
@@ -62,7 +46,7 @@ int randInt(int min, int max) {
  * @param array input array
  * @return indices w.r.t sorted array
  */
-inline std::vector<size_t> argsort(const std::vector<Chromosome *> &array) {
+std::vector<size_t> argsort(const std::vector<Chromosome *> &array) {
     std::vector<size_t> indices(array.size());
     std::iota(indices.begin(), indices.end(), 0);
     std::sort(

@@ -26,7 +26,7 @@ WorkUnit *decodeWorkUnit(PyObject *pyWorkUnit) {
     );
     float volume       = PyCodec::getAttrFloat(pyWorkUnit, "volume");
     bool isServiceUnit = PyCodec::getAttrBool(pyWorkUnit, "is_service_unit");
-    return new WorkUnit(name, worker_reqs, volume, isServiceUnit);
+    return new WorkUnit(id, name, worker_reqs, volume, isServiceUnit);
 }
 
 typedef struct {
@@ -63,25 +63,39 @@ T identity(T v) {
 }
 
 UnlinkedGraphNode decodeNodeWorkUnit(PyObject *pyGraphNode) {
-    auto workUnit = PyCodec::getAttr(pyGraphNode, "_work_unit", decodeWorkUnit);
-    auto pyParents = PyCodec::
-        fromList(PyCodec::getAttr(pyGraphNode, "_parent_edges"), identity<PyObject *>);
+    auto* workUnit = PyCodec::getAttr(pyGraphNode, "_work_unit", decodeWorkUnit);
+    auto pyParents = PyCodec::fromList(PyCodec::getAttr(pyGraphNode, "_parent_edges"),
+                 identity<PyObject *>);
+//    WorkUnit* workUnit = nullptr;
     auto parents = vector<tuple<string, float, EdgeType>>();
     // decode with first element replaced GraphNode -> GraphNode#WorkUnit#id
     for (PyObject *pyParent : pyParents) {
         // go deep and get work_unit's id
         string id = PyCodec::getAttrString(
-            PyCodec::getAttr(PyCodec::getAttr(pyParent, "start"), "_work_unit"),
+            PyCodec::getAttr(PyCodec::getAttr(pyParent, "start"), "work_unit"),
             "id"
         );
-        float lag     = PyCodec::getAttrFloat(pyGraphNode, "lag");
-        EdgeType type = PyCodec::getAttr(pyGraphNode, "type", decodeEdgeType);
+        float lag = PyCodec::getAttrFloat(pyParent, "lag");
+        EdgeType type = PyCodec::getAttr(pyParent, "type", decodeEdgeType);
         parents.emplace_back(id, lag, type);
     }
+
     return { workUnit, parents };
 }
 
 WorkGraph *workGraph(PyObject *pyWorkGraph) {
+//    PyCodec::getAttr(pyWorkGraph, "node_list");
+//    cout << PyCodec::fromPrimitive(PyObject_Str(pyWorkGraph), "") << endl;
+//    PyGILState_STATE state = PyGILState_Ensure();
+//    auto* str = PyUnicode_FromString("start");
+//    cout << pyWorkGraph->ob_refcnt << endl;
+//    Py_XINCREF(pyWorkGraph);
+//    cout << pyWorkGraph->ob_refcnt << endl;
+//    cout << PyObject_HasAttr(pyWorkGraph, str) << endl;
+//    Py_XDECREF(pyWorkGraph);
+
+//    PyGILState_Release(state);
+//    return nullptr;
     auto unlinked_ordered_nodes = PyCodec::fromList(
         PyCodec::getAttr(pyWorkGraph, "nodes"), decodeNodeWorkUnit
     );
@@ -91,6 +105,13 @@ WorkGraph *workGraph(PyObject *pyWorkGraph) {
     // linking
     for (const auto &s_node : unlinked_ordered_nodes) {
         auto linked_parents = vector<tuple<GraphNode *, float, EdgeType>>();
+        auto* node = new GraphNode(s_node.workUnit, linked_parents);
+        ordered_nodes.push_back(node);
+        nodes[s_node.workUnit->id] = node;
+    }
+
+    for (const auto &s_node : unlinked_ordered_nodes) {
+        vector<tuple<GraphNode *, float, EdgeType>> linked_parents;
         for (const auto &unlinked_parent : s_node.parents) {
             string id     = get<0>(unlinked_parent);
             float lag     = get<1>(unlinked_parent);
@@ -98,9 +119,7 @@ WorkGraph *workGraph(PyObject *pyWorkGraph) {
             linked_parents.emplace_back(nodes[id], lag, type);
         }
 
-        auto node = new GraphNode(s_node.workUnit, linked_parents);
-        ordered_nodes.push_back(node);
-        nodes[s_node.workUnit->id] = node;
+        nodes[s_node.workUnit->id]->add_parents(linked_parents);
     }
 
     return new WorkGraph(ordered_nodes);
@@ -118,15 +137,14 @@ Worker decodeWorker(PyObject *pyWorker) {
     string id            = PyCodec::getAttrString(pyWorker, "id");
     string name          = PyCodec::getAttrString(pyWorker, "name");
     int count            = PyCodec::getAttrInt(pyWorker, "count");
-    int cost             = PyCodec::getAttrInt(pyWorker, "cost");
+    int cost             = PyCodec::getAttrInt(pyWorker, "cost_one_unit");
     string contractor_id = PyCodec::getAttrString(pyWorker, "contractor_id");
-    IntervalGaussian productivity =
-        PyCodec::getAttr(pyWorker, "productivity", decodeIntervalGaussian);
+    IntervalGaussian productivity = PyCodec::getAttr(pyWorker, "productivity", decodeIntervalGaussian);
     return Worker(id, name, count, cost, contractor_id, productivity);
 }
 
 Contractor *decodeContractor(PyObject *pyContractor) {
-    PyObject *pyWorkers = PyCodec::getAttr(pyContractor, "workers");
+    PyObject *pyWorkers = PyCodec::getAttr(pyContractor, "worker_list");
     auto workers        = PyCodec::fromList(pyWorkers, decodeWorker);
     return new Contractor(workers);
 }
@@ -151,8 +169,7 @@ inline Chromosome *decodeChromosome(PyObject *incoming) {
     int resourcesCount   = PyArray_DIM(pyResources, 1) - 1;
     int contractorsCount = PyArray_DIM(pyContractors, 0);
 
-    auto *chromosome =
-        new Chromosome(worksCount, resourcesCount, contractorsCount);
+    auto *chromosome = new Chromosome(worksCount, resourcesCount, contractorsCount);
 
     //        cout << "------------------" << endl;
 

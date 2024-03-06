@@ -114,7 +114,3 @@ bool Time::operator==(const Time &other) const {
 bool Time::operator==(int other) const {
     return this->value == other;
 }
-
-inline Time maxt(const Time &a, const Time &b) {
-    return Time(std::max(a.val(), b.val()));
-}

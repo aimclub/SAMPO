@@ -32,6 +32,7 @@ public:
 
     // TODO Add id
     explicit WorkUnit(
+            string id = "",
             string name = "",
             const std::vector<WorkerReq> &worker_reqs = std::vector<WorkerReq>(),
             float volume                              = 1,
@@ -40,7 +41,9 @@ public:
             : worker_reqs(worker_reqs),
               name(std::move(name)),
               volume(volume),
-              isServiceUnit(isServiceUnit) { }
+              isServiceUnit(isServiceUnit) {
+        this->id = id;
+    }
 };
 
 #endif //SAMPO_WORKS_H

@@ -1,19 +1,18 @@
 import random
-from typing import Optional, Callable
+from typing import Optional
 
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.schedule_builder import build_schedules
-from sampo.scheduler.genetic.converter import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
-from sampo.scheduler.lft.base import LFTScheduler
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.lft.base import LFTScheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.resource.base import ResourceOptimizer
 from sampo.scheduler.resource.identity import IdentityResourceOptimizer
 from sampo.scheduler.resources_in_time.average_binary_search import AverageBinarySearchResourceOptimizingScheduler
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
@@ -39,18 +38,15 @@ class GeneticScheduler(Scheduler):
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
-                 n_cpu: int = 1,
                  weights: Optional[list[int] or None] = None,
-                 fitness_constructor: Callable[
-                     [Callable[[list[ChromosomeType]], list[Schedule]]], FitnessFunction] = TimeFitness,
+                 fitness_constructor: FitnessFunction = TimeFitness(),
                  fitness_weights: tuple[int | float, ...] = (-1,),
                  scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
-                 only_lft_initialization: bool = False,
-                 verbose: bool = True):
+                 only_lft_initialization: bool = False):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -66,10 +62,8 @@ class GeneticScheduler(Scheduler):
         self.sgs_type = sgs_type
 
         self._optimize_resources = optimize_resources
-        self._n_cpu = n_cpu
         self._weights = weights
         self._only_lft_initialization = only_lft_initialization
-        self._verbose = verbose
 
         self._time_border = None
         self._max_plateau_steps = None
@@ -112,15 +106,6 @@ class GeneticScheduler(Scheduler):
                 size_of_population = works_count // 25
         return mutate_order, mutate_resources, mutate_zones, size_of_population
 
-    def set_use_multiprocessing(self, n_cpu: int):
-        """
-        Set the number of CPU cores.
-        DEPRECATED, NOT WORKING
-
-        :param n_cpu:
-        """
-        self._n_cpu = n_cpu
-
     def set_time_border(self, time_border: int):
         self._time_border = time_border
 
@@ -140,9 +125,6 @@ class GeneticScheduler(Scheduler):
 
     def set_optimize_resources(self, optimize_resources: bool):
         self._optimize_resources = optimize_resources
-
-    def set_verbose(self, verbose: bool):
-        self._verbose = verbose
 
     def set_only_lft_initialization(self, only_lft_initialization: bool):
         self._only_lft_initialization = only_lft_initialization
@@ -171,8 +153,8 @@ class GeneticScheduler(Scheduler):
         if weights is None:
             weights = [2, 2, 2, 1, 1, 1, 1]
 
-        # init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
-        #                                                                           landscape=landscape), None, spec)
+        init_lft_schedule = (LFTScheduler(work_estimator=work_estimator).schedule(wg, contractors, spec=spec,
+                                                                                  landscape=landscape), None, spec)
 
         def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
             try:
@@ -204,7 +186,7 @@ class GeneticScheduler(Scheduler):
                     return None, None, None
 
         return {
-            # "lft": (*init_lft_schedule, weights[0]),
+            "lft": (*init_lft_schedule, weights[0]),
             "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
             "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
             "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),
@@ -301,12 +283,10 @@ class GeneticScheduler(Scheduler):
                                                                     self.work_estimator, self._deadline, self._weights)
 
         mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
-        worker_pool = get_worker_contractor_pool(contractors)
         deadline = None if self._optimize_resources else self._deadline
 
         schedules = build_schedules(wg,
                                     contractors,
-                                    worker_pool,
                                     size_of_population,
                                     self.number_of_generation,
                                     mutate_order,
@@ -315,12 +295,12 @@ class GeneticScheduler(Scheduler):
                                     init_schedules,
                                     self.rand,
                                     spec,
+                                    self._weights,
                                     landscape,
                                     self.fitness_constructor,
                                     self.fitness_weights,
                                     self.work_estimator,
                                     self.sgs_type,
-                                    self._n_cpu,
                                     assigned_parent_time,
                                     timeline,
                                     self._time_border,
@@ -328,8 +308,7 @@ class GeneticScheduler(Scheduler):
                                     self._optimize_resources,
                                     deadline,
                                     self._only_lft_initialization,
-                                    is_multiobjective,
-                                    self._verbose)
+                                    is_multiobjective)
         schedules = [
             (Schedule.from_scheduled_works(scheduled_works.values(), wg), schedule_start_time, timeline, order_nodes)
             for scheduled_works, schedule_start_time, timeline, order_nodes in schedules]

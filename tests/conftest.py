@@ -1,3 +1,4 @@
+import random
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -6,8 +7,10 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
-from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, Scheduler
+from sampo.scheduler import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
+from sampo.scheduler.heft import HEFTScheduler, HEFTBetweenScheduler
+from sampo.scheduler.topological import TopologicalScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -113,7 +116,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     generate_landscape = False
     materials = [material for node in setup_wg.nodes for material in node.work_unit.need_materials()]
-    if materials is not None:
+    if len(materials) > 0:
         generate_landscape = True
     resource_req: Dict[str, int] = {}
     resource_req_count: Dict[str, int] = {}
@@ -143,6 +146,14 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
                                                for name, count in resource_req.items()},
                                       equipments={}))
 
+    if generate_landscape:
+        materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
+        for node in setup_wg.nodes:
+            if not node.work_unit.is_service_unit:
+                work_materials = list(set(random.choices(materials_name, k=3)))
+                node.work_unit.material_reqs = [MaterialReq(name, random.randint(500, 750), name) for name in
+                                                work_materials]
+
     landscape = setup_simple_synthetic.simple_synthetic_landscape(setup_wg) \
         if generate_landscape else LandscapeConfiguration()
     return setup_wg, contractors, landscape
@@ -152,7 +163,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
-    num_contractors= 1
+    num_contractors = 1
 
     for node in setup_wg.nodes:
         for req in node.work_unit.worker_reqs:
@@ -188,10 +199,7 @@ def setup_scheduler(request) -> Scheduler:
 @fixture
 def setup_schedule(setup_scheduler, setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
-    if setup_wg.vertex_count > 16:
-        pytest.skip('Non-manual graph')
     scheduler = setup_scheduler
-
     try:
         return scheduler.schedule(setup_wg,
                                   setup_contractors,

@@ -86,7 +86,8 @@ class LandscapeConfiguration:
     def __init__(self,
                  holders: list[ResourceHolder] = None,
                  lg: LandGraph = None,
-                 zone_config: ZoneConfiguration = ZoneConfiguration()):
+                 zone_config: ZoneConfiguration = ZoneConfiguration(),
+                 algorithm_delivery: str = 'to_start'):
         self.WAY_LENGTH = np.Inf
         self.dist_mx: list[list[float]] = None
         self.path_mx: np.array = None
@@ -111,10 +112,17 @@ class LandscapeConfiguration:
         #                                                          for work in platform.works}
         self._build_routes()
         self._node2ind = self.lg.node2ind
+        self._algo_delivery = algorithm_delivery
+
+    def get_algorithm_delivery(self) -> str:
+        return self._algo_delivery
+
+    def set_algorithm_delivery(self, algorithm_delivery: str) -> None:
+        self._algo_delivery = algorithm_delivery
 
     def get_sorted_holders(self, node: LandGraphNode) -> SortedList[list[tuple[float, str]]]:
         """
-        :param node_id: id of node in LandGraph's list of nodes
+        :param node: id of node in LandGraph's list of nodes
         :return: sorted list of holders' id by the length of way
         """
         holders = []

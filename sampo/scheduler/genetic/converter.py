@@ -1,13 +1,12 @@
 import copy
-from enum import Enum
 
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
-from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
@@ -145,7 +144,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
             worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(worker_pool, landscape)
+        timeline = JustInTimeTimeline(worker_pool, landscape, landscape.get_algorithm_delivery())
 
     order_nodes = []
 
@@ -258,7 +257,7 @@ def serial_schedule_generation_scheme(chromosome: ChromosomeType,
             worker_name2index[worker_index]])
 
     if not isinstance(timeline, MomentumTimeline):
-        timeline = MomentumTimeline(worker_pool, landscape)
+        timeline = MomentumTimeline(worker_pool, landscape, landscape.get_algorithm_delivery())
 
     order_nodes = []
 

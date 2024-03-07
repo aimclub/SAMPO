@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from sortedcontainers import SortedList
 
+from sampo.scheduler.timeline.base import BaseSupplyTimeline
 from sampo.scheduler.timeline.platform_timeline import PlatformTimeline
 from sampo.schemas.exceptions import NotEnoughMaterialsInDepots, NoDepots, NoAvailableResources
 from sampo.schemas.graph import GraphNode
@@ -13,7 +14,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.types import ScheduleEvent, EventType
 
 
-class SupplyTimeline:
+class ToStartSupplyTimeline(BaseSupplyTimeline):
     def __init__(self, landscape_config: LandscapeConfiguration):
 
         def event_cmp(event: ScheduleEvent | Time | tuple[Time, int, int]) -> tuple[Time, int, int]:
@@ -157,15 +158,12 @@ class SupplyTimeline:
         if not node.work_unit.need_materials():
             return MaterialDelivery(node.id), deadline
 
-        start_time = deadline
-
         if self._platform_timeline.can_provide_resources(node, deadline, materials, update):
-            return MaterialDelivery(node.id), start_time
+            return MaterialDelivery(node.id), deadline
 
-        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
-        delivery, time = self._supply_resources(node, start_time, materials_for_delivery, update)
+        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
+        delivery, time = self._supply_resources(node, deadline, materials_for_delivery, update)
 
-        # print(node.id)
         return delivery, time
 
     def _supply_resources(self, node: GraphNode,

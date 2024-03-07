@@ -4,7 +4,7 @@ import pytest
 from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.to_start_supply_timeline import ToStartSupplyTimeline
 from sampo.schemas.resources import Material
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import DefaultWorkEstimator
@@ -12,7 +12,7 @@ from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 @fixture(scope='function')
 def setup_timeline(setup_scheduler_parameters):
-    return SupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
+    return ToStartSupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
 
 
 def test_init_resource_structure(setup_timeline):
@@ -28,7 +28,7 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
     wg, contractors, landscape = setup_scheduler_parameters
     if wg.vertex_count > 20:
         pytest.skip('Not manual graph')
-    timeline = SupplyTimeline(landscape)
+    timeline = ToStartSupplyTimeline(landscape)
 
     ordered_nodes = prioritization(wg, DefaultWorkEstimator())
     for node in ordered_nodes:

@@ -1,46 +1,26 @@
 #include <iostream>
+#include <string>
 
-#include "Python.h"
-//#include <Python.h>
+#include <pybind11/embed.h>
 
+#include "native/python_deserializer.h"
+
+namespace py = pybind11;
 using namespace std;
 
 int main() {
-    PyObject *pName, *pModule, *pFunc;
-    PyObject *pArgs, *pValue, *sys, *path;
+    py::scoped_interpreter guard{}; // start the interpreter and keep it alive
 
-    Py_Initialize();
+    try {
+        py::module test_module = py::module_::import("extra.test");
 
-//    sys  = PyImport_ImportModule("sys");
-//    path = PyObject_GetAttrString(sys, "path");
-//    PyList_Append(path, PyUnicode_FromString("."));
+//        auto result = test_module.attr("get_args")().cast<py::tuple>();
+//
+//        cout << result[0].attr("vertex_count").cast<int>() << endl;
+        // PythonDeserializer::workGraph(result[0].ptr());
 
-    pModule = PyImport_ImportModule("extra.test");
-
-    if (!pModule) {
-        PyErr_Print();
-        cout << "ERROR in pModule" << endl;
-        exit(1);
+    } catch (exception &e) {
+        cout << e.what();
     }
-
-    pFunc = PyObject_GetAttrString(pModule, "get_args");
-
-    if (!pFunc) {
-        PyErr_Print();
-        cout << "ERROR in pFunc" << endl;
-        exit(1);
-    }
-
-    pArgs = PyTuple_New(0);
-
-    PyObject* wg = PyObject_CallObject(pFunc, pArgs);
-
-    if (!wg) {
-        PyErr_Print();
-        cout << "ERROR in WorkGraph#loadf" << endl;
-        exit(1);
-    }
-
-    Py_Finalize();
     return 0;
 }

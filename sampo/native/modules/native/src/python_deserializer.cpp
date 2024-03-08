@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "native/pycodec.h"
-#include "native/use_numpy.h"
 
 namespace PythonDeserializer {
 

@@ -31,7 +31,11 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
         for w in self.workers.values():
             w.contractor_id = self.id
 
-    def __hash__(self) -> str:
+    @property
+    def worker_list(self) -> list[Worker]:
+        return list(self.workers.values())
+
+    def __hash__(self) -> int:
         return hash(self.id)
 
     @custom_serializer('workers')

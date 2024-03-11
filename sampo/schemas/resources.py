@@ -14,6 +14,10 @@ class WorkerProductivityMode(Enum):
     Stochastic = 'stochastic'
 
 
+class WorkerSkillsMode(Enum):
+    Universal = 'universal'
+
+
 @dataclass
 class Resource(AutoJSONSerializable['Resource'], Identifiable):
     """
@@ -63,9 +67,11 @@ class Worker(Resource):
                  name: str,
                  count: int,
                  contractor_id: Optional[str] = "",
+                 skills: Optional[set] = None,
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
         super(Worker, self).__init__(id, name, int(count), contractor_id)
+        self.skills = skills if skills is not None else WorkerSkillsMode.Universal
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
@@ -81,7 +87,9 @@ class Worker(Resource):
                       name=self.name,
                       count=self.count,
                       contractor_id=self.contractor_id,
-                      productivity=self.productivity)
+                      skills=self.skills,
+                      productivity=self.productivity,
+                      cost_one_unit=self.cost_one_unit)
 
     def with_count(self, count: int) -> 'Worker':
         """
@@ -116,6 +124,14 @@ class Worker(Resource):
         if productivity_mode is WorkerProductivityMode.Static:
             return self.productivity.mean * self.count
         return self.productivity.rand_float(rand) * self.count
+
+    def get_skills(self) -> set | WorkerSkillsMode:
+        """
+        Return the set of skills of the worker.
+
+        :return: set of skills or WorkerSkillsMode.Universal
+        """
+        return self.skills
 
     def __repr__(self) -> str:
         return f'{self.count} {self.name}'

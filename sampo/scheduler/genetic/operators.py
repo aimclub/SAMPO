@@ -207,7 +207,7 @@ def init_toolbox(wg: WorkGraph,
     # crossover for resources
     toolbox.register('mate_resources', mate_resources, rand=rand, toolbox=toolbox)
     # mutation for resources
-    toolbox.register('mutate_resources', mutate_resources, resources_border=resources_border,
+    toolbox.register('mutate_resources', mutate_binary_resources, resources_border=resources_border,
                      mutpb=mut_res_pb, rand=rand)
     # mutation for resource borders
     toolbox.register('mutate_resource_borders', mutate_resource_borders, contractor_borders=contractor_borders,

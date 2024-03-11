@@ -29,12 +29,13 @@ class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
+
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
-        return (schedule.execution_time.value, )
+            return (Time.inf().value,)
+        return (schedule.execution_time.value,)
 
 
 class SumOfResourcesPeaksFitness(FitnessFunction):
@@ -48,8 +49,8 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
-        return (resources_peaks_sum(schedule, self._resources_names), )
+            return (Time.inf().value,)
+        return (resources_peaks_sum(schedule, self._resources_names),)
 
 
 class SumOfResourcesFitness(FitnessFunction):
@@ -97,9 +98,9 @@ class DeadlineResourcesFitness(FitnessFunction):
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
+            return (Time.inf().value,)
         return (resources_peaks_sum(schedule, self._resources_names) \
-                    * max(1.0, schedule.execution_time.value / self._deadline.value), )
+                * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -117,9 +118,9 @@ class DeadlineCostFitness(FitnessFunction):
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
+            return (Time.inf().value,)
         return (resources_costs_sum(schedule, self._resources_names) \
-                * max(1.0, schedule.execution_time.value / self._deadline.value), )
+                * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
 class TimeAndResourcesFitness(FitnessFunction):
@@ -642,6 +643,52 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
     # make mutation of resources
     mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask],
                   res_up_borders[mask], masks[mask], -1, rand)
+
+    return ind
+
+
+def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
+                            resources_border: np.ndarray) -> Individual:
+    """
+    Mutation function for binary resources.
+
+    :param ind: the individual to be mutated
+    :param resources_border: low and up borders of resources amounts
+    :param mutpb: probability of gene mutation
+    :param rand: the rand object used for randomized operations
+
+    :return: mutated individual
+    """
+    res = ind[1]
+    num_works = len(res)
+
+    num_res = len(res[0, :-1])
+    works_indexes = np.arange(0, num_works)
+    masks = np.array([[rand.random() < mutpb for _ in range(num_res)] for _ in range(num_works)])
+    # mask of works where at least one resource should be mutated
+    mask = masks.any(axis=1)
+
+    if not mask.any():
+        # if no True value in mask then no mutation can be done
+        return ind
+
+    # if low border and up border are equal then no mutation can be done
+    # update masks by checking this condition
+    masks &= resources_border[1].T != resources_border[0].T
+    # update mask of works where mutation should be done
+    mask = masks.any(axis=1)
+
+    if not mask.any():
+        # if no True value in mask then no mutation can be done
+        return ind
+
+    masks = np.concatenate((masks, np.full((masks.shape[0], 1), False)), axis=1)
+
+    for cur_row, row_mask in zip(res[mask], masks[mask]):
+        mutated_values = 1 - cur_row[row_mask]
+        if mutated_values.sum() + cur_row[~row_mask, :-1].sum() < 1:
+            continue
+        cur_row[row_mask] = mutated_values
 
     return ind
 

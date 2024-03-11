@@ -663,19 +663,11 @@ def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
     num_works = len(res)
 
     num_res = len(res[0, :-1])
-    works_indexes = np.arange(0, num_works)
     masks = np.array([[rand.random() < mutpb for _ in range(num_res)] for _ in range(num_works)])
-    # mask of works where at least one resource should be mutated
-    mask = masks.any(axis=1)
-
-    if not mask.any():
-        # if no True value in mask then no mutation can be done
-        return ind
-
     # if low border and up border are equal then no mutation can be done
     # update masks by checking this condition
     masks &= resources_border[1].T != resources_border[0].T
-    # update mask of works where mutation should be done
+    # mask of works where at least one resource should be mutated
     mask = masks.any(axis=1)
 
     if not mask.any():
@@ -686,7 +678,7 @@ def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
 
     for cur_row, row_mask in zip(res[mask], masks[mask]):
         mutated_values = 1 - cur_row[row_mask]
-        if mutated_values.sum() + cur_row[~row_mask, :-1].sum() < 1:
+        if mutated_values.sum() + cur_row[~row_mask, :-1].sum() == 0:
             continue
         cur_row[row_mask] = mutated_values
 

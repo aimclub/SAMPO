@@ -20,7 +20,8 @@ from sampo.schemas.exceptions import IncorrectAmountOfWorker, NoSufficientContra
 
 
 def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractors: list[Contractor],
-                                                 spec: ScheduleSpec, worker_pool: WorkerContractorPool) \
+                                                 spec: ScheduleSpec, worker_pool: WorkerContractorPool,
+                                                 get_workers_amounts: Callable[[np.ndarray, np.ndarray], np.ndarray]) \
         -> tuple[list[Contractor], np.ndarray]:
     """
     This function selects contractors that can perform the work.
@@ -76,7 +77,7 @@ def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractor
         # bring max amounts of accepted contractors and max amounts of workers to the same size
         # and take the minimum of them to satisfy all constraints
         max_amounts = np.stack(np.broadcast_arrays(max_amounts, max_req_amounts), axis=0).min(axis=0)
-        workers_amounts = max_amounts
+        workers_amounts = get_workers_amounts(max_amounts, np.broadcast_to(min_req_amounts, max_amounts.shape))
         # assign to all accepted contractors assigned in schedule spec amounts of workers
         workers_amounts[:, in_spec_mask] = work_spec_amounts[in_spec_mask]
 
@@ -100,7 +101,7 @@ class LFTScheduler(GenericScheduler):
     def get_default_res_opt_function(self, get_finish_time=get_finish_time_default) \
             -> Callable[[GraphNode, list[Contractor], WorkSpec, WorkerContractorPool,
                          dict[GraphNode, ScheduledWork], Time, Timeline, WorkTimeEstimator],
-                        tuple[Time, Time, Contractor, list[Worker]]]:
+            tuple[Time, Time, Contractor, list[Worker]]]:
         def optimize_resources_def(node: GraphNode, contractors: list[Contractor], spec: WorkSpec,
                                    worker_pool: WorkerContractorPool, node2swork: dict[GraphNode, ScheduledWork],
                                    assigned_parent_time: Time, timeline: Timeline, work_estimator: WorkTimeEstimator) \
@@ -122,7 +123,8 @@ class LFTScheduler(GenericScheduler):
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None,
-                            landscape: LandscapeConfiguration() = LandscapeConfiguration()) -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+                            landscape: LandscapeConfiguration() = LandscapeConfiguration()) -> list[
+        tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         # get contractors borders
         worker_pool = get_worker_contractor_pool(contractors)
 
@@ -200,13 +202,17 @@ class LFTScheduler(GenericScheduler):
             self._node_id2workers[node.id] = (assigned_contractor, workers)
 
             # assign the received durations to each node in the chain
-            for duration, dep_node in zip(durations_for_chain[contractor_index], node.get_inseparable_chain_with_self()):
+            for duration, dep_node in zip(durations_for_chain[contractor_index],
+                                          node.get_inseparable_chain_with_self()):
                 node_id2duration[dep_node.id] = duration
 
         return node_id2duration
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return np.argmax(scores)
+
+    def _get_workers_amounts(self, max_amounts: np.ndarray, min_amounts: np.ndarray) -> np.ndarray:
+        return max_amounts
 
 
 class RandomizedLFTScheduler(LFTScheduler):
@@ -226,3 +232,14 @@ class RandomizedLFTScheduler(LFTScheduler):
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0
+
+    def _get_workers_amounts(self, max_amounts: np.ndarray, min_amounts: np.ndarray) -> np.ndarray:
+        amounts = np.array([[self._random.randint(min_, max_) for min_, max_ in zip(amounts_min, amounts_max)]
+                            for amounts_min, amounts_max in zip(min_amounts, max_amounts)])
+        mask = amounts.sum(axis=1) == 0
+        if mask.any():
+            workers_indexes = np.arange(max_amounts.shape[1])
+            workers_indexes = workers_indexes[max_amounts > 0]
+            indexes_to_max = [self._random.choice(workers_indexes) for _ in range(mask.sum())]
+            amounts[mask, indexes_to_max] = max_amounts[indexes_to_max]
+        return amounts

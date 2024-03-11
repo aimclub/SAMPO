@@ -47,7 +47,7 @@ class GeneticScheduler(Scheduler):
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
                  is_multiobjective: bool = False,
-                 only_lft_initialization: bool = False):
+                 only_lft_initialization: bool = True):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -193,12 +193,12 @@ class GeneticScheduler(Scheduler):
 
         return {
             "lft": (*init_lft_schedule, weights[0]),
-            "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
-            "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
-            "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),
-            "25%": (*init_k_schedule(HEFTScheduler, 4), weights[4]),
-            "75%": (*init_k_schedule(HEFTScheduler, 4 / 3), weights[5]),
-            "87.5%": (*init_k_schedule(HEFTScheduler, 8 / 7), weights[6])
+            # "heft_end": (*init_schedule(HEFTScheduler), weights[1]),
+            # "heft_between": (*init_schedule(HEFTBetweenScheduler), weights[2]),
+            # "12.5%": (*init_k_schedule(HEFTScheduler, 8), weights[3]),
+            # "25%": (*init_k_schedule(HEFTScheduler, 4), weights[4]),
+            # "75%": (*init_k_schedule(HEFTScheduler, 4 / 3), weights[5]),
+            # "87.5%": (*init_k_schedule(HEFTScheduler, 8 / 7), weights[6])
         }
 
     def schedule_with_cache(self,

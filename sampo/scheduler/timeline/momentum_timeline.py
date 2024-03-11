@@ -4,7 +4,7 @@ from typing import Optional, Union
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.to_start_supply_timeline import ToStartSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
@@ -25,7 +25,7 @@ class MomentumTimeline(Timeline):
     Timeline that stores the intervals in which resources is occupied.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """
@@ -67,7 +67,7 @@ class MomentumTimeline(Timeline):
 
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
-        self._material_timeline = SupplyTimeline(landscape)
+        self._material_timeline = ToStartSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self,
@@ -156,6 +156,7 @@ class MomentumTimeline(Timeline):
 
             st = cur_start_time
 
+        self._validate(st + exec_time, exec_time, worker_team)
         return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
@@ -313,7 +314,7 @@ class MomentumTimeline(Timeline):
             for w in worker_team:
                 state = self._timeline[w.contractor_id][w.name]
                 start_idx = state.bisect_right(start)
-                end_idx = state.bisect_right(end)
+                end_idx = state.bisect_left((end, -1, EventType.INITIAL))
                 available_workers_count = state[start_idx - 1].available_workers_count
                 # updating all events in between the start and the end of our current task
                 for event in state[start_idx: end_idx]:
@@ -323,13 +324,8 @@ class MomentumTimeline(Timeline):
                 if not available_workers_count >= w.count:
                     return False
 
-                if start_idx < end_idx:
-                    event: ScheduleEvent = state[end_idx - 1]
-                    if not state[0].available_workers_count >= event.available_workers_count + w.count:
-                        return False
-                else:
-                    if not state[0].available_workers_count >= available_workers_count:
-                        return False
+                if not state[0].available_workers_count >= available_workers_count:
+                    return False
 
             if not self._material_timeline.can_schedule_at_the_moment(node, start_time,
                                                                       node.work_unit.need_materials()):
@@ -437,6 +433,7 @@ class MomentumTimeline(Timeline):
                                                                                  chain_node.work_unit.need_materials(),
                                                                                  True)
             start_work = max(start_work, mat_del_time)
+            self._validate(start_work + node_time, node_time, worker_team)
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),
@@ -452,3 +449,22 @@ class MomentumTimeline(Timeline):
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         curr_time - start_time)
 
+    def _validate(self,
+                  finish_time: Time,
+                  exec_time: Time,
+                  worker_team: list[Worker]):
+        if exec_time == 0:
+            return
+
+        start = finish_time - exec_time
+        end = finish_time
+        for w in worker_team:
+            state = self._timeline[w.contractor_id][w.name]
+            start_idx = state.bisect_right(start)
+            end_idx = state.bisect_left((end, -1, EventType.INITIAL))
+            available_workers_count = state[start_idx - 1].available_workers_count
+            # updating all events in between the start and the end of our current task
+            for event in state[start_idx: end_idx]:
+                assert event.available_workers_count >= w.count
+
+            assert available_workers_count >= w.count

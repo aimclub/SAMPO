@@ -84,13 +84,15 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
     platforms_number = math.ceil(math.log(wg.vertex_count))
     platforms = []
+    materials_name = list(max_materials.keys())
+
     for i in range(platforms_number):
-        materials_name = list(max_materials.keys())
         platforms.append(LandGraphNode(str(uuid.uuid4()), f'platform{i}',
                                        ResourceStorageUnit(
                                            {
                                                name: rnd.randint(max(max_materials[name], 1),
-                                                                 3 * max(max_materials[name], 1))
+                                                                 2 * max(max_materials[name], 1))
+                                               # name: max(max_materials[name], 1)
                                                for name in materials_name
                                            }
                                        )))
@@ -106,7 +108,9 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(30, 50))
+        # neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
+        #                    for neighbour in neighbour_platforms]
+        neighbour_edges = [(neighbour,  10.0, wg.vertex_count * 2)
                            for neighbour in neighbour_platforms]
         platform.add_neighbours(neighbour_edges)
 
@@ -125,16 +129,20 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
     holders_node = []
     holders = []
 
+    sample_materials_for_holders = materials_name * holders_number
+    # random.shuffle(sample_materials_for_holders)
+    materials_number = len(materials_name)
+
     for i in range(holders_number):
         if not max_materials:
-            materials_name = []
+            materials_name_for_holder = []
         else:
-            materials_name = rnd.choices(list(max_materials.keys()), k=rnd.randint(min(len(max_materials), 1), max(len(max_materials), 1)))
+            materials_name_for_holder = sample_materials_for_holders[i * materials_number: (i + 1) * materials_number]
         holders_node.append(LandGraphNode(str(uuid.uuid4()), f'holder{i}',
                                           ResourceStorageUnit(
                                               {
-                                                  name: max(max_materials[name], 1) * wg.vertex_count * wg.vertex_count
-                                                  for name in materials_name
+                                                  name: max(max_materials[name], 1) * wg.vertex_count
+                                                  for name in materials_name_for_holder
                                               }
                                           )))
         neighbour_platforms = rnd.choices(holders_node[:-1] + platforms, k=rnd.randint(1, len(holders_node[:-1] + platforms)))
@@ -145,15 +153,17 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                 neighbour_platforms_tmp.remove(neighbour)
         neighbour_platforms = neighbour_platforms_tmp
 
-        neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(1000, 10000))
+        # neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
+        #                    for neighbour in neighbour_platforms]
+        neighbour_edges = [(neighbour, 10.0, wg.vertex_count * 2)
                            for neighbour in neighbour_platforms]
         holders_node[-1].add_neighbours(neighbour_edges)
 
-        vehicles_number = rnd.randint(10, 20)
+        vehicles_number = 20
         holders.append(ResourceHolder(str(uuid.uuid4()), holders_node[-1].name,
                                       vehicles=[
                                           Vehicle(str(uuid.uuid4()), f'vehicle{j}',
-                                                  [Material(name, name, math.ceil(math.sqrt(count)))
+                                                  [Material(name, name, count)
                                                    for name, count in max_materials.items()])
                                           for j in range(vehicles_number)
                                       ], node=holders_node[-1]))

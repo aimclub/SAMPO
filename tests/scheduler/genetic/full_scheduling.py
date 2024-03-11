@@ -6,7 +6,7 @@ from sampo.base import SAMPO
 from sampo.scheduler import GeneticScheduler
 
 
-def _test_multiprocessing(setup_scheduler_parameters):
+def test_multiprocessing(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
     SAMPO.backend = DefaultComputationalBackend()

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.to_start_supply_timeline import ToStartSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
@@ -21,14 +21,14 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
         self._timeline = {}
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
-        self._material_timeline = SupplyTimeline(landscape)
+        self._material_timeline = ToStartSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self, node: GraphNode,

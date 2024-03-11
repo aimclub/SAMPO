@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 from sampo.scheduler.heft.base import HEFTBetweenScheduler
-from sampo.scheduler.timeline import SupplyTimeline
+from sampo.scheduler.timeline import ToStartSupplyTimeline
 from sampo.schemas import Time, WorkGraph, MaterialReq, EdgeType, LandscapeConfiguration, Material
 from sampo.schemas.landscape import Vehicle, ResourceHolder
 from sampo.schemas.landscape_graph import LandGraph, ResourceStorageUnit, LandGraphNode
@@ -17,7 +17,7 @@ def test_empty_node_find_start_time(setup_default_schedules):
     if wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
-    timeline = SupplyTimeline(landscape)
+    timeline = ToStartSupplyTimeline(landscape)
     delivery_time = timeline.find_min_material_time(wg.start, Time(0), wg.start.work_unit.need_materials())
 
     assert delivery_time == Time(0)

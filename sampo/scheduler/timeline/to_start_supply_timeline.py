@@ -78,13 +78,12 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         if not self._platform_timeline.can_schedule_at_the_moment(node, start_time, materials):
             return False
 
-        delivery_finish_time = start_time
-        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, delivery_finish_time)
+        materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
         if sum((mat.count for mat in materials_for_delivery), 0) == 0:
             # there are no materials to be delivered
             return True
 
-        can_delivery = self._can_deliver_to_time(node, delivery_finish_time, materials_for_delivery)
+        can_delivery = self._can_deliver_to_time(node, start_time, materials_for_delivery)
         return can_delivery
 
     def _check_material_availability_on_platform(self, platform: LandGraphNode, materials: list[Material],

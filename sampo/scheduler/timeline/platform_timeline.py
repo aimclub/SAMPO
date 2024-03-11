@@ -85,10 +85,8 @@ class PlatformTimeline:
                              self._landscape.works2platform[node].resource_storage_unit.capacity[need_mat.name] -
                              available_count_material)
                 )
-            else:
-                request.append(Material(str(uuid.uuid4()), need_mat.name, 0))
 
-            return request
+        return request
 
     def find_min_material_time_with_additional(self, node: GraphNode, start_time: Time,
                                                materials: list[Material]) -> tuple[Time, list[Material]]:

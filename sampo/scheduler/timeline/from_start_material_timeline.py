@@ -109,7 +109,7 @@ class FromStartSupplyTimeline(BaseSupplyTimeline):
             return start_time
 
         start_time, mat_request = self._platform_timeline.find_min_material_time_with_additional(node, start_time, materials)
-        if sum(mat.count for mat in mat_request) == 0:
+        if sum(mat.count for mat in mat_request) == 0 or len(mat_request) == 0:
             return start_time
 
         _, time = self._supply_resources(node, start_time, materials)

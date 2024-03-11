@@ -24,7 +24,7 @@ def test_deadline_planning(setup_scheduler_parameters):
 
     scheduler = HEFTScheduler()
 
-    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)
+    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)[0]
 
     print(f'Plain planning time: {schedule.execution_time}, cost: {resources_costs_sum(schedule)}')
 
@@ -42,7 +42,7 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler.set_deadline(deadline)
 
-    schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)
+    schedule = scheduler.schedule(setup_wg, setup_contractors, landscape=landscape)[0]
 
     print(f'Planning for deadline time: {schedule.execution_time}, ' +
           f'peaks: {resources_peaks_sum(schedule)}, cost: {resources_costs_sum(schedule)}')
@@ -76,7 +76,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
     setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
 
     scheduler = HEFTScheduler()
-    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)
+    schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)[0]
 
     # assigning deadline to the time-10^(order_of_magnitude(time) - 1)
     # time - time of schedule from HEFT
@@ -102,13 +102,13 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler_lexicographic.set_deadline(deadline)
 
-    schedule = scheduler_combined.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    schedule = scheduler_combined.schedule(setup_wg, setup_contractors, landscape=setup_landscape)[0]
     time_combined = schedule.execution_time
 
     print(f'\tCombined genetic: time = {time_combined}, ' +
           f'peak = {resources_peaks_sum(schedule)}')
 
-    schedule = scheduler_lexicographic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    schedule = scheduler_lexicographic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)[0]
     time_lexicographic = schedule.execution_time
 
     print(f'\tLexicographic genetic: time = {time_lexicographic}, ' +

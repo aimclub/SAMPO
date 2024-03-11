@@ -35,8 +35,9 @@ class AverageBinarySearchResourceOptimizingScheduler:
                 -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:
             self._resource_optimizer.k = k
             try:
-                return self._base_scheduler.schedule_with_cache(wg, contractors, landscape, inner_spec, validate,
-                                                                assigned_parent_time), inner_spec
+                return self._base_scheduler.schedule_with_cache(wg, contractors, inner_spec, validate,
+                                                                assigned_parent_time,
+                                                                landscape=landscape)[0], inner_spec
             except NoSufficientContractorError:
                 return (None, Time.inf(), None, None), inner_spec
 

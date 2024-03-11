@@ -44,7 +44,7 @@ assert (res_kind_count <= synth_works_top_border)
 contractors = [get_contractor_by_wg(wg)]
 
 # Schedule works
-schedule = scheduler.schedule(wg, contractors)
+schedule = scheduler.schedule(wg, contractors)[0]
 schedule_df = schedule.merged_stages_datetime_df(start_date)
 # Schedule's gant chart visualization
 gant_fig = schedule_gant_chart_fig(schedule_df,

@@ -6,7 +6,7 @@ class ApplyQueue:
     def __init__(self):
         self.stack = []
 
-    def add(self, function, args: tuple) -> 'ApplyQueue':
+    def add(self, function, *args) -> 'ApplyQueue':
         """
         Adds function and args to queue. args should be (first arg, second arg, ...).
         The zero arg applied to `f` is the result of previous function in the queue.
@@ -14,14 +14,14 @@ class ApplyQueue:
         self.stack.append((function, args))
         return self
 
-    def apply(self, first_args):
+    def apply(self, *first_args):
         """
         Sequentially applies functions to the result of previous function and the args stored in queue.
         """
         res = first_args
         for f, args in self.stack:
-            res = f(res, *args)
-        return res
+            res = (f(*res, *args),)
+        return res[0]
 
     def empty(self) -> bool:
         return len(self.stack) == 0

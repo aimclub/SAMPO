@@ -1,7 +1,8 @@
 from typing import Optional
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.to_start_supply_timeline import ToStartSupplyTimeline
+
+from sampo.scheduler.timeline.from_start_material_timeline import FromStartSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
@@ -28,7 +29,7 @@ class JustInTimeTimeline(Timeline):
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
-        self._material_timeline = ToStartSupplyTimeline(landscape)
+        self._material_timeline = FromStartSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self, node: GraphNode,

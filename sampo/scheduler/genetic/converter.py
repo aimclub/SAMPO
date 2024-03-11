@@ -144,7 +144,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
             worker_name2index[worker_index]])
 
     if not isinstance(timeline, JustInTimeTimeline):
-        timeline = JustInTimeTimeline(worker_pool, landscape, landscape.get_algorithm_delivery())
+        timeline = JustInTimeTimeline(worker_pool, landscape)
 
     order_nodes = []
 

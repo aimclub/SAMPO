@@ -72,14 +72,14 @@ To use SAMPO for the schedule generation you need to prepare:
 
       from sampo.scheduler.genetic import GeneticScheduler
 
-      scheduler = GeneticScheduler(mutate_order=0.1,
-                                   mutate_resources=0.3)
+      scheduler = GeneticScheduler(mutate_order=0.05,
+                                   mutate_resources=0.05)
 
     2.2. Schedule generation
 
     .. code-block:: python
 
-      schedule = scheduler.schedule(wg, contractors)
+      schedule = scheduler.schedule(wg, contractors)[0]
 
 3. Pipeline structure
 
@@ -93,4 +93,4 @@ When data was prepared and scheduler built, you should use scheduling pipeline t
         .wg(wg) \
         .contractors(contractors) \
         .schedule(HEFTScheduler()) \
-        .finish()
+        .finish()[0]

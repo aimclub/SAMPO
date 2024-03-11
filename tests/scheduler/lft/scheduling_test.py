@@ -7,7 +7,7 @@ def test_lft_scheduling(setup_schedulers_and_parameters):
 
     schedule = scheduler.schedule(setup_wg, setup_contractors,
                                   validate=True,
-                                  landscape=setup_landscape)
+                                  landscape=setup_landscape)[0]
     lft_time = schedule.execution_time
 
     assert not lft_time.is_inf()

@@ -90,5 +90,5 @@ class SchedulePipeline(ABC):
         ...
 
     @abstractmethod
-    def finish(self) -> ScheduledProject:
+    def finish(self) -> list[ScheduledProject]:
         ...

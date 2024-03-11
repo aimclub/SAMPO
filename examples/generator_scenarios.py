@@ -15,7 +15,7 @@ rand = random.Random(10)
 p_rand = SimpleSynthetic(rand=231)
 wg = p_rand.work_graph(top_border=3000)
 contractors = [p_rand.contractor(i) for i in range(10, 31, 10)]
-schedule = HEFTScheduler().schedule(wg, contractors)
+schedule = HEFTScheduler().schedule(wg, contractors)[0]
 
 print(len(wg.nodes))
 print("\nDefault contractors")
@@ -24,7 +24,7 @@ print(f"Execution time: {schedule.execution_time}")
 print("\nContractor by work graph")
 for pack_counts in []:#[1, 2, 10]:
     contractors = [get_contractor_by_wg(wg, scaler=pack_counts)]
-    execution_time = HEFTScheduler().schedule(wg, contractors).execution_time
+    execution_time = HEFTScheduler().schedule(wg, contractors)[0].execution_time
     print(f"Execution time: {execution_time}, pack count: {pack_counts}")
 
 print("\nNames extension")

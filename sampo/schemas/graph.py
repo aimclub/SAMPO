@@ -70,18 +70,17 @@ class GraphNode(JSONSerializable['GraphNode']):
     def __repr__(self) -> str:
         return self.id
 
-    def __getstate__(self):
-        # custom method to avoid calling __hash__() on GraphNode objects
-        return self._work_unit._serialize(), \
-            [(e.start.id, e.lag, e.type.value) for e in self._parent_edges]
-
-    def __setstate__(self, state):
-        # custom method to avoid calling __hash__() on GraphNode objects
-        s_work_unit, s_parent_edges = state
-        self.__init__(WorkUnit._deserialize(s_work_unit),
-                      s_parent_edges)
-        # self._work_unit = representation['work_unit']
-        # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
+    # def __getstate__(self):
+    #     # custom method to avoid calling __hash__() on GraphNode objects
+    #     return self._serialize()
+    #
+    # def __setstate__(self, state):
+    #     # custom method to avoid calling __hash__() on GraphNode objects
+    #     representation = self._deserialize(state)
+    #     self.__init__(representation['work_unit'],
+    #                   representation['parent_edges'])
+    #     # self._work_unit = representation['work_unit']
+    #     # self._parent_edges = [GraphEdge(*e) for e in representation['parent_edges']]
 
     def _serialize(self) -> T:
         return {
@@ -114,6 +113,8 @@ class GraphNode(JSONSerializable['GraphNode']):
                 edges = [GraphEdge(p, self, lag, edge_type) for p, lag, edge_type in parent_works]
 
         for edge, parent in zip(edges, parent_works):
+            if isinstance(parent[0] if isinstance(parent, tuple) else parent, str):
+                print(f'{parent} {edge}')
             parent: GraphNode = parent[0] if isinstance(parent, tuple) else parent
             parent._add_child_edge(edge)
             parent.invalidate_children_cache()

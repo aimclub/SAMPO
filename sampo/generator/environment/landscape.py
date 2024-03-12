@@ -90,9 +90,9 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
         platforms.append(LandGraphNode(str(uuid.uuid4()), f'platform{i}',
                                        ResourceStorageUnit(
                                            {
-                                               # name: rnd.randint(max(max_materials[name], 1),
-                                               #                   2 * max(max_materials[name], 1))
-                                               name: 2 * max(max_materials[name], 1)
+                                               name: rnd.randint(max(max_materials[name], 1),
+                                                                 2 * max(max_materials[name], 1))
+                                               # name: max(max_materials[name], 1)
                                                for name in materials_name
                                            }
                                        )))

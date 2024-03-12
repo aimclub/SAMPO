@@ -674,9 +674,12 @@ def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
         # if no True value in mask then no mutation can be done
         return ind
 
+    masks = masks[mask]
     masks = np.concatenate((masks, np.full((masks.shape[0], 1), False)), axis=1)
+    works_indexes = np.arange(num_works)[mask]
 
-    for cur_row, row_mask in zip(res[mask], masks[mask]):
+    for row_index, row_mask in zip(works_indexes, masks):
+        cur_row = res[row_index]
         mutated_values = 1 - cur_row[row_mask]
         if mutated_values.sum() + cur_row[~row_mask, :-1].sum() == 0:
             continue

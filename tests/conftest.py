@@ -1,4 +1,3 @@
-import random
 from random import Random
 from typing import Dict, Any
 from uuid import uuid4
@@ -7,10 +6,9 @@ import pytest
 from pytest import fixture
 
 from sampo.generator.base import SimpleSynthetic
+from sampo.scheduler import HEFTScheduler, HEFTBetweenScheduler, TopologicalScheduler, Scheduler
 from sampo.scheduler import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
-from sampo.scheduler.heft import HEFTScheduler, HEFTBetweenScheduler
-from sampo.scheduler.topological import TopologicalScheduler
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType

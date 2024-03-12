@@ -114,7 +114,7 @@ class LandscapeConfiguration:
 
     def get_sorted_holders(self, node: LandGraphNode) -> SortedList[list[tuple[float, str]]]:
         """
-        :param node_id: id of node in LandGraph's list of nodes
+        :param node: id of node in LandGraph's list of nodes
         :return: sorted list of holders' id by the length of way
         """
         holders = []

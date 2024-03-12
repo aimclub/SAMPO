@@ -24,8 +24,8 @@ def run_test(args) -> list[tuple[Time, Time]]:
                                              size_of_population=200)
         optimized_genetic.set_weights([14, 11, 1, 1, 1, 1, 10])
 
-        baseline_result = baseline_genetic.schedule(wg, contractors)
-        my_result = optimized_genetic.schedule(wg, contractors)
+        baseline_result = baseline_genetic.schedule(wg, contractors)[0]
+        my_result = optimized_genetic.schedule(wg, contractors)[0]
 
         result.append((baseline_result.execution_time, my_result.execution_time))
 

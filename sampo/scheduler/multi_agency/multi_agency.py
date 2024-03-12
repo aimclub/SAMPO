@@ -45,7 +45,7 @@ class Agent:
         """
         schedule, start_time, timeline, _ = \
             self._scheduler.schedule_with_cache(wg, self._contractors,
-                                                assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))
+                                                assigned_parent_time=parent_time, timeline=deepcopy(self._timeline))[0]
         return start_time, schedule.execution_time, schedule, timeline
 
     def confirm(self, timeline: Timeline, start: Time, end: Time):

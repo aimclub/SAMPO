@@ -84,6 +84,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         return [t._serialize() for t in value]
 
     @classmethod
+    @custom_serializer('material_reqs', deserializer=True)
+    def material_reqs_deserializer(cls, value) -> list[MaterialReq]:
+        """
+        Get list of material requirements
+
+        :param value: serialized list of material requirements
+        :return: list of material requirements
+        """
+        return [MaterialReq._deserialize(wr) for wr in value]
+
+    @classmethod
     @custom_serializer('worker_reqs', deserializer=True)
     def worker_reqs_deserializer(cls, value) -> list[WorkerReq]:
         """

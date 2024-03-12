@@ -4,7 +4,8 @@ from typing import Optional, Union
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+
+from sampo.scheduler.timeline.from_start_material_timeline import FromStartSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
@@ -25,7 +26,7 @@ class MomentumTimeline(Timeline):
     Timeline that stores the intervals in which resources is occupied.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """
@@ -67,7 +68,7 @@ class MomentumTimeline(Timeline):
 
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
-        self._material_timeline = SupplyTimeline(landscape)
+        self._material_timeline = FromStartSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self,
@@ -141,10 +142,11 @@ class MomentumTimeline(Timeline):
                 material_time = self._material_timeline.find_min_material_time(node,
                                                                                cur_start_time,
                                                                                node.work_unit.need_materials())
+
                 cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
                                                            material_time, exec_time, worker_team)
 
-                if material_time < cur_start_time:
+                if cur_start_time > material_time:
                     continue
 
                 zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
@@ -429,7 +431,7 @@ class MomentumTimeline(Timeline):
 
             start_work = curr_time + node_lag
             deliveries, mat_del_time = self._material_timeline.deliver_resources(chain_node,
-                                                                                 start_work - node_lag,
+                                                                                 start_work,
                                                                                  chain_node.work_unit.need_materials(),
                                                                                  True)
             start_work = max(start_work, mat_del_time)

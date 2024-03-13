@@ -287,6 +287,7 @@ def generate_chromosomes(n: int,
     if only_lft_initialization:
         chromosomes = [randomized_init(is_topological=False) for _ in range(n - 1)]
         chromosomes.append(init_chromosomes['lft'][0])
+        chromosomes = [toolbox.Individual(chromosome) for chromosome in chromosomes]
         return chromosomes
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)
@@ -681,7 +682,7 @@ def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
     for row_index, row_mask in zip(works_indexes, masks):
         cur_row = res[row_index]
         mutated_values = 1 - cur_row[row_mask]
-        if mutated_values.sum() + cur_row[~row_mask, :-1].sum() == 0:
+        if mutated_values.sum() + cur_row[~row_mask][:-1].sum() == 0:
             continue
         cur_row[row_mask] = mutated_values
 
@@ -730,7 +731,8 @@ def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set
     :return: mutated individual
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
+    mutant = mutate_binary_resources(mutant, res_mutpb, rand, resources_border)
+    # mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 

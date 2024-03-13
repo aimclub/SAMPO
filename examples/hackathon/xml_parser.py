@@ -2,14 +2,12 @@ from uuid import uuid4
 
 import pandas as pd
 
-from sampo.schemas.time import Time
-from sampo.schemas.graph import WorkGraph
 from sampo.schemas.resources import Worker
 from sampo.schemas.contractor import Contractor
 
 import xml.etree.ElementTree as ET
 
-from datetime import timedelta, date, datetime, time
+from datetime import timedelta, date
 from business_calendar import Calendar, MO, TU, WE, TH, FR, SA, SU
 
 tag_prefix = '{http://schemas.microsoft.com/project}'
@@ -352,7 +350,7 @@ def get_project_calendar(path_to_input_xml: str) -> Calendar:
             working_days.append(week_days_by_id[week_day.find(tag_prefix + 'DayType').text])
         elif week_day.find(tag_prefix + 'DayType').text == '0':
             time_period = week_day.find(tag_prefix + 'TimePeriod')
-            if not time_period is None:
+            if time_period is not None:
                 start_date_lst = time_period.find(tag_prefix + 'FromDate').text.split('T')[0].split('-')
                 start_date = date(*[int(x) for x in start_date_lst])
                 end_date_lst = time_period.find(tag_prefix + 'ToDate').text.split('T')[0].split('-')
@@ -367,7 +365,7 @@ def get_project_calendar(path_to_input_xml: str) -> Calendar:
         time_period = exception.find(tag_prefix + 'TimePeriod')
         is_working_day = exception.find(tag_prefix + 'DayWorking').text
 
-        if not time_period is None:
+        if time_period is not None:
             start_date_lst = time_period.find(tag_prefix + 'FromDate').text.split('T')[0].split('-')
             start_date = date(*[int(x) for x in start_date_lst])
             end_date_lst = time_period.find(tag_prefix + 'ToDate').text.split('T')[0].split('-')

@@ -257,7 +257,7 @@ def serial_schedule_generation_scheme(chromosome: ChromosomeType,
             worker_name2index[worker_index]])
 
     if not isinstance(timeline, MomentumTimeline):
-        timeline = MomentumTimeline(worker_pool, landscape, landscape.get_algorithm_delivery())
+        timeline = MomentumTimeline(worker_pool, landscape)
 
     order_nodes = []
 

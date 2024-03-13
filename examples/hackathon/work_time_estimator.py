@@ -1,21 +1,17 @@
 import math
-from itertools import chain
-from operator import attrgetter
-from random import Random
 from sampo.schemas.time import Time
 from typing import Type
 
 from business_calendar import Calendar
 from datetime import datetime, timedelta, time
 
-from sampo.utilities.collections_util import build_index
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
 
 
 def get_date_by_start_time(project_start_date, working_hours, start_time):
-        days_from_start = int(start_time.value // working_hours)
-        task_start_date = project_start_date + timedelta(days_from_start)
-        return task_start_date.date()
+    days_from_start = int(start_time.value // working_hours)
+    task_start_date = project_start_date + timedelta(days_from_start)
+    return task_start_date.date()
 
 
 def get_calendar_hours_from_working_hours(calendar, start_date, work_execution_hours, working_hours):
@@ -91,20 +87,19 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
             cnt_workers = 0
             for worker in worker_list:
                 cnt_workers += worker.count
-            work_execution_time = int(math.ceil(work_volume / cnt_workers)) # in hours
-            
+            work_execution_time = int(math.ceil(work_volume / cnt_workers))  # in hours
+
             if start_time is None:
                 return Time(work_execution_time)
-                
+
             task_start_date = get_date_by_start_time(self.project_start_date,
-                                                     self.working_hours, 
-                                                     start_time) # get task start date from Time attribute value
-            calendar_duration = get_calendar_hours_from_working_hours(self.calendar, 
-                                                                      task_start_date, 
-                                                                      work_execution_time, 
+                                                     self.working_hours,
+                                                     start_time)  # get task start date from Time attribute value
+            calendar_duration = get_calendar_hours_from_working_hours(self.calendar,
+                                                                      task_start_date,
+                                                                      work_execution_time,
                                                                       self.working_hours)
             return Time(calendar_duration)
-            
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
             -> list[WorkerReq]:

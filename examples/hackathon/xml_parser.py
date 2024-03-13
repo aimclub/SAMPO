@@ -31,6 +31,7 @@ week_days_by_id = {
     '6': FR,
     '7': SA}
 
+
 # Helper functions
 def get_resources_info(filepath: str) -> list[dict]:
     # Parse XML file with the project's data

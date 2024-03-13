@@ -1,10 +1,6 @@
 from datetime import datetime
 
-import pandas as pd
-from ast import literal_eval
-
 from sampo.pipeline import SchedulingPipeline
-from sampo.schemas.contractor import Contractor
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme

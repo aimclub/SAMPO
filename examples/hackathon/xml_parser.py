@@ -12,7 +12,7 @@ from business_calendar import Calendar, MO, TU, WE, TH, FR, SA, SU
 
 tag_prefix = '{http://schemas.microsoft.com/project}'
 
-FS_lag = '1.0'
+FS_lag = '0.0'
 
 work_req_dict = {
     'Аналитика': 'Аналитик',

@@ -8,19 +8,32 @@ from datetime import datetime, timedelta, time
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
 
 
-def get_date_by_start_time(project_start_date, working_hours, start_time):
+def get_end_date(start_date, working_days, holidays_set, working_weekdays):
+    actual_working_days = 0
+    current_date = start_date
+    while actual_working_days < working_days:
+        if current_date.weekday() in working_weekdays and not current_date in holidays_set:
+            actual_working_days += 1
+        current_date += timedelta(days=1)
+    return current_date - timedelta(days=1)
+
+
+def get_datetime_by_start_time(project_start_date, working_hours, start_time):
     days_from_start = int(start_time.value // working_hours)
     task_start_date = project_start_date + timedelta(days_from_start)
-    return task_start_date.date()
+    return task_start_date
 
 
-def get_calendar_hours_from_working_hours(calendar, start_date, work_execution_hours, working_hours):
+def get_calendar_hours(working_weekdays, holidays, task_start_date, work_execution_hours, working_hours):
     working_days = int(math.ceil(work_execution_hours / working_hours))
-    additional_working_hours = work_execution_hours % working_hours
-    task_start_date = datetime.combine(start_date, time())
-    calendar_end_date = calendar.addbusdays(task_start_date - timedelta(days=1), working_days)
+    if work_execution_hours % working_hours != 0:
+        additional_working_hours = working_hours - work_execution_hours % working_hours
+    else:
+        additional_working_hours = 0
+
+    calendar_end_date = get_end_date(task_start_date, working_days, holidays, working_weekdays)
     calendar_duration = calendar_end_date - task_start_date + timedelta(days=1)
-    return calendar_duration.days * working_hours + additional_working_hours
+    return calendar_duration.days * working_hours - additional_working_hours
 
 
 class WorkEstimator(WorkTimeEstimator):
@@ -73,11 +86,6 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
         self.project_start_date = start_date
         self._productivity_mode = WorkerProductivityMode.Static
 
-    def get_date_by_start_time(self, start_time: Time):
-        days_from_start = int(start_time.value // self.working_hours)
-        task_start_date = self.project_start_date + timedelta(days_from_start)
-        return task_start_date.date()
-
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker], start_time: Time | None = None):
         work_volume = work_unit.volume
 
@@ -92,13 +100,13 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
             if start_time is None:
                 return Time(work_execution_time)
 
-            task_start_date = get_date_by_start_time(self.project_start_date,
+            task_start_date = get_datetime_by_start_time(self.project_start_date,
                                                      self.working_hours,
                                                      start_time)  # get task start date from Time attribute value
-            calendar_duration = get_calendar_hours_from_working_hours(self.calendar,
-                                                                      task_start_date,
-                                                                      work_execution_time,
-                                                                      self.working_hours)
+            calendar_duration = get_calendar_hours(*self.calendar,
+                                                   task_start_date,
+                                                   work_execution_time,
+                                                   self.working_hours)
             return Time(calendar_duration)
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \

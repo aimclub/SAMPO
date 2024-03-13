@@ -21,13 +21,13 @@ work_req_dict = {
 }
 
 week_days_by_id = {
-    '1': SU,
-    '2': MO,
-    '3': TU,
-    '4': WE,
-    '5': TH,
-    '6': FR,
-    '7': SA}
+    '1': 6,
+    '2': 0,
+    '3': 1,
+    '4': 2,
+    '5': 3,
+    '6': 4,
+    '7': 5}
 
 
 # Helper functions
@@ -336,7 +336,7 @@ def get_contractors_info(filepath:str) -> list[Contractor]:
     return contractors
 
 
-def get_project_calendar(path_to_input_xml: str) -> Calendar:
+def get_project_calendar(path_to_input_xml: str):
     main_calendar = get_calendar_info(path_to_input_xml)
 
     # Get information about working days and holidays from WeekDays tag
@@ -355,7 +355,7 @@ def get_project_calendar(path_to_input_xml: str) -> Calendar:
                 start_date = date(*[int(x) for x in start_date_lst])
                 end_date_lst = time_period.find(tag_prefix + 'ToDate').text.split('T')[0].split('-')
                 end_date = date(*[int(x) for x in end_date_lst])
-                holidays_lst.extend([x.strftime("%Y-%m-%d") for x in list(generate_dates(start_date, end_date))])
+                holidays_lst.extend(list(generate_dates(start_date, end_date)))
     holidays = set(holidays_lst)
 
     # Get information about exceptions from Exceptions tag
@@ -373,10 +373,10 @@ def get_project_calendar(path_to_input_xml: str) -> Calendar:
 
             if is_working_day == '0':
                 for x in list(generate_dates(start_date, end_date)):
-                    holidays.add(x.strftime("%Y-%m-%d"))
+                    holidays.add(x)
             else:
                 for x in list(generate_dates(start_date, end_date)):
-                    if x.strftime("%Y-%m-%d") in holidays:
-                        holidays.remove(x.strftime("%Y-%m-%d"))
+                    if x in holidays:
+                        holidays.remove(x)
 
-    return Calendar(workdays=working_days, holidays=list(holidays))
+    return working_days, holidays

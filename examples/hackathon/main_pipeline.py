@@ -45,7 +45,7 @@ raw_project_schedule = scheduling_project.schedule
 
 print(raw_project_schedule.execution_time.value)
 
-project_schedule = raw_project_schedule.merged_stages_datetime_df('2022-09-01')
+project_schedule = raw_project_schedule.merged_stages_datetime_df('2023-02-05')
 
 schedule_fig = schedule_gant_chart_fig(schedule_dataframe=project_schedule,
                                        visualization=VisualizationMode.ShowFig,

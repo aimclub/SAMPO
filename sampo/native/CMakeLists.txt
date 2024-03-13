@@ -22,7 +22,7 @@ if (NOT SAMPO_STANDALONE_CONFIGURE)
     set(SAMPO_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
 endif()
 
-set(SAMPO_CXX_STANDARD 11)
+set(SAMPO_CXX_STANDARD 20)
 set(CMAKE_DEBUG_POSTFIX d)
 set(SAMPO_RUNTIME_DEPS_PATHS "")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR})
@@ -69,11 +69,9 @@ set_target_properties(OpenMP::OpenMP_CXX PROPERTIES SAMPO_FINDPACKAGE_NAME "Open
 set_target_properties(OpenMP::OpenMP_CXX PROPERTIES SAMPO_FINDPACKAGE_VERSION "2.0")
 set_target_properties(OpenMP::OpenMP_CXX PROPERTIES SAMPO_FINDPACKAGE_EXACT_VERSION False)
 
-include(sampo_simd_detector)
 include(sampo_subdirectory)
 include(sampo_glob_sources)
 include(sampo_install_utils)
-include(sampo_simd_helper)
 include(sampo_common)
 include(sampo_clang_tools)
 include(ci)
@@ -85,27 +83,6 @@ sampo_add_ci_copy_deps()
 if (NOT SAMPO_STANDALONE_CONFIGURE)
     sampo_install_runtime_deps()
 endif()
-
-
-set(CPACK_GENERATOR "ZIP" CACHE STRING "Generator for CPack.")
-set(CPACK_OUTPUT_FILE_PREFIX ${CMAKE_CURRENT_BINARY_DIR} CACHE STRING "CPack output prefix.")
-set_property(CACHE CPACK_GENERATOR PROPERTY STRINGS "ZIP;TGZ;DEB;NSIS")
-mark_as_advanced(CPACK_GENERATOR)
-
-set(CPACK_ARCHIVE_COMPONENT_INSTALL True)
-set(CPACK_COMPONENTS_IGNORE_GROUPS 1)
-set(CPACK_COMPONENTS_ALL Runtime Development)
-
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "SAMPO")
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-set(CPACK_DEB_COMPONENT_INSTALL ON)
-
-if (NOT SAMPO_STANDALONE_CONFIGURE)
-    include(CPack)
-endif()
-
-message(${CMAKE_SOURCE_DIR}/modules/native/include/${CUR_PROJ})
-include_directories(${CMAKE_SOURCE_DIR}/modules/native/include/${CUR_PROJ})
 
 #include_directories(
 #        modules/native/timeEstimatorLibrary

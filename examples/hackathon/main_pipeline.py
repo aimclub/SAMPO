@@ -1,4 +1,5 @@
 from datetime import datetime
+import warnings
 
 from sampo.pipeline import SchedulingPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -11,6 +12,8 @@ from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
 from work_time_estimator import WorkEstimator, CalendarBasedWorkEstimator
 
 from xml_parser import get_works_info, get_contractors_info, get_project_calendar
+
+warnings.filterwarnings("ignore")
 
 filepath = './sber_task.xml'
 
@@ -42,6 +45,8 @@ genetic_scheduler_with_estimator = GeneticScheduler(number_of_generation=100, si
 scheduling_project = scheduling_pipeline.schedule(genetic_scheduler_with_estimator).finish()[0]
 
 raw_project_schedule = scheduling_project.schedule
+
+raw_project_schedule.pure_schedule_df.to_csv('scheduled.csv', index=0)
 
 print(raw_project_schedule.execution_time.value)
 

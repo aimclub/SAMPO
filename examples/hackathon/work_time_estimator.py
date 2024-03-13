@@ -6,7 +6,7 @@ from sampo.schemas.time import Time
 from typing import Type
 
 from business_calendar import Calendar
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 from sampo.utilities.collections_util import build_index
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
@@ -43,8 +43,11 @@ class WorkEstimator(WorkTimeEstimator):
             cnt_workers = 0
             for worker in worker_list:
                 cnt_workers += worker.count
-            work_execution_time = int(math.ceil(work_volume / cnt_workers))
-            return Time(work_execution_time)
+            if cnt_workers != 0:
+                work_execution_time = int(math.ceil(work_volume / cnt_workers))
+                return Time(work_execution_time)
+            else:
+                return Time.inf()
 
     def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
             -> list[WorkerReq]:
@@ -115,4 +118,4 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
         self._productivity_mode = mode
 
     def get_recreate_info(self) -> tuple[Type, tuple]:
-        return WorkEstimator, (self.calendar, self.self.working_hours, self.project_start_date)
+        return WorkEstimator, (self.calendar, self.working_hours, self.project_start_date)

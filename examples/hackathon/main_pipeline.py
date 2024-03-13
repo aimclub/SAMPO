@@ -13,24 +13,24 @@ from sampo.utilities.visualization.base import VisualizationMode
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
 
 from work_time_estimator import WorkEstimator, CalendarBasedWorkEstimator
-from project_calendar import get_project_calendar
 
-df = pd.read_csv('works_info.csv')
+from xml_parser import get_works_info, get_contractors_info, get_project_calendar
 
-df['req_volume'] = [literal_eval(x) for x in df['req_volume']]
-df['min_req'] = [literal_eval(x) for x in df['min_req']]
-df['max_req'] = [literal_eval(x) for x in df['max_req']]
+filepath = './sber_task.xml'
+
+df = get_works_info(filepath)
+contractors = get_contractors_info(filepath)
+project_business_calendar = get_project_calendar(filepath)
+
 scheduling_pipeline = SchedulingPipeline.create()
 scheduling_pipeline = scheduling_pipeline.wg(wg=df,
                                              all_connections=True,
                                              change_connections_info=False)
 
-contractors = [Contractor.load('./', 'project_contractor')]
 scheduling_pipeline = scheduling_pipeline.contractors(contractors).lag_optimize(LagOptimizationStrategy.TRUE)
 
 # project_work_estimator = WorkEstimator()
 
-project_business_calendar = get_project_calendar('sber_task.xml')
 project_work_estimator = CalendarBasedWorkEstimator(project_calendar=project_business_calendar,
                                                     working_hours_cnt=8,
                                                     start_date=datetime(2024, 2, 5))

@@ -240,7 +240,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
             reqs = []
             for res_name in resource_names:
                 if res_name in row['min_req'] and res_name in row['max_req']:
-                    if 0 < row['min_req'][res_name] <= row['max_req'][res_name]:
+                    if row['min_req'][res_name] <= row['max_req'][res_name]:
                         reqs.append(WorkerReq(res_name, Time(int(row['req_volume'][res_name])),
                                               row['min_req'][res_name],
                                               row['max_req'][res_name]))

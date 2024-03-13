@@ -118,13 +118,12 @@ class CSVParser:
         :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
         :return: WorkGraph and list of Contractors
         """
-
         works_info['activity_name_original'] = works_info.activity_name
         if name_mapper:
             works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
 
         if 'min_req' in works_info.columns and 'max_req' in works_info.columns and 'req_volume' in works_info.columns:
-            resources = [works_info.loc[:, 'req_volume']]
+            resources = works_info.loc[:, 'req_volume']
         else:
             resources = [dict((worker_req.kind, int(worker_req.volume))
                               for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))

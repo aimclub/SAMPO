@@ -75,7 +75,7 @@ class Worker(Resource):
         self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
-    ignored_fields = ['productivity']
+    ignored_fields = ['productivity', 'skills']
 
     def copy(self) -> 'Worker':
         """

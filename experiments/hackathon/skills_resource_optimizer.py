@@ -26,7 +26,7 @@ class GreedyMinimalMultiSkillResourceOptimizer(ResourceOptimizer):
         # for bin_ in bins:
         #     bin_.sort(key=attrgetter('cost_one_unit'))
 
-        for bin_ in bins:
+        for bin_ in bins.values():
             min_cost_worker = bin_[0]
             for worker in bin_[1:]:
                 if worker.cost_one_unit < min_cost_worker.cost_one_unit:

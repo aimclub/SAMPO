@@ -20,7 +20,7 @@ class GreedyMinimalMultiSkillResourceOptimizer(ResourceOptimizer):
         # separate workers by specialization
         bins = defaultdict(list)
         for worker in worker_team:
-            bins[worker.name].append(worker)
+            bins[worker.name.split(' ')[0]].append(worker)
             worker.count = 0
 
         # for bin_ in bins:

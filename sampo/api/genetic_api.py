@@ -11,6 +11,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 
 ChromosomeType = tuple[np.ndarray, np.ndarray, np.ndarray, ScheduleSpec, np.ndarray]
 
+
 class ScheduleGenerationScheme(Enum):
     Parallel = 'Parallel'
     Serial = 'Serial'
@@ -23,7 +24,7 @@ class FitnessFunction(ABC):
 
     @abstractmethod
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int | float]:
+            -> tuple[int | float, ...]:
         """
         Calculate the value of fitness function of the chromosome.
         It is better when value is less.

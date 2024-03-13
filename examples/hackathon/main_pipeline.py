@@ -1,10 +1,6 @@
 from datetime import datetime
 
-import pandas as pd
-from ast import literal_eval
-
 from sampo.pipeline import SchedulingPipeline
-from sampo.schemas.contractor import Contractor
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
@@ -46,6 +42,8 @@ genetic_scheduler_with_estimator = GeneticScheduler(number_of_generation=100, si
 scheduling_project = scheduling_pipeline.schedule(genetic_scheduler_with_estimator).finish()[0]
 
 raw_project_schedule = scheduling_project.schedule
+
+print(raw_project_schedule.execution_time.value)
 
 project_schedule = raw_project_schedule.merged_stages_datetime_df('2022-09-01')
 

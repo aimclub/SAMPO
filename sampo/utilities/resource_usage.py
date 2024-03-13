@@ -14,7 +14,7 @@ def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str]
     usage = defaultdict(lambda: np.zeros_like(points))
 
     is_none = resources_names is None
-    resources_names = set(resources_names) if not is_none else {}
+    resources_names = set(resources_names) if not is_none else set()
 
     for swork in schedule.works:
         start = points.bisect_left(swork.start_time)
@@ -36,6 +36,7 @@ def resources_peaks_sum(schedule: Schedule, resources_names: Iterable[str] | Non
     """
     if schedule.execution_time.is_inf():
         return Time.inf().value
+
     return sum(get_resources_peak_usage(schedule, resources_names).values())
 
 
@@ -43,11 +44,14 @@ def resources_sum(schedule: Schedule, resources_names: Iterable[str] | None = No
     """
     Count the summary usage of resources in received schedule
     """
+    if schedule.execution_time.is_inf():
+        return Time.inf().value
+
     is_none = resources_names is None
-    resources_names = set(resources_names) if not is_none else {}
+    resources_names = set(resources_names) if not is_none else set()
 
     res_sum = sum([sum([worker.count * work.duration.value for worker in work.workers
-                        if worker.name in resources_names or is_none], start=0)
+                        if is_none or worker.name in resources_names], start=0)
                    for work in schedule.works])
 
     return res_sum
@@ -61,7 +65,7 @@ def resources_costs_sum(schedule: Schedule, resources_names: Iterable[str] | Non
     resources_names = set(resources_names) if not is_none else {}
 
     cost = sum([sum([worker.get_cost() * work.duration.value for worker in work.workers
-                     if worker.name in resources_names or is_none], start=0.0)
+                     if is_none or worker.name in resources_names], start=0.0)
                 for work in schedule.works])
 
     return cost

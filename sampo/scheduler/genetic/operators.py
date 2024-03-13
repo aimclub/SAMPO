@@ -30,8 +30,7 @@ class TimeFitness(FitnessFunction):
     Fitness function that relies on finish time.
     """
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int | float]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)
@@ -46,7 +45,7 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)
@@ -61,11 +60,11 @@ class SumOfResourcesFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return resources_sum(schedule, self._resources_names)
+            return (Time.inf().value,)
+        return (resources_sum(schedule, self._resources_names),)
 
 
 class TimeWithResourcesFitness(FitnessFunction):
@@ -76,11 +75,11 @@ class TimeWithResourcesFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names)
+            return (Time.inf().value,)
+        return (schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names),)
 
 
 class DeadlineResourcesFitness(FitnessFunction):
@@ -94,12 +93,11 @@ class DeadlineResourcesFitness(FitnessFunction):
         self._deadline = deadline
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int | float]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)
-        return (resources_peaks_sum(schedule, self._resources_names) \
+        return (resources_peaks_sum(schedule, self._resources_names)
                 * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
@@ -115,11 +113,11 @@ class DeadlineCostFitness(FitnessFunction):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int | float]:
+            -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)
-        return (resources_costs_sum(schedule, self._resources_names) \
+        return (resources_costs_sum(schedule, self._resources_names)
                 * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
@@ -131,8 +129,7 @@ class TimeAndResourcesFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int, int]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int, int]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return Time.inf().value, Time.inf().value

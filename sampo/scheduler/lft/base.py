@@ -170,7 +170,8 @@ class LFTScheduler(GenericScheduler):
             accepted_contractors, workers_amounts = get_contractors_and_workers_amounts_for_work(work_unit,
                                                                                                  contractors,
                                                                                                  spec,
-                                                                                                 worker_pool)
+                                                                                                 worker_pool,
+                                                                                                 self._get_workers_amounts)
 
             # estimate chain durations for each accepted contractor
             durations_for_chain = [work_chain_durations(node, amounts, self.work_estimator)
@@ -234,12 +235,11 @@ class RandomizedLFTScheduler(LFTScheduler):
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0
 
     def _get_workers_amounts(self, max_amounts: np.ndarray, min_amounts: np.ndarray) -> np.ndarray:
-        amounts = np.array([[self._random.randint(min_, max_) for min_, max_ in zip(amounts_min, amounts_max)]
-                            for amounts_min, amounts_max in zip(min_amounts, max_amounts)])
+        amounts = np.array([[self._random.randint(min_, max_) for min_, max_ in zip(contractor_min, contractor_max)]
+                            for contractor_min, contractor_max in zip(min_amounts, max_amounts)])
         mask = amounts.sum(axis=1) == 0
         if mask.any():
-            workers_indexes = np.arange(max_amounts.shape[1])
-            workers_indexes = workers_indexes[max_amounts > 0]
-            indexes_to_max = [self._random.choice(workers_indexes) for _ in range(mask.sum())]
-            amounts[mask, indexes_to_max] = max_amounts[indexes_to_max]
+            indexes_to_max = [self._random.choice(np.arange(len(contractor_max))[contractor_max > 0])
+                              for contractor_max in max_amounts[mask]]
+            amounts[mask, indexes_to_max] = max_amounts[mask, indexes_to_max]
         return amounts

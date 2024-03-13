@@ -42,7 +42,7 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker], start_date: str | None = None):
+    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker], start_time: Time | None = None):
         ...
 
     @abstractmethod

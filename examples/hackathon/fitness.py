@@ -6,7 +6,7 @@ from sampo.schemas.time import Time
 
 
 def count_resources(schedule: Schedule) -> int:
-    return len(set([worker.name for swork in schedule.works for worker in swork.workers]))
+    return sum([worker.count for swork in schedule.works for worker in swork.workers])
 
 
 class MultiFitness(FitnessFunction):

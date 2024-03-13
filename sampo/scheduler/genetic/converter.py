@@ -195,13 +195,13 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
                 st = max(start_time, finish_time)
 
             # finish using time spec
-            timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
-                              st, exec_time, assigned_parent_time, work_estimator)
+            ft = timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
+                                   st, None, assigned_parent_time, work_estimator)
 
             if idx == len(works_order) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
-            work_timeline.update_timeline(st, exec_time, None)
+            work_timeline.update_timeline(st, ft - st, None)
             return True
         return False
 

@@ -30,8 +30,7 @@ class TimeFitness(FitnessFunction):
     Fitness function that relies on finish time.
     """
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
-            -> tuple[int | float]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)
@@ -46,7 +45,7 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[int]:
         schedule = evaluator(chromosome)
         if schedule is None:
             return (Time.inf().value,)

@@ -47,6 +47,8 @@ scheduling_project = scheduling_pipeline.schedule(genetic_scheduler_with_estimat
 
 raw_project_schedule = scheduling_project.schedule
 
+print(raw_project_schedule.execution_time.value)
+
 project_schedule = raw_project_schedule.merged_stages_datetime_df('2022-09-01')
 
 schedule_fig = schedule_gant_chart_fig(schedule_dataframe=project_schedule,

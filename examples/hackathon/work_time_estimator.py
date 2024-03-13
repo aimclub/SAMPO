@@ -96,7 +96,7 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
             if start_time is None:
                 return Time(work_execution_time)
                 
-            task_start_date = get_date_by_start_time(self.project_start_time, 
+            task_start_date = get_date_by_start_time(self.project_start_date,
                                                      self.working_hours, 
                                                      start_time) # get task start date from Time attribute value
             calendar_duration = get_calendar_hours_from_working_hours(self.calendar, 

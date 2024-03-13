@@ -123,9 +123,12 @@ class CSVParser:
         if name_mapper:
             works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
 
-        resources = [dict((worker_req.kind, int(worker_req.volume))
-                          for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
-                     for w in works_info.loc[:, ['granular_name', 'volume']].to_numpy()]
+        if 'min_req' in works_info.columns and 'max_req' in works_info.columns and 'req_volume' in works_info.columns:
+            resources = [works_info.loc[:, 'req_volume']]
+        else:
+            resources = [dict((worker_req.kind, int(worker_req.volume))
+                              for worker_req in work_resource_estimator.find_work_resources(w[0], float(w[1])))
+                         for w in works_info.loc[:, ['granular_name', 'volume']].to_numpy()]
 
         unique_res = list(set(chain(*[r.keys() for r in resources])))
         # works_info.loc[:, unique_res] = DataFrame(resources).fillna(0)

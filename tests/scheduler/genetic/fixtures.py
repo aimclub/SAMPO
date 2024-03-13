@@ -38,7 +38,7 @@ def setup_toolbox(setup_default_schedules) -> tuple:
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
-    worker_name2index = {worker_name: index for index, worker_name in enumerate(setup_worker_pool)}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(sorted(setup_worker_pool))}
     resources_border = np.zeros((2, len(setup_worker_pool), len(nodes)))
     for work_index, node in enumerate(nodes):
         for req in node.work_unit.worker_reqs:

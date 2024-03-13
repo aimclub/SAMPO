@@ -40,11 +40,13 @@ public:
 
             pair<Time, Time> node_lag_exec_time;
             auto it = exec_times.find(dep_node->id());
+//            cout << "111" << endl;
             if (it == exec_times.end()) {
                 node_lag_exec_time = { Time(0), work_estimator.estimateTime(*node->getWorkUnit(), worker_team) };
             } else {
                 node_lag_exec_time = it->second;
             }
+//            cout << "222" << endl;
 
             Time c_st = max(c_ft + node_lag_exec_time.first, max_parent_time);
             Time new_finish_time = c_st + node_lag_exec_time.second;
@@ -55,8 +57,11 @@ public:
                     dep_node->getWorkUnit(),
                     { c_st, new_finish_time },
                     worker_team, contractor, vector<Equipment>(), deliveries, ConstructionObject());
+//            cout << "333" << endl;
             c_ft = new_finish_time;
         }
+
+//        cout << "Works scheduled, update timeline start" << endl;
 
         this->update_timeline(node, worker_team, spec, c_ft, c_ft - start_time);
         return c_ft;

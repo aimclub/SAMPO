@@ -9,15 +9,12 @@
 #include <set>
 #include <vector>
 
-#include "Python.h"
 #include "native/scheduler/chromosome_evaluator.h"
 #include "native/schemas/evaluator_types.h"
 #include "native/scheduler/timeline/timeline.h"
 #include "native/scheduler/timeline/just_in_time.h"
 #include "native/scheduler/sgs.h"
 #include "native/pycodec.h"
-
-#include "numpy/arrayobject.h"
 
 using namespace std;
 

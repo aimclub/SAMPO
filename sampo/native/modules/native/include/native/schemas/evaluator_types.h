@@ -6,17 +6,22 @@
 #include <iostream>
 #include <vector>
 
-#include "Python.h"
 #include "native/schemas/dtime.h"
 #include "native/schemas/scheduled_work.h"
 #include "native/schemas/time_estimator.h"
 #include "native/schemas/spec.h"
 #include "native/schemas/workgraph.h"
 
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
+
 using namespace std;
 
-typedef struct {
-    PyObject *pythonWrapper;
+struct EvaluateInfo {
+    py::object pythonWrapper;
     WorkGraph *wg;
     vector<Contractor*> contractors;
     vector<vector<int>> parents;
@@ -34,7 +39,7 @@ typedef struct {
     int totalWorksCount;
     bool usePythonWorkEstimator;
     bool useExternalWorkEstimator;
-} EvaluateInfo;
+};
 
 using swork_dict_t = unordered_map<string, ScheduledWork>;
 using exec_times_t = unordered_map<string, pair<Time, Time>>;

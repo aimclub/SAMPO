@@ -1,3 +1,5 @@
+#include <list>
+
 #include "native/scheduler/sgs.h"
 
 swork_dict_t SGS::serial(Chromosome* chromosome,
@@ -34,9 +36,24 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
         // decompress worker team
         vector<Worker> worker_team;
         for (auto& wreq : node->getWorkUnit()->worker_reqs) {
-            auto &v = worker_pool[contractor->id];
-            auto &ref = v[wreq.kind];
-            worker_team.emplace_back();
+            auto &v = worker_pool[wreq.kind];
+            int count = chromosome->getResources()[work_index][worker_name2index.at(wreq.kind)];
+            worker_team.emplace_back(v[contractor->id].copy().with_count(count));
+//            worker_team.emplace_back(v[contractor->id]);
+        }
+
+        if (!worker_team.empty()) {
+            cout << "Worker team mask: ";
+            for (int i = 0; i < chromosome->numResources(); i++) {
+                cout << chromosome->getResources()[work_index][i] << " ";
+            }
+            cout << endl;
+
+            cout << "Worker team: ";
+            for (auto& worker : worker_team) {
+                cout << worker.count << " ";
+            }
+            cout << endl;
         }
 
         auto[st, ft, exec_times] = timeline.find_min_start_time_with_additional(node, worker_team, node2swork,

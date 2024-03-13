@@ -17,18 +17,10 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
     A class summarizing any requirements for the work to be performed related to renewable and non-renewable
     resources, infrastructure requirements, etc.
     """
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """
-        Returns the name of the claim if it exists, e.g. 'dig work claim'.
-
-        :return name: the name of req
-        """
-        ...
+    pass
 
 
-@dataclass(frozen=True)
+# @dataclass(frozen=True)
 class WorkerReq(BaseReq):
     """
     Requirements related to renewable human resources
@@ -39,11 +31,22 @@ class WorkerReq(BaseReq):
     :param max_count: maximum allowable number of employees performing the work
     :param name: the name of this requirement
     """
-    kind: str
-    volume: Time
-    min_count: Optional[int] = 1
-    max_count: Optional[int] = DEFAULT_MAX_COUNT
-    name: Optional[str] = ''
+
+    def __init__(self,
+                 kind: str,
+                 volume: Time | int,
+                 min_count: int = 1,
+                 max_count: int = DEFAULT_MAX_COUNT,
+                 name: str = ''):
+        self.kind = kind
+        self.min_count = min_count
+        self.max_count = max_count
+        self.name = name
+
+        if isinstance(volume, Time):
+            self.volume = volume
+        else:
+            self.volume = Time(int(volume))
 
     def scale_all(self, scalar: float, new_name: Optional[str] = '') -> 'WorkerReq':
         """

@@ -35,7 +35,7 @@ def get_contractor_by_wg(wg: WorkGraph,
                          scaler: float | None = 1,
                          method: ContractorGenerationMethod = ContractorGenerationMethod.AVG,
                          contractor_id: str | None = None,
-                         contractor_name: str | None = None) -> Contractor:
+                         contractor_name: str = "") -> Contractor:
     """
     Creates a pool of contractor resources based on job requirements, selecting the maximum specified parameter
 

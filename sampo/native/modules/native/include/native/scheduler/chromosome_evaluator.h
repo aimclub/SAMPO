@@ -18,14 +18,12 @@
 #include <omp.h>
 
 #include "DLLoader.h"
-#include "Python.h"
 #include "native/schemas/evaluator_types.h"
 #include "native/schemas/external.h"
 #include "native/schemas/time_estimator.h"
 #include "native/schemas/chromosome.h"
 #include "native/pycodec.h"
 
-#include "numpy/arrayobject.h"
 #include "sgs.h"
 #include "native/scheduler/timeline/just_in_time.h"
 #include "native/scheduler/fitness.h"
@@ -60,14 +58,14 @@ private:
     unordered_map<string, unordered_map<string, int>> maxReqNames;
 
     int totalWorksCount;
-    PyObject *pythonWrapper;
+    py::object pythonWrapper;
     bool usePythonWorkEstimator;
 
     // TODO (?) Make interop with Python work estimators like in old NativeWrapper was
-    WorkTimeEstimator *timeEstimator;
-    dlloader::DLLoader<ITimeEstimatorLibrary> loader {
-        External::timeEstimatorLibPath
-    };
+//    WorkTimeEstimator *timeEstimator;
+//    dlloader::DLLoader<ITimeEstimatorLibrary> loader {
+//        External::timeEstimatorLibPath
+//    };
 
 public:
     int numThreads;
@@ -127,15 +125,20 @@ public:
 //            }
 //        }
 
+        set<string> worker_names;
+
         for (auto* contractor : index2contractor) {
             for (const auto& worker : contractor->workers) {
-                worker_pool[worker.id].emplace(contractor->id, worker);
+                worker_pool[worker.name].emplace(contractor->id, worker);
+                worker_names.emplace(worker.name);
             }
         }
 
+//        cout << "Worker names: " << endl;
         int ind = 0;
-        for (auto& it : worker_pool) {
-            worker_name2index[it.first] = ind;
+        for (const auto& worker_name : worker_names) {
+//            cout << worker_name << endl;
+            worker_name2index[worker_name] = ind;
             ind++;
         }
 
@@ -145,13 +148,13 @@ public:
 
         this->usePythonWorkEstimator = info->usePythonWorkEstimator;
         this->numThreads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
-        printf("Genetic running threads: %i\n", this->numThreads);
+//        printf("Genetic running threads: %i\n", this->numThreads);
 
-        if (info->useExternalWorkEstimator) {
-            loader.DLOpenLib();
-            auto library        = loader.DLGetInstance();
-            this->timeEstimator = library->create(info->timeEstimatorPath);
-        }
+//        if (info->useExternalWorkEstimator) {
+//            loader.DLOpenLib();
+//            auto library        = loader.DLGetInstance();
+//            this->timeEstimator = library->create(info->timeEstimatorPath);
+//        }
 //        else if (!usePythonWorkEstimator) {
 //            this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
 //        }
@@ -167,7 +170,7 @@ public:
     ~ChromosomeEvaluator() = default;
 
     bool isValid(Chromosome *chromosome) {
-        bool *visited = new bool[chromosome->numWorks()] { false };
+        bool visited[chromosome->numWorks()];
 
         // check edges
         for (int i = 0; i < chromosome->numWorks(); i++) {
@@ -175,19 +178,19 @@ public:
             visited[node] = true;
             for (int parent : headParents[node]) {
                 if (!visited[parent]) {
+//                    cout << "Invalid order" << endl;
                     return false;
                 }
             }
         }
 
-        delete[] visited;
         // check resources
         for (int node = 0; node < chromosome->numWorks(); node++) {
             int contractor = chromosome->getContractor(node);
             for (int res = 0; res < chromosome->numResources(); res++) {
                 int count = chromosome->getResources()[node][res];
-                if (count < minReqs[node][res]
-                    || count > chromosome->getContractors()[contractor][res]) {
+                if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
+                    cout << "Invalid resources: " << minReqs[node][res] << " <= " << count << " <= " << chromosome->getContractors()[contractor][res] << endl;
                     return false;
                 }
             }
@@ -198,8 +201,8 @@ public:
 
     void evaluate(vector<Chromosome *> &chromosomes) {
         auto fitness = TimeFitness();
-#pragma omp parallel for shared(chromosomes, fitness) default(none) num_threads(this->numThreads)
-        for (auto& chromosome : chromosomes) {
+ // #pragma omp parallel for shared(chromosomes, fitness) default(none) num_threads(this->numThreads)
+        for (auto* chromosome : chromosomes) {
             if (isValid(chromosome)) {
                 // TODO Add sgs_type parametrization
                 JustInTimeTimeline timeline(worker_pool, landscape);
@@ -217,9 +220,10 @@ public:
                                                     timeline,
                                                     work_estimator);
                 chromosome->fitness = fitness.evaluate(schedule);
-            }
-            else {
+//                cout << "Fitness written out: " << chromosome->fitness << endl;
+            } else {
                 chromosome->fitness = INT_MAX;
+//                cout << "Chromosome invalid" << endl;
             }
         }
     }

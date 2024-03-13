@@ -9,29 +9,27 @@
 #include "interval.h"
 
 class Worker : public Identifiable {
-
 public:
-    string id;
     string name;
     int count;
     int cost;
     string contractor_id;
     IntervalGaussian productivity;
 
-    Worker(
+    explicit Worker(
         string id = "",
         string name = "",
         int count = 0,
         int cost = 0,
-        string contractorId = "",
+        string contractor_id = "",
         const IntervalGaussian& productivity = IntervalGaussian()
     )
-        : id(std::move(id)),
+        : Identifiable(std::move(id)),
           name(std::move(name)),
           count(count),
           cost(cost),
-          contractor_id(std::move(contractorId)),
-          productivity(productivity) { }
+          contractor_id(std::move(contractor_id)),
+          productivity(productivity) {}
 
     Worker(const Worker& other) = default;
 
@@ -41,15 +39,19 @@ public:
     }
 
     inline Worker copy() const {
-        return { id, name, count, cost, contractor_id, productivity };
+        return Worker(id, name, count, cost, contractor_id, productivity);
     }
 };
 
 class Contractor : public Identifiable {
 public:
+    string name;
     vector<Worker> workers;
 
-    explicit Contractor(const vector<Worker> &workers) : workers(workers) { }
+    explicit Contractor(const string &id, string name, const vector<Worker> &workers)
+        : Identifiable(id),
+          name(std::move(name)),
+          workers(workers) { }
 };
 
 #endif    // CONTRACTOR_H

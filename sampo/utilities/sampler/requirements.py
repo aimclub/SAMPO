@@ -1,6 +1,7 @@
 import random
 from typing import Optional
 
+from sampo.schemas import Time
 from sampo.schemas.requirements import WorkerReq
 from sampo.utilities.sampler.resources import WORKER_TYPES, WorkerSpecialization
 from sampo.utilities.sampler.types import MinMax
@@ -12,7 +13,7 @@ def get_worker_req(rand: random.Random,
                    worker_count: Optional[MinMax[int]] = MinMax[int](1, 100)
                    ) -> WorkerReq:
     count = rand.randint(volume.min, volume.max)
-    return WorkerReq(name, count, worker_count.min, worker_count.max)
+    return WorkerReq(name, Time(count), worker_count.min, worker_count.max)
 
 
 def get_worker_reqs_list(rand: random.Random,

@@ -24,7 +24,7 @@ public:
 
     JustInTimeTimeline(const JustInTimeTimeline &other);
 
-    virtual ~JustInTimeTimeline() = default;
+//    virtual ~JustInTimeTimeline() = default;
 
     tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(GraphNode *node,
                                                                         vector<Worker>& worker_team,

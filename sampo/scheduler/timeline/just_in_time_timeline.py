@@ -101,7 +101,7 @@ class JustInTimeTimeline(Timeline):
             dep_parent_time = dep_node.min_start_time(node2swork)
 
             dep_st = max(new_finish_time, dep_parent_time)
-            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
+            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team, dep_st)
             new_finish_time = dep_st + working_time
 
         exec_time = new_finish_time - c_st
@@ -282,7 +282,7 @@ class JustInTimeTimeline(Timeline):
             if dep_node in exec_times:
                 lag, working_time = exec_times[dep_node]
             else:
-                lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
+                lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers, max(c_ft, max_parent_time))
             c_st = max(c_ft + lag, max_parent_time)
 
             new_finish_time = c_st + working_time

@@ -23,6 +23,7 @@ pytest = ">=7.2.0,<7.3.0"
 typing-extensions = "^4.10.0"
 dill = "^0.3.8"
 networkx = "^3.2.1"
+pathos = "^0.3.2"
 
 
 [build-system]

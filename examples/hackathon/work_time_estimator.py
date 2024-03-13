@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from sampo.utilities.collections_util import build_index
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
 
+
 def get_date_by_start_time(project_start_date, working_hours, start_time):
         days_from_start = int(start_time.value // working_hours)
         task_start_date = project_start_date + timedelta(days_from_start)

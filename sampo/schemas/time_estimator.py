@@ -1,3 +1,4 @@
+import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 from operator import attrgetter
@@ -41,7 +42,7 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]):
+    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker], start_date: str | None = None):
         ...
 
     @abstractmethod

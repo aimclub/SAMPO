@@ -156,7 +156,7 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
         # neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
         #                    for neighbour in neighbour_platforms]
-        lengths = [i * 20 for i in range(1, len(neighbour_platforms) + 1)]
+        lengths = [i * 50 for i in range(1, len(neighbour_platforms) + 1)]
         neighbour_edges = [(neighbour, lengths[i], wg.vertex_count * 2)
                            for i, neighbour in enumerate(neighbour_platforms)]
         holders_node[-1].add_neighbours(neighbour_edges)

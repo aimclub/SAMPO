@@ -289,8 +289,12 @@ def get_works_info(filepath: str):
 
     for i in range(len(project_df)):
         if project_df.loc[i, 'activity_id'] in project_wbs['predecessor_id']:
-            is_executable_lst.append(0)
-            executable_dict[project_df.loc[i, 'activity_id']] = 0
+            if 'Веха' not in project_df.loc[i, 'activity_name']:
+                is_executable_lst.append(0)
+                executable_dict[project_df.loc[i, 'activity_id']] = 0
+            else:
+                is_executable_lst.append(1)
+                executable_dict[project_df.loc[i, 'activity_id']] = 1
         else:
             is_executable_lst.append(1)
             executable_dict[project_df.loc[i, 'activity_id']] = 1

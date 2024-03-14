@@ -5,7 +5,7 @@ import warnings
 from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
 
-from main_pipeline import get_pipeline_with_estimator
+from prepare_pipeline import get_pipeline_with_estimator
 
 warnings.filterwarnings("ignore")
 

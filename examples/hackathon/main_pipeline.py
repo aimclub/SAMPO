@@ -1,7 +1,9 @@
+import json
 from datetime import datetime
 import warnings
 from typing import Optional
 import os
+from enum import Enum
 
 from sampo.pipeline import SchedulingPipeline, InputPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -23,7 +25,7 @@ from experiments.hackathon.skills_resource_optimizer import GreedyMinimalMultiSk
 
 from fitness import MultiFitness, WeightedFitness
 
-from enum import Enum
+from tuning import tune_genetic
 
 warnings.filterwarnings("ignore")
 
@@ -31,6 +33,7 @@ warnings.filterwarnings("ignore")
 class WorkEstimatorType(Enum):
     Basic = 'Basic'
     Calendar = 'Calendar'
+
 
 filepath = './sber_task.xml'
 output_filepath = 'scheduled_xml.xml'
@@ -71,18 +74,33 @@ def single_scheduling(data_path: str, output_path: Optional[str] = None,
                       working_hours: int = 8, start_date: datetime = datetime(2024, 2, 5)):
     scheduling_pipeline, project_work_estimator = get_pipeline_with_estimator(data_path, estimator_type, working_hours,
                                                                               start_date)
-    if cost_weight + resources_weight == 0:
-        fitness = TimeFitness()
+    if abs(time_weight) + abs(cost_weight) + abs(resources_weight) == 0:
+        raise Exception('At least one weight should be non-zero')
+    if time_weight == 0:
+        scheduler = HEFTScheduler(resource_optimizer=GreedyMinimalMultiSkillResourceOptimizer(),
+                                  work_estimator=project_work_estimator)
     else:
-        fitness = WeightedFitness(time_weight=time_weight, cost_weight=cost_weight, resources_weight=resources_weight)
-    scheduler = GeneticScheduler(number_of_generation=100, size_of_population=50,
-                                 mutate_order=0.05,
-                                 mutate_resources=0.005,
-                                 sgs_type=ScheduleGenerationScheme.Parallel,
-                                 only_lft_initialization=True,
-                                 work_estimator=project_work_estimator,
-                                 fitness_constructor=fitness,
-                                 )
+        if abs(cost_weight) + abs(resources_weight) == 0:
+            fitness = TimeFitness()
+        else:
+            fitness = WeightedFitness(time_weight=time_weight, cost_weight=cost_weight,
+                                      resources_weight=resources_weight)
+        if not os.path.exists('best_params.json'):
+            tune_genetic(data_path, 1)
+
+        with open('best_params.json', 'r') as f:
+            params = json.load(f)
+            mutate_order = params['mut_order_pb']
+            mutate_resources = params['mut_res_pb']
+
+        scheduler = GeneticScheduler(number_of_generation=100, size_of_population=50,
+                                     mutate_order=mutate_order,
+                                     mutate_resources=mutate_resources,
+                                     sgs_type=ScheduleGenerationScheme.Parallel,
+                                     only_lft_initialization=True,
+                                     work_estimator=project_work_estimator,
+                                     fitness_constructor=fitness,
+                                     )
     scheduling_project = scheduling_pipeline.schedule(scheduler).finish()[0]
 
     schedule = scheduling_project.schedule
@@ -109,9 +127,16 @@ def multi_scheduling(data_path: str, output_path: Optional[str] = None,
     weights = (-1., -1.)
     if consider_cost and consider_resources:
         weights = (*weights, -1.)
+    if not os.path.exists('best_params.json'):
+        tune_genetic(data_path, 1)
+
+    with open('best_params.json', 'r') as f:
+        params = json.load(f)
+        mutate_order = params['mut_order_pb']
+        mutate_resources = params['mut_res_pb']
     scheduler = GeneticScheduler(number_of_generation=100, size_of_population=50,
-                                 mutate_order=0.05,
-                                 mutate_resources=0.005,
+                                 mutate_order=mutate_order,
+                                 mutate_resources=mutate_resources,
                                  sgs_type=ScheduleGenerationScheme.Parallel,
                                  only_lft_initialization=True,
                                  work_estimator=project_work_estimator,
@@ -140,12 +165,12 @@ if __name__ == "__main__":
 
     filepath = './sber_task.xml'
 
-    raw_project_schedule = single_scheduling(filepath, 'output')
-
+    raw_project_schedule = single_scheduling(filepath, 'scheduled.csv')
+    # FOR OUR DEBUG
     print(raw_project_schedule.execution_time.value)
-
-    raw_project_schedules = multi_scheduling(filepath)
-
-    for schedule in raw_project_schedules:
-        # print(f"time: {schedule.execution_time.value}, cost: {schedule.pure_schedule_df['cost'].sum()}, resources: {count_resources(schedule)}")
-        print(f"time: {schedule.execution_time.value}, cost: {schedule.pure_schedule_df['cost'].sum()}")
+    #
+    # raw_project_schedules = multi_scheduling(filepath)
+    #
+    # for schedule in raw_project_schedules:
+    #     # print(f"time: {schedule.execution_time.value}, cost: {schedule.pure_schedule_df['cost'].sum()}, resources: {count_resources(schedule)}")
+    #     print(f"time: {schedule.execution_time.value}, cost: {schedule.pure_schedule_df['cost'].sum()}")

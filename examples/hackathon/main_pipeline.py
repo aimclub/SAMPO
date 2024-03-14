@@ -165,10 +165,10 @@ if __name__ == "__main__":
 
     filepath = './sber_task.xml'
 
-    raw_project_schedule = single_scheduling(filepath, 'scheduled.csv')
-    # FOR OUR DEBUG
+    raw_project_schedule = single_scheduling(filepath, 'output')
+
     print(raw_project_schedule.execution_time.value)
-    #
+
     # raw_project_schedules = multi_scheduling(filepath)
     #
     # for schedule in raw_project_schedules:

@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pandas as pd
+from ast import literal_eval
 
 from sampo.schemas.resources import Worker
 from sampo.schemas.contractor import Contractor
@@ -33,7 +34,8 @@ week_days_by_id = {
 # Helper functions
 def get_resources_info(filepath: str) -> list[dict]:
     # Parse XML file with the project's data
-    project_tree = ET.parse(filepath)
+    parser = ET.XMLParser(encoding="utf-8")
+    project_tree = ET.parse(filepath, parser=parser)
     project_root = project_tree.getroot()
 
     workers_lst = []
@@ -55,6 +57,7 @@ def get_resources_info(filepath: str) -> list[dict]:
                 res_skills.add(attr.find(tag_prefix + 'Value').text)
 
         workers_lst.append({
+            'id': res_id,
             'name': res_name,
             'count': 1,
             'cost_one_unit': res_cost,
@@ -64,9 +67,10 @@ def get_resources_info(filepath: str) -> list[dict]:
     return workers_lst
 
 
-def get_calendar_info(path_to_input_xml):
+def get_calendar_info(filepath):
     # Parse XML file with the project's data
-    project_tree = ET.parse(path_to_input_xml)
+    parser = ET.XMLParser(encoding="utf-8")
+    project_tree = ET.parse(filepath, parser=parser)
     project_root = project_tree.getroot()
 
     project_calendars = project_root.find(tag_prefix + 'Calendars').findall(tag_prefix + 'Calendar')
@@ -90,9 +94,101 @@ def generate_dates(start_date, end_date):
         current_date += timedelta(days=1)
 
 
-def get_works_info(filepath: str) -> pd.DataFrame:
+def get_datetime_string(project_start_date, start_hours, end_hours):
+    start_date = project_start_date + timedelta(days=start_hours // 8)
+    add_hours = start_hours % 8 + 9
+    if start_hours % 8 > 3:
+        add_hours = add_hours + 1
+    start_datetime = start_date.strftime("%Y-%m-%d") + 'T' + str(add_hours) + ':00:00'
+
+    end_date = project_start_date + timedelta(days=end_hours // 8)
+    add_end_hours = end_hours % 8 + 9
+    if (end_hours % 8) == 0:
+        end_date = end_date - timedelta(days=1)
+        add_end_hours = 17
+    elif end_hours % 8 < 4:
+        add_end_hours = add_end_hours - 1
+
+    end_datetime = end_date.strftime("%Y-%m-%d") + 'T' + str(add_end_hours) + ':59:59'
+
+    return start_datetime, end_datetime
+
+
+def create_new_asssignment(assignment_value, task_id, res_id, work_volume, start_date, end_date, units):
+    assignment_element = ET.Element(tag_prefix + 'Assignment')
+
+    uid_elem = ET.Element(tag_prefix + 'UID')
+    uid_elem.text = str(assignment_value)
+    assignment_element.append(uid_elem)
+
+    elem = ET.Element(tag_prefix + 'GUID')
+    elem.text = str(uuid4())
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'TaskID')
+    elem.text = str(task_id)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'ResourceID')
+    elem.text = str(res_id)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'PercentWorkComplete')
+    elem.text = str(0)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'Finish')
+    elem.text = str(end_date)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'HasFixedRateUnits')
+    elem.text = str(1)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'FixedMaterial')
+    elem.text = str(0)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'LevelingDelayFormat')
+    elem.text = str(7)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'RemainingWork')
+    elem.text = 'PT' + work_volume + 'H0M0S'
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'Start')
+    elem.text = str(start_date)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'Units')
+    elem.text = str(units)
+    assignment_element.append(elem)
+
+    elem = ET.Element(tag_prefix + 'Work')
+    elem.text = 'PT' + work_volume + 'H0M0S'
+    assignment_element.append(elem)
+
+    elem_extended = ET.Element(tag_prefix + 'ExtendedAttribute')
+
+    elem = ET.Element(tag_prefix + 'FieldID')
+    elem.text = str(255852770)
+    elem_extended.append(elem)
+
+    elem = ET.Element(tag_prefix + 'Value')
+    elem.text = "{}"
+    elem_extended.append(elem)
+
+    assignment_element.append(elem_extended)
+    # assignment_element.append(ET.Element(tag_prefix + '/ExtendedAttribute'))
+
+    return assignment_element
+
+
+def get_works_info(filepath: str):
     # Parse XML file with the project's data
-    project_tree = ET.parse(filepath)
+    parser = ET.XMLParser(encoding="utf-8")
+    project_tree = ET.parse(filepath, parser=parser)
     project_root = project_tree.getroot()
 
     # Prepare structure for the input data after parsing XML
@@ -272,6 +368,7 @@ def get_works_info(filepath: str) -> pd.DataFrame:
     project_df['predecessor_ids'] = new_predecessors_lst
 
     # Prepare dataframe with works info for scheduling
+    structural_df = project_df[(project_df['is_executable'] == 0) & (project_df['is_service'] == 0)]
     df_for_scheduling = project_df[(project_df['is_executable'] == 1) | (project_df['is_service'] == 1)]
     df_for_scheduling = df_for_scheduling.reset_index(drop=True)
     df_for_scheduling = df_for_scheduling[
@@ -312,7 +409,7 @@ def get_works_info(filepath: str) -> pd.DataFrame:
     df_for_scheduling['max_req'] = max_req
     df_for_scheduling['req_volume'] = volume
 
-    return df_for_scheduling
+    return df_for_scheduling, structural_df, project_wbs_levels, successors_dict
 
 
 def get_contractors_info(filepath:str) -> list[Contractor]:
@@ -380,3 +477,132 @@ def get_project_calendar(path_to_input_xml: str):
                         holidays.remove(x)
 
     return working_days, holidays
+
+
+def convert_dates_in_schedule(project_df, project_start_date):
+    start_dates = []
+    end_dates = []
+
+    for i in project_df.index:
+        start_time = int(project_df.loc[i, 'start'])
+        end_time = int(project_df.loc[i, 'finish'])
+        datetimes = get_datetime_string(project_start_date, start_time, end_time)
+        start_dates.append(datetimes[0])
+        end_dates.append(datetimes[1])
+
+    project_df['start_date'] = start_dates
+    project_df['finish_date'] = end_dates
+
+    return project_df
+
+
+def process_schedule(schedule_df, structure_info):
+
+    structure_df, project_wbs_levels, successors_dict = structure_info
+    schedule_df = schedule_df[['task_id', 'task_name', 'volume', 'measurement',
+                               'cost', 'start', 'finish',
+                               'start_date', 'finish_date', 'duration', 'workers']]
+    schedule_df = schedule_df.rename(columns={'task_id': 'activity_id',
+                                              'task_name': 'activity_name'})
+    schedule_df['is_executable'] = [1] * len(schedule_df)
+    schedule_df['activity_id'] = [str(x) for x in schedule_df['activity_id']]
+
+    structure_df = structure_df[['activity_id', 'activity_name', 'volume', 'measurement']]
+    structure_df['cost'] = [0] * len(structure_df)
+    structure_df['start'] = [0] * len(structure_df)
+    structure_df['finish'] = [0] * len(structure_df)
+    structure_df['start_date'] = [''] * len(structure_df)
+    structure_df['finish_date'] = [''] * len(structure_df)
+    structure_df['duration'] = [-1] * len(structure_df)
+    structure_df['workers'] = ['{}'] * len(structure_df)
+    structure_df['is_executable'] = [0] * len(structure_df)
+
+    project_df2 = pd.concat([schedule_df, structure_df])
+
+    project_df2 = project_df2.set_index('activity_id')
+
+    for wbs_lvl in range(max(project_wbs_levels.keys()), 0, -1):
+        for task_id in project_wbs_levels[wbs_lvl]:
+            if project_df2.loc[task_id, 'is_executable'] == 0:
+                # print(task_id)
+                min_id = -1
+                min_val = 2000000
+                max_id = -1
+                max_val = -1
+                cost = 0
+                for inner_task_id in successors_dict[task_id]:
+                    cost += project_df2.loc[inner_task_id, 'cost']
+                    if project_df2.loc[inner_task_id, 'start'] < min_val:
+                        min_val = project_df2.loc[inner_task_id, 'start']
+                        min_id = inner_task_id
+                    if project_df2.loc[inner_task_id, 'finish'] > max_val:
+                        max_val = project_df2.loc[inner_task_id, 'finish']
+                        max_id = inner_task_id
+                project_df2.loc[task_id, 'start'] = project_df2.loc[min_id, 'start']
+                project_df2.loc[task_id, 'finish'] = project_df2.loc[max_id, 'finish']
+                project_df2.loc[task_id, 'start_date'] = project_df2.loc[min_id, 'start_date']
+                project_df2.loc[task_id, 'finish_date'] = project_df2.loc[max_id, 'finish_date']
+                project_df2.loc[task_id, 'duration'] = int(max_val - min_val)
+                project_df2.loc[task_id, 'cost'] = cost
+
+    project_df2 = project_df2.reset_index()
+    return project_df2, list(project_wbs_levels[1])[0]
+
+
+def schedule_csv_to_xml(schedule_df, project_id, filepath, output_xml_name):
+    # Parse XML file with the project's data
+    parser = ET.XMLParser(encoding="utf-8")
+    project_tree = ET.parse(filepath, parser=parser)
+    project_root = project_tree.getroot()
+
+    schedule_df = schedule_df.set_index('activity_id')
+    schedule_df['workers'] = [literal_eval(x) for x in schedule_df['workers']]
+
+    # Fix project info
+    project_root.find(tag_prefix + 'StartDate').text = schedule_df.loc[project_id, 'start_date']
+    project_root.find(tag_prefix + 'FinishDate').text = schedule_df.loc[project_id, 'finish_date']
+    project_root.find(tag_prefix + 'CurrentDate').text = current_date = '2024-03-14T08:38:12'
+
+    # Fix tasks info
+    for task_info in project_root.find(tag_prefix + 'Tasks'). \
+            findall(tag_prefix + 'Task'):
+        task_id = task_info.find(tag_prefix + 'UID').text
+        task_info.find(tag_prefix + 'Duration').text = 'PT' + str(schedule_df.loc[task_id, 'duration']) + 'H0M0S'
+        task_info.find(tag_prefix + 'RemainingDuration').text = 'PT' + str(
+            schedule_df.loc[task_id, 'duration']) + 'H0M0S'
+        task_info.find(tag_prefix + 'Start').text = schedule_df.loc[task_id, 'start_date']
+        task_info.find(tag_prefix + 'Finish').text = schedule_df.loc[task_id, 'finish_date']
+
+    assignments_lst = project_root.find(tag_prefix + 'Assignments'). \
+        findall(tag_prefix + 'Assignment')
+    assignments_element = project_root.find(tag_prefix + 'Assignments')
+    n_assignments = len(assignments_lst)
+
+    workers_lst = get_resources_info(filepath)
+
+    get_resource_id_by_name = {}
+    for worker in workers_lst:
+        get_resource_id_by_name[worker['name']] = worker['id']
+
+    assignment_id = 1
+    for task_id in schedule_df.index:
+        for res_name in schedule_df.loc[task_id, 'workers']:
+            if assignment_id <= n_assignments:
+                assignment = assignments_lst[assignment_id - 1]
+                assignment.find(tag_prefix + 'GUID').text = str(uuid4())
+                assignment.find(tag_prefix + 'TaskUID').text = str(task_id)
+                assignment.find(tag_prefix + 'ResourceUID').text = str(get_resource_id_by_name[res_name])
+                assignment.find(tag_prefix + 'Start').text = schedule_df.loc[task_id, 'start_date']
+                assignment.find(tag_prefix + 'Finish').text = schedule_df.loc[task_id, 'finish_date']
+                assignment.find(tag_prefix + 'Units').text = str(schedule_df.loc[task_id, 'workers'][res_name])
+            else:
+                assignments_element.append(create_new_asssignment(str(assignment_id),
+                                                                  str(task_id),
+                                                                  str(get_resource_id_by_name[res_name]),
+                                                                  str(int(schedule_df.loc[task_id, 'volume'])),
+                                                                  schedule_df.loc[task_id, 'start_date'],
+                                                                  schedule_df.loc[task_id, 'finish_date'],
+                                                                  str(schedule_df.loc[task_id, 'workers'][res_name])))
+            assignment_id += 1
+
+    project_tree.write(output_xml_name, encoding="utf-8")

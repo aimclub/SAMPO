@@ -95,7 +95,10 @@ class CalendarBasedWorkEstimator(WorkTimeEstimator):
             cnt_workers = 0
             for worker in worker_list:
                 cnt_workers += worker.count
-            work_execution_time = int(math.ceil(work_volume / cnt_workers))  # in hours
+            if cnt_workers != 0:
+                work_execution_time = int(math.ceil(work_volume / cnt_workers))  # in hours
+            else:
+                return Time.inf()
 
             if start_time is None:
                 return Time(work_execution_time)

@@ -17,7 +17,7 @@ from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
 from work_time_estimator import WorkEstimator, CalendarBasedWorkEstimator
 
 from xml_parser import get_works_info, get_contractors_info, get_project_calendar, \
-    convert_dates_in_schedule, process_schedule, schedule_csv_to_xml
+    convert_dates_in_schedule, process_schedule, schedule_csv_to_xml, get_project_works_structure
 
 from experiments.hackathon.skills_resource_optimizer import GreedyMinimalMultiSkillResourceOptimizer
 
@@ -33,16 +33,15 @@ class WorkEstimatorType(Enum):
     Calendar = 'Calendar'
 
 filepath = './sber_task.xml'
-output_path = 'scheduled_xml.xml'
+output_filepath = 'scheduled_xml.xml'
 project_start_date = datetime(2024, 2, 5)
 
 
 def get_pipeline_with_estimator(data_path: str, estimator_type: WorkEstimatorType = WorkEstimatorType.Calendar,
                                 working_hours: int = 8, start_date: datetime = datetime(2024, 2, 5)) \
         -> tuple[InputPipeline, WorkTimeEstimator]:
-    df, *structure_info = get_works_info(filepath)
-    contractors = get_contractors_info(filepath)
-    project_business_calendar = get_project_calendar(filepath)
+    df = get_works_info(data_path)
+    contractors = get_contractors_info(data_path)
 
     scheduling_pipeline = SchedulingPipeline.create()
     scheduling_pipeline = scheduling_pipeline.wg(wg=df,
@@ -87,9 +86,14 @@ def single_scheduling(data_path: str, output_path: Optional[str] = None,
     scheduling_project = scheduling_pipeline.schedule(scheduler).finish()[0]
 
     schedule = scheduling_project.schedule
+    schedule_df = convert_dates_in_schedule(schedule.pure_schedule_df, start_date)
 
     if output_path is not None:
-        raw_project_schedule.pure_schedule_df.to_csv(output_path, index=0)
+        schedule_df.to_csv(os.path.join(output_path, 'schedule.csv'), index=0)
+        _, *structure_info = get_project_works_structure(data_path)
+        schedule_csv_to_xml(*process_schedule(schedule_df, structure_info),
+                            data_path, os.path.join(output_path, 'schedule.xml'))
+
     return schedule
 
 
@@ -117,17 +121,17 @@ def multi_scheduling(data_path: str, output_path: Optional[str] = None,
                                  )
 
     scheduling_projects = scheduling_pipeline.schedule(scheduler).finish()
-
-    # raw_project_schedule = scheduling_project.schedule
-    # pure_schedule = raw_project_schedule.pure_schedule_df
-    # schedule_df = convert_dates_in_schedule(pure_schedule, project_start_date)
-    # schedule_df.to_csv('scheduled.csv', index=0)
     schedules = [project.schedule for project in scheduling_projects]
 
-    # schedule_csv_to_xml(*process_schedule(schedule_df, structure_info), filepath, output_path)
     if output_path is not None:
         for i, schedule in enumerate(schedules):
-            schedule.pure_schedule_df.to_csv(os.path.join(output_path, f'schedule_{i}.csv'), index=0)
+            schedule_df = convert_dates_in_schedule(schedule.pure_schedule_df, project_start_date)
+            schedule_df.to_csv(os.path.join(output_path, f'schedule_{i}.csv'), index=0)
+
+            _, *structure_info = get_project_works_structure(data_path)
+            schedule_csv_to_xml(*process_schedule(schedule_df, structure_info),
+                                data_path,
+                                os.path.join(output_path, f'schedule_{i}.xml'))
     return schedules
 
 
@@ -136,11 +140,8 @@ if __name__ == "__main__":
 
     filepath = './sber_task.xml'
 
-    raw_project_schedule = single_scheduling(filepath, 'scheduled.csv')
+    raw_project_schedule = single_scheduling(filepath, 'output')
 
-
-# FOR OUR DEBUG
-print(raw_project_schedule.execution_time.value)
     print(raw_project_schedule.execution_time.value)
 
     raw_project_schedules = multi_scheduling(filepath)

@@ -185,7 +185,7 @@ def create_new_asssignment(assignment_value, task_id, res_id, work_volume, start
     return assignment_element
 
 
-def get_works_info(filepath: str):
+def get_project_works_structure(filepath: str):
     # Parse XML file with the project's data
     parser = ET.XMLParser(encoding="utf-8")
     project_tree = ET.parse(filepath, parser=parser)
@@ -214,7 +214,7 @@ def get_works_info(filepath: str):
     executable_successors_dict = {}
     successors_dict = {}
 
-    project_tasks = project_root.find(tag_prefix + 'Tasks').\
+    project_tasks = project_root.find(tag_prefix + 'Tasks'). \
         findall(tag_prefix + 'Task')
 
     # Tasks info preparation
@@ -299,8 +299,22 @@ def get_works_info(filepath: str):
                         executable_successors_dict[task_id] = set()
                     executable_successors_dict[task_id].add(project_df.loc[j, 'activity_id'])
 
+    structural_df = project_df[project_df['is_executable'] == 0]
+
+    return project_df, structural_df, project_wbs_levels, successors_dict
+
+
+def get_works_info(filepath: str):
+    # Parse XML file with the project's data
+    parser = ET.XMLParser(encoding="utf-8")
+    project_tree = ET.parse(filepath, parser=parser)
+    project_root = project_tree.getroot()
+
+    project_df, _, project_wbs_levels, successors_dict = get_project_works_structure(filepath)
+
     project_df = project_df.set_index('activity_id')
 
+    # Restructuring DataFrame and create service vertices for the beginning and ending of each block
     new_vertices = []
     for wbs_lvl in range(1, max(project_wbs_levels.keys()) + 1):
         for task_id in project_wbs_levels[wbs_lvl]:
@@ -368,7 +382,6 @@ def get_works_info(filepath: str):
     project_df['predecessor_ids'] = new_predecessors_lst
 
     # Prepare dataframe with works info for scheduling
-    structural_df = project_df[(project_df['is_executable'] == 0) & (project_df['is_service'] == 0)]
     df_for_scheduling = project_df[(project_df['is_executable'] == 1) | (project_df['is_service'] == 1)]
     df_for_scheduling = df_for_scheduling.reset_index(drop=True)
     df_for_scheduling = df_for_scheduling[
@@ -409,7 +422,7 @@ def get_works_info(filepath: str):
     df_for_scheduling['max_req'] = max_req
     df_for_scheduling['req_volume'] = volume
 
-    return df_for_scheduling, structural_df, project_wbs_levels, successors_dict
+    return df_for_scheduling
 
 
 def get_contractors_info(filepath:str) -> list[Contractor]:

@@ -532,6 +532,8 @@ def process_schedule(schedule_df, structure_info):
 
     project_df2 = pd.concat([schedule_df, structure_df])
 
+    project_df2['activity_id'] = [str(x) for x in project_df2['activity_id']]
+
     project_df2 = project_df2.set_index('activity_id')
 
     for wbs_lvl in range(max(project_wbs_levels.keys()), 0, -1):

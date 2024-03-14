@@ -161,11 +161,11 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
                            for i, neighbour in enumerate(neighbour_platforms)]
         holders_node[-1].add_neighbours(neighbour_edges)
 
-        vehicles_number = 20
+        vehicles_number = rnd.randint(7, 20)
         holders.append(ResourceHolder(str(uuid.uuid4()), holders_node[-1].name,
                                       vehicles=[
                                           Vehicle(str(uuid.uuid4()), f'vehicle{j}',
-                                                  [Material(name, name, count)
+                                                  [Material(name, name, count // 2)
                                                    for name, count in max_materials.items()])
                                           for j in range(vehicles_number)
                                       ], node=holders_node[-1]))

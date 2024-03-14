@@ -196,14 +196,14 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         selected_vehicles = []
         depot_vehicle_finish_time = Time(0)
 
-        start_delivery_time = Time(-1)
+        start_delivery_time = deadline
         finish_delivery_time = Time(-1)
 
         road_deliveries = []
 
         # find time, that depot could provide resources
-        while finish_delivery_time < deadline:
-            start_delivery_time += 1
+        while finish_delivery_time != deadline and start_delivery_time > Time(-1):
+            start_delivery_time -= 1
             # min start time found on this iteration
             local_min_start_time = Time.inf()
 

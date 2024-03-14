@@ -1,7 +1,9 @@
+import json
 from datetime import datetime
 import warnings
 from typing import Optional
 import os
+from enum import Enum
 
 from sampo.pipeline import SchedulingPipeline, InputPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -18,7 +20,7 @@ from experiments.hackathon.skills_resource_optimizer import GreedyMinimalMultiSk
 
 from fitness import MultiFitness, WeightedFitness
 
-from enum import Enum
+from tuning import tune_genetic
 
 warnings.filterwarnings("ignore")
 
@@ -72,16 +74,24 @@ def single_scheduling(data_path: str, output_path: Optional[str] = None,
         raise Exception('At least one weight should be non-zero')
     if time_weight == 0:
         scheduler = HEFTScheduler(resource_optimizer=GreedyMinimalMultiSkillResourceOptimizer(),
-                                  work_estimator=estimator)
+                                  work_estimator=project_work_estimator)
     else:
         if abs(cost_weight) + abs(resources_weight) == 0:
             fitness = TimeFitness()
         else:
             fitness = WeightedFitness(time_weight=time_weight, cost_weight=cost_weight,
                                       resources_weight=resources_weight)
+        if not os.path.exists('best_params.json'):
+            tune_genetic(data_path, 1)
+
+        with open('best_params.json', 'r') as f:
+            params = json.load(f)
+            mutate_order = params['mut_order_pb']
+            mutate_resources = params['mut_res_pb']
+
         scheduler = GeneticScheduler(number_of_generation=100, size_of_population=50,
-                                     mutate_order=0.025,
-                                     mutate_resources=0.008,
+                                     mutate_order=mutate_order,
+                                     mutate_resources=mutate_resources,
                                      sgs_type=ScheduleGenerationScheme.Parallel,
                                      only_lft_initialization=True,
                                      work_estimator=project_work_estimator,
@@ -108,9 +118,16 @@ def multi_scheduling(data_path: str, output_path: Optional[str] = None,
     weights = (-1., -1.)
     if consider_cost and consider_resources:
         weights = (*weights, -1.)
+    if not os.path.exists('best_params.json'):
+        tune_genetic(data_path, 1)
+
+    with open('best_params.json', 'r') as f:
+        params = json.load(f)
+        mutate_order = params['mut_order_pb']
+        mutate_resources = params['mut_res_pb']
     scheduler = GeneticScheduler(number_of_generation=100, size_of_population=50,
-                                 mutate_order=0.025,
-                                 mutate_resources=0.008,
+                                 mutate_order=mutate_order,
+                                 mutate_resources=mutate_resources,
                                  sgs_type=ScheduleGenerationScheme.Parallel,
                                  only_lft_initialization=True,
                                  work_estimator=project_work_estimator,

@@ -18,8 +18,11 @@ FS_lag = '0.0'
 work_req_dict = {
     'Аналитика': 'Аналитик',
     'Разработка': 'Разработчик',
-    'Тестирование': 'Тестировщик'
+    'Тестирование': 'Тестировщик',
+    'Общая': 'Разработчик'
 }
+
+works_with_spec = {'Аналитика', 'Разработка', 'Тестирование'}
 
 week_days_by_id = {
     '1': 6,
@@ -185,7 +188,7 @@ def create_new_asssignment(assignment_value, task_id, res_id, work_volume, start
     return assignment_element
 
 
-def get_project_works_structure(filepath: str):
+def get_works_info(filepath: str):
     # Parse XML file with the project's data
     parser = ET.XMLParser(encoding="utf-8")
     project_tree = ET.parse(filepath, parser=parser)
@@ -225,7 +228,15 @@ def get_project_works_structure(filepath: str):
 
         task_name = task_info.find(tag_prefix + 'Name').text
         input_data['activity_name'].append(task_name)
-        input_data['granular_name'].append(task_name.split(' ')[0])
+
+        granular_name = task_name.split(' ')[0]
+        if granular_name not in works_with_spec:
+            if granular_name == 'Веха':
+                input_data['granular_name'].append('Веха')
+            else:
+                input_data['granular_name'].append('Общая')
+        else:
+            input_data['granular_name'].append(granular_name)
 
         volume_str = task_info.find(tag_prefix + 'Duration').text
         input_data['volume'].append(int(volume_str.split('PT')[1].split('H')[0]))  # in hours
@@ -299,19 +310,6 @@ def get_project_works_structure(filepath: str):
                         executable_successors_dict[task_id] = set()
                     executable_successors_dict[task_id].add(project_df.loc[j, 'activity_id'])
 
-    structural_df = project_df[project_df['is_executable'] == 0]
-
-    return project_df, structural_df, project_wbs_levels, successors_dict
-
-
-def get_works_info(filepath: str):
-    # Parse XML file with the project's data
-    parser = ET.XMLParser(encoding="utf-8")
-    project_tree = ET.parse(filepath, parser=parser)
-    project_root = project_tree.getroot()
-
-    project_df, _, project_wbs_levels, successors_dict = get_project_works_structure(filepath)
-
     project_df = project_df.set_index('activity_id')
 
     # Restructuring DataFrame and create service vertices for the beginning and ending of each block
@@ -360,6 +358,10 @@ def get_works_info(filepath: str):
                     project_df.loc[inner_task_id, 'lags'].append(FS_lag)
 
     project_df['is_service'] = [0] * len(project_df)
+    # for i in project_df.index:
+    #     if project_df.loc[i, 'granular_name'] == 'Веха':
+    #         project_df.loc[i, 'is_service'] = 1
+
     service_tasks_df = pd.DataFrame(data=new_vertices)
     project_df = project_df.reset_index()
     project_df = pd.concat([project_df, service_tasks_df])
@@ -380,6 +382,8 @@ def get_works_info(filepath: str):
 
     project_df = project_df.reset_index()
     project_df['predecessor_ids'] = new_predecessors_lst
+
+    df_service = project_df[(project_df['is_executable'] == 0) & (project_df['is_service'] == 0)]
 
     # Prepare dataframe with works info for scheduling
     df_for_scheduling = project_df[(project_df['is_executable'] == 1) | (project_df['is_service'] == 1)]
@@ -422,7 +426,7 @@ def get_works_info(filepath: str):
     df_for_scheduling['max_req'] = max_req
     df_for_scheduling['req_volume'] = volume
 
-    return df_for_scheduling
+    return df_for_scheduling, df_service, project_wbs_levels, successors_dict
 
 
 def get_contractors_info(filepath:str) -> list[Contractor]:
@@ -533,6 +537,7 @@ def process_schedule(schedule_df, structure_info):
     project_df2 = pd.concat([schedule_df, structure_df])
 
     project_df2['activity_id'] = [str(x) for x in project_df2['activity_id']]
+    project_df2.to_csv('project_df_after_merging.csv', index=False)
 
     project_df2 = project_df2.set_index('activity_id')
 
@@ -553,12 +558,30 @@ def process_schedule(schedule_df, structure_info):
                     if project_df2.loc[inner_task_id, 'finish'] > max_val:
                         max_val = project_df2.loc[inner_task_id, 'finish']
                         max_id = inner_task_id
+
                 project_df2.loc[task_id, 'start'] = project_df2.loc[min_id, 'start']
-                project_df2.loc[task_id, 'finish'] = project_df2.loc[max_id, 'finish']
                 project_df2.loc[task_id, 'start_date'] = project_df2.loc[min_id, 'start_date']
+                project_df2.loc[task_id, 'finish'] = project_df2.loc[min_id, 'finish']
                 project_df2.loc[task_id, 'finish_date'] = project_df2.loc[max_id, 'finish_date']
                 project_df2.loc[task_id, 'duration'] = int(max_val - min_val)
                 project_df2.loc[task_id, 'cost'] = cost
+
+                # if min_id != -1:
+                #     project_df2.loc[task_id, 'start'] = project_df2.loc[min_id, 'start']
+                #     project_df2.loc[task_id, 'start_date'] = project_df2.loc[min_id, 'start_date']
+                # else:
+                #     project_df2.loc[task_id, 'start'] = -1
+                #     project_df2.loc[task_id, 'start_date'] = ''
+                # if max_id != -1:
+                #     project_df2.loc[task_id, 'finish'] = project_df2.loc[min_id, 'finish']
+                #     project_df2.loc[task_id, 'finish_date'] = project_df2.loc[max_id, 'finish_date']
+                #     if min_id != 1:
+                #         project_df2.loc[task_id, 'duration'] = int(max_val - min_val)
+                #
+                # project_df2.loc[task_id, 'cost'] = cost
+
+    # project_df2 = project_df2[project_df2['finish'] != -1]
+    # project_df2 = project_df2[project_df2['start'] != -1]
 
     project_df2 = project_df2.reset_index()
     return project_df2, list(project_wbs_levels[1])[0]
@@ -583,8 +606,9 @@ def schedule_csv_to_xml(schedule_df, project_id, filepath, output_xml_name):
             findall(tag_prefix + 'Task'):
         task_id = task_info.find(tag_prefix + 'UID').text
         task_info.find(tag_prefix + 'Duration').text = 'PT' + str(schedule_df.loc[task_id, 'duration']) + 'H0M0S'
-        task_info.find(tag_prefix + 'RemainingDuration').text = 'PT' + str(
-            schedule_df.loc[task_id, 'duration']) + 'H0M0S'
+        if not task_info.find(tag_prefix + 'RemainingDuration') is None:
+            task_info.find(tag_prefix + 'RemainingDuration').text = 'PT' + str(
+                schedule_df.loc[task_id, 'duration']) + 'H0M0S'
         task_info.find(tag_prefix + 'Start').text = schedule_df.loc[task_id, 'start_date']
         task_info.find(tag_prefix + 'Finish').text = schedule_df.loc[task_id, 'finish_date']
 
@@ -601,23 +625,24 @@ def schedule_csv_to_xml(schedule_df, project_id, filepath, output_xml_name):
 
     assignment_id = 1
     for task_id in schedule_df.index:
-        for res_name in schedule_df.loc[task_id, 'workers']:
-            if assignment_id <= n_assignments:
-                assignment = assignments_lst[assignment_id - 1]
-                assignment.find(tag_prefix + 'GUID').text = str(uuid4())
-                assignment.find(tag_prefix + 'TaskUID').text = str(task_id)
-                assignment.find(tag_prefix + 'ResourceUID').text = str(get_resource_id_by_name[res_name])
-                assignment.find(tag_prefix + 'Start').text = schedule_df.loc[task_id, 'start_date']
-                assignment.find(tag_prefix + 'Finish').text = schedule_df.loc[task_id, 'finish_date']
-                assignment.find(tag_prefix + 'Units').text = str(schedule_df.loc[task_id, 'workers'][res_name])
-            else:
-                assignments_element.append(create_new_asssignment(str(assignment_id),
-                                                                  str(task_id),
-                                                                  str(get_resource_id_by_name[res_name]),
-                                                                  str(int(schedule_df.loc[task_id, 'volume'])),
-                                                                  schedule_df.loc[task_id, 'start_date'],
-                                                                  schedule_df.loc[task_id, 'finish_date'],
-                                                                  str(schedule_df.loc[task_id, 'workers'][res_name])))
-            assignment_id += 1
+        if 'Веха' not in schedule_df.loc[task_id, 'activity_name']:
+            for res_name in schedule_df.loc[task_id, 'workers']:
+                if assignment_id <= n_assignments:
+                    assignment = assignments_lst[assignment_id - 1]
+                    assignment.find(tag_prefix + 'GUID').text = str(uuid4())
+                    assignment.find(tag_prefix + 'TaskUID').text = str(task_id)
+                    assignment.find(tag_prefix + 'ResourceUID').text = str(get_resource_id_by_name[res_name])
+                    assignment.find(tag_prefix + 'Start').text = schedule_df.loc[task_id, 'start_date']
+                    assignment.find(tag_prefix + 'Finish').text = schedule_df.loc[task_id, 'finish_date']
+                    assignment.find(tag_prefix + 'Units').text = str(schedule_df.loc[task_id, 'workers'][res_name])
+                else:
+                    assignments_element.append(create_new_asssignment(str(assignment_id),
+                                                                      str(task_id),
+                                                                      str(get_resource_id_by_name[res_name]),
+                                                                      str(int(schedule_df.loc[task_id, 'volume'])),
+                                                                      schedule_df.loc[task_id, 'start_date'],
+                                                                      schedule_df.loc[task_id, 'finish_date'],
+                                                                      str(schedule_df.loc[task_id, 'workers'][res_name])))
+                assignment_id += 1
 
     project_tree.write(output_xml_name, encoding="utf-8")

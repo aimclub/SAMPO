@@ -19,7 +19,7 @@ class WorkEstimatorType(Enum):
 def get_pipeline_with_estimator(data_path: str, estimator_type: WorkEstimatorType = WorkEstimatorType.Calendar,
                                 working_hours: int = 8, start_date: datetime = datetime(2024, 2, 5)) \
         -> tuple[InputPipeline, WorkTimeEstimator]:
-    df = get_works_info(data_path)
+    df, _, _, _ = get_works_info(data_path)
     contractors = get_contractors_info(data_path)
 
     scheduling_pipeline = SchedulingPipeline.create()

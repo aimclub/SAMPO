@@ -263,8 +263,8 @@ def get_works_info(filepath: str):
             if int(predecessor.find(tag_prefix + 'LinkLag').text) == 0:
                 lags.append(FS_lag)
             else:
-                lags.append(str(int(predecessor.find(tag_prefix + 'LinkLag').text)))
-
+                # lags.append(str(int(predecessor.find(tag_prefix + 'LinkLag').text)))
+                lags.append(FS_lag)
         input_data['predecessor_ids'].append(predecessor_ids)
         input_data['connection_types'].append(connection_types)
         input_data['lags'].append(lags)
@@ -525,8 +525,17 @@ def process_schedule(schedule_df, structure_info):
                                'start_date', 'finish_date', 'duration', 'workers']]
     schedule_df = schedule_df.rename(columns={'task_id': 'activity_id',
                                               'task_name': 'activity_name'})
-    schedule_df['is_executable'] = [1] * len(schedule_df)
+
     schedule_df['activity_id'] = [str(x) for x in schedule_df['activity_id']]
+    schedule_df['is_active'] = [1] * len(schedule_df)
+    for i in range(len(schedule_df)):
+        if ('0000' in schedule_df.loc[i, 'activity_id']) or ('1111' in schedule_df.loc[i, 'activity_id']):
+            schedule_df.loc[i, 'is_active'] = 0
+
+    schedule_df = schedule_df[schedule_df['is_active'] == 1]
+    schedule_df = schedule_df.reset_index()
+
+    schedule_df['is_executable'] = [1] * len(schedule_df)
 
     structure_df = structure_df[['activity_id', 'activity_name', 'volume', 'measurement']]
     structure_df['cost'] = [0] * len(structure_df)
@@ -588,6 +597,7 @@ def process_schedule(schedule_df, structure_info):
     # project_df2 = project_df2[project_df2['start'] != -1]
 
     project_df2 = project_df2.reset_index()
+    project_df2.to_csv('final_schedule_time_no_lags.csv')
     return project_df2, list(project_wbs_levels[1])[0]
 
 

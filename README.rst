@@ -45,16 +45,25 @@ SAMPO Features
 
 The following algorithms for projects sheduling are implemented:
 
-* Topological - heuristic algorithm based in toposort of WorkGraph
-* HEFT (heterogeneous earliest finish time) and HEFTBetween - heuristic algorithms based on critical path heuristic
-* Genetic - algorithm that uses heuristic algorithms for beginning population and modelling evolution process
+* **Heuristic approaches**
+   * Topological - heuristic algorithm based in toposort of WorkGraph
+   * HEFT (heterogeneous earliest finish time) and HEFTBetween - heuristic algorithms based on critical path heuristic
+* **Genetic evolutional algorithm** that uses the idea of evolution and applies mutation, crossover and selection operators to form optimal solutions
 
-Difference from existing implementations:
+Heuristic approaches are also used for initialization in a genetic algorithm to produce better solutions
 
-* Module for generating graphs of production tasks with a given structure
-* Easy to use pipeline structure
-* Multi-agent modeling block, allowing you to effectively select a combination of planning algorithms for a particular project
-* Ability to handle complex projects with a large number of works (2-10 thousand)
+**Advantages of the framework:**
+
+* Pipeline structure with easy customization options for additional constraints
+* Ability to handle complex projects with a large number of tasks (2-10 thousand)
+* Flexible multi-criteria optimization (time, resources and cost, optimization to project deadline) and construction of a set of Pareto-optimal plans
+* Ability to use within a modular structure with an Input Data Parser and a Time and Resource Estimation Model to take into account the specifics of the task and subject area
+
+**Advanced options:**
+
+* Multi-agent modeling block for an effective combining different scheduling algorithms
+* Module for generating synthetic graphs with a given structure
+
 
 How to Use
 ==========

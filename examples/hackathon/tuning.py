@@ -43,10 +43,10 @@ def tune_genetic(filepath: str, n_iters: int = 5, n_trials: int = 20):
     study = optuna.create_study()
     study.optimize(objective, n_trials=n_trials, n_jobs=-1)
 
-    with open('best_params.json', 'w') as f:
+    with open('best_params_2.json', 'w') as f:
         json.dump(study.best_params, f)
 
 
 if __name__ == "__main__":
     filepath = './sber_task.xml'
-    tune_genetic(filepath)
+    tune_genetic(filepath, n_iters=1)

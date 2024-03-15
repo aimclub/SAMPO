@@ -213,7 +213,12 @@ class LFTScheduler(GenericScheduler):
         return np.argmax(scores)
 
     def _get_workers_amounts(self, max_amounts: np.ndarray, min_amounts: np.ndarray) -> np.ndarray:
-        return max_amounts
+        amounts = np.zeros_like(max_amounts)
+        indexes_to_max = [random.choice(np.arange(len(contractor_max))[contractor_max > 0])
+                          for contractor_max in max_amounts]
+        indexes = np.arange(amounts.shape[0])
+        amounts[indexes, indexes_to_max] = max_amounts[indexes, indexes_to_max]
+        return amounts
 
 
 class RandomizedLFTScheduler(LFTScheduler):
@@ -233,13 +238,3 @@ class RandomizedLFTScheduler(LFTScheduler):
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0
-
-    def _get_workers_amounts(self, max_amounts: np.ndarray, min_amounts: np.ndarray) -> np.ndarray:
-        amounts = np.array([[self._random.randint(min_, max_) for min_, max_ in zip(contractor_min, contractor_max)]
-                            for contractor_min, contractor_max in zip(min_amounts, max_amounts)])
-        mask = amounts.sum(axis=1) == 0
-        if mask.any():
-            indexes_to_max = [self._random.choice(np.arange(len(contractor_max))[contractor_max > 0])
-                              for contractor_max in max_amounts[mask]]
-            amounts[mask, indexes_to_max] = max_amounts[mask, indexes_to_max]
-        return amounts

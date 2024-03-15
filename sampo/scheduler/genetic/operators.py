@@ -678,10 +678,12 @@ def mutate_binary_resources(ind: Individual, mutpb: float, rand: random.Random,
 
     for row_index, row_mask in zip(works_indexes, masks):
         cur_row = res[row_index]
-        mutated_values = 1 - cur_row[row_mask]
-        if mutated_values.sum() + cur_row[~row_mask][:-1].sum() == 0:
+        cur_res = cur_row == 1
+        if (row_mask == cur_res).all():
             continue
-        cur_row[row_mask] = mutated_values
+        index = rand.choice(np.arange(len(cur_row))[row_mask])
+        cur_row[cur_res] = 0
+        cur_row[index] = 1
 
     return ind
 

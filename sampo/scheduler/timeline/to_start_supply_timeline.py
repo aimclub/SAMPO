@@ -229,7 +229,6 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                                                                           route_start_time,
                                                                           exec_return_time + exec_ahead_time)
 
-
                 if local_min_start_time > depot_vehicle_start_time:
                     depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
                     # FIXME min_depot_time and local_min_start_time have the same value when while ends

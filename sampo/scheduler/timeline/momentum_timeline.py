@@ -434,6 +434,7 @@ class MomentumTimeline(Timeline):
                                                                                  start_work,
                                                                                  chain_node.work_unit.need_materials(),
                                                                                  True)
+            assert start_time == mat_del_time
             start_work = max(start_work, mat_del_time)
             self._validate(start_work + node_time, node_time, worker_team)
             swork = ScheduledWork(

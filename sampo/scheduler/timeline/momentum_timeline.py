@@ -4,7 +4,6 @@ from typing import Optional, Union
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
-
 from sampo.scheduler.timeline.from_start_material_timeline import FromStartSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
@@ -26,7 +25,7 @@ class MomentumTimeline(Timeline):
     Timeline that stores the intervals in which resources is occupied.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """

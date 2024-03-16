@@ -90,9 +90,9 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
         platforms.append(LandGraphNode(str(uuid.uuid4()), f'platform{i}',
                                        ResourceStorageUnit(
                                            {
-                                               name: rnd.randint(max(max_materials[name], 1),
-                                                                 2 * max(max_materials[name], 1))
-                                               # name: max(max_materials[name], 1)
+                                               # name: rnd.randint(max(max_materials[name], 1),
+                                               #                   2 * max(max_materials[name], 1))
+                                               name: max(max_materials[name], 1)
                                                for name in materials_name
                                            }
                                        )))
@@ -110,8 +110,9 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
         # neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
         #                    for neighbour in neighbour_platforms]
-        neighbour_edges = [(neighbour,  10.0, wg.vertex_count * 2)
-                           for neighbour in neighbour_platforms]
+        lengths = [i for i in range(1, len(neighbour_platforms) + 1)]
+        neighbour_edges = [(neighbour, lengths[i], wg.vertex_count)
+                           for i, neighbour in enumerate(neighbour_platforms)]
         platform.add_neighbours(neighbour_edges)
 
     inseparable_heads = [node for node in nodes if not node.is_inseparable_son()]
@@ -155,15 +156,16 @@ def get_landscape_by_wg(wg: WorkGraph, rnd: random.Random) -> LandscapeConfigura
 
         # neighbour_edges = [(neighbour, rnd.uniform(1.0, 10.0), rnd.randint(wg.vertex_count, wg.vertex_count * 2))
         #                    for neighbour in neighbour_platforms]
-        neighbour_edges = [(neighbour, 10.0, wg.vertex_count * 2)
-                           for neighbour in neighbour_platforms]
+        lengths = [i for i in range(1, len(neighbour_platforms) + 1)]
+        neighbour_edges = [(neighbour, lengths[i], wg.vertex_count * 2)
+                           for i, neighbour in enumerate(neighbour_platforms)]
         holders_node[-1].add_neighbours(neighbour_edges)
 
-        vehicles_number = 20
+        vehicles_number = rnd.randint(7, 20)
         holders.append(ResourceHolder(str(uuid.uuid4()), holders_node[-1].name,
                                       vehicles=[
                                           Vehicle(str(uuid.uuid4()), f'vehicle{j}',
-                                                  [Material(name, name, count)
+                                                  [Material(name, name, count // 2)
                                                    for name, count in max_materials.items()])
                                           for j in range(vehicles_number)
                                       ], node=holders_node[-1]))

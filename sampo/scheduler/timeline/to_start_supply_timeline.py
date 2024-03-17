@@ -112,7 +112,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         if sum(mat.count for mat in mat_request) == 0:
             return start_time
 
-        _, time = self._supply_resources(node, start_time, materials)
+        _, time = self._supply_resources(node, start_time, mat_request)
         return time
 
     def _find_best_holders_by_dist(self, node: LandGraphNode,
@@ -161,7 +161,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
             return MaterialDelivery(node.id), deadline
 
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
-        delivery, time = self._supply_resources(node, deadline, materials_for_delivery, update)
+        delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
 
         # print(node.id)
         return delivery, time
@@ -202,7 +202,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         road_deliveries = []
 
         # find time, that depot could provide resources
-        while finish_delivery_time < deadline:
+        while start_delivery_time < deadline:
             start_delivery_time += 1
             # min start time found on this iteration
             local_min_start_time = Time.inf()
@@ -230,14 +230,16 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                                                                           exec_return_time + exec_ahead_time)
 
                 if local_min_start_time > depot_vehicle_start_time:
-                    depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
-                    # FIXME min_depot_time and local_min_start_time have the same value when while ends
-                    min_depot_time = depot_vehicle_start_time
-                    local_min_start_time = depot_vehicle_start_time
-                    finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
-                    selected_depot = depot
+                    if finish_delivery_time > deadline and depot_vehicle_start_time + exec_ahead_time < finish_delivery_time \
+                        or finish_delivery_time < deadline:
+                        depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
+                        # FIXME min_depot_time and local_min_start_time have the same value when while ends
+                        min_depot_time = depot_vehicle_start_time
+                        local_min_start_time = depot_vehicle_start_time
+                        finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
+                        selected_depot = depot
 
-                    road_deliveries = deliveries
+                        road_deliveries = deliveries
 
         for mat in materials:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, selected_depot.name)

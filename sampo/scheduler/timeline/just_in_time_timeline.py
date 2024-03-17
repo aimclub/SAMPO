@@ -305,8 +305,6 @@ class JustInTimeTimeline(Timeline):
                                                                                  c_st,
                                                                                  dep_node.work_unit.need_materials(),
                                                                                  True)
-            assert start_time == mat_del_time
-
             c_st = max(mat_del_time, c_st)
 
             new_finish_time = c_st + working_time

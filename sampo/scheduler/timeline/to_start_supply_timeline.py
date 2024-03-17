@@ -163,7 +163,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
         delivery, time = self._supply_resources(node, deadline, materials_for_delivery, update)
 
-        # print(node.id)
+        print(node.id)
         return delivery, time
 
     def _supply_resources(self, node: GraphNode,

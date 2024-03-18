@@ -112,8 +112,7 @@ class PlatformTimeline:
         materials_for_delivery = self.get_material_for_delivery(node, materials, start_time)
         platform = self._landscape.works2platform[node]
         # TODO Simplify OR because it checks emptiness of materials for delivery
-        if (not materials_for_delivery or sum([mat.count for mat in materials_for_delivery]) == 0) \
-                and self._check_material_availability_on_platform(platform, materials_for_delivery, start_time):
+        if not materials_for_delivery and self._check_material_availability_on_platform(platform, materials, start_time):
             # work doesn't need materials
             if update:
                 update_timeline_info: list[tuple[str, int, Time]] = [(mat.name, mat.count, start_time) for mat in materials]

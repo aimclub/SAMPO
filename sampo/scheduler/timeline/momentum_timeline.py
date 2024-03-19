@@ -431,8 +431,7 @@ class MomentumTimeline(Timeline):
             start_work = curr_time + node_lag
             deliveries, mat_del_time = self._material_timeline.deliver_resources(chain_node,
                                                                                  start_work,
-                                                                                 chain_node.work_unit.need_materials(),
-                                                                                 True)
+                                                                                 chain_node.work_unit.need_materials())
             start_work = max(start_work, mat_del_time)
             self._validate(start_work + node_time, node_time, worker_team)
             swork = ScheduledWork(

@@ -95,17 +95,30 @@ class BaseSupplyTimeline(ABC):
     @abstractmethod
     def can_schedule_at_the_moment(self, node: GraphNode, start_time: Time,
                                    materials: list[Material]) -> bool:
+        """
+        The ability of scheduling given `node` at the `start_time` moment
+        """
         ...
 
     @abstractmethod
     def find_min_material_time(self, node: GraphNode, start_time: Time,
                                materials: list[Material]) -> Time:
+        """
+        :param node: current work that initializes resource delivery
+        :param start_time: proposed start time of work
+        :param materials: required materials to perform the work
+        :return: minimal time when materials can be supplied,
+        it is equal or greater than given start time
+        """
         ...
 
     @abstractmethod
-    def deliver_resources(self,
-                          node: GraphNode,
-                          deadline: Time,
-                          materials: list[Material],
-                          update: bool = False) -> tuple[MaterialDelivery, Time]:
+    def deliver_resources(self, node: GraphNode, deadline: Time,
+                          materials: list[Material]) -> tuple[MaterialDelivery, Time]:
+        """
+        Algorithm of resource delivery
+        :param node: work that initializes resource delivery
+        :param deadline: proposed start time of work
+        :param materials: materials that are required to start the work
+        """
         ...

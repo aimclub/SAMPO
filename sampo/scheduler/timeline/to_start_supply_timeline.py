@@ -157,13 +157,12 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         if not node.work_unit.need_materials():
             return MaterialDelivery(node.id), deadline
 
-        if self._platform_timeline.can_provide_resources(node, deadline, materials, update):
+        if self._platform_timeline.can_provide_resources(node, deadline, materials):
             return MaterialDelivery(node.id), deadline
 
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
         delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
 
-        print(node.id)
         return delivery, time
 
     def _supply_resources(self, node: GraphNode,
@@ -183,12 +182,6 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         def get_finish_time(start_time: Time):
             for depot in depots:
                 depot_mat_start_time = start_time
-                # TODO Check that is necessary
-                # for mat in materials:
-                #     depot_mat_start_time = max(self._find_earliest_start_time(self._timeline[depot][mat.name],
-                #                                                               mat.count,
-                #                                                               depot_mat_start_time,
-                #                                                               Time.inf()), depot_mat_start_time)
 
                 # get vehicles from the depot
                 vehicle_count_need = self._get_vehicles_need(depot, materials)
@@ -243,8 +236,6 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                     selected_depot = depot
 
                     road_deliveries = deliveries
-        if get_finish_time(deadline) < finish_delivery_time:
-            depot_vehicle_start_time, exec_ahead_time, exec_return_time, depot, deliveries
 
         for mat in materials:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, selected_depot.name)

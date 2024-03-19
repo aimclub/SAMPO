@@ -104,8 +104,7 @@ class PlatformTimeline:
     def can_provide_resources(self,
                               node: GraphNode,
                               deadline: Time,
-                              materials: list[Material],
-                              update: bool = False) -> bool:
+                              materials: list[Material]) -> bool:
 
         start_time = deadline
 
@@ -113,10 +112,8 @@ class PlatformTimeline:
         platform = self._landscape.works2platform[node]
         # TODO Simplify OR because it checks emptiness of materials for delivery
         if not materials_for_delivery and self._check_material_availability_on_platform(platform, materials, start_time):
-            # work doesn't need materials
-            if update:
-                update_timeline_info: list[tuple[str, int, Time]] = [(mat.name, mat.count, start_time) for mat in materials]
-                self.update_timeline(platform.id, update_timeline_info)
+            update_timeline_info: list[tuple[str, int, Time]] = [(mat.name, mat.count, start_time) for mat in materials]
+            self.update_timeline(platform.id, update_timeline_info)
 
             return True
         return False

@@ -1,7 +1,6 @@
 import random
 
-from sampo.api.genetic_api import ScheduleGenerationScheme
-from sampo.generator import SimpleSynthetic, SyntheticGraphType
+from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import DefaultInputPipeline
 from sampo.scheduler import GeneticScheduler
@@ -19,13 +18,13 @@ def run_test(args):
     for i in range(iterations):
         rand = random.Random(seed)
         ss = SimpleSynthetic(rand=rand)
-        wg = ss.work_graph(top_border=graph_size, mode=SyntheticGraphType.SEQUENTIAL)
+        wg = ss.work_graph(top_border=graph_size)
         print(wg.vertex_count)
 
         materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
         for node in wg.nodes:
             if not node.work_unit.is_service_unit:
-                work_materials = rand.choices(materials_name, k=rand.randint(2, 6))
+                work_materials = list(set(rand.choices(materials_name, k=rand.randint(2, 6))))
                 node.work_unit.material_reqs = [MaterialReq(name, rand.randint(52, 345), name) for name in
                                                 work_materials]
         contractors = [get_contractor_by_wg(wg, contractor_id=str(i), contractor_name='Contractor' + ' ' + str(i + 1))
@@ -37,8 +36,7 @@ def run_test(args):
                                      mutate_resources=0.005,
                                      size_of_population=1,
                                      work_estimator=work_time_estimator,
-                                     rand=rand,
-                                     sgs_type=ScheduleGenerationScheme.Serial)
+                                     rand=rand)
         # schedule = DefaultInputPipeline() \
         #     .wg(wg) \
         #     .contractors(contractors) \

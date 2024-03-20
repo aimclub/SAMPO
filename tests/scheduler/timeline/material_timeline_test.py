@@ -1,18 +1,15 @@
-import uuid
-
 import pytest
 from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
-from sampo.scheduler.timeline.to_start_supply_timeline import ToStartSupplyTimeline
-from sampo.schemas.resources import Material
+from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 
 @fixture(scope='function')
 def setup_timeline(setup_scheduler_parameters):
-    return ToStartSupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
+    return HybridSupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
 
 
 def test_init_resource_structure(setup_timeline):
@@ -26,9 +23,9 @@ def test_init_resource_structure(setup_timeline):
 
 def test_supply_resources(setup_scheduler_parameters, setup_rand):
     wg, contractors, landscape = setup_scheduler_parameters
-    if wg.vertex_count > 20:
-        pytest.skip('Not manual graph')
-    timeline = ToStartSupplyTimeline(landscape)
+    if not landscape.platforms:
+        pytest.skip('Non landscape test')
+    timeline = HybridSupplyTimeline(landscape)
 
     ordered_nodes = prioritization(wg, DefaultWorkEstimator())
     for node in ordered_nodes:
@@ -36,13 +33,15 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
             continue
         node.platform = landscape.platforms[setup_rand.randint(0, len(landscape.platforms) - 1)]
 
-    parent_time = Time(0)
+    delivery_time = Time(0)
     for node in ordered_nodes[-1::-1]:
         if node.work_unit.is_service_unit:
             continue
-        materials = [Material(str(uuid.uuid4()), req.kind, req.count) for req in node.work_unit.material_reqs]
-        delivery, parent_time = timeline._supply_resources(node,
-                                                           parent_time,
-                                                           materials, True)
+        materials = node.work_unit.need_materials()
+        deadline = delivery_time
+        delivery, delivery_time = timeline.deliver_resources(node,
+                                                             deadline,
+                                                             materials)
+        assert delivery_time >= deadline
 
-    assert not parent_time.is_inf()
+    assert not delivery_time.is_inf()

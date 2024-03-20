@@ -107,8 +107,7 @@ class BaseSupplyTimeline(ABC):
         :param node: current work that initializes resource delivery
         :param start_time: proposed start time of work
         :param materials: required materials to perform the work
-        :return: minimal time when materials can be supplied,
-        it is equal or greater than given start time
+        :return: minimal time when materials can be supplied, it is equal or greater than given start time
         """
         ...
 

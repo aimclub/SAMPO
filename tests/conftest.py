@@ -71,17 +71,6 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
             l3n2 = sr.graph_node('l3n2', [(l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000022')
             l3n3 = sr.graph_node('l3n3', [(l2n3, 1, EdgeType.LagFinishStart),
                                           (l2n2, 0, EdgeType.FinishStart)], group='2', work_id='000023')
-            if generate_materials:
-                l1n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-                l1n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-
-                l2n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-                l2n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-                l2n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-
-                l3n1.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-                l3n2.work_unit.material_reqs = [MaterialReq('mat1', 50)]
-                l3n3.work_unit.material_reqs = [MaterialReq('mat1', 50)]
 
             wg = WorkGraph.from_nodes([l1n1, l1n2, l2n1, l2n2, l2n3, l3n1, l3n2, l3n3])
         case 'small plain synthetic':
@@ -104,6 +93,14 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
                                      uniq_resources=int(size * ADV_GRAPH_UNIQ_RES_PROP))
         case _:
             raise ValueError(f'Unknown graph type: {graph_type}')
+
+    if generate_materials:
+        materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
+        for node in wg.nodes:
+            if not node.work_unit.is_service_unit:
+                work_materials = list(set(random.choices(materials_name, k=random.randint(2, 6))))
+                node.work_unit.material_reqs = [MaterialReq(name, random.randint(52, 345), name) for name in
+                                                work_materials]
 
     wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
@@ -145,14 +142,6 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
                                       workers={name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
                                                for name, count in resource_req.items()},
                                       equipments={}))
-
-    if generate_landscape:
-        materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
-        for node in setup_wg.nodes:
-            if not node.work_unit.is_service_unit:
-                work_materials = list(set(random.choices(materials_name, k=3)))
-                node.work_unit.material_reqs = [MaterialReq(name, random.randint(500, 750), name) for name in
-                                                work_materials]
 
     landscape = setup_simple_synthetic.simple_synthetic_landscape(setup_wg) \
         if generate_landscape else LandscapeConfiguration()

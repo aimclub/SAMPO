@@ -21,7 +21,7 @@ class JustInTimeTimeline(Timeline):
     number of available workers of this type of this contractor.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         self._timeline = {}
         # stacks of time(Time) and count[int]
         for worker_type, worker_offers in worker_pool.items():

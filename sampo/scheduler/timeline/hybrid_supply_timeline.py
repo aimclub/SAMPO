@@ -96,6 +96,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
         # we need to find the optimal time when materials can be supplied
         # we compare the delivery algorithms and choose the best one
         _, time = self._supply_resources(node, start_time, mat_request)
+        # TODO: adopt JustInTime and Momentum timelines to use the following line (don't delete it)
         # time = min(time, self._find_min_delivery_time_after_work_start(node, start_time, mat_request))
         return time
 
@@ -110,7 +111,10 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
         depots = [self._holder_id2holder[depot] for depot in self._find_best_holders_by_dist(platform, materials)]
 
         start_delivery_time = deadline
-        finish_delivery_time = Time.inf()
+        finish_delivery_time = Time(-1)
+
+        # variable, that stores the earliest time of the optimal depot
+        local_min_start_time = Time.inf()
 
         for depot in depots:
             depot_mat_start_time = start_delivery_time
@@ -121,7 +125,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
             # get information about route: start time, deliveries,
             # time of vehicles routing to platform and back separately
             route_start_time, deliveries, exec_ahead_time, exec_return_time = \
-                self._get_route_with_additionals(depot.node, platform, selected_vehicles, depot_mat_start_time)
+                self._get_route_with_additional(depot.node, platform, selected_vehicles, depot_mat_start_time)
 
             # get the minimum start time that all required vehicles are available
             depot_vehicle_start_time = self._find_earliest_start_time(self._timeline[depot.id]['vehicles'],
@@ -130,7 +134,8 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                                                                       exec_return_time + exec_ahead_time)
 
             # if the depot could supply materials earlier, update the finish delivery time
-            if finish_delivery_time > depot_vehicle_start_time + exec_ahead_time:
+            if local_min_start_time > depot_vehicle_start_time:
+                local_min_start_time = depot_vehicle_start_time
                 finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
 
         return finish_delivery_time
@@ -187,7 +192,6 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
         # get the materials that should be delivered to the platform
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
         delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
-        print(node.id)
 
         return delivery, time
 
@@ -196,7 +200,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                           materials: list[Material],
                           update: bool = False) -> tuple[MaterialDelivery, Time]:
         """
-        Finds minimal time that the materials can be supplied, equal or greater than start time
+        Finds minimal time that the materials can be supplied, equal or greater than start time and make the delivery
         :param update: should timeline be updated,
         It is necessary when materials are supplied, otherwise, timeline should not be updated
         :param node: work that initializes the resource delivery
@@ -218,7 +222,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                 # get information about route: start time, deliveries,
                 # time of vehicles routing to platform and back separately
                 route_start_time, deliveries, exec_ahead_time, exec_return_time = \
-                    self._get_route_with_additionals(depot.node, platform, selected_vehicles, depot_mat_start_time)
+                    self._get_route_with_additional(depot.node, platform, selected_vehicles, depot_mat_start_time)
 
                 # get the minimum start time that all required vehicles are available
                 depot_vehicle_start_time = self._find_earliest_start_time(self._timeline[depot.id]['vehicles'],
@@ -252,20 +256,20 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
         # information (for updating timeline) about roads that are used to deliver materials
         road_deliveries = []
 
-        # find the earliest start time when delivery could be finished
-        # (the time should be equal or greater than work start time)
+        # find the closest start delivery time to deadline
+        # (it's explained by the fact that roads should be free as most time as possible,
+        # because others could use them on another time)
+        # (the finish delivery time should be equal or greater than work start time)
         while finish_delivery_time < deadline:
             start_delivery_time += 1
 
-            local_min_start_time = Time.inf()
+            # iterate over depots and find the earliest time when the depot could supply resources
             for depot_vehicle_start_time, exec_ahead_time, exec_return_time, depot, deliveries in get_finish_time(start_delivery_time):
-                if local_min_start_time > depot_vehicle_start_time and (finish_delivery_time > deadline
-                                                                        and depot_vehicle_start_time + exec_ahead_time < finish_delivery_time
-                                                                        or finish_delivery_time < deadline):
+                # choose the current depot if only it could supply resources earlier than the previous one
+                if finish_delivery_time > deadline and depot_vehicle_start_time + exec_ahead_time < finish_delivery_time \
+                        or finish_delivery_time < deadline:
                     depot_vehicle_finish_time = depot_vehicle_start_time + exec_return_time + exec_ahead_time
-                    # FIXME min_depot_time and local_min_start_time have the same value when while ends
                     min_depot_time = depot_vehicle_start_time
-                    local_min_start_time = depot_vehicle_start_time
                     finish_delivery_time = depot_vehicle_start_time + exec_ahead_time
                     selected_depot = depot
 
@@ -290,10 +294,12 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
             for road_id, res_info in delivery_dict.items():
                 update_timeline_info[road_id].append(res_info)
 
+        # update the platform timeline
         node_mat_req = {mat.name: mat.count for mat in node.work_unit.need_materials()}
         update_mat_req_info = [(mat.name, node_mat_req[mat.name] - mat.count, finish_delivery_time) for mat in materials]
         self._platform_timeline.update_timeline(platform.id, update_mat_req_info)
 
+        # update the supply timeline
         self._update_timeline(update_timeline_info)
 
         return delivery, finish_delivery_time
@@ -303,6 +309,14 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                                   required_resources: int,
                                   parent_time: Time,
                                   exec_time: Time) -> Time:
+        """
+        Finds the earliest time when required resources are available
+        :param state: the timeline of required resource
+        :param required_resources: amount of resources
+        :param parent_time: initial time when resource already should be available
+        :param exec_time: period of time when resources should be available
+        :return: the earliest time when required resources are available during the received period of time
+        """
         current_start_time = parent_time
         base_ind = state.bisect_right(parent_time) - 1
 
@@ -328,8 +342,8 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
 
         return current_start_time
 
-    def _get_route_with_additionals(self, holder_node: LandGraphNode, node: LandGraphNode, vehicles: list[Vehicle],
-                                    start_holder_time: Time) -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
+    def _get_route_with_additional(self, holder_node: LandGraphNode, node: LandGraphNode, vehicles: list[Vehicle],
+                                   start_holder_time: Time) -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
         def move_vehicles(from_node: LandGraphNode,
                           to_node: LandGraphNode,
                           parent_time: Time,
@@ -347,7 +361,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
             # check time availability of each part of 'route'
             for road_id in route:
                 road_overcome_time = _id2road[road_id].overcome_time
-                for i in range(len(vehicles) // max(batch_size, 1)):
+                for i in range(len(vehicles) // batch_size):
                     start_time = self._find_earliest_start_time(state=self._timeline[road_id]['vehicles'],
                                                                 required_resources=batch_size,
                                                                 parent_time=finish_time,
@@ -362,6 +376,9 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                                            f'(probably roads have less bandwidth than is required)')
 
             return finish_time, road_delivery, finish_time - parent_time
+
+        if not vehicles:
+            raise
 
         _id2road: dict[str, Road] = {road.id: road for road in self._landscape.roads}
 
@@ -403,7 +420,7 @@ class HybridSupplyTimeline(BaseSupplyTimeline):
                 )
 
                 end_idx = res_state.bisect_right(end_time) - 1
-                # TODO Check correctness
+
                 if res_state[end_idx].time == end_time:
                     end_count = res_state[end_idx].available_workers_count
                 else:

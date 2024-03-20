@@ -25,7 +25,7 @@ class MomentumTimeline(Timeline):
     Timeline that stores the intervals in which resources is occupied.
     """
 
-    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration, algorithm: str = 'to_start'):
+    def __init__(self, worker_pool: WorkerContractorPool, landscape: LandscapeConfiguration):
         """
         This should create an empty Timeline from given a list of tasks and contractor list.
         """

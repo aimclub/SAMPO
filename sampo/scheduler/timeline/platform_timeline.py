@@ -62,7 +62,7 @@ class PlatformTimeline:
             start = platform_state[mat.name].bisect_right(start_time)
             finish = len(platform_state[mat.name])
 
-            if finish - start > 1 or platform_state[mat.name][finish - 1].available_workers_count < mat.count:
+            if finish - start > 1:
                 return False
 
         return True

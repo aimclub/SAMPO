@@ -143,7 +143,7 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
                                                for name, count in resource_req.items()},
                                       equipments={}))
 
-    landscape = setup_simple_synthetic.simple_synthetic_landscape(setup_wg) \
+    landscape = setup_simple_synthetic.synthetic_landscape(setup_wg) \
         if generate_landscape else LandscapeConfiguration()
     return setup_wg, contractors, landscape
 

@@ -42,28 +42,14 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
 //            worker_team.emplace_back(v[contractor->id]);
         }
 
-        if (!worker_team.empty()) {
-            cout << "Worker team mask: ";
-            for (int i = 0; i < chromosome->numResources(); i++) {
-                cout << chromosome->getResources()[work_index][i] << " ";
-            }
-            cout << endl;
-
-            cout << "Worker team: ";
-            for (auto& worker : worker_team) {
-                cout << worker.count << " ";
-            }
-            cout << endl;
-        }
-
-        auto[st, ft, exec_times] = timeline.find_min_start_time_with_additional(node, worker_team, node2swork,
-                                                                                work_spec, Time::unassigned(),
-                                                                                assigned_parent_time, work_estimator);
+//        auto[st, ft, exec_times] = timeline.find_min_start_time_with_additional(node, worker_team, node2swork,
+//                                                                                work_spec, Time::unassigned(),
+//                                                                                assigned_parent_time, work_estimator);
 
         // TODO Check if assigned_parent_time was not applied
         // TODO Check that find_min_start_time() is not calling if start time specified
-        ft = timeline.schedule(node, worker_team, node2swork, work_spec, contractor, st,
-                               work_spec.assigned_time, assigned_parent_time, work_estimator);
+        timeline.schedule(node, worker_team, node2swork, work_spec, contractor, Time::unassigned(),
+                          work_spec.assigned_time, assigned_parent_time, work_estimator);
 
         // TODO Add other timelines
     }

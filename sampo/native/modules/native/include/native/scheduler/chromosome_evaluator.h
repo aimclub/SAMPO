@@ -9,7 +9,6 @@
 
 // #pragma optimize( "O2", on )
 
-#define PY_SSIZE_T_CLEAN
 #include <iostream>
 #include <set>
 #include <unordered_map>
@@ -178,7 +177,12 @@ public:
             visited[node] = true;
             for (int parent : headParents[node]) {
                 if (!visited[parent]) {
-//                    cout << "Invalid order" << endl;
+//                    cout << "Mismatch: " << node << " " << parent << endl;
+//                    cout << "Invalid order: ";
+//                    for (int k = 0; k < chromosome->numWorks(); k++) {
+//                        cout << *chromosome->getOrder()[k] << " ";
+//                    }
+//                    cout << endl;
                     return false;
                 }
             }
@@ -190,7 +194,7 @@ public:
             for (int res = 0; res < chromosome->numResources(); res++) {
                 int count = chromosome->getResources()[node][res];
                 if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
-                    cout << "Invalid resources: " << minReqs[node][res] << " <= " << count << " <= " << chromosome->getContractors()[contractor][res] << endl;
+//                    cout << "Invalid resources: " << minReqs[node][res] << " <= " << count << " <= " << chromosome->getContractors()[contractor][res] << endl;
                     return false;
                 }
             }

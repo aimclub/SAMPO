@@ -38,10 +38,17 @@ class NativeComputationalBackend(DefaultComputationalBackend):
 
         # for each vertex index store list of parents' indices
         parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
-        head_parents = [list(parents[i]) for i in range(len(parents))]
         # for each vertex index store list of whole it's inseparable chain indices
-        inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain_with_self()]
+        inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain()]
                              for index in range(wg.vertex_count)]
+        # construct heads
+        inseparable_heads = [-1 for _ in range(wg.vertex_count)]
+        for ins_head, inseps in enumerate(inseparables):
+            for insep in inseps:
+                inseparable_heads[insep] = ins_head
+
+        head_parents = [list(set(inseparable_heads[p] for p in list(parents[inseparable_heads[i]])))
+                        for i in range(len(parents))]
         # contractors' workers matrix. If contractor can't supply given type of worker, 0 should be passed
         workers = [[0 for _ in range(len(worker_name2index))] for _ in contractors]
         for i, contractor in enumerate(contractors):

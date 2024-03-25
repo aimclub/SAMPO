@@ -28,11 +28,11 @@ def test_multiprocessing(setup_scheduler_parameters):
     SAMPO.backend = NativeComputationalBackend()
 
     start_multiproc = time.time()
-    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    genetic.schedule(wg, contractors, landscape=landscape)
     time_multiproc = time.time() - start_multiproc
 
     print('\n------------------\n')
-    print(f'Graph size: {setup_wg.vertex_count}')
+    print(f'Graph size: {wg.vertex_count}')
     print(f'Time default: {time_default} s')
     print(f'Time multiproc: {time_multiproc} s')
     print(f'CPUs used: {n_cpus}')

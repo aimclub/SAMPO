@@ -130,11 +130,11 @@ public:
     }
 
     inline bool is_inseparable_parent() {
-        return inseparableSon() == nullptr;
+        return inseparableSon() != nullptr;
     }
 
     inline bool is_inseparable_son() {
-        return inseparableParent() == nullptr;
+        return inseparableParent() != nullptr;
     }
 
     std::vector<GraphNode *> getInseparableChainWithSelf() {
@@ -148,7 +148,7 @@ public:
         return chain;
     }
 
-    Time min_start_time(swork_dict_t &node2swork) {
+    Time min_start_time(const swork_dict_t &node2swork) {
         Time time;
         for (auto& edge : this->parentEdges) {
             auto it = node2swork.find(edge.start->id());

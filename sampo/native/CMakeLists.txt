@@ -11,7 +11,7 @@ cmake_policy(SET CMP0091 NEW)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(PythonLibs REQUIRED)
+# find_package(PythonLibs REQUIRED)
 
 include_guard(GLOBAL)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
@@ -135,7 +135,7 @@ include_directories(${CMAKE_SOURCE_DIR}/modules/native/include/${CUR_PROJ})
 #message(${NUMPY_INCLUDE_DIR})
 
 #include_directories(${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
-#target_link_libraries(native ${PYTHON_LIBRARIES})
+# target_link_libraries(native ${PYTHON_LIBRARIES})
 #target_link_libraries(native ${CMAKE_DL_LIBS})
 
 #find_package(Python3 3.10 COMPONENTS Interpreter Development REQUIRED)

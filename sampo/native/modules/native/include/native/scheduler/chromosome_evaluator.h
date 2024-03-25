@@ -31,16 +31,11 @@ class ChromosomeEvaluator {
 private:
     WorkGraph *wg;
 
-    const vector<vector<int>> &parents;         // vertices' parents
-    const vector<vector<int>> &headParents;     // vertices' parents without
-                                                // inseparables
-    const vector<vector<int>> &inseparables;    // inseparable chains with self
-    const vector<vector<int>> &workers;         // contractor -> worker -> count
-    const vector<float> &volumes;               // work -> worker -> WorkUnit.min_req
-    const vector<vector<int>> &minReqs;         // work -> worker -> WorkUnit.max_req
-    const vector<vector<int>> &maxReqs;         // work -> WorkUnit.volume
-    const vector<string> &id2work;
-    const vector<string> &id2res;
+    vector<vector<int>> headParents;     // vertices' parents without inseparables
+    vector<vector<int>> minReqs;         // work -> worker -> WorkUnit.min_req
+    vector<vector<int>> maxReqs;         // work -> worker -> WorkUnit.max_req
+    vector<string> id2work;
+    vector<string> id2res;
 
     worker_pool_t worker_pool;
     const LandscapeConfiguration &landscape;
@@ -56,7 +51,6 @@ private:
     unordered_map<string, unordered_map<string, int>> minReqNames;
     unordered_map<string, unordered_map<string, int>> maxReqNames;
 
-    int totalWorksCount;
     py::object pythonWrapper;
     bool usePythonWorkEstimator;
 
@@ -71,19 +65,9 @@ public:
 
     explicit ChromosomeEvaluator(EvaluateInfo *info)
         : wg(info->wg),
-          parents(info->parents),
-          headParents(info->headParents),
-          inseparables(info->inseparables),
-          workers(info->workers),
-          volumes(info->volume),
-          minReqs(info->minReq),
-          maxReqs(info->maxReq),
-          id2work(info->id2work),
-          id2res(info->id2res),
           landscape(info->landscape),
           work_estimator(*info->work_estimator),
           index2contractor(info->contractors),
-          totalWorksCount(info->totalWorksCount),
           pythonWrapper(info->pythonWrapper) {
 
         for (size_t i = 0; i < minReqs.size(); i++) {
@@ -100,21 +84,48 @@ public:
             }
         }
 
+        unordered_map<string, int> node_id2index;
+
         // construct the outer numeration
         // start with inseparable heads
         for (auto* node : wg->nodes) {
             if (!node->is_inseparable_son()) {
+                node_id2index[node->id()] = (int) index2node.size();
                 index2node.push_back(node);
             }
         }
+
+        size_t heads_count = index2node.size();
         // continue with others
         // this should match the numeration on the Python-size backend,
         // otherwise everything will break
         for (auto* node : wg->nodes) {
             if (node->is_inseparable_son()) {
+                node_id2index[node->id()] = (int) index2node.size();
                 index2node.push_back(node);
             }
         }
+
+        // prepare inseparable heads predecessor mapping
+        vector<int> inseparable_heads;
+        inseparable_heads.resize(wg->nodes.size());
+        for (int i = 0; i < wg->nodes.size(); i++) {
+            for (auto* inseparable_node : wg->nodes[i]->getInseparableChainWithSelf()) {
+                inseparable_heads[i] = node_id2index[inseparable_node->id()];
+            }
+        }
+
+        headParents.resize(heads_count);
+        for (int i = 0; i < wg->nodes.size(); i++) {
+            unordered_set<int> parent_inds;
+            for (auto* parent : wg->nodes[inseparable_heads[i]]->parents()) {
+                parent_inds.emplace(inseparable_heads[node_id2index[parent->id()]]);
+            }
+            vector<int> parents_vec;
+            parents_vec.insert(parents_vec.begin(), parent_inds.begin(), parent_inds.end());
+            headParents.emplace_back(parents_vec);
+        }
+
         // TODO
 //        worker_pool_indices.resize(index2contractor.size());
 //        for (size_t contractor_ind = 0; contractor_ind < index2contractor.size(); contractor_ind++) {
@@ -133,10 +144,8 @@ public:
             }
         }
 
-//        cout << "Worker names: " << endl;
         int ind = 0;
         for (const auto& worker_name : worker_names) {
-//            cout << worker_name << endl;
             worker_name2index[worker_name] = ind;
             ind++;
         }

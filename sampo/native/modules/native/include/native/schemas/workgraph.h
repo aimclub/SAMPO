@@ -138,12 +138,12 @@ public:
     }
 
     std::vector<GraphNode *> getInseparableChainWithSelf() {
-        auto chain = std::vector<GraphNode *>();
+        std::vector<GraphNode *> chain;
         chain.push_back(this);
-        auto child = inseparableSon();
+        auto* child = inseparableSon();
         if (child) {
-            auto subChain = child->getInseparableChainWithSelf();
-            chain.insert(chain.end(), subChain.begin(), subChain.end());
+            auto sub_chain = child->getInseparableChainWithSelf();
+            chain.insert(chain.end(), sub_chain.begin(), sub_chain.end());
         }
         return chain;
     }

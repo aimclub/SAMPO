@@ -34,8 +34,6 @@ class NativeComputationalBackend(DefaultComputationalBackend):
             numeration[heads_count + i] = node
         rev_numeration = reverse_dictionary(numeration)
 
-        # TODO remove assignment unuseful info to self
-
         # for each vertex index store list of parents' indices
         parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
         # for each vertex index store list of whole it's inseparable chain indices

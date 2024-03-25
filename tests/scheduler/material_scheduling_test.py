@@ -88,7 +88,7 @@ def test_momentum_scheduling_with_materials(setup_default_schedules):
         pytest.skip('Non-material graph')
 
     scheduler = HEFTBetweenScheduler()
-    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=landscape)
+    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=landscape)[0]
 
     try:
         validate_schedule(schedule, setup_wg, setup_contractors)

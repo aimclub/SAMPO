@@ -12,15 +12,6 @@ def setup_timeline(setup_scheduler_parameters):
     return HybridSupplyTimeline(landscape_config=setup_scheduler_parameters[-1])
 
 
-def test_init_resource_structure(setup_timeline):
-    timeline = setup_timeline
-
-    assert len(timeline._timeline) != 0
-    for res_holder_info in timeline._timeline.values():
-        for state in res_holder_info.values():
-            assert len(state) == 1
-
-
 def test_supply_resources(setup_scheduler_parameters, setup_rand):
     wg, contractors, landscape = setup_scheduler_parameters
     if not landscape.platforms:

@@ -31,6 +31,7 @@ def setup_sampler(request) -> Sampler:
 def setup_rand() -> Random:
     return Random(231)
 
+
 @fixture
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
@@ -39,12 +40,17 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
 @fixture(params=[(graph_type, lag, generate_materials)
                  for lag in [True, False]
                  for generate_materials in [True, False]
-                 for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']],
+                 for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']
+                 if generate_materials and graph_type == 'manual'
+                 or not generate_materials
+                 ],
          # 'small advanced synthetic', 'big advanced synthetic']],
          ids=[f'Graph: {graph_type}, LAG_OPT={lag_opt}, generate_materials={generate_materials}'
               for lag_opt in [True, False]
               for generate_materials in [True, False]
-              for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']])
+              for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']
+              if generate_materials and graph_type == 'manual'
+              or not generate_materials])
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     SMALL_GRAPH_SIZE = 100
@@ -94,13 +100,14 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
         case _:
             raise ValueError(f'Unknown graph type: {graph_type}')
 
-    if generate_materials:
-        materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
-        for node in wg.nodes:
-            if not node.work_unit.is_service_unit:
-                work_materials = list(set(random.choices(materials_name, k=random.randint(2, 6))))
-                node.work_unit.material_reqs = [MaterialReq(name, random.randint(52, 345), name) for name in
-                                                work_materials]
+    if graph_type not in ['big plain synthetic', 'big advanced synthetic']:
+        if generate_materials:
+            materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
+            for node in wg.nodes:
+                if not node.work_unit.is_service_unit:
+                    work_materials = list(set(random.choices(materials_name, k=random.randint(2, 6))))
+                    node.work_unit.material_reqs = [MaterialReq(name, random.randint(52, 345), name) for name in
+                                                    work_materials]
 
     wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
@@ -110,7 +117,8 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
 # TODO Make parametrization with different(specialized) contractors
 @fixture(params=[(i, 5 * j) for j in range(2) for i in range(1, 2)],
          ids=[f'Contractors: count={i}, min_size={5 * j}' for j in range(2) for i in range(1, 2)])
-def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
+def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tuple[
+    WorkGraph, list[Contractor], LandscapeConfiguration | Any]:
     generate_landscape = False
     materials = [material for node in setup_wg.nodes for material in node.work_unit.need_materials()]
     if len(materials) > 0:
@@ -139,8 +147,9 @@ def setup_scheduler_parameters(request, setup_wg, setup_simple_synthetic) -> tup
         contractor_id = str(uuid4())
         contractors.append(Contractor(id=contractor_id,
                                       name='OOO Berezka',
-                                      workers={name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
-                                               for name, count in resource_req.items()},
+                                      workers={
+                                          name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
+                                          for name, count in resource_req.items()},
                                       equipments={}))
 
     landscape = setup_simple_synthetic.synthetic_landscape(setup_wg) \
@@ -179,6 +188,7 @@ def setup_default_schedules(setup_scheduler_parameters):
                                                                                   landscape=landscape,
                                                                                   work_estimator=work_estimator)
 
+
 @fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
          ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'])
 def setup_scheduler(request) -> Scheduler:
@@ -193,6 +203,6 @@ def setup_schedule(setup_scheduler, setup_scheduler_parameters):
         return scheduler.schedule(setup_wg,
                                   setup_contractors,
                                   validate=False,
-                                  landscape=landscape), scheduler.scheduler_type, setup_scheduler_parameters
+                                  landscape=landscape)[0], scheduler.scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

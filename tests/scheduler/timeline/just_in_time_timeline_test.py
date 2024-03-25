@@ -17,7 +17,7 @@ from sampo.utilities.collections_util import build_index
 def setup_timeline(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
-    return JustInTimeTimeline(setup_worker_pool, landscape=landscape, algorithm='to_start'), \
+    return JustInTimeTimeline(setup_worker_pool, landscape=landscape), \
         setup_wg, setup_contractors, setup_worker_pool
 
 
@@ -28,7 +28,6 @@ def test_init_resource_structure(setup_timeline):
     for setup_timeline in setup_timeline._timeline.values():
         assert len(setup_timeline) == 1
         assert setup_timeline[0][0] == 0
-
 
 # def test_update_resource_structure(setup_timeline):
 #     setup_timeline, _, _, setup_worker_pool = setup_timeline

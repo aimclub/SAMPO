@@ -66,7 +66,7 @@ class Worker(Resource):
                  productivity: Optional[IntervalGaussian] = IntervalGaussian(1, 0, 1, 1),
                  cost_one_unit: Optional[float] = None):
         super(Worker, self).__init__(id, name, int(count), contractor_id)
-        self.productivity = productivity if productivity is not None else IntervalGaussian(1, 0, 1, 1)
+        self.productivity = productivity
         self.cost_one_unit = cost_one_unit if cost_one_unit is not None else self.productivity.mean * 10
 
     ignored_fields = ['productivity']

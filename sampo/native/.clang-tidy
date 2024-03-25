@@ -54,7 +54,7 @@ CheckOptions:
   - key: readability-identifier-naming.ParameterPackCase
     value: CamelCase
   - key: readability-identifier-naming.StructCase
-    value: lower_case
+    value: CamelCase
   - key: readability-identifier-naming.TemplateTemplateParameterCase
     value: CamelCase
   - key: readability-identifier-naming.TemplateUsingCase

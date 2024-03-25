@@ -1,23 +1,27 @@
 #ifndef PYTHON_DESERIALIZER_H
 #define PYTHON_DESERIALIZER_H
 
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
 #include "native/schemas/evaluator_types.h"
 #include "native/schemas/workgraph.h"
 #include "native/schemas/chromosome.h"
 #include "native/schemas/contractor.h"
 
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
+
 namespace PythonDeserializer {
-WorkGraph *workGraph(PyObject *pyWorkGraph);
+WorkGraph *workGraph(const py::handle &pyWorkGraph);
 
-vector<Contractor *> contractors(PyObject *pyContractors);
+vector<Contractor *> contractors(const py::handle &pyContractors);
 
-vector<Chromosome *> decodeChromosomes(PyObject *incoming);
+vector<Chromosome *> decodeChromosomes(const py::handle &incoming);
 
-PyObject *encodeChromosome(Chromosome *incoming);
+py::object encodeChromosome(Chromosome *incoming);
 
-PyObject *encodeChromosomes(vector<Chromosome *> &incoming);
+py::list encodeChromosomes(vector<Chromosome *> &incoming);
 }    // namespace PythonDeserializer
 
 #endif    // PYTHON_DESERIALIZER_H

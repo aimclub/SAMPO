@@ -1,8 +1,5 @@
-#define PY_SSIZE_T_CLEAN
 #include <chrono>
 #include <iostream>
-
-#include "Python.h"
 
 #include "native/scheduler/chromosome_evaluator.h"
 #include "native/scheduler/genetic.h"
@@ -17,154 +14,115 @@
 // per-scheduling
 // TODO Split data types' definition and implementation
 
-static inline int PyLong_AsInt(PyObject *object) {
-    return (int)PyLong_AsLong(object);
+inline int PyLong_AsInt(const py::handle &object) {
+    return object.cast<int>();
 }
 
-static vector<int> decodeIntList(PyObject *object) {
+vector<int> decodeIntList(const py::handle &object) {
     return PyCodec::fromList(object, PyLong_AsInt);
 }
 
-static string decodeString(PyObject *object) {
-    return string { PyUnicode_AsUTF8(object) };
-}
+vector<vector<float>> evaluate(size_t info_ptr_orig, const py::object &py_chromosomes) {
+    EvaluateInfo *info_ptr = (EvaluateInfo *) info_ptr_orig;
 
-static float decodeFloat(PyObject *object) {
-    return (float)PyFloat_AsDouble(object);
-}
+    auto chromosomes = PythonDeserializer::decodeChromosomes(py_chromosomes);
 
-static PyObject *evaluate(PyObject *self, PyObject *args) {
-    EvaluateInfo *infoPtr;
-    PyObject *pyChromosomes;
-    if (!PyArg_ParseTuple(args, "LO", &infoPtr, &pyChromosomes)) {
-        cout << "Can't parse arguments" << endl;
-    }
-    auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
-
-    ChromosomeEvaluator evaluator(infoPtr);
+    ChromosomeEvaluator evaluator(info_ptr);
 
     evaluator.evaluate(chromosomes);
 
-    PyObject *pyList = PyList_New(chromosomes.size());
-    Py_INCREF(pyList);
+    vector<vector<float>> fitness;
+    fitness.resize(chromosomes.size());
     for (int i = 0; i < chromosomes.size(); i++) {
-        PyObject *pyInt = Py_BuildValue("i", chromosomes[i]->fitness);
-        PyList_SetItem(pyList, i, pyInt);
+        fitness[i] = { chromosomes[i]->fitness };
+        delete chromosomes[i];
     }
-    return pyList;
+    return fitness;
 }
 
-static PyObject *runGenetic(PyObject *self, PyObject *args) {
-    EvaluateInfo *infoPtr;
-    PyObject *pyChromosomes;
-    float mutateOrderProb, mutateResourcesProb, mutateContractorsProb;
-    float crossOrderProb, crossResourcesProb, crossContractorsProb;
-    int sizeSelection;
+//static PyObject *runGenetic(PyObject *self, PyObject *args) {
+//    EvaluateInfo *infoPtr;
+//    PyObject *pyChromosomes;
+//    float mutateOrderProb, mutateResourcesProb, mutateContractorsProb;
+//    float crossOrderProb, crossResourcesProb, crossContractorsProb;
+//    int sizeSelection;
+//
+//    if (!PyArg_ParseTuple(
+//            args,
+//            "LOOOffffffi",
+//            &infoPtr,
+//            &pyChromosomes,
+//            &mutateOrderProb,
+//            &mutateResourcesProb,
+//            &mutateContractorsProb,
+//            &crossOrderProb,
+//            &crossResourcesProb,
+//            &crossContractorsProb,
+//            &sizeSelection
+//        )) {
+//        cout << "Can't parse arguments" << endl;
+//    }
+//    auto start       = chrono::high_resolution_clock::now();
+//    auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
+//    auto stop        = chrono::high_resolution_clock::now();
+//    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+//    cout << "Chromosomes decoded in " << duration.count() << " ms" << endl;
+//
+//    ChromosomeEvaluator evaluator(infoPtr);
+//    Genetic g(
+//        infoPtr->minReq,
+//        mutateOrderProb,
+//        mutateResourcesProb,
+//        mutateContractorsProb,
+//        crossOrderProb,
+//        crossResourcesProb,
+//        crossContractorsProb,
+//        sizeSelection,
+//        evaluator
+//    );
+//    Chromosome *result;
+//    //    Py_BEGIN_ALLOW_THREADS;
+////    result = g.run(chromosomes);
+//    //    Py_END_ALLOW_THREADS;
+//    auto pyResult = PythonDeserializer::encodeChromosome(result);
+//    delete result;
+//    return pyResult;
+//}
 
-    if (!PyArg_ParseTuple(
-            args,
-            "LOOOffffffi",
-            &infoPtr,
-            &pyChromosomes,
-            &mutateOrderProb,
-            &mutateResourcesProb,
-            &mutateContractorsProb,
-            &crossOrderProb,
-            &crossResourcesProb,
-            &crossContractorsProb,
-            &sizeSelection
-        )) {
-        cout << "Can't parse arguments" << endl;
-    }
-    auto start       = chrono::high_resolution_clock::now();
-    auto chromosomes = PythonDeserializer::decodeChromosomes(pyChromosomes);
-    auto stop        = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
-    cout << "Chromosomes decoded in " << duration.count() << " ms" << endl;
+//static PyObject *ddd(PyObject *self, PyObject *args) {
+//    PyObject *pyWorkGraph;
+//
+//    if (!PyArg_ParseTuple(
+//            args,
+//            "O",
+//            &pyWorkGraph
+//    )) {
+//        cout << "Can't parse arguments" << endl;
+//        Py_RETURN_NONE;
+//    }
+//
+//    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
+//    cout << "Decoded wg size: " << wg->nodes.size() << endl;
+//    delete wg;
+//    Py_RETURN_NONE;
+//}
 
-    ChromosomeEvaluator evaluator(infoPtr);
-    Genetic g(
-        infoPtr->minReq,
-        mutateOrderProb,
-        mutateResourcesProb,
-        mutateContractorsProb,
-        crossOrderProb,
-        crossResourcesProb,
-        crossContractorsProb,
-        sizeSelection,
-        evaluator
-    );
-    Chromosome *result;
-    //    Py_BEGIN_ALLOW_THREADS;
-//    result = g.run(chromosomes);
-    //    Py_END_ALLOW_THREADS;
-    auto pyResult = PythonDeserializer::encodeChromosome(result);
-    delete result;
-    return pyResult;
-}
-
-static PyObject *ddd(PyObject *self, PyObject *args) {
-    PyObject *pyWorkGraph;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "O",
-            &pyWorkGraph
-    )) {
-        cout << "Can't parse arguments" << endl;
-        Py_RETURN_NONE;
-    }
-
-    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
-    cout << "Decoded wg size: " << wg->nodes.size() << endl;
-    delete wg;
-    Py_RETURN_NONE;
-}
-
-static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
-    PyObject *pythonWrapper;
-    PyObject *pyWorkGraph;
-    PyObject *pyContractors;
-    PyObject *pyWorkEstimatorPath;
-    PyObject *pyParents;
-    PyObject *pyHeadParents;
-    PyObject *pyInseparables;
-    PyObject *pyWorkers;
-    int totalWorksCount;
-    bool usePythonWorkEstimator;
-    bool useExternalWorkEstimator;
-    PyObject *volume;
-    PyObject *minReq;
-    PyObject *maxReq;
-    PyObject *id2work;
-    PyObject *id2res;
-
-    if (!PyArg_ParseTuple(
-            args,
-            "OOOOOOOOippOOOOO",
-            &pythonWrapper,
-            &pyWorkGraph,
-            &pyContractors,
-            &pyWorkEstimatorPath,
-            &pyParents,
-            &pyHeadParents,
-            &pyInseparables,
-            &pyWorkers,
-            &totalWorksCount,
-            &usePythonWorkEstimator,
-            &useExternalWorkEstimator,
-            &volume,
-            &minReq,
-            &maxReq,
-            &id2work,
-            &id2res
-        )) {
-        cout << "Can't parse arguments" << endl;
-        Py_RETURN_NONE;
-    }
-
-//    Py_XINCREF(pyWorkGraph);
-//    Py_XDECREF(pyWorkGraph);
+size_t decodeEvaluationInfo(const py::object &pythonWrapper,
+                            const py::object &pyWorkGraph,
+                            const py::object &pyContractors,
+                            const string &pyWorkEstimatorPath,
+                            const py::object &pyParents,
+                            const py::object &pyHeadParents,
+                            const py::object &pyInseparables,
+                            const py::object &pyWorkers,
+                            int totalWorksCount,
+                            bool usePythonWorkEstimator,
+                            bool useExternalWorkEstimator,
+                            const vector<float> &volume,
+                            const py::object &minReq,
+                            const py::object &maxReq,
+                            const vector<string> &id2work,
+                            const vector<string> &id2res) {
 
 //    cout << pyWorkGraph->ob_refcnt << endl;
 //    cout << pyContractors->ob_refcnt << endl;
@@ -174,152 +132,72 @@ static PyObject *decodeEvaluationInfo(PyObject *self, PyObject *args) {
 //    delete wg;
 //    PythonDeserializer::contractors(pyContractors);
 
-    auto *info = new EvaluateInfo {
-        pythonWrapper,
-        PythonDeserializer::workGraph(pyWorkGraph),
-        PythonDeserializer::contractors(pyContractors),
-        PyCodec::fromList(pyParents, decodeIntList),
-        PyCodec::fromList(pyHeadParents, decodeIntList),
-        PyCodec::fromList(pyInseparables, decodeIntList),
-        PyCodec::fromList(pyWorkers, decodeIntList),
-        PyCodec::fromList(volume, decodeFloat),
-        PyCodec::fromList(minReq, decodeIntList),
-        PyCodec::fromList(maxReq, decodeIntList),
-        PyCodec::fromList(id2work, decodeString),
-        PyCodec::fromList(id2res, decodeString),
-        PyCodec::fromPrimitive(pyWorkEstimatorPath, ""),
-        LandscapeConfiguration(),
-        new DefaultWorkTimeEstimator(),
-        totalWorksCount,
-        usePythonWorkEstimator,
-        useExternalWorkEstimator
+    return (size_t) new EvaluateInfo {
+            pythonWrapper,
+            PythonDeserializer::workGraph(pyWorkGraph),
+            PythonDeserializer::contractors(pyContractors),
+            PyCodec::fromList(pyParents, decodeIntList),
+            PyCodec::fromList(pyHeadParents, decodeIntList),
+            PyCodec::fromList(pyInseparables, decodeIntList),
+            PyCodec::fromList(pyWorkers, decodeIntList),
+            volume,
+            PyCodec::fromList(minReq, decodeIntList),
+            PyCodec::fromList(maxReq, decodeIntList),
+            id2work,
+            id2res,
+            pyWorkEstimatorPath,
+            LandscapeConfiguration(),
+            new DefaultWorkTimeEstimator(),
+            totalWorksCount,
+            usePythonWorkEstimator,
+            useExternalWorkEstimator
     };
-
-    auto *res = PyLong_FromVoidPtr(info);
-    Py_INCREF(res);
-    return res;
 }
 
-static PyObject *freeEvaluationInfo(PyObject *self, PyObject *args) {
-    EvaluateInfo *infoPtr;
-    if (!PyArg_ParseTuple(args, "L", &infoPtr)) {
-        cout << "Can't parse arguments" << endl;
-    }
-    delete infoPtr->work_estimator;
-    delete infoPtr;
-    Py_RETURN_NONE;
+void freeEvaluationInfo(size_t info_ptr_orig) {
+    EvaluateInfo *info_ptr = (EvaluateInfo *) info_ptr_orig;
+    delete info_ptr->work_estimator;
+    delete info_ptr;
 }
 
-static PyMethodDef nativeMethods[] = {
-    {            "evaluate",
-     evaluate, METH_VARARGS,
-     "Evaluates the chromosome using Just-In-Time-Timeline"                             },
-    {          "runGenetic", runGenetic, METH_VARARGS,    "Runs the whole genetic cycle"},
-    {"decodeEvaluationInfo",
-     decodeEvaluationInfo, METH_VARARGS,
-     "Uploads the scheduling info to C++ memory and caches it"                          },
-    {"ddd",
-            ddd, METH_VARARGS,
-            "Uploads the scheduling info to C++ memory and caches it"                          },
-    {  "freeEvaluationInfo",
-     freeEvaluationInfo, METH_VARARGS,
-     "Frees C++ scheduling cache. Must be called in the end of scheduling to "
-     "avoid memory leaks."                                                              },
-    {               nullptr,    nullptr,            0,                           nullptr}
-};
+//static PyMethodDef nativeMethods[] = {
+//    {            "evaluate",
+//     evaluate, METH_VARARGS,
+//     "Evaluates the chromosome using Just-In-Time-Timeline"                             },
+//    {          "runGenetic", runGenetic, METH_VARARGS,    "Runs the whole genetic cycle"},
+//    {"decodeEvaluationInfo",
+//     decodeEvaluationInfo, METH_VARARGS,
+//     "Uploads the scheduling info to C++ memory and caches it"                          },
+//    {"ddd",
+//            ddd, METH_VARARGS,
+//            "Uploads the scheduling info to C++ memory and caches it"                          },
+//    {  "freeEvaluationInfo",
+//     freeEvaluationInfo, METH_VARARGS,
+//     "Frees C++ scheduling cache. Must be called in the end of scheduling to "
+//     "avoid memory leaks."                                                              },
+//    {               nullptr,    nullptr,            0,                           nullptr}
+//};
+//
+//static PyModuleDef nativeModule = { PyModuleDef_HEAD_INIT,
+//                                    "native",
+//                                    "The high-efficient native implementation of SAMPO modules",
+//                                    -1,
+//                                    nativeMethods };
 
-static PyModuleDef nativeModule = { PyModuleDef_HEAD_INIT,
-                                    "native",
-                                    "The high-efficient native implementation of SAMPO modules",
-                                    -1,
-                                    nativeMethods };
-
-PyMODINIT_FUNC PyInit_native(void) {
-    assert(!PyErr_Occurred());
-    // Initialise Numpy
-    import_array();
-    if (PyErr_Occurred()) {
-        return nullptr;
-    }
-    return PyModule_Create(&nativeModule);
+PYBIND11_MODULE(native, m) {
+    m.def(
+          "decodeEvaluationInfo",
+          decodeEvaluationInfo,
+          "Uploads the scheduling info to C++ memory and caches it"
+    );
+    m.def(
+            "freeEvaluationInfo",
+            freeEvaluationInfo,
+            "Frees C++ scheduling cache. Must be called in the end of scheduling to avoid memory leaks"
+    );
+    m.def(
+            "evaluate",
+            evaluate,
+            "Evaluates the chromosome using Just-In-Time-Timeline"
+    );
 }
-
-// the test function
-//int main() {
-//    // real data from Python
-//    vector<vector<int>> parents = {
-//        {},
-//        { 0 },
-//        { 0 },
-//        { 1 },
-//        { 2 },
-//        { 1, 10 },
-//        { 4, 5 },
-//        { 3, 5 },
-//        { 5 },
-//        { 7, 8, 13 },
-//        { 2 },
-//        { 4 },
-//        { 11, 10 },
-//        { 6, 12 }
-//    };
-//    vector<vector<int>> inseparables = {
-//        { 0 },
-//        { 1 },
-//        { 2, 10 },
-//        { 3 },
-//        { 4, 11, 12 },
-//        { 5 },
-//        { 6, 13 },
-//        { 7 },
-//        { 8 },
-//        { 9 },
-//        { 10 },
-//        { 11 },
-//        { 12 },
-//        { 13 },
-//    };
-//    vector<vector<int>> workers = {
-//        {50, 50, 50, 50, 50, 50}
-//    };    // one contractor with 6 types of workers
-//
-//    vector<int> chromosomeOrder             = { 0, 1, 2, 3, 5, 7, 4, 8, 6, 9 };
-//    vector<vector<int>> chromosomeResources = {
-//        { 0,  0,  0,  0,  0,  0, 0},
-//        {49, 49,  0,  0,  0,  0, 0},
-//        {49, 49, 49, 49, 49, 49, 0},
-//        { 0, 49, 49,  0,  0, 49, 0},
-//        { 0, 49, 49,  0,  0, 49, 0},
-//        {49, 49, 49,  0, 49, 49, 0},
-//        {49, 49, 49, 49,  0,  0, 0},
-//        {49,  0, 49, 49, 49, 49, 0},
-//        {49, 49, 49, 49,  0, 49, 0},
-//        { 0,  0,  0,  0,  0,  0, 0}
-//    };
-//
-//    string v = "aaaa";
-//
-//    auto *info =
-//        new EvaluateInfo { nullptr,
-//                           parents,
-//                           vector<vector<int>>(),
-//                           inseparables,
-//                           workers,
-//                           vector<float>(),
-//                           vector<vector<int>>(),
-//                           vector<vector<int>>(),
-//                           vector<string>(),
-//                           vector<string>(),
-//                           v,
-//                           0,
-//                           false,
-//                           true };
-//    //
-//    ChromosomeEvaluator evaluator(info);
-//    //    int res = evaluator.testEvaluate(chromosomeOrder,
-//    //    chromosomeResources);
-//    //
-//    //    cout << "Result: " << res << endl;
-//
-//    return 0;
-//}

@@ -70,18 +70,8 @@ public:
                 continue;
             int actual_count = worker.count;
             if (actual_count < worker_req.min_count) {
-                //        cout << "Not conforms to min_req: " <<
-                //        get_worker(resources, team_target, i) << " < " <<
-                //        minReq << " on work " << work
-                //             << " and worker " << i << ", chromosome " <<
-                //             chromosome_ind << ", teamSize=" << teamSize <<
-                //             endl;
-                //        cout << "Team: ";
-                //        for (size_t j = 0; j < teamSize; j++) {
-                //            cout << get_worker(resources, team_target, i) << "
-                //            ";
-                //        }
-                //        cout << endl;
+                cout << "Not conforms to min_req: " << worker.name << " count: "
+                     << actual_count << ", required: " << worker_req.min_count << endl;
                 return TIME_INF;
             }
             int max_req = worker_req.max_count;

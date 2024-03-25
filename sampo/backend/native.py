@@ -25,7 +25,7 @@ class NativeComputationalBackend(DefaultComputationalBackend):
 
         index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
         work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
-        worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
+        worker_name2index = {worker_name: index for index, worker_name in enumerate(sorted(worker_pool))}
 
         numeration: dict[int, GraphNode] = {i: node for i, node in
                                             enumerate(filter(lambda node: not node.is_inseparable_son(), wg.nodes))}

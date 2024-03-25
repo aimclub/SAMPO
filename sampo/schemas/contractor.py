@@ -1,15 +1,9 @@
-from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Union, Iterable
-from uuid import uuid4
-
-import numpy as np
-from pandas import DataFrame, Series
+from functools import cached_property
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.resources import Worker, Equipment
 from sampo.schemas.serializable import AutoJSONSerializable
-from sampo.schemas.types import WorkerName, ContractorName
 from sampo.utilities.serializers import custom_serializer
 
 DEFAULT_CONTRACTOR_CAPACITY = 25
@@ -31,7 +25,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
         for w in self.workers.values():
             w.contractor_id = self.id
 
-    @property
+    @cached_property
     def worker_list(self) -> list[Worker]:
         return list(self.workers.values())
 

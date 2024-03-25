@@ -13,10 +13,10 @@ using namespace std;
 
 JustInTimeTimeline::JustInTimeTimeline(const worker_pool_t &worker_pool, const LandscapeConfiguration &landscape) {
     for (const auto& it : worker_pool) {
-        this->timeline.insert(std::make_pair(it.first, unordered_map<string, vector<pair<Time, int>>>()));
+//        this->timeline.insert(std::make_pair(it.first, unordered_map<string, vector<pair<Time, int>>>()));
         for (const auto& it_contractor : it.second) {
             vector<pair<Time, int>> resource_state;
-            resource_state.emplace_back(0, worker_pool.at(it_contractor.first).at(it.first).count);
+            resource_state.emplace_back(0, it_contractor.second.count);
             this->timeline[it_contractor.first].insert(std::make_pair(it.first, resource_state));
         }
     }
@@ -50,7 +50,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
     if (spec.is_independent) {
         // grab from the end
         for (auto& worker : worker_team) {
-            const vector<pair<Time, int>>& offer_stack = contractor_state.at(worker.id);
+            const vector<pair<Time, int>>& offer_stack = contractor_state.at(worker.name);
             max_agent_time = max(max_agent_time, offer_stack[0].first);
         }
     } else {
@@ -58,11 +58,13 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
         // for each resource type
         for (auto& worker : worker_team) {
             int needed_count = worker.count;
-            const vector<pair<Time, int>> &offer_stack = contractor_state.at(worker.id);
+
+            const vector<pair<Time, int>> &offer_stack = contractor_state.at(worker.name);
 
             size_t ind = offer_stack.size() - 1;
             while (needed_count > 0) {
                 auto[offer_time, offer_count] = offer_stack[ind];
+//                cout << "Offer time: " << offer_time.val() << endl;
                 max_agent_time = max(max_agent_time, offer_time);
 
                 if (needed_count < offer_count) {
@@ -74,14 +76,19 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
         }
     }
 
+//    if (max_agent_time.is_inf()) {
+//        cout << "Agent time inf!!!" << endl;
+//    }
+
     // TODO Remove multiple search time instances, replace with one
     Time c_st = max(max_agent_time, max_parent_time);
     Time new_finish_time = c_st;
-    for (auto& dep_node : node->getInseparableChainWithSelf()) {
+    for (auto* dep_node : node->getInseparableChainWithSelf()) {
         Time dep_parent_time = dep_node->min_start_time(node2swork);
 
         Time dep_st = max(new_finish_time, dep_parent_time);
         Time working_time = work_estimator.estimateTime(*dep_node->getWorkUnit(), worker_team);
+//        cout << "Working time: " << working_time.val() << endl;
         new_finish_time = dep_st + working_time;
     }
 
@@ -162,7 +169,7 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
         return;
     }
 
-    unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline[worker_team[0].contractor_id];
+    auto& contractor_timeline = this->timeline.at(worker_team[0].contractor_id);
 
     if (spec.is_independent) {
         // squash all the timeline to the last point
@@ -181,22 +188,26 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
         // Addition performed as step in bubble-sort algorithm.
         for (auto& worker : worker_team) {
             int needed_count = worker.count;
-            auto &worker_timeline = contractor_timeline[worker.name];
+            auto &worker_timeline = contractor_timeline.at(worker.name);
 
             // consume needed workers
             while (needed_count > 0) {
-                auto next = worker_timeline.end();
+                if (worker_timeline.empty()) {
+                    cout << "ERROR!!! JustInTimeTimeline#update_timeline" << endl;
+                }
+                pair<Time, int> next = worker_timeline.back();
                 worker_timeline.pop_back();
-                if (next->second > needed_count && worker_timeline.empty()) {
-                    worker_timeline.emplace_back(next->first, next->second - needed_count);
+                if (next.second > needed_count || worker_timeline.empty()) {
+                    worker_timeline.emplace_back(next.first, next.second - needed_count);
                     break;
                 }
-                needed_count -= next->second;
+                needed_count -= next.second;
             }
 
             // add to the right place
             worker_timeline.emplace_back(finish_time, worker.count);
-            size_t ind = worker_timeline.size() - 1;
+            // FIXME long long here because using size_t causes unsigned overflow
+            long long ind = worker_timeline.size() - 1;
             while (ind > 0 && worker_timeline[ind].first > worker_timeline[ind - 1].first) {
                 std::swap(worker_timeline[ind], worker_timeline[ind - 1]);
                 ind--;

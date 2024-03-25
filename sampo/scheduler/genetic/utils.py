@@ -40,7 +40,7 @@ def prepare_optimized_data_structures(wg: WorkGraph,
 
     index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
-    worker_name2index = {worker_name: index for index, worker_name in enumerate(worker_pool)}
+    worker_name2index = {worker_name: index for index, worker_name in enumerate(sorted(worker_pool))}
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
     index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
     contractor2index = {contractor.id: ind for ind, contractor in enumerate(contractors)}

@@ -11,7 +11,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 def test_multiprocessing(setup_scheduler_parameters):
     wg, contractors, landscape = setup_scheduler_parameters
 
-    SAMPO.backend = NativeComputationalBackend()
+    SAMPO.backend = DefaultComputationalBackend()
 
     # SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, ScheduleSpec())
 
@@ -24,16 +24,16 @@ def test_multiprocessing(setup_scheduler_parameters):
     genetic.schedule(wg, contractors, validate=True, landscape=landscape)
     time_default = time.time() - start_default
 
-    # n_cpus = 10
-    # SAMPO.backend = MultiprocessingComputationalBackend(n_cpus=n_cpus)
-    #
-    # start_multiproc = time.time()
-    # genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
-    # time_multiproc = time.time() - start_multiproc
-    #
-    # print('\n------------------\n')
-    # print(f'Graph size: {setup_wg.vertex_count}')
-    # print(f'Time default: {time_default} s')
-    # print(f'Time multiproc: {time_multiproc} s')
-    # print(f'CPUs used: {n_cpus}')
-    # print(f'Ratio: {time_default / time_multiproc}')
+    n_cpus = 10
+    SAMPO.backend = NativeComputationalBackend()
+
+    start_multiproc = time.time()
+    genetic.schedule(setup_wg, setup_contractors, landscape=setup_landscape)
+    time_multiproc = time.time() - start_multiproc
+
+    print('\n------------------\n')
+    print(f'Graph size: {setup_wg.vertex_count}')
+    print(f'Time default: {time_default} s')
+    print(f'Time multiproc: {time_multiproc} s')
+    print(f'CPUs used: {n_cpus}')
+    print(f'Ratio: {time_default / time_multiproc}')

@@ -6,7 +6,6 @@
 #include <iostream>
 #include <vector>
 
-#include "Python.h"
 #include "native/schemas/dtime.h"
 #include "native/schemas/scheduled_work.h"
 #include "native/schemas/time_estimator.h"

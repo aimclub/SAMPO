@@ -7,106 +7,69 @@
 
 namespace PythonDeserializer {
 
-WorkerReq decodeWorkerReq(PyObject *pyWorkerReq) {
-    string kind = PyCodec::getAttrString(pyWorkerReq, "kind");
-    Time volume = Time(
-        PyCodec::getAttrInt(PyCodec::getAttr(pyWorkerReq, "volume"), "value")
-    );
-    int min_count = PyCodec::getAttrInt(pyWorkerReq, "min_count");
-    int max_count = PyCodec::getAttrInt(pyWorkerReq, "max_count");
-    return WorkerReq(kind, volume, min_count, max_count);
+WorkerReq decodeWorkerReq(const py::handle &pyWorkerReq) {
+    return {
+        pyWorkerReq.attr("kind").cast<string>(),
+        Time(pyWorkerReq.attr("volume").attr("value").cast<int>()),
+        pyWorkerReq.attr("min_count").cast<int>(),
+        pyWorkerReq.attr("max_count").cast<int>()
+    };
 }
 
-WorkUnit *decodeWorkUnit(PyObject *pyWorkUnit) {
-    string id = PyCodec::getAttrString(pyWorkUnit, "id");
-    string name = PyCodec::getAttrString(pyWorkUnit, "name");
-    auto worker_reqs = PyCodec::fromList(
-        PyCodec::getAttr(pyWorkUnit, "worker_reqs"), decodeWorkerReq
+WorkUnit *decodeWorkUnit(const py::handle &pyWorkUnit) {
+    py::object wr = pyWorkUnit.attr("worker_reqs");
+    return new WorkUnit(
+                pyWorkUnit.attr("id").cast<string>(),
+                pyWorkUnit.attr("name").cast<string>(),
+                PyCodec::fromList(wr, decodeWorkerReq),
+                pyWorkUnit.attr("volume").cast<float>(),
+                pyWorkUnit.attr("is_service_unit").cast<bool>()
     );
-    float volume       = PyCodec::getAttrFloat(pyWorkUnit, "volume");
-    bool isServiceUnit = PyCodec::getAttrBool(pyWorkUnit, "is_service_unit");
-    return new WorkUnit(id, name, worker_reqs, volume, isServiceUnit);
 }
 
-typedef struct {
-    WorkUnit *workUnit;
+struct UnlinkedGraphNode {
+    WorkUnit *work_unit;
     vector<tuple<string, float, EdgeType>> parents;
-} UnlinkedGraphNode;
+};
 
-EdgeType decodeEdgeType(PyObject *pyEdgeType) {
-    string value = PyCodec::getAttrString(pyEdgeType, "_value_");
-    if (value == "IFS") {
-        return EdgeType::InseparableFinishStart;
-    }
-    else if (value == "FFS") {
-        return EdgeType::LagFinishStart;
-    }
-    else if (value == "SS") {
-        return EdgeType::StartStart;
-    }
-    else if (value == "FF") {
-        return EdgeType::FinishFinish;
-    }
-    else if (value == "FS") {
-        return EdgeType::FinishStart;
-    }
-    else {
-        throw logic_error("Illegal EdgeType: " + value);
-    }
+EdgeType decodeEdgeType(const py::handle &pyEdgeType) {
+    auto value = pyEdgeType.attr("_value_").cast<string>();
+    if (value == "IFS") return EdgeType::InseparableFinishStart;
+    if (value == "FFS") return EdgeType::LagFinishStart;
+    if (value == "SS") return EdgeType::StartStart;
+    if (value == "FF") return EdgeType::FinishFinish;
+    if (value == "FS") return EdgeType::FinishStart;
+
+    throw logic_error("Illegal EdgeType: " + value);
 }
 
-// helper function for next method
-template <typename T>
-T identity(T v) {
-    return v;
-}
-
-UnlinkedGraphNode decodeNodeWorkUnit(PyObject *pyGraphNode) {
-    auto* workUnit = PyCodec::getAttr(pyGraphNode, "_work_unit", decodeWorkUnit);
-    auto pyParents = PyCodec::fromList(PyCodec::getAttr(pyGraphNode, "_parent_edges"),
-                 identity<PyObject *>);
-//    WorkUnit* workUnit = nullptr;
+UnlinkedGraphNode decodeNodeWorkUnit(const py::handle &pyGraphNode) {
+    auto* work_unit = decodeWorkUnit(pyGraphNode.attr("_work_unit"));
+    auto py_parents = pyGraphNode.attr("_parent_edges").cast<py::list>();
     auto parents = vector<tuple<string, float, EdgeType>>();
     // decode with first element replaced GraphNode -> GraphNode#WorkUnit#id
-    for (PyObject *pyParent : pyParents) {
+    for (const auto &py_parent : py_parents) {
         // go deep and get work_unit's id
-        string id = PyCodec::getAttrString(
-            PyCodec::getAttr(PyCodec::getAttr(pyParent, "start"), "work_unit"),
-            "id"
-        );
-        float lag = PyCodec::getAttrFloat(pyParent, "lag");
-        EdgeType type = PyCodec::getAttr(pyParent, "type", decodeEdgeType);
+        auto id = py_parent.attr("start").attr("work_unit").attr("id").cast<string>();
+        auto lag = py_parent.attr("lag").cast<float>();
+        EdgeType type = decodeEdgeType(py_parent.attr("type"));
         parents.emplace_back(id, lag, type);
     }
 
-    return { workUnit, parents };
+    return { work_unit, parents };
 }
 
-WorkGraph *workGraph(PyObject *pyWorkGraph) {
-//    PyCodec::getAttr(pyWorkGraph, "node_list");
-//    cout << PyCodec::fromPrimitive(PyObject_Str(pyWorkGraph), "") << endl;
-//    PyGILState_STATE state = PyGILState_Ensure();
-//    auto* str = PyUnicode_FromString("start");
-//    cout << pyWorkGraph->ob_refcnt << endl;
-//    Py_XINCREF(pyWorkGraph);
-//    cout << pyWorkGraph->ob_refcnt << endl;
-//    cout << PyObject_HasAttr(pyWorkGraph, str) << endl;
-//    Py_XDECREF(pyWorkGraph);
-
-//    PyGILState_Release(state);
-//    return nullptr;
-    auto unlinked_ordered_nodes = PyCodec::fromList(
-        PyCodec::getAttr(pyWorkGraph, "nodes"), decodeNodeWorkUnit
-    );
+WorkGraph *workGraph(const py::handle &pyWorkGraph) {
+    auto unlinked_ordered_nodes = PyCodec::fromList(pyWorkGraph.attr("nodes"), decodeNodeWorkUnit);
     auto nodes         = unordered_map<string, GraphNode *>();
     auto ordered_nodes = vector<GraphNode *>();
 
     // linking
     for (const auto &s_node : unlinked_ordered_nodes) {
         auto linked_parents = vector<tuple<GraphNode *, float, EdgeType>>();
-        auto* node = new GraphNode(s_node.workUnit, linked_parents);
+        auto* node = new GraphNode(s_node.work_unit, linked_parents);
         ordered_nodes.push_back(node);
-        nodes[s_node.workUnit->id] = node;
+        nodes[s_node.work_unit->id] = node;
     }
 
     for (const auto &s_node : unlinked_ordered_nodes) {
@@ -118,149 +81,126 @@ WorkGraph *workGraph(PyObject *pyWorkGraph) {
             linked_parents.emplace_back(nodes[id], lag, type);
         }
 
-        nodes[s_node.workUnit->id]->add_parents(linked_parents);
+        nodes[s_node.work_unit->id]->add_parents(linked_parents);
     }
 
     return new WorkGraph(ordered_nodes);
 }
 
-IntervalGaussian decodeIntervalGaussian(PyObject *pyIntervalGaussian) {
-    float mean    = PyCodec::getAttrFloat(pyIntervalGaussian, "mean");
-    float sigma   = PyCodec::getAttrFloat(pyIntervalGaussian, "sigma");
-    float min_val = PyCodec::getAttrFloat(pyIntervalGaussian, "min_val");
-    float max_val = PyCodec::getAttrFloat(pyIntervalGaussian, "max_val");
-    return IntervalGaussian(mean, sigma, min_val, max_val);
+IntervalGaussian decodeIntervalGaussian(const py::handle &pyIntervalGaussian) {
+    return IntervalGaussian(
+        pyIntervalGaussian.attr("mean").cast<float>(),
+        pyIntervalGaussian.attr("sigma").cast<float>(),
+        pyIntervalGaussian.attr("min_val").cast<float>(),
+        pyIntervalGaussian.attr("max_val").cast<float>()
+    );
 }
 
-Worker decodeWorker(PyObject *pyWorker) {
-    string id            = PyCodec::getAttrString(pyWorker, "id");
-    string name          = PyCodec::getAttrString(pyWorker, "name");
-    int count            = PyCodec::getAttrInt(pyWorker, "count");
-    int cost             = PyCodec::getAttrInt(pyWorker, "cost_one_unit");
-    string contractor_id = PyCodec::getAttrString(pyWorker, "contractor_id");
-    IntervalGaussian productivity = PyCodec::getAttr(pyWorker, "productivity", decodeIntervalGaussian);
-    return Worker(id, name, count, cost, contractor_id, productivity);
+Worker decodeWorker(const py::handle &pyWorker) {
+    return Worker(
+            pyWorker.attr("id").cast<string>(),
+            pyWorker.attr("name").cast<string>(),
+            pyWorker.attr("count").cast<int>(),
+            pyWorker.attr("cost_one_unit").cast<int>(),
+            pyWorker.attr("contractor_id").cast<string>(),
+            decodeIntervalGaussian(pyWorker.attr("productivity"))
+    );
 }
 
-Contractor *decodeContractor(PyObject *pyContractor) {
-    PyObject *pyWorkers = PyCodec::getAttr(pyContractor, "worker_list");
-    auto workers        = PyCodec::fromList(pyWorkers, decodeWorker);
-    return new Contractor(workers);
+Contractor *decodeContractor(const py::handle &pyContractor) {
+    return new Contractor(
+            pyContractor.attr("id").cast<string>(),
+            pyContractor.attr("name").cast<string>(),
+            PyCodec::fromList(pyContractor.attr("worker_list"), decodeWorker)
+    );
 }
 
-vector<Contractor *> contractors(PyObject *pyContractors) {
+vector<Contractor *> contractors(const py::handle &pyContractors) {
     return PyCodec::fromList(pyContractors, decodeContractor);
 }
 
-inline Chromosome *decodeChromosome(PyObject *incoming) {
-    PyObject *pyOrder;          //= PyList_GetItem(chromosome, 0);
-    PyObject *pyResources;      //= PyList_GetItem(chromosome, 1);
-    PyObject *pyContractors;    //= PyList_GetItem(chromosome, 2);
+Chromosome *decodeChromosome(const py::handle &py_incoming) {
+    auto py_tuple = py_incoming.cast<py::tuple>();
+    auto py_order = py_tuple[0].cast<py::array_t<int>>();
+    auto py_resources = py_tuple[1].cast<py::array_t<int>>();
+    auto py_contractors = py_tuple[2].cast<py::array_t<int>>();
 
-    if (!PyArg_ParseTuple(
-            incoming, "OOO", &pyOrder, &pyResources, &pyContractors
-        )) {
-        cerr << "Can't parse chromosome!!!!" << endl;
-        return nullptr;
-    }
+    size_t works_count       = py_order.size();    // without inseparables
+    size_t resources_count   = py_resources.shape(1) - 1;
+    size_t contractors_count = py_contractors.shape(0);
 
-    int worksCount       = PyArray_DIM(pyOrder, 0);    // without inseparables
-    int resourcesCount   = PyArray_DIM(pyResources, 1) - 1;
-    int contractorsCount = PyArray_DIM(pyContractors, 0);
-
-    auto *chromosome = new Chromosome(worksCount, resourcesCount, contractorsCount);
-
-    //        cout << "------------------" << endl;
+    auto *chromosome = new Chromosome(works_count, resources_count, contractors_count);
 
     // TODO Find the way to faster copy from NumPy ND array.
     //  !!!Attention!!! You can't just memcpy()! Plain NumPy array is not
     //  C-aligned!
     auto &order = chromosome->getOrder();
-    for (int i = 0; i < worksCount; i++) {
-        int v     = *(int *)PyArray_GETPTR1(pyOrder, i);
-        *order[i] = v;
-        //        cout << v << " " << *order[i] << *chromosome->getOrder()[i] <<
-        //        endl;
+    const auto* py_order_ptr = py_order.data();
+    for (int i = 0; i < works_count; i++) {
+        *order[i] = py_order_ptr[i];
     }
-    //        cout << "------------------" << endl;
 
     auto &resources = chromosome->getResources();
-    for (int work = 0; work < worksCount; work++) {
-        for (int worker = 0; worker < resourcesCount + 1; worker++) {
-            resources[work][worker] =
-                PyCodec::Py_GET2D(pyResources, work, worker);
+    const auto* py_resources_ptr = py_resources.data();
+    for (size_t work = 0; work < works_count; work++) {
+        for (size_t worker = 0; worker < resources_count + 1; worker++) {
+            resources[work][worker] = py_resources_ptr[work * (resources_count + 1) + worker];
         }
     }
+
     auto &contractors = chromosome->getContractors();
-    for (int contractor = 0; contractor < contractorsCount; contractor++) {
-        for (int worker = 0; worker < resourcesCount; worker++) {
-            contractors[contractor][worker] =
-                PyCodec::Py_GET2D(pyContractors, contractor, worker);
+    const auto* py_contractors_ptr = py_contractors.data();
+    for (int contractor = 0; contractor < contractors_count; contractor++) {
+        for (int worker = 0; worker < resources_count; worker++) {
+            contractors[contractor][worker] = py_contractors_ptr[contractor * resources_count + worker];
         }
     }
 
     return chromosome;
 }
 
-vector<Chromosome *> decodeChromosomes(PyObject *incoming) {
+vector<Chromosome *> decodeChromosomes(const py::handle &incoming) {
     return PyCodec::fromList(incoming, decodeChromosome);
 }
 
-PyObject *encodeChromosome(Chromosome *incoming) {
-    npy_intp dimsOrder[] { incoming->getOrder().size() };
-    npy_intp dimsResources[] { incoming->getResources().height(),
+py::object encodeChromosome(Chromosome *incoming) {
+    int dims_order[] { incoming->getOrder().size() };
+    int dims_resources[] { incoming->getResources().height(),
                                incoming->getResources().width() };
-    npy_intp dimsContractors[] { incoming->getContractors().height(),
+    int dims_contractors[] { incoming->getContractors().height(),
                                  incoming->getContractors().width() };
 
-    cout << dimsOrder[0] << endl;
-    cout << dimsResources[0] << " " << dimsResources[1] << endl;
-    cout << dimsContractors[0] << " " << dimsContractors[1] << endl;
+    cout << dims_order[0] << endl;
+    cout << dims_resources[0] << " " << dims_resources[1] << endl;
+    cout << dims_contractors[0] << " " << dims_contractors[1] << endl;
 
-    import_array();
+    auto py_order = py::array_t<int>(dims_order);
+    auto py_resources = py::array_t<int>(dims_resources);
+    auto py_contractors = py::array_t<int>(dims_contractors);
 
-    PyObject *pyOrder = PyArray_EMPTY(1, dimsOrder, NPY_INT, 0);
-    Py_XINCREF(pyOrder);
-    PyObject *pyResources = PyArray_EMPTY(2, dimsResources, NPY_INT, 0);
-    Py_XINCREF(pyResources);
-    PyObject *pyContractors = PyArray_EMPTY(2, dimsContractors, NPY_INT, 0);
-    Py_XINCREF(pyContractors);
-
-    //        Py_RETURN_NONE;
-
-    if (pyOrder == nullptr || pyResources == nullptr
-        || pyContractors == nullptr) {
-        cout << "Can't allocate chromosome" << endl;
-        // we can run out-of-memory, but still just return to Python
-        Py_RETURN_NONE;
+    auto py_order_ptr = py_order.mutable_unchecked();
+    for (int i = 0; i < dims_order[0]; i++) {
+        py_order_ptr[i] = *incoming->getOrder()[i];
     }
 
-    for (int i = 0; i < dimsOrder[0]; i++) {
-        PyCodec::Py_GET1D(pyOrder, i) = *incoming->getOrder()[i];
-    }
-    for (int work = 0; work < dimsResources[0]; work++) {
-        for (int resource = 0; resource < dimsResources[1]; resource++) {
-            PyCodec::Py_GET2D(pyResources, work, resource) =
-                incoming->getResources()[work][resource];
-        }
-    }
-    for (int contractor = 0; contractor < dimsContractors[0]; contractor++) {
-        for (int resource = 0; resource < dimsContractors[1]; resource++) {
-            PyCodec::Py_GET2D(pyContractors, contractor, resource) =
-                incoming->getContractors()[contractor][resource];
+    auto py_resources_ptr = py_resources.mutable_unchecked();
+    for (int work = 0; work < dims_resources[0]; work++) {
+        for (int resource = 0; resource < dims_resources[1]; resource++) {
+            py_resources_ptr[work * dims_resources[1] + resource] = incoming->getResources()[work][resource];
         }
     }
 
-    //        Py_RETURN_NONE;
+    auto py_contractors_ptr = py_contractors.mutable_unchecked();
+    for (int contractor = 0; contractor < dims_contractors[0]; contractor++) {
+        for (int resource = 0; resource < dims_contractors[1]; resource++) {
+            py_contractors_ptr[contractor * dims_contractors[1] + resource] = incoming->getContractors()[contractor][resource];
+        }
+    }
 
-    PyObject *pyChromosome =
-        Py_BuildValue("(OOO)", pyOrder, pyResources, pyContractors);
-    Py_XINCREF(pyChromosome
-    );    // we can run out-of-memory, but still just return to Python
-    return pyChromosome;
+    return py::make_tuple(py_order, py_resources, py_contractors).cast<py::object>();
 }
 
-PyObject *encodeChromosomes(const vector<Chromosome *> &incoming) {
+py::list encodeChromosomes(const vector<Chromosome *> &incoming) {
     return PyCodec::toList(incoming, encodeChromosome);
 }
 }    // namespace PythonDeserializer

@@ -162,7 +162,7 @@ class LandscapeConfiguration:
                         continue
                     d = dist + road.weight
                     finish_ind = self._node2ind[road.finish]
-                    if d < distances[finish_ind] and road.id in roads_available_set:
+                    if d < distances[finish_ind]:
                         distances[finish_ind] = d
                         path_mx[node_ind][finish_ind] = v
                         heapq.heappush(prior_queue, (d, finish_ind))
@@ -184,13 +184,11 @@ class LandscapeConfiguration:
         if path_mx[to_ind][from_ind] == -1:
             return []
 
-        path_tmp = []
         fr = from_ind
-        while path_mx[to_ind][fr] != to_ind:
-            path_tmp.append(path_mx[to_ind][fr])
-            fr = path_mx[to_ind][fr]
         path = [from_ind]
-        path.extend(path_tmp)
+        while path_mx[to_ind][fr] != to_ind:
+            path.append(path_mx[to_ind][fr])
+            fr = path_mx[to_ind][fr]
         path.append(to_ind)
         return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 

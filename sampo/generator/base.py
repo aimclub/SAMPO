@@ -93,7 +93,7 @@ class SimpleSynthetic:
             if top_border is None:
                 top_border = len(materials_name)
 
-        if bottom_border >= len(materials_name) or top_border >= len(materials_name):
+        if bottom_border > len(materials_name) or top_border > len(materials_name):
             raise ValueError('The borders are out of the range of materials_name')
 
         for node in wg.nodes:

@@ -52,9 +52,9 @@ def run_test(args):
 # Number of iterations for each graph size
 total_iters = 1
 # Number of graph sizes
-graphs = 10
+graphs = 1
 # Graph sizes
-sizes = [30 * i for i in range(1, graphs + 1)]
+sizes = [100 * i for i in range(1, graphs + 1)]
 total_results = []
 # Seed for random number generator can be specified here
 # seed = 1

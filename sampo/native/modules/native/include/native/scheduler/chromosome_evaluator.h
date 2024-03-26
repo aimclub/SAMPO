@@ -30,6 +30,8 @@
 
 class ChromosomeEvaluator {
 private:
+    EvaluateInfo *info_ptr;
+
     WorkGraph *wg;
 
     const vector<vector<int>> &parents;         // vertices' parents
@@ -71,7 +73,8 @@ public:
     int numThreads;
 
     explicit ChromosomeEvaluator(EvaluateInfo *info)
-        : wg(info->wg),
+        : info_ptr(info),
+          wg(info->wg),
           parents(info->parents),
           headParents(info->headParents),
           inseparables(info->inseparables),
@@ -167,7 +170,9 @@ public:
     //    ~ChromosomeEvaluator() {
     //        loader.DLCloseLib();
     //    }
-    ~ChromosomeEvaluator() = default;
+    ~ChromosomeEvaluator() {
+        delete info_ptr;
+    }
 
     bool isValid(Chromosome *chromosome) {
         bool visited[chromosome->numWorks()];

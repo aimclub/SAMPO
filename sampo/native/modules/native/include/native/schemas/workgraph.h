@@ -46,8 +46,8 @@ public:
 class GraphNode {
 private:
     WorkUnit *workUnit;
-    std::vector<GraphEdge> parentEdges   = std::vector<GraphEdge>();
-    std::vector<GraphEdge> childrenEdges = std::vector<GraphEdge>();
+    std::vector<GraphEdge> parentEdges;
+    std::vector<GraphEdge> childrenEdges;
 public:
     explicit GraphNode(WorkUnit *workUnit) : workUnit(workUnit) {};
 
@@ -130,11 +130,11 @@ public:
     }
 
     inline bool is_inseparable_parent() {
-        return inseparableSon() == nullptr;
+        return inseparableSon() != nullptr;
     }
 
     inline bool is_inseparable_son() {
-        return inseparableParent() == nullptr;
+        return inseparableParent() != nullptr;
     }
 
     std::vector<GraphNode *> getInseparableChainWithSelf() {

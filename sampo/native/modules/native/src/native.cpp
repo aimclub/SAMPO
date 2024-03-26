@@ -23,13 +23,13 @@ vector<int> decodeIntList(const py::handle &object) {
 }
 
 vector<vector<float>> evaluate(size_t info_ptr_orig, const py::object &py_chromosomes) {
-    EvaluateInfo *info_ptr = (EvaluateInfo *) info_ptr_orig;
+    auto *evaluator = (ChromosomeEvaluator *) info_ptr_orig;
 
     auto chromosomes = PythonDeserializer::decodeChromosomes(py_chromosomes);
 
-    ChromosomeEvaluator evaluator(info_ptr);
+//    ChromosomeEvaluator evaluator(info_ptr);
 
-    evaluator.evaluate(chromosomes);
+    evaluator->evaluate(chromosomes);
 
     vector<vector<float>> fitness;
     fitness.resize(chromosomes.size());
@@ -132,7 +132,7 @@ size_t decodeEvaluationInfo(const py::object &pythonWrapper,
 //    delete wg;
 //    PythonDeserializer::contractors(pyContractors);
 
-    return (size_t) new EvaluateInfo {
+    auto* info_ptr = new EvaluateInfo(
             pythonWrapper,
             PythonDeserializer::workGraph(pyWorkGraph),
             PythonDeserializer::contractors(pyContractors),
@@ -151,12 +151,13 @@ size_t decodeEvaluationInfo(const py::object &pythonWrapper,
             totalWorksCount,
             usePythonWorkEstimator,
             useExternalWorkEstimator
-    };
+    );
+
+    return size_t (new ChromosomeEvaluator(info_ptr));
 }
 
 void freeEvaluationInfo(size_t info_ptr_orig) {
-    EvaluateInfo *info_ptr = (EvaluateInfo *) info_ptr_orig;
-    delete info_ptr->work_estimator;
+    void *info_ptr = (void *) info_ptr_orig;
     delete info_ptr;
 }
 

@@ -148,7 +148,7 @@ public:
         return chain;
     }
 
-    Time min_start_time(swork_dict_t &node2swork) {
+    Time min_start_time(const swork_dict_t &node2swork) {
         Time time;
         for (auto& edge : this->parentEdges) {
             auto it = node2swork.find(edge.start->id());

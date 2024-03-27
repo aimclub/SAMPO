@@ -12,6 +12,7 @@
 #include <iostream>
 #include <set>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <omp.h>
@@ -29,32 +30,26 @@
 
 class ChromosomeEvaluator {
 private:
-    EvaluateInfo *info_ptr;
-
-    WorkGraph *wg;
+    const WorkGraph *wg;
 
     vector<vector<int>> headParents;     // vertices' parents without inseparables
     vector<vector<int>> minReqs;         // work -> worker -> WorkUnit.min_req
     vector<vector<int>> maxReqs;         // work -> worker -> WorkUnit.max_req
-    vector<string> id2work;
-    vector<string> id2res;
+    vector<string> id2work;   // unused
+    vector<string> id2res;    // unused
 
     worker_pool_t worker_pool;
-    const LandscapeConfiguration &landscape;
-    const WorkTimeEstimator &work_estimator;
+    LandscapeConfiguration landscape;
+    const WorkTimeEstimator *work_estimator;
 
     vector<vector<Worker*>> worker_pool_indices;
     vector<GraphNode*> index2node;
-    const vector<Contractor*> &index2contractor;
+    vector<Contractor*> contractors;
     vector<int> index2zone;  // TODO
     unordered_map<string, int> worker_name2index;
     unordered_map<string, int> contractor2index;
 
-    unordered_map<string, unordered_map<string, int>> minReqNames;
-    unordered_map<string, unordered_map<string, int>> maxReqNames;
-
-    py::object pythonWrapper;
-    bool usePythonWorkEstimator;
+//    const py::object &python_wrapper;
 
     // TODO (?) Make interop with Python work estimators like in old NativeWrapper was
 //    WorkTimeEstimator *timeEstimator;
@@ -63,29 +58,14 @@ private:
 //    };
 
 public:
-    int numThreads;
+    int num_threads;
 
-    explicit ChromosomeEvaluator(EvaluateInfo *info)
-        : info_ptr(info),
-          wg(info->wg),
-          landscape(info->landscape),
-          work_estimator(*info->work_estimator),
-          index2contractor(info->contractors),
-          pythonWrapper(info->pythonWrapper) {
-
-        for (size_t i = 0; i < minReqs.size(); i++) {
-            const auto &work = id2work[i];
-            // TODO I think we can remove this
-            minReqNames[work] = unordered_map<string, int>();
-            maxReqNames[work] = unordered_map<string, int>();
-            for (size_t j = 0; j < minReqs[i].size(); j++) {
-                if (minReqs[i][j] != 0) {
-                    const auto &res = id2res[j];
-                    minReqNames[work][res] = minReqs[i][j];
-                    maxReqNames[work][res] = maxReqs[i][j];
-                }
-            }
-        }
+    explicit ChromosomeEvaluator(const WorkGraph *wg,
+                                 vector<Contractor*> contractors,
+                                 const WorkTimeEstimator *work_estimator)
+        : wg(wg),
+          contractors(contractors),
+          work_estimator(work_estimator) {
 
         unordered_map<string, int> node_id2index;
 
@@ -140,7 +120,7 @@ public:
 
         set<string> worker_names;
 
-        for (auto* contractor : index2contractor) {
+        for (auto* contractor : contractors) {
             for (const auto& worker : contractor->workers) {
                 worker_pool[worker.name].emplace(contractor->id, worker);
                 worker_names.emplace(worker.name);
@@ -153,21 +133,30 @@ public:
             ind++;
         }
 
-        for (int index = 0; index < index2contractor.size(); index++) {
-            contractor2index[index2contractor[index]->id] = index;
+        minReqs.resize(index2node.size());
+        maxReqs.resize(index2node.size());
+        for (int node = 0; node < index2node.size(); node++) {
+            minReqs[node].resize(worker_names.size());
+            maxReqs[node].resize(worker_names.size());
+            for (auto& worker_req : index2node[node]->getWorkUnit()->worker_reqs) {
+                int worker_ind = worker_name2index[worker_req.kind];
+                minReqs[node][worker_ind] = worker_req.min_count;
+                maxReqs[node][worker_ind] = worker_req.max_count;
+            }
         }
 
-        this->usePythonWorkEstimator = info->usePythonWorkEstimator;
-        this->numThreads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
+        for (int index = 0; index < contractors.size(); index++) {
+            contractor2index[contractors[index]->id] = index;
+        }
+
+        this->num_threads = omp_get_num_procs();
+//        this->num_threads = this->usePythonWorkEstimator ? 1 : omp_get_num_procs();
 //        printf("Genetic running threads: %i\n", this->numThreads);
 
 //        if (info->useExternalWorkEstimator) {
 //            loader.DLOpenLib();
 //            auto library        = loader.DLGetInstance();
 //            this->timeEstimator = library->create(info->timeEstimatorPath);
-//        }
-//        else if (!usePythonWorkEstimator) {
-//            this->timeEstimator = new DefaultWorkTimeEstimator(minReqNames, maxReqNames);
 //        }
     }
 
@@ -179,7 +168,7 @@ public:
     //        loader.DLCloseLib();
     //    }
     ~ChromosomeEvaluator() {
-        delete info_ptr;
+        delete work_estimator;
     }
 
     bool isValid(Chromosome *chromosome) {
@@ -229,14 +218,14 @@ public:
                                                     worker_pool,
                                                     worker_pool_indices,
                                                     index2node,
-                                                    index2contractor,
+                                                    contractors,
                                                     index2zone,
                                                     worker_name2index,
                                                     contractor2index,
                                                     landscape,
                                                     assigned_parent_time,
                                                     timeline,
-                                                    work_estimator);
+                                                    *work_estimator);
                 chromosome->fitness = fitness.evaluate(schedule);
 //                cout << "Fitness written out: " << chromosome->fitness << endl;
             } else {

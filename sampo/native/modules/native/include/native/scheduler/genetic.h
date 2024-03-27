@@ -111,7 +111,7 @@ public:
           crossOrderProb(crossOrder),
           crossResourcesProb(crossResources),
           crossContractorsProb(crossContractors),
-          numThreads(evaluator.numThreads) {
+          numThreads(evaluator.num_threads) {
         // TODO
         applyFunctions[0] = &Genetic::applyOrder;
         applyFunctions[1] = &Genetic::applyResources;

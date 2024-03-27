@@ -75,8 +75,7 @@ class NativeComputationalBackend(DefaultComputationalBackend):
         #
         # ddd(wg)
 
-        self._cache = decodeEvaluationInfo(self, wg, contractors, "", parents, head_parents, inseparables, workers,
-                                           wg.vertex_count, False, True, volume, min_req, max_req, id2work, id2res)
+        self._cache = decodeEvaluationInfo(self, wg, contractors)
 
     def cache_genetic_info(self, population_size: int, mutate_order: float, mutate_resources: float,
                            mutate_zones: float, deadline: Time | None, weights: list[int] | None,

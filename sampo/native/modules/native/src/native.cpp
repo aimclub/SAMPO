@@ -89,71 +89,16 @@ vector<vector<float>> evaluate(size_t info_ptr_orig, const py::object &py_chromo
 //    return pyResult;
 //}
 
-//static PyObject *ddd(PyObject *self, PyObject *args) {
-//    PyObject *pyWorkGraph;
-//
-//    if (!PyArg_ParseTuple(
-//            args,
-//            "O",
-//            &pyWorkGraph
-//    )) {
-//        cout << "Can't parse arguments" << endl;
-//        Py_RETURN_NONE;
-//    }
-//
-//    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
-//    cout << "Decoded wg size: " << wg->nodes.size() << endl;
-//    delete wg;
-//    Py_RETURN_NONE;
-//}
-
 size_t decodeEvaluationInfo(const py::object &pythonWrapper,
                             const py::object &pyWorkGraph,
-                            const py::object &pyContractors,
-                            const string &pyWorkEstimatorPath,
-                            const py::object &pyParents,
-                            const py::object &pyHeadParents,
-                            const py::object &pyInseparables,
-                            const py::object &pyWorkers,
-                            int totalWorksCount,
-                            bool usePythonWorkEstimator,
-                            bool useExternalWorkEstimator,
-                            const vector<float> &volume,
-                            const py::object &minReq,
-                            const py::object &maxReq,
-                            const vector<string> &id2work,
-                            const vector<string> &id2res) {
+                            const py::object &pyContractors) {
 
-//    cout << pyWorkGraph->ob_refcnt << endl;
-//    cout << pyContractors->ob_refcnt << endl;
-
-//    auto* wg = PythonDeserializer::workGraph(pyWorkGraph);
-//    cout << "Decoded wg size: " << wg->nodes.size() << endl;
-//    delete wg;
-//    PythonDeserializer::contractors(pyContractors);
-
-    auto* info_ptr = new EvaluateInfo(
-            pythonWrapper,
+    return size_t (new ChromosomeEvaluator(
             PythonDeserializer::workGraph(pyWorkGraph),
             PythonDeserializer::contractors(pyContractors),
-            PyCodec::fromList(pyParents, decodeIntList),
-            PyCodec::fromList(pyHeadParents, decodeIntList),
-            PyCodec::fromList(pyInseparables, decodeIntList),
-            PyCodec::fromList(pyWorkers, decodeIntList),
-            volume,
-            PyCodec::fromList(minReq, decodeIntList),
-            PyCodec::fromList(maxReq, decodeIntList),
-            id2work,
-            id2res,
-            pyWorkEstimatorPath,
-            LandscapeConfiguration(),
-            new DefaultWorkTimeEstimator(),
-            totalWorksCount,
-            usePythonWorkEstimator,
-            useExternalWorkEstimator
-    );
-
-    return size_t (new ChromosomeEvaluator(info_ptr));
+            new DefaultWorkTimeEstimator()
+//            LandscapeConfiguration()
+    ));
 }
 
 void freeEvaluationInfo(size_t info_ptr_orig) {

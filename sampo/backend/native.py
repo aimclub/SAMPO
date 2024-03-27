@@ -19,61 +19,6 @@ class NativeComputationalBackend(DefaultComputationalBackend):
                              spec: ScheduleSpec, rand: Random | None = None,
                              work_estimator: WorkTimeEstimator | None = None):
         super().cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
-        # the outer numeration. Begins with inseparable heads, continuous with tails.
-
-        worker_pool = get_worker_contractor_pool(contractors)
-
-        index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(wg.nodes)}
-        work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
-        worker_name2index = {worker_name: index for index, worker_name in enumerate(sorted(worker_pool))}
-
-        numeration: dict[int, GraphNode] = {i: node for i, node in
-                                            enumerate(filter(lambda node: not node.is_inseparable_son(), wg.nodes))}
-        heads_count = len(numeration)
-        for i, node in enumerate([node for node in wg.nodes if node.is_inseparable_son()]):
-            numeration[heads_count + i] = node
-        rev_numeration = reverse_dictionary(numeration)
-
-        # for each vertex index store list of parents' indices
-        parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
-        # for each vertex index store list of whole it's inseparable chain indices
-        inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain()]
-                             for index in range(wg.vertex_count)]
-        # construct heads
-        inseparable_heads = [-1 for _ in range(wg.vertex_count)]
-        for ins_head, inseps in enumerate(inseparables):
-            for insep in inseps:
-                inseparable_heads[insep] = ins_head
-
-        head_parents = [list(set(inseparable_heads[p] for p in list(parents[inseparable_heads[i]])))
-                        for i in range(len(parents))]
-        # contractors' workers matrix. If contractor can't supply given type of worker, 0 should be passed
-        workers = [[0 for _ in range(len(worker_name2index))] for _ in contractors]
-        for i, contractor in enumerate(contractors):
-            for worker in contractor.workers.values():
-                workers[i][worker_name2index[worker.name]] = worker.count
-
-        min_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
-        max_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
-        for work_index, node in numeration.items():
-            cur_min_req = [0 for _ in worker_name2index]
-            cur_max_req = [0 for _ in worker_name2index]
-            for req in node.work_unit.worker_reqs:
-                worker_index = worker_name2index[req.kind]
-                cur_min_req[worker_index] = req.min_count
-                cur_max_req[worker_index] = req.max_count
-            min_req[work_index] = cur_min_req
-            max_req[work_index] = cur_max_req
-
-        volume = [node.work_unit.volume for node in numeration.values()]
-
-        id2work = [numeration[i].work_unit.id for i in range(len(numeration))]
-        id2worker_name = reverse_dictionary(worker_name2index)
-        id2res = [id2worker_name[i] for i in range(len(id2worker_name))]
-
-        # from native import ddd
-        #
-        # ddd(wg)
 
         self._cache = decodeEvaluationInfo(self, wg, contractors)
 

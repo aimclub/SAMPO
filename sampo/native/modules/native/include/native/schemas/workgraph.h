@@ -46,8 +46,8 @@ public:
 class GraphNode {
 private:
     WorkUnit *workUnit;
-    std::vector<GraphEdge> parentEdges   = std::vector<GraphEdge>();
-    std::vector<GraphEdge> childrenEdges = std::vector<GraphEdge>();
+    std::vector<GraphEdge> parentEdges;
+    std::vector<GraphEdge> childrenEdges;
 public:
     explicit GraphNode(WorkUnit *workUnit) : workUnit(workUnit) {};
 

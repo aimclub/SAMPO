@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
@@ -28,7 +28,7 @@ class JustInTimeTimeline(Timeline):
             for worker_offer in worker_offers.values():
                 self._timeline[worker_offer.get_agent_id()] = [(Time(0), worker_offer.count)]
 
-        self._material_timeline = SupplyTimeline(landscape)
+        self._material_timeline = HybridSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self, node: GraphNode,
@@ -55,9 +55,9 @@ class JustInTimeTimeline(Timeline):
         """
         # if current job is the first
         if not node2swork:
-            max_material_time = self._material_timeline.find_min_material_time(node.id, assigned_parent_time,
-                                                                               node.work_unit.need_materials(),
-                                                                               node.work_unit.workground_size)
+            max_material_time = self._material_timeline.find_min_material_time(node,
+                                                                               assigned_parent_time,
+                                                                               node.work_unit.need_materials())
 
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, Time(0))
 
@@ -66,7 +66,50 @@ class JustInTimeTimeline(Timeline):
         max_parent_time = max(node.min_start_time(node2swork), assigned_parent_time)
         # define the max agents time when all needed workers are off from previous tasks
         max_agent_time = Time(0)
+        cur_start_time = max_agent_time
 
+        inseparable_chain = node.get_inseparable_chain_with_self()
+
+        new_finish_time = cur_start_time
+        for dep_node in inseparable_chain:
+            # set start time as finish time of original work
+            # set finish time as finish time + working time of current node with identical resources
+            # (the same as in original work)
+            # set the same workers on it
+            # TODO Decide where this should be
+            dep_parent_time = dep_node.min_start_time(node2swork)
+
+            dep_st = max(new_finish_time, dep_parent_time)
+            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
+            new_finish_time = dep_st + working_time
+
+        exec_time = new_finish_time - cur_start_time
+
+        found_earliest_time = False
+        while not found_earliest_time:
+            cur_start_time = self._find_min_start_time(worker_team, cur_start_time, spec)
+
+            material_time = self._material_timeline.find_min_material_time(node,
+                                                                           cur_start_time,
+                                                                           node.work_unit.need_materials())
+            if material_time > cur_start_time:
+                cur_start_time = material_time
+                continue
+
+            zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
+                                                               exec_time)
+            if zone_time > cur_start_time:
+                cur_start_time = zone_time
+            else:
+                found_earliest_time = True
+
+        c_st = cur_start_time
+
+        c_ft = c_st + exec_time
+        return c_st, c_ft, None
+
+    def _find_min_start_time(self, worker_team: list[Worker], _max_agent_time: Time, spec: WorkSpec):
+        max_agent_time = _max_agent_time
         if spec.is_independent:
             # grab from the end
             for worker in worker_team:
@@ -89,33 +132,7 @@ class JustInTimeTimeline(Timeline):
                     needed_count -= offer_count
                     ind -= 1
 
-        c_st = max(max_agent_time, max_parent_time)
-
-        new_finish_time = c_st
-        for dep_node in node.get_inseparable_chain_with_self():
-            # set start time as finish time of original work
-            # set finish time as finish time + working time of current node with identical resources
-            # (the same as in original work)
-            # set the same workers on it
-            # TODO Decide where this should be
-            dep_parent_time = dep_node.min_start_time(node2swork)
-
-            dep_st = max(new_finish_time, dep_parent_time)
-            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
-            new_finish_time = dep_st + working_time
-
-        exec_time = new_finish_time - c_st
-
-        max_material_time = self._material_timeline.find_min_material_time(node.id, c_st,
-                                                                           node.work_unit.need_materials(),
-                                                                           node.work_unit.workground_size)
-
-        max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, c_st, exec_time)
-
-        c_st = max(c_st, max_material_time, max_zone_time)
-
-        c_ft = c_st + exec_time
-        return c_st, c_ft, None
+        return max_agent_time
 
     def can_schedule_at_the_moment(self,
                                    node: GraphNode,
@@ -159,9 +176,8 @@ class JustInTimeTimeline(Timeline):
             if not max_agent_time <= start_time:
                 return False
 
-            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
-                                                                      node.work_unit.need_materials(),
-                                                                      node.work_unit.workground_size):
+            if not self._material_timeline.can_schedule_at_the_moment(node, start_time,
+                                                                      node.work_unit.need_materials()):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
                 return False
@@ -285,12 +301,12 @@ class JustInTimeTimeline(Timeline):
                 lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
 
-            new_finish_time = c_st + working_time
+            deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
+                                                                                 c_st,
+                                                                                 dep_node.work_unit.need_materials())
+            c_st = max(mat_del_time, c_st)
 
-            deliveries, _, new_finish_time = self._material_timeline.deliver_materials(dep_node.id, c_st,
-                                                                                       new_finish_time,
-                                                                                       dep_node.work_unit.need_materials(),
-                                                                                       dep_node.work_unit.workground_size)
+            new_finish_time = c_st + working_time
 
             node2swork[dep_node] = ScheduledWork(work_unit=dep_node.work_unit,
                                                  start_end_time=(c_st, new_finish_time),

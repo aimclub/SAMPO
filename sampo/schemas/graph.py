@@ -62,6 +62,11 @@ class GraphNode(JSONSerializable['GraphNode']):
     def __hash__(self) -> int:
         return hash(self.id)
 
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        return self.id == other.id
+
     def __repr__(self) -> str:
         return self.id
 
@@ -121,14 +126,14 @@ class GraphNode(JSONSerializable['GraphNode']):
         self.__dict__.pop('parents_set', None)
         self.__dict__.pop('inseparable_parent', None)
         self.__dict__.pop('inseparable_son', None)
-        self.__dict__.pop('get_inseparable_chain', None)
+        self.get_inseparable_chain.cache_clear()
 
     def invalidate_children_cache(self):
         self.__dict__.pop('children', None)
         self.__dict__.pop('children_set', None)
         self.__dict__.pop('inseparable_parent', None)
         self.__dict__.pop('inseparable_son', None)
-        self.__dict__.pop('get_inseparable_chain', None)
+        self.get_inseparable_chain.cache_clear()
 
     def is_inseparable_parent(self) -> bool:
         return self.inseparable_son is not None

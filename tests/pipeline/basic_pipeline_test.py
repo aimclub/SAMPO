@@ -3,12 +3,10 @@ import sys
 
 from sampo.pipeline import SchedulingPipeline
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
-from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.heft.base import HEFTScheduler
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
 from sampo.schemas.exceptions import NoSufficientContractorError
-from sampo.utilities.visualization import schedule_gant_chart_fig, VisualizationMode
 
 
 def test_plain_scheduling(setup_scheduler_parameters):
@@ -41,9 +39,10 @@ def test_local_optimize_scheduling(setup_scheduler_parameters):
 
 # this test is needed to check validation of input contractors
 
-def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors,
-                                                                   setup_landscape_many_holders):
+def test_plain_scheduling_with_no_sufficient_number_of_contractors(setup_wg, setup_empty_contractors):
     thrown = False
+    if setup_wg.vertex_count > 16:
+        pass
     try:
         SchedulingPipeline.create() \
             .wg(setup_wg) \

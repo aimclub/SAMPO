@@ -140,6 +140,28 @@ class LandscapeConfiguration:
 
         return [self.road_mx[path[v - 1]][path[v]] for v in range(len(path) - 1, 0, -1)]
 
+    def _dijkstra(self, node_ind: int, distances: list[float], path_mx: np.ndarray, roads_available_set: set[str]) \
+            -> np.ndarray:
+        prior_queue = [(.0, node_ind)]
+        distances[node_ind] = 0
+
+        while prior_queue:
+            dist, v = heapq.heappop(prior_queue)
+
+            if dist > distances[v]:
+                continue
+
+            for road in self.lg.nodes[v].roads:
+                if road.id not in roads_available_set:
+                    continue
+                d = dist + road.weight
+                finish_ind = self._node2ind[road.finish]
+                if d < distances[finish_ind]:
+                    distances[finish_ind] = d
+                    path_mx[node_ind][finish_ind] = v
+                    heapq.heappush(prior_queue, (d, finish_ind))
+        return path_mx
+
     def construct_route(self, from_node: LandGraphNode, to_node: LandGraphNode,
                         roads_available: list[Road]) -> list[str]:
         """
@@ -147,26 +169,8 @@ class LandscapeConfiguration:
         :param roads_available: list of available roads
         :return: list of roads' id that are included to the route whether it exists, otherwise return empty list
         """
-        def dijkstra(node_ind: int):
-            prior_queue = [(.0, node_ind)]
-            distances[node_ind] = 0
 
-            while prior_queue:
-                dist, v = heapq.heappop(prior_queue)
-
-                if dist > distances[v]:
-                    continue
-
-                for road in self.lg.nodes[v].roads:
-                    if road.id not in roads_available_set:
-                        continue
-                    d = dist + road.weight
-                    finish_ind = self._node2ind[road.finish]
-                    if d < distances[finish_ind]:
-                        distances[finish_ind] = d
-                        path_mx[node_ind][finish_ind] = v
-                        heapq.heappush(prior_queue, (d, finish_ind))
-
+        adj_matrix = self.lg.adj_matrix.copy()
         distances = [self.WAY_LENGTH] * self.lg.vertex_count
         path_mx = np.full((self.lg.vertex_count, self.lg.vertex_count), -1)
         roads_available_set = set(road.id for road in roads_available)
@@ -174,12 +178,12 @@ class LandscapeConfiguration:
             for u in range(self.lg.vertex_count):
                 if v == u:
                     path_mx[v][u] = 0
-                elif self.lg.adj_matrix[v][u] != np.Inf and self.road_mx[v][u] in roads_available_set:
+                elif adj_matrix[v][u] != np.Inf and self.road_mx[v][u] in roads_available_set:
                     path_mx[v][u] = v
 
         from_ind = self._node2ind[from_node]
         to_ind = self._node2ind[to_node]
-        dijkstra(to_ind)
+        path_mx = self._dijkstra(to_ind, distances, path_mx, roads_available_set)
 
         if path_mx[to_ind][from_ind] == -1:
             return []
@@ -190,6 +194,7 @@ class LandscapeConfiguration:
             path.append(path_mx[to_ind][fr])
             fr = path_mx[to_ind][fr]
         path.append(to_ind)
+
         return [self.road_mx[path[v]][path[v + 1]] for v in range(len(path) - 1)]
 
     @cached_property

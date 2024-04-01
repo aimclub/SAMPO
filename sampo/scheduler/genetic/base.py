@@ -4,7 +4,7 @@ from typing import Optional
 from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.schedule_builder import build_schedules
+from sampo.scheduler.genetic.schedule_builder import build_schedules, build_schedules_with_cache
 from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.lft.base import LFTScheduler
@@ -201,6 +201,44 @@ class GeneticScheduler(Scheduler):
             "87.5%": (*init_k_schedule(HEFTScheduler, 8 / 7), weights[6])
         }
 
+    def upgrade_pop(self,
+                    wg: WorkGraph,
+                    contractors: list[Contractor],
+                    pop: list[ChromosomeType],
+                    spec: ScheduleSpec = ScheduleSpec(),
+                    assigned_parent_time: Time = Time(0),
+                    timeline: Timeline | None = None,
+                    landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[ChromosomeType]:
+        mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
+        deadline = None if self._optimize_resources else self._deadline
+
+        _, new_pop = build_schedules_with_cache(wg,
+                                                contractors,
+                                                size_of_population,
+                                                self.number_of_generation,
+                                                mutate_order,
+                                                mutate_resources,
+                                                mutate_zones,
+                                                {},
+                                                self.rand,
+                                                spec,
+                                                self._weights,
+                                                pop,
+                                                landscape,
+                                                self.fitness_constructor,
+                                                self.fitness_weights,
+                                                self.work_estimator,
+                                                self.sgs_type,
+                                                assigned_parent_time,
+                                                timeline,
+                                                self._time_border,
+                                                self._max_plateau_steps,
+                                                self._optimize_resources,
+                                                deadline,
+                                                self._only_lft_initialization,
+                                                self._is_multiobjective)
+        return new_pop
+
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
@@ -240,6 +278,7 @@ class GeneticScheduler(Scheduler):
                                     self.rand,
                                     spec,
                                     self._weights,
+                                    None,
                                     landscape,
                                     self.fitness_constructor,
                                     self.fitness_weights,

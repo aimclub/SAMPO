@@ -97,6 +97,7 @@ def build_schedules(wg: WorkGraph,
                     rand: random.Random,
                     spec: ScheduleSpec,
                     weights: list[int],
+                    pop: list[ChromosomeType] = None,
                     landscape: LandscapeConfiguration = LandscapeConfiguration(),
                     fitness_object: FitnessFunction = TimeFitness(),
                     fitness_weights: tuple[int | float, ...] = (-1,),
@@ -111,6 +112,40 @@ def build_schedules(wg: WorkGraph,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
+    return build_schedules_with_cache(wg, contractors, population_size, generation_number,
+                                      mutpb_order, mutpb_res, mutpb_zones, init_schedules,
+                                      rand, spec, weights, pop, landscape, fitness_object,
+                                      fitness_weights, work_estimator, sgs_type, assigned_parent_time,
+                                      timeline, time_border, max_plateau_steps, optimize_resources,
+                                      deadline, only_lft_initialization, is_multiobjective)[0]
+
+
+def build_schedules_with_cache(wg: WorkGraph,
+                               contractors: list[Contractor],
+                               population_size: int,
+                               generation_number: int,
+                               mutpb_order: float,
+                               mutpb_res: float,
+                               mutpb_zones: float,
+                               init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
+                               rand: random.Random,
+                               spec: ScheduleSpec,
+                               weights: list[int],
+                               pop: list[ChromosomeType] = None,
+                               landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                               fitness_object: FitnessFunction = TimeFitness(),
+                               fitness_weights: tuple[int | float, ...] = (-1,),
+                               work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                               sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                               assigned_parent_time: Time = Time(0),
+                               timeline: Timeline | None = None,
+                               time_border: int | None = None,
+                               max_plateau_steps: int | None = None,
+                               optimize_resources: bool = False,
+                               deadline: Time | None = None,
+                               only_lft_initialization: bool = False,
+                               is_multiobjective: bool = False) \
+        -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
     Structure of chromosome:
@@ -142,7 +177,7 @@ def build_schedules(wg: WorkGraph,
                                      sgs_type, only_lft_initialization, is_multiobjective)
 
     # create population of a given size
-    pop = SAMPO.backend.generate_first_population(population_size)
+    pop = pop or SAMPO.backend.generate_first_population(population_size)
 
     SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
@@ -308,7 +343,7 @@ def build_schedules(wg: WorkGraph,
                        schedule_start_time, timeline, order_nodes)
                       for scheduled_works, schedule_start_time, timeline, order_nodes in best_schedules]
 
-    return best_schedules
+    return best_schedules, pop
 
 
 def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:

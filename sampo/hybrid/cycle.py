@@ -3,6 +3,7 @@ import numpy as np
 from sampo.api.genetic_api import FitnessFunction, ChromosomeType, ScheduleGenerationScheme
 from sampo.base import SAMPO
 from sampo.hybrid.population import PopulationScheduler
+from sampo.scheduler.genetic import TimeFitness
 from sampo.scheduler.genetic.schedule_builder import create_toolbox
 from sampo.schemas import WorkGraph, Contractor, Time, LandscapeConfiguration, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
@@ -12,7 +13,7 @@ class CycleHybridScheduler:
     def __init__(self,
                  starting_scheduler: PopulationScheduler,
                  cycle_schedulers: list[PopulationScheduler],
-                 fitness: FitnessFunction,
+                 fitness: FitnessFunction = TimeFitness(),
                  max_plateau_size: int = 2):
         self._starting_scheduler = starting_scheduler
         self._cycle_schedulers = cycle_schedulers
@@ -25,8 +26,7 @@ class CycleHybridScheduler:
 
     def _get_best_individual(self, pop: list[ChromosomeType]) -> ChromosomeType:
         fitness = SAMPO.backend.compute_chromosomes(self._fitness, pop)
-        min_indices = np.argmin(fitness)
-        return pop[min_indices[0]]
+        return pop[np.argmin(fitness)]
 
     def run(self,
             wg: WorkGraph,

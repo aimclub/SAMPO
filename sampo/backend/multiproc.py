@@ -115,27 +115,28 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
     def cache_scheduler_info(self,
                              wg: WorkGraph,
                              contractors: list[Contractor],
-                             landscape: LandscapeConfiguration,
-                             spec: ScheduleSpec,
+                             landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                             spec: ScheduleSpec = ScheduleSpec(),
                              rand: Random | None = None,
                              work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
         self._pool = None
 
     def cache_genetic_info(self,
-                           selection_size: int,
-                           mutate_order: float,
-                           mutate_resources: float,
-                           mutate_zones: float,
-                           deadline: Time | None,
-                           weights: list[int] | None,
-                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...],
-                           sgs_type: ScheduleGenerationScheme,
-                           only_lft_initialization: bool,
-                           is_multiobjective: bool):
-        super().cache_genetic_info(selection_size, mutate_order, mutate_resources, mutate_zones, deadline,
+                           population_size: int = 50,
+                           mutate_order: float = 0.1,
+                           mutate_resources: float = 0.05,
+                           mutate_zones: float = 0.05,
+                           deadline: Time | None = None,
+                           weights: list[int] | None = None,
+                           init_schedules: dict[
+                               str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           assigned_parent_time: Time = Time(0),
+                           fitness_weights: tuple[int | float, ...] = None,
+                           sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                           only_lft_initialization: bool = False,
+                           is_multiobjective: bool = False):
+        super().cache_genetic_info(population_size, mutate_order, mutate_resources, mutate_zones, deadline,
                                    weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
                                    only_lft_initialization, is_multiobjective)
         self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)

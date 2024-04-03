@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from sampo.api.genetic_api import ChromosomeType
+from sampo.api.genetic_api import ChromosomeType, Individual
 from sampo.scheduler import GeneticScheduler, Scheduler
 from sampo.scheduler.genetic.schedule_builder import create_toolbox
 from sampo.schemas import WorkGraph, Contractor, Time, LandscapeConfiguration
@@ -49,5 +49,6 @@ class HeuristicPopulationScheduler(PopulationScheduler):
         toolbox = create_toolbox(wg=wg, contractors=contractors,
                                  spec=spec, assigned_parent_time=assigned_parent_time,
                                  landscape=landscape)
-        return [toolbox.schedule_to_chromosome(scheduler.schedule(wg, contractors, spec, landscape=landscape))
-                for scheduler in self._schedulers]
+        return [toolbox.Individual(toolbox.schedule_to_chromosome(schedule=schedule))
+                for scheduler in self._schedulers
+                for schedule in scheduler.schedule(wg, contractors, spec, landscape=landscape)]

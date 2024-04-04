@@ -1,7 +1,5 @@
 import random
 
-import pandas as pd
-
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import DefaultInputPipeline
@@ -73,5 +71,5 @@ for i, results_by_size in enumerate(total_results):
     result_df['size'].append(sizes[i])
     result_df['makespan'].append(result)
 
-pd.DataFrame(result_df).to_csv('landscape_genetic_results.csv', index=False)
+# pd.DataFrame(result_df).to_csv('landscape_genetic_results.csv', index=False)
 

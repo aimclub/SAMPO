@@ -1,5 +1,7 @@
 import random
 
+import pandas as pd
+
 from sampo.generator import SimpleSynthetic
 from sampo.generator.environment import get_contractor_by_wg
 from sampo.pipeline import DefaultInputPipeline
@@ -8,14 +10,12 @@ from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 work_time_estimator = DefaultWorkEstimator()
 
-
 def run_test(args):
-    graph_size, iterations = args
-    # global seed
+    graph_size, iterations, seed = args
 
     result = []
     for i in range(iterations):
-        rand = random.Random()
+        rand = random.Random(seed)
         ss = SimpleSynthetic(rand=rand)
         if graph_size < 100:
             wg = ss.small_work_graph()
@@ -42,34 +42,32 @@ def run_test(args):
             .finish()
         result.append(schedule[0].schedule.execution_time)
 
-        # seed += 1
-
     return result
 
+if __name__ == '__main__':
+    # Number of iterations for each graph size
+    total_iters = 1
+    # Number of graph sizes
+    graphs = 10
+    # Graph sizes
+    sizes = [20 * i for i in range(1, graphs + 1)]
+    total_results = []
+    # Seed for random number generator can be specified here
+    seed = 1
+    # Iterate over graph sizes and receive results
+    for size in sizes:
+        results_by_size = run_test((size, total_iters, seed))
+        seed += 1
+        total_results.append(results_by_size)
+        print(size)
 
-# Number of iterations for each graph size
-total_iters = 1
-# Number of graph sizes
-graphs = 1
-# Graph sizes
-sizes = [100 * i for i in range(1, graphs + 1)]
-total_results = []
-# Seed for random number generator can be specified here
-# seed = 1
+    # Save results to the DataFrame
+    result_df = {'size': [], 'makespan': []}
+    for i, results_by_size in enumerate(total_results):
+        result = results_by_size[0]
 
-# Iterate over graph sizes and receive results
-for size in sizes:
-    results_by_size = run_test((size, total_iters))
-    total_results.append(results_by_size)
-    print(size)
+        result_df['size'].append(sizes[i])
+        result_df['makespan'].append(result)
 
-# Save results to the DataFrame
-result_df = {'size': [], 'makespan': []}
-for i, results_by_size in enumerate(total_results):
-    result = results_by_size[0]
-
-    result_df['size'].append(sizes[i])
-    result_df['makespan'].append(result)
-
-# pd.DataFrame(result_df).to_csv('landscape_genetic_results.csv', index=False)
+    pd.DataFrame(result_df).to_csv('landscape_genetic_results1.csv', index=False)
 

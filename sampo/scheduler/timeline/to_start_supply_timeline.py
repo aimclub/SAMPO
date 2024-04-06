@@ -61,9 +61,11 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                    if material_carry_one_vehicle.name in need_mat)
 
     def _can_deliver_to_time(self, node: GraphNode, finish_delivery_time: Time, materials: list[Material]) -> bool:
-        # _, time = self._supply_resources(node, finish_delivery_time, materials)
-        _, time = self._supply_resources_reversed_v(node, finish_delivery_time, materials)
-        assert time >= finish_delivery_time
+        if finish_delivery_time < 60:
+            _, time = self._supply_resources(node, finish_delivery_time, materials)
+        else:
+            _, time = self._supply_resources_reversed_v(node, finish_delivery_time, materials)
+        # assert time >= finish_delivery_time
         return time == finish_delivery_time
 
     def can_schedule_at_the_moment(self, node: GraphNode, start_time: Time,
@@ -82,25 +84,18 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         return self._can_deliver_to_time(node, start_time, materials_for_delivery)
 
-    def _can_start_at_the_moment(self, depot: ResourceHolder, materials: list[Material], start_time: Time) -> bool:
-        vehicles_amount = self._get_necessary_vehicles_amount(depot, materials)
-        depot_state = self._timeline[depot.id]
-        vehicle_available = depot_state['vehicle'].bisect_right(start_time) - 1
+    @staticmethod
+    def _is_resource_available_at_the_moment(resource_state: SortedList, resource_amount: int, start_time: Time, finish_time: Time) -> bool:
 
-        if vehicle_available < vehicles_amount:
-            return False
+        start_idx = resource_state.bisect_right(start_time) - 1
 
-        for mat in materials:
-            mat_available = depot_state[mat.name].bisect_right(start_time) - 1
-            if mat_available < mat.count:
+        end_idx = resource_state.bisect_left((finish_time, -1, EventType.INITIAL))
+
+        for event in resource_state[start_idx: end_idx]:
+            if event.available_workers_count < resource_amount:
                 return False
 
         return True
-
-    @staticmethod
-    def _is_resource_available_at_the_moment(resource_state: SortedList, resource_amount: int, time: Time) -> bool:
-        resource_available = resource_state.bisect_right(time) - 1
-        return resource_available >= resource_amount
 
     def find_min_material_time(self, node: GraphNode, start_time: Time,
                                materials: list[Material]) -> Time:
@@ -118,8 +113,10 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         # we need to find the optimal time when materials can be supplied
         # we compare the delivery algorithms and choose the best one
-        # _, time = self._supply_resources(node, start_time, mat_request)
-        _, time = self._supply_resources_reversed_v(node, start_time, mat_request)
+        if start_time < 60:
+            _, time = self._supply_resources(node, start_time, mat_request)
+        else:
+            _, time = self._supply_resources_reversed_v(node, start_time, mat_request)
         return time
 
     def _find_best_holders_by_dist(self, node: LandGraphNode,
@@ -173,10 +170,12 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         # get the materials that should be delivered to the platform
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
-        # delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
-        delivery, time = self._supply_resources_reversed_v(node, deadline, materials_for_delivery, True)
+        if deadline < 40:
+            delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
+        else:
+            delivery, time = self._supply_resources_reversed_v(node, deadline, materials_for_delivery, True)
 
-        print(node.id)
+        # print(node.id)
 
         return delivery, time
 
@@ -213,7 +212,6 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         # the time when selected vehicles return back to the depot
         depot_vehicle_finish_time = Time(0)
 
-        start_delivery_time = Time(-1)
         # the time when selected vehicles go to the platform and deliver materials
         finish_delivery_time = deadline - 1
 
@@ -224,7 +222,9 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         # (it's explained by the fact that roads should be free as most time as possible,
         # because others could use them on another time)
         # (the finish delivery time should be equal or greater than work start time)
+        amounts = 0
         while continue_search:
+            amounts += 1
 
             finish_delivery_time += 1
 
@@ -235,14 +235,20 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                 route_start_time, deliveries, exec_ahead_time, exec_return_time = \
                     self._get_reversed_route_with_additional(depot.node, platform, len(selected_vehicles), finish_delivery_time)
 
+                assert amounts < 200
+
                 if route_start_time < 0:
                     continue
 
-                if self._is_resource_available_at_the_moment(self._timeline[depot.id]['vehicles'], vehicle_count_need, route_start_time):
+                if not self._is_resource_available_at_the_moment(self._timeline[depot.id]['vehicles'], vehicle_count_need,
+                                                                 route_start_time,
+                                                                 route_start_time + exec_ahead_time + exec_return_time):
                     continue
 
-                if all([self._is_resource_available_at_the_moment(self._timeline[depot.id][mat.name], mat.count, route_start_time) for mat in materials]):
-                    continue
+                # if not all([self._is_resource_available_at_the_moment(self._timeline[depot.id][mat.name], mat.count,
+                #                                                       route_start_time,
+                #                                                       Time.inf()) for mat in materials]):
+                #     continue
 
                 continue_search = False
                 depot_vehicle_finish_time = route_start_time + exec_ahead_time + exec_return_time
@@ -462,7 +468,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
     def _get_reversed_route_with_additional(self, holder_node: LandGraphNode, node: LandGraphNode,
                                             vehicle_amount: int, start_reversed_time: Time) \
             -> tuple[Time, list[dict[str, tuple[str, int, Time, Time]]], Time, Time]:
-        def move_vehicles(from_node: LandGraphNode,
+        def move_vehicles_reversed(from_node: LandGraphNode,
                           to_node: LandGraphNode,
                           parent_time: Time,
                           batch_size: int):
@@ -483,7 +489,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                     start_time = self._find_reversed_earliest_start_time(state=self._timeline[road_id]['vehicles'],
                                                                          required_resources=batch_size,
                                                                          parent_time=finish_time,
-                                                                         exec_time=-road_overcome_time)
+                                                                         exec_time=road_overcome_time)
                     # road delivery has the direct form of time, because this info is using in update method
                     road_delivery[road_id] = ('vehicles', batch_size,
                                               start_time - Time(road_overcome_time), start_time)
@@ -502,14 +508,17 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         _id2road: dict[str, Road] = {road.id: road for road in self._landscape.roads}
 
         # | ------------ from platform to holder ------------ |
-        finish_delivery_time, delivery, exec_time_ahead = move_vehicles(node, holder_node, start_reversed_time,
+        finish_delivery_time, delivery, exec_time_ahead = move_vehicles_reversed(node, holder_node, start_reversed_time,
                                                                         vehicle_amount)
 
         # | ------------ from holder to platform ------------ |
         # compute the return time for vehicles
         # TODO: adapt move_vehicles() for batch_size = 1. Now the method don't allow to save deliveries of each (batch_size = 1) vehicle (similar with roads' deliveries)
-        return_time, return_delivery, exec_time_return = move_vehicles(holder_node, node, finish_delivery_time,
+        return_time, return_delivery, exec_time_return = move_vehicles_reversed(holder_node, node, finish_delivery_time,
                                                                        vehicle_amount)
+
+        if return_time < 0:
+            finish_delivery_time = -1
 
         return finish_delivery_time, [delivery, return_delivery], exec_time_ahead, exec_time_return
 

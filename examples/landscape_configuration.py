@@ -25,7 +25,7 @@ if __name__ == '__main__':
     scheduler = GeneticScheduler(number_of_generation=1,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
-                                 size_of_population=10)
+                                 size_of_population=1)
 
     # Get information about created LandscapeConfiguration
     platform_number = len(landscape.platforms)

@@ -5,7 +5,7 @@ from sampo.generator.environment import get_contractor
 from sampo.generator.environment.landscape import get_landscape_by_wg
 from sampo.generator.pipeline.extension import extend_names, extend_resources
 from sampo.generator.pipeline.project import get_small_graph, get_graph
-from sampo.schemas import LandscapeConfiguration
+from sampo.schemas import LandscapeConfiguration, MaterialReq
 from sampo.schemas.graph import WorkGraph
 
 
@@ -74,5 +74,39 @@ class SimpleSynthetic:
         wg = extend_resources(uniq_resources, wg, self._rand)
         return wg
 
-    def simple_synthetic_landscape(self, wg: WorkGraph) -> LandscapeConfiguration:
+    def set_materials_for_wg(self, wg: WorkGraph, materials_name: list[str] = None, bottom_border: int = None,
+                             top_border: int = None) -> WorkGraph:
+        """
+        Sets the materials for nodes of given work graph
+        :param top_border: the top border for the number of material kinds in each node (except service nodes)
+        :param bottom_border: the bottom border for the number of material kinds in each node (except service nodes)
+        :param materials_name: a list of material names, that can be sent
+        :return: work graph with materials
+        """
+        if materials_name is None:
+            materials_name = ['stone', 'brick', 'sand', 'rubble', 'concrete', 'metal']
+            bottom_border = 2
+            top_border = 6
+        else:
+            if bottom_border is None:
+                bottom_border = len(materials_name) // 2
+            if top_border is None:
+                top_border = len(materials_name)
+
+        if bottom_border > len(materials_name) or top_border > len(materials_name):
+            raise ValueError('The borders are out of the range of materials_name')
+
+        for node in wg.nodes:
+            if not node.work_unit.is_service_unit:
+                work_materials = list(set(self._rand.choices(materials_name, k=self._rand.randint(bottom_border, top_border))))
+                node.work_unit.material_reqs = [MaterialReq(name, self._rand.randint(52, 345), name) for name in
+                                                work_materials]
+
+        return wg
+
+    def synthetic_landscape(self, wg: WorkGraph) -> LandscapeConfiguration:
+        """
+        Generates a landscape by work graph
+        :return: LandscapeConfiguration
+        """
         return get_landscape_by_wg(wg, self._rand)

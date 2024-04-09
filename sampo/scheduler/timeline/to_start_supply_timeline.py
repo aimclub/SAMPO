@@ -107,16 +107,18 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         # that should be delivered
         start_time, mat_request = self._platform_timeline.find_min_material_time_with_additional(node, start_time,
                                                                                                  materials)
+
         # if there are no materials to be delivered and the platform could allocate resources, return start time
         if not mat_request:
             return start_time
 
         # we need to find the optimal time when materials can be supplied
         # we compare the delivery algorithms and choose the best one
-        if start_time < 60:
+        if start_time < 40:
             _, time = self._supply_resources(node, start_time, mat_request)
         else:
             _, time = self._supply_resources_reversed_v(node, start_time, mat_request)
+
         return time
 
     def _find_best_holders_by_dist(self, node: LandGraphNode,
@@ -175,8 +177,6 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
         else:
             delivery, time = self._supply_resources_reversed_v(node, deadline, materials_for_delivery, True)
 
-        # print(node.id)
-
         return delivery, time
 
     def _supply_resources_reversed_v(self, node: GraphNode,
@@ -214,6 +214,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         # the time when selected vehicles go to the platform and deliver materials
         finish_delivery_time = deadline - 1
+        finish_delivery_time_tmp = Time.inf()
 
         # information (for updating timeline) about roads that are used to deliver materials
         road_deliveries = []
@@ -235,7 +236,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                 route_start_time, deliveries, exec_ahead_time, exec_return_time = \
                     self._get_reversed_route_with_additional(depot.node, platform, len(selected_vehicles), finish_delivery_time)
 
-                assert amounts < 200
+                # assert amounts < 200
 
                 if route_start_time < 0:
                     continue
@@ -250,12 +251,13 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                 #                                                       Time.inf()) for mat in materials]):
                 #     continue
 
-                continue_search = False
-                depot_vehicle_finish_time = route_start_time + exec_ahead_time + exec_return_time
-                min_depot_time = route_start_time
-                finish_delivery_time = route_start_time + exec_return_time
-                selected_depot = depot
-                road_deliveries = deliveries
+                if finish_delivery_time_tmp > route_start_time + exec_return_time:
+                    continue_search = False
+                    depot_vehicle_finish_time = route_start_time + exec_ahead_time + exec_return_time
+                    min_depot_time = route_start_time
+                    finish_delivery_time_tmp = route_start_time + exec_return_time
+                    selected_depot = depot
+                    road_deliveries = deliveries
 
         for mat in materials:
             delivery.add_delivery(mat.name, mat.count, min_depot_time, finish_delivery_time, selected_depot.name)
@@ -450,7 +452,7 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
             end_ind = state.bisect_left(current_start_time - exec_time)
 
             not_enough_resources = False
-            for idx in range(end_ind, base_ind + 1):
+            for idx in range(end_ind - 1, base_ind - 1, -1):
                 if state[idx].available_workers_count < required_resources:
                     base_ind = max(0, idx - 1)
                     not_enough_resources = True

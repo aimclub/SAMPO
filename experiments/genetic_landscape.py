@@ -48,18 +48,19 @@ if __name__ == '__main__':
     # Number of iterations for each graph size
     total_iters = 1
     # Number of graph sizes
-    graphs = 10
+    graphs = 6
     # Graph sizes
-    sizes = [20 * i for i in range(1, graphs + 1)]
+    sizes = [100 * i for i in range(1, graphs + 1)]
     total_results = []
     # Seed for random number generator can be specified here
     seed = 1
     # Iterate over graph sizes and receive results
     for size in sizes:
+        print(size)
+        print(seed)
         results_by_size = run_test((size, total_iters, seed))
         seed += 1
         total_results.append(results_by_size)
-        print(size)
 
     # Save results to the DataFrame
     result_df = {'size': [], 'makespan': []}

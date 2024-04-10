@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # Generate synthetic graph with material requirements for
     # number of unique works names and number of unique resources
     ss = SimpleSynthetic(rand=31)
-    wg = ss.small_work_graph()
+    wg = ss.work_graph(top_border=200)
     wg = ss.set_materials_for_wg(wg)
     landscape = ss.synthetic_landscape(wg)
 

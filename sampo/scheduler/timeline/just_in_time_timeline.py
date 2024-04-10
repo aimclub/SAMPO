@@ -91,7 +91,7 @@ class JustInTimeTimeline(Timeline):
                                                                            cur_start_time,
                                                                            node.work_unit.need_materials())
 
-            cur_start_time = self._find_min_start_time(worker_team, cur_start_time, spec)
+            cur_start_time = self._find_min_start_time(worker_team, material_time, spec)
 
             if cur_start_time > material_time:
                 continue

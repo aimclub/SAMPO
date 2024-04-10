@@ -200,8 +200,6 @@ class FromStartSupplyTimeline(BaseSupplyTimeline):
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, start_time)
         delivery, time = self._supply_resources(node, start_time, materials_for_delivery, update)
 
-        print(node.id)
-
         return delivery, time
 
     def _supply_resources(self, node: GraphNode,
@@ -234,14 +232,14 @@ class FromStartSupplyTimeline(BaseSupplyTimeline):
         selected_vehicles = []
         depot_vehicle_finish_time = Time(0)
 
-        start_delivery_time = Time(-1)
+        start_delivery_time = deadline + 1
         finish_delivery_time = Time(-1)
 
         road_deliveries = []
 
         # find time, that depot could provide resources
-        while finish_delivery_time < deadline:
-            start_delivery_time += 1
+        while finish_delivery_time != deadline:
+            start_delivery_time -= 1
             # min start time found on this iteration
             local_min_start_time = Time.inf()
 

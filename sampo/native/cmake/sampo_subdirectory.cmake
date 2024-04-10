@@ -1,0 +1,25 @@
+macro(sampo_add_subdirectory directory)
+    set(optional EXCLUDE_FROM_ALL)
+    cmake_parse_arguments(PARSED "${optional}" "" "" ${ARGN})
+
+    if (PARSED_EXCLUDE_FROM_ALL OR sampo_STANDALONE_CONFIGURE)
+        file(RELATIVE_PATH relative_path ${SAMPO_SOURCE_DIR} ${CMAKE_CURRENT_LIST_DIR}/${directory})
+        add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/${directory} ${CMAKE_BINARY_DIR}/${relative_path} EXCLUDE_FROM_ALL)
+    else()
+        add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/${directory})
+    endif()
+endmacro()
+
+function(get_targets_in_subdirectory output directory)
+    get_property(targets DIRECTORY ${directory} PROPERTY BUILDSYSTEM_TARGETS)
+    get_property(imported_targets DIRECTORY ${directory} PROPERTY IMPORTED_TARGETS)
+    set(${output} ${targets} ${imported_targets})
+
+    get_property(subdirs DIRECTORY ${directory} PROPERTY SUBDIRECTORIES)
+    foreach(dir ${subdirs})
+        get_targets_in_subdirectory(subtargets ${dir})
+        list(APPEND ${output} ${subtargets})
+    endforeach()
+
+    set(${output} ${${output}} PARENT_SCOPE)
+endfunction()

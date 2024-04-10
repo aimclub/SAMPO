@@ -2,16 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 cmake_policy(SET CMP0091 NEW)
 
-#set(CMAKE_C_COMPILER "C:\\msys64\\mingw64\\bin\\gcc")
-#set(CMAKE_CXX_COMPILER "C:\\msys64\\mingw64\\bin\\g++")
-#set(CMAKE_C_COMPILER "gcc")
-#set(CMAKE_CXX_COMPILER "g++")
-
-# project(native CXX)
-
 set(CMAKE_CXX_STANDARD 20)
-
-# find_package(PythonLibs REQUIRED)
 
 include_guard(GLOBAL)
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
@@ -61,7 +52,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 find_package(OpenMP)
-# FIX: CMake не находит библиотек OpenMP для линковки на Windows с компилятором clang
+# FIX: CMake does not find OpenMP for linking on Windows with clang
 if (WIN32 AND NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_link_libraries(OpenMP::OpenMP_CXX INTERFACE libomp)
 endif()
@@ -73,47 +64,12 @@ include(sampo_subdirectory)
 include(sampo_glob_sources)
 include(sampo_install_utils)
 include(sampo_common)
-include(sampo_clang_tools)
 include(ci)
 
 sampo_add_subdirectory(third_party)
-sampo_add_subdirectory(modules)
+sampo_add_subdirectory(native)
 sampo_add_ci_copy_deps()
 
 if (NOT SAMPO_STANDALONE_CONFIGURE)
     sampo_install_runtime_deps()
 endif()
-
-#include_directories(
-#        modules/native/timeEstimatorLibrary
-#)
-#
-#add_executable(native
-#        native.cpp native.h                                # main files
-#        dtime.cpp dtime.h                                  # Time implementation
-#        python_deserializer.cpp python_deserializer.h      # custom Python datastruct handler
-#        workgraph.h contractor.h modules/native/basic_types.h             # custom Python types definition
-#        pycodec.h                                          # basic type transcoder
-#        modules/native/chromosome_evaluator.cpp modules/native/chromosome_evaluator.h genetic.h evaluator_types.h # algorithms
-#        modules/native/utils/use_numpy.cpp modules/native/utils/use_numpy.h
-#        time_estimator.h time_estimator.cpp
-#        ${DLLOADER_SRC}
-#        external.h)
-
-#find_package(OpenMP)
-#if (OPENMP_FOUND)
-#    message("OpenMP found")
-#    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-#    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-#    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-#endif()
-
-#message(${PYTHON_INCLUDE_DIRS})
-#message(${NUMPY_INCLUDE_DIR})
-
-#include_directories(${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
-# target_link_libraries(native ${PYTHON_LIBRARIES})
-#target_link_libraries(native ${CMAKE_DL_LIBS})
-
-#find_package(Python3 3.10 COMPONENTS Interpreter Development REQUIRED)
-

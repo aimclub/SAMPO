@@ -61,10 +61,10 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
                    if material_carry_one_vehicle.name in need_mat)
 
     def _can_deliver_to_time(self, node: GraphNode, finish_delivery_time: Time, materials: list[Material]) -> bool:
-        if finish_delivery_time < 60:
-            _, time = self._supply_resources(node, finish_delivery_time, materials)
-        else:
-            _, time = self._supply_resources_reversed_v(node, finish_delivery_time, materials)
+        # if finish_delivery_time < 60:
+        #     _, time = self._supply_resources(node, finish_delivery_time, materials)
+        # else:
+        _, time = self._supply_resources_reversed_v(node, finish_delivery_time, materials)
         # assert time >= finish_delivery_time
         return time == finish_delivery_time
 
@@ -114,10 +114,10 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         # we need to find the optimal time when materials can be supplied
         # we compare the delivery algorithms and choose the best one
-        if start_time < 40:
-            _, time = self._supply_resources(node, start_time, mat_request)
-        else:
-            _, time = self._supply_resources_reversed_v(node, start_time, mat_request)
+        # if start_time < 40:
+        #     _, time = self._supply_resources(node, start_time, mat_request)
+        # else:
+        _, time = self._supply_resources_reversed_v(node, start_time, mat_request)
 
         return time
 
@@ -172,10 +172,10 @@ class ToStartSupplyTimeline(BaseSupplyTimeline):
 
         # get the materials that should be delivered to the platform
         materials_for_delivery = self._platform_timeline.get_material_for_delivery(node, materials, deadline)
-        if deadline < 40:
-            delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
-        else:
-            delivery, time = self._supply_resources_reversed_v(node, deadline, materials_for_delivery, True)
+        # if deadline < 40:
+        #     delivery, time = self._supply_resources(node, deadline, materials_for_delivery, True)
+        # else:
+        delivery, time = self._supply_resources_reversed_v(node, deadline, materials_for_delivery, True)
 
         return delivery, time
 

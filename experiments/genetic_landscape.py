@@ -27,10 +27,10 @@ def run_test(args):
                        for i in range(1)]
 
         landscape = ss.synthetic_landscape(wg)
-        scheduler = GeneticScheduler(number_of_generation=1,
+        scheduler = GeneticScheduler(number_of_generation=2,
                                      mutate_order=0.05,
                                      mutate_resources=0.005,
-                                     size_of_population=1,
+                                     size_of_population=10,
                                      work_estimator=work_time_estimator,
                                      rand=rand)
         schedule = DefaultInputPipeline() \
@@ -43,6 +43,7 @@ def run_test(args):
         result.append(schedule[0].schedule.execution_time)
 
     return result
+
 
 if __name__ == '__main__':
     # Number of iterations for each graph size
@@ -70,5 +71,5 @@ if __name__ == '__main__':
         result_df['size'].append(sizes[i])
         result_df['makespan'].append(result)
 
-    pd.DataFrame(result_df).to_csv('landscape_genetic_results1.csv', index=False)
+    pd.DataFrame(result_df).to_csv('landscape_genetic_results2.csv', index=False)
 

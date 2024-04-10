@@ -130,7 +130,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                                init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                                rand: random.Random,
                                spec: ScheduleSpec,
-                               weights: list[int],
+                               weights: list[int] = None,
                                pop: list[ChromosomeType] = None,
                                landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                fitness_object: FitnessFunction = TimeFitness(),
@@ -176,15 +176,19 @@ def build_schedules_with_cache(wg: WorkGraph,
                                      init_schedules, assigned_parent_time, fitness_weights,
                                      sgs_type, only_lft_initialization, is_multiobjective)
 
-    # create population of a given size
-    pop = pop or SAMPO.backend.generate_first_population(population_size)
-
     SAMPO.logger.info(f'Toolbox initialization & first population took {(time.time() - start) * 1000} ms')
 
     have_deadline = deadline is not None
     fitness_f = fitness_object if not have_deadline else TimeFitness()
     if have_deadline:
         toolbox.register_individual_constructor((-1,))
+
+    # create population of a given size
+    if pop is None:
+        pop = SAMPO.backend.generate_first_population(population_size)
+    else:
+        pop = [toolbox.Individual(chromosome) for chromosome in pop]
+
     evaluation_start = time.time()
 
     hof = tools.ParetoFront(similar=compare_individuals)

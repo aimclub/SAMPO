@@ -139,7 +139,11 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         super().cache_genetic_info(population_size, mutate_order, mutate_resources, mutate_zones, deadline,
                                    weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
                                    only_lft_initialization, is_multiobjective)
-        self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
+        if init_schedules:
+            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules,
+                                                  self._landscape)
+        else:
+            self._init_chromosomes = []
         self._pool = None
 
     def compute_chromosomes(self, fitness: FitnessFunction, chromosomes: list[ChromosomeType]) -> list[float]:

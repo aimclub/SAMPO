@@ -39,10 +39,12 @@ class CycleHybridScheduler:
         cur_fitness = Time.inf().value
         plateau_steps = 0
 
-        while plateau_steps < self._max_plateau_size:
+        while True:
             pop_fitness = self._get_population_fitness(pop)
             if pop_fitness == cur_fitness:
                 plateau_steps += 1
+                if plateau_steps == self._max_plateau_size:
+                    break
             else:
                 plateau_steps = 0
                 cur_fitness = pop_fitness
@@ -59,23 +61,7 @@ class CycleHybridScheduler:
                  assigned_parent_time: Time = Time(0),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  landscape: LandscapeConfiguration = LandscapeConfiguration()) -> Schedule:
-        pop = self._starting_scheduler.schedule([], wg, contractors, spec, assigned_parent_time, landscape)
-
-        cur_fitness = Time.inf().value
-        plateau_steps = 0
-
-        while plateau_steps < self._max_plateau_size:
-            pop_fitness = self._get_population_fitness(pop)
-            if pop_fitness == cur_fitness:
-                plateau_steps += 1
-            else:
-                plateau_steps = 0
-                cur_fitness = pop_fitness
-
-            for scheduler in self._cycle_schedulers:
-                pop = scheduler.schedule(pop, wg, contractors, spec, assigned_parent_time, landscape)
-
-        best_ind = self._get_best_individual(pop)
+        best_ind = self.run(wg, contractors, spec, assigned_parent_time, landscape)
 
         toolbox = create_toolbox(wg=wg, contractors=contractors, landscape=landscape,
                                  assigned_parent_time=assigned_parent_time, spec=spec,

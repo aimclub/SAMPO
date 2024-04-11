@@ -20,33 +20,13 @@ private:
     float max_val;
 
 public:
-    explicit IntervalGaussian(
-            float mean = 1, float sigma = EPS, float min_val = 0, float max_val = 0
-    )
-            : d(normal_distribution<float> { mean, max(sigma, EPS) }),
-              min_val(min_val),
-              max_val(max_val) {}
+    explicit IntervalGaussian(float mean = 1, float sigma = EPS, float min_val = 0, float max_val = 0);
 
-    IntervalGaussian(const IntervalGaussian &other)
-            : IntervalGaussian(
-            (float)other.d.mean(),
-            (float)other.d.stddev(),
-            other.min_val,
-            other.max_val
-    ) { }
+    IntervalGaussian(const IntervalGaussian &other);
 
-    double mean() {
-        return d.mean();
-    }
+    double mean();
 
-    float randFloat() {
-        return (float)d(gen);
-    }
+    float randFloat();
 
-    int randInt() {
-        int value = (int)round(randFloat());
-        value     = max(value, int(min_val - EPS));
-        value     = min(value, int(max_val + EPS));
-        return value;
-    }
+    int randInt();
 };

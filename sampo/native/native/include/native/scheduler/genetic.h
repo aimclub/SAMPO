@@ -31,22 +31,6 @@ private:
 
     ChromosomeEvaluator evaluator;
 
-    //    template<typename T>
-    //    void swap(T* o1, T* o2) {
-    //        T tmp = *o1;
-    //        *o1 = *o2;
-    //        *o2 = tmp;
-    //    }
-    //
-    //    template<typename T>
-    //    void shuffle(T* data, int first, int last, unsigned seed) {
-    //        auto rnd = default_random_engine(seed);
-    //        for (int i = last - 1; i > first; i--) {
-    //            std::uniform_int_distribution<int> d(first, i);
-    //            swap(data + i, data + d(rnd));
-    //        }
-    //    }
-
     static void deleteChromosomes(vector<Chromosome *> &chromosomes) {
         for (auto *chromosome : chromosomes) {
             delete chromosome;
@@ -118,71 +102,7 @@ public:
         applyFunctions[2] = &Genetic::applyContractors;
     }
 
-    Chromosome *run(vector<Chromosome *> &initialPopulation) {
-        // TODO Ensure this is copy
-        auto population = initialPopulation;
-
-        int maxPlateau = 100;
-        int curPlateau = 0;
-
-        evaluator.evaluate(population);
-
-        int prevFitness            = INT_MAX;
-        Chromosome *bestChromosome = nullptr;
-
-        for (auto i : population) {
-            if (bestChromosome == nullptr
-                || i->fitness < bestChromosome->fitness) {
-                bestChromosome = i;
-            }
-        }
-
-        int g = 0;
-        // TODO Propagate from Python
-        const int MAX_GENERATIONS = 50;
-
-        while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
-            //        printf("--- Generation %i | fitness = %i\n", g,
-            //        bestChromosome->fitness);
-            // update plateau info
-            if (bestChromosome->fitness == prevFitness) {
-                curPlateau++;
-            }
-            else {
-                curPlateau = 0;
-            }
-
-            auto offspring = selection(population);
-
-            //        cout << "Selected " << offspring.size() << " individuals"
-            //        << endl;
-
-            auto nextGeneration = applyAll(offspring);
-
-            evaluator.evaluate(nextGeneration);
-
-            auto newBest   = updateHOF(nextGeneration, bestChromosome);
-            bestChromosome = new Chromosome(newBest);
-
-            // renew population
-            deleteChromosomes(population);
-            population.clear();
-            population.insert(
-                population.end(), offspring.begin(), offspring.end()
-            );
-            population.insert(
-                population.end(), nextGeneration.begin(), nextGeneration.end()
-            );
-
-            g++;
-        }
-        deleteChromosomes(population);
-
-        //        cout << "Result validation: " <<
-        //        evaluator.isValid(bestChromosome) << endl;
-
-        return bestChromosome;
-    }
+    Chromosome* run(vector<Chromosome *> &initialPopulation);
 };
 
 #endif    // NATIVE_GENETIC_H

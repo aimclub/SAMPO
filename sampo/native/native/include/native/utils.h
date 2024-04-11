@@ -1,5 +1,4 @@
-#ifndef SAMPO_UTILS_H
-#define SAMPO_UTILS_H
+#pragma once
 
 #include <vector>
 #include <numeric>
@@ -34,11 +33,6 @@ int randInt(int min, int max);
 
 std::vector<size_t> argsort(const std::vector<Chromosome *> &array);
 
-template <typename T>
-T identity(const T &t) {
-    return t;
-}
-
 template <typename T, typename K, typename V>
 std::unordered_map<K, V> build_index(vector<T> items,
                                      K (*get_key)(const T&),
@@ -63,5 +57,3 @@ std::unordered_map<K, T> build_index(vector<T> items,
 
     return diction;
 }
-
-#endif //SAMPO_UTILS_H

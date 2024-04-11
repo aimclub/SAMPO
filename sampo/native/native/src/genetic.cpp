@@ -236,3 +236,69 @@ Chromosome* Genetic::updateHOF(vector<Chromosome *> &population, Chromosome *old
     }
     return leader;
 }
+
+Chromosome* Genetic::run(vector<Chromosome *> &initialPopulation) {
+    // TODO Ensure this is copy
+    auto population = initialPopulation;
+
+    int maxPlateau = 100;
+    int curPlateau = 0;
+
+    evaluator.evaluate(population);
+
+    int prevFitness            = INT_MAX;
+    Chromosome *bestChromosome = nullptr;
+
+    for (auto i : population) {
+        if (bestChromosome == nullptr
+            || i->fitness < bestChromosome->fitness) {
+            bestChromosome = i;
+        }
+    }
+
+    int g = 0;
+    // TODO Propagate from Python
+    const int MAX_GENERATIONS = 50;
+
+    while (g < MAX_GENERATIONS && curPlateau < maxPlateau) {
+        //        printf("--- Generation %i | fitness = %i\n", g,
+        //        bestChromosome->fitness);
+        // update plateau info
+        if (bestChromosome->fitness == prevFitness) {
+            curPlateau++;
+        }
+        else {
+            curPlateau = 0;
+        }
+
+        auto offspring = selection(population);
+
+        //        cout << "Selected " << offspring.size() << " individuals"
+        //        << endl;
+
+        auto nextGeneration = applyAll(offspring);
+
+        evaluator.evaluate(nextGeneration);
+
+        auto newBest   = updateHOF(nextGeneration, bestChromosome);
+        bestChromosome = new Chromosome(newBest);
+
+        // renew population
+        deleteChromosomes(population);
+        population.clear();
+        population.insert(
+                population.end(), offspring.begin(), offspring.end()
+        );
+        population.insert(
+                population.end(), nextGeneration.begin(), nextGeneration.end()
+        );
+
+        g++;
+    }
+    deleteChromosomes(population);
+
+    //        cout << "Result validation: " <<
+    //        evaluator.isValid(bestChromosome) << endl;
+
+    return bestChromosome;
+}

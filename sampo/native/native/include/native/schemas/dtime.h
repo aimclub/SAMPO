@@ -1,6 +1,8 @@
 #ifndef NATIVE_TIME_H
 #define NATIVE_TIME_H
 
+#define TIME_INF 2000000000
+
 class Time {
 private:
     int value;

@@ -34,4 +34,34 @@ int randInt(int min, int max);
 
 std::vector<size_t> argsort(const std::vector<Chromosome *> &array);
 
+template <typename T>
+T identity(const T &t) {
+    return t;
+}
+
+template <typename T, typename K, typename V>
+std::unordered_map<K, V> build_index(vector<T> items,
+                                     K (*get_key)(const T&),
+                                     V (*get_value)(const T&)) {
+    std::unordered_map<K, V> diction;
+
+    for (const auto &item : items) {
+        diction.insert({ get_key(item), get_value(item) });
+    }
+
+    return diction;
+}
+
+template <typename T, typename K>
+std::unordered_map<K, T> build_index(vector<T> items,
+                                     K (*get_key)(const T&)) {
+    std::unordered_map<K, T> diction;
+
+    for (const auto &item : items) {
+        diction.insert({ get_key(item), item });
+    }
+
+    return diction;
+}
+
 #endif //SAMPO_UTILS_H

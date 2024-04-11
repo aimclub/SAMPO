@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "workgraph.h"
+#include "native/utils.h"
 
 #define TIME_INF 2000000000
 
@@ -59,10 +60,8 @@ public:
         // TODO Rework with OOP
 
         // build worker_req index
-        unordered_map<string, WorkerReq> worker_reqs;
-        for (const auto& worker_req : work.worker_reqs) {
-            worker_reqs[worker_req.kind] = worker_req;
-        }
+        auto worker_reqs = build_index<WorkerReq, string>(work.worker_reqs,
+                                                                   [](const WorkerReq &req) { return req.kind; });
 
         for (const auto& worker : workers) {
             const auto& worker_req = worker_reqs[worker.name];

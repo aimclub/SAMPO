@@ -101,7 +101,7 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         enumerated_works_remaining.emplace_back(node, contractor, worker_team, exec_time);
     }
 
-    GeneralTimeline<GraphNode*> work_timeline;
+    GeneralTimeline<GraphNode> work_timeline;
 
     Time start_time;
     Time pred_start_time;

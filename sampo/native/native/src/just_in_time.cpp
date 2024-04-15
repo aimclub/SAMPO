@@ -101,10 +101,10 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
 //    return max(x, y);
 //}
 
-bool JustInTimeTimeline::can_schedule_at_the_moment(GraphNode *node,
-                                                    vector<Worker>& worker_team,
-                                                    swork_dict_t &node2swork,
-                                                    WorkSpec &spec,
+bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
+                                                    const vector<Worker>& worker_team,
+                                                    const swork_dict_t &node2swork,
+                                                    const WorkSpec &spec,
                                                     Time start_time,
                                                     Time exec_time) const {
     if (worker_team.empty()) {

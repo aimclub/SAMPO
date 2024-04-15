@@ -114,3 +114,32 @@ bool Time::operator==(const Time &other) const {
 bool Time::operator==(int other) const {
     return this->value == other;
 }
+
+Time& Time::operator++(int n) {
+    if (n == 0)
+        n = 1;
+    return this->operator+=(n);
+}
+
+Time& Time::operator--(int n) {
+    if (n == 0)
+        n = 1;
+    return this->operator-=(n);
+}
+
+Time& Time::operator+=(int other) {
+    this->value += other;
+    return *this;
+}
+
+Time& Time::operator+=(const Time &other) {
+    return this->operator+=(other.value);
+}
+
+Time& Time::operator-=(int other) {
+    return this->operator+=(-other);
+}
+
+Time& Time::operator-=(const Time &other) {
+    return this->operator-=(other.value);
+}

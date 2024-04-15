@@ -8,7 +8,7 @@ class GeneralTimeline {
 public:
     void update_timeline(Time start_time, Time exec_time, T obj);
 
-    T operator[](size_t i);
+    tuple<Time, Time, T&> operator[](size_t i);
 
     size_t size();
 };

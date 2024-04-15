@@ -75,24 +75,24 @@ public:
                                                                                 Time assigned_parent_time,
                                                                                 const WorkTimeEstimator &work_estimator) const = 0;
 
-    virtual bool can_schedule_at_the_moment(GraphNode *node,
-                                            vector<Worker>& worker_team,
-                                            swork_dict_t &node2swork,
-                                            WorkSpec &spec,
+    virtual bool can_schedule_at_the_moment(const GraphNode *node,
+                                            const vector<Worker>& worker_team,
+                                            const swork_dict_t &node2swork,
+                                            const WorkSpec &spec,
                                             Time start_time,
                                             Time exec_time) const = 0;
 
-    virtual void update_timeline(GraphNode *node,
-                                 vector<Worker>& worker_team,
-                                 WorkSpec &spec,
+    virtual void update_timeline(const GraphNode *node,
+                                 const vector<Worker>& worker_team,
+                                 const WorkSpec &spec,
                                  Time finish_time,
                                  Time exec_time) = 0;
 
-    virtual Time schedule(GraphNode *node,
-                          vector<Worker>& worker_team,
+    virtual Time schedule(const GraphNode *node,
+                          const vector<Worker>& worker_team,
                           swork_dict_t &node2swork,
-                          WorkSpec &spec,
-                          Contractor *contractor,
+                          const WorkSpec &spec,
+                          const Contractor *contractor,
                           Time assigned_start_time,
                           Time assigned_time,
                           Time assigned_parent_time,

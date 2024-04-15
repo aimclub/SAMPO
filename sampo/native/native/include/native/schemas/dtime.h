@@ -57,6 +57,18 @@ public:
     bool operator==(const Time &other) const;
 
     bool operator==(int other) const;
+
+    Time& operator++(int n);
+
+    Time& operator--(int n);
+
+    Time& operator+=(int other);
+
+    Time& operator+=(const Time &other);
+
+    Time& operator-=(int other);
+
+    Time& operator-=(const Time &other);
 };
 
 #endif    // NATIVE_TIME_H

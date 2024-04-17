@@ -122,7 +122,7 @@ struct map_caster {
         }
         for (auto &&kv : src) {
             auto key = reinterpret_steal<object>(
-                key_conv::cast(forward_like<T>(kv.first), policy_key, parent));
+                key_conv::cast(forward_like<T>(kv.begin), policy_key, parent));
             auto value = reinterpret_steal<object>(
                 value_conv::cast(forward_like<T>(kv.second), policy_value, parent));
             if (!key || !value) {

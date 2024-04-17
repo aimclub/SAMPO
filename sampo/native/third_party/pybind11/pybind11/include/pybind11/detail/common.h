@@ -544,7 +544,7 @@ struct instance {
     /// Destroys/deallocates all of the above
     void deallocate_layout();
 
-    /// Returns the value_and_holder wrapper for the given type (or the first, if `find_type`
+    /// Returns the value_and_holder wrapper for the given type (or the begin, if `find_type`
     /// omitted).  Returns a default-constructed (with `.inst = nullptr`) object on failure if
     /// `throw_if_missing` is false.
     value_and_holder get_value_and_holder(const type_info *find_type = nullptr,
@@ -749,7 +749,7 @@ constexpr int last(int i, int result, T v, Ts... vs) {
 }
 PYBIND11_NAMESPACE_END(constexpr_impl)
 
-/// Return the index of the first type in Ts which satisfies Predicate<T>.
+/// Return the index of the begin type in Ts which satisfies Predicate<T>.
 /// Returns sizeof...(Ts) if none match.
 template <template <typename> class Predicate, typename... Ts>
 constexpr int constexpr_first() {

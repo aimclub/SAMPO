@@ -1,7 +1,12 @@
 #include "native/schemas/scheduled_work.h"
 
-ScheduledWork::ScheduledWork(WorkUnit* work_unit, pair<Time, Time> start_end_time, vector<Worker> workers, Contractor *contractor,
-                             vector<Equipment> equipments, vector<MaterialDelivery> materials, ConstructionObject object)
+ScheduledWork::ScheduledWork(const WorkUnit* work_unit,
+                             pair<Time, Time> start_end_time,
+                             vector<Worker> workers,
+                             const Contractor *contractor,
+                             vector<Equipment> equipments,
+                             vector<MaterialDelivery> materials,
+                             ConstructionObject object)
     : work_unit(work_unit), start_end_time(std::move(start_end_time)),
       workers(std::move(workers)), contractor(contractor), equipments(std::move(equipments)),
       materials(std::move(materials)), object(std::move(object)) {
@@ -23,7 +28,7 @@ ScheduledWork::ScheduledWork(WorkUnit* work_unit, pair<Time, Time> start_end_tim
         contractor->get_id
     }*/
 
-    _cost = 0;
+    cost = 0;
 
     // TODO
 //		for (auto& worker : workers) {
@@ -39,8 +44,8 @@ const Time& ScheduledWork::start_time() const {
     return start_end_time.first;
 }
 
-void ScheduledWork::start_time(Time val) {
-    start_end_time = make_pair(std::move(val), start_end_time.second);
+void ScheduledWork::start_time(const Time& val) {
+    start_end_time = make_pair(val, start_end_time.second);
 }
 
 const Time& ScheduledWork::finish_time() const {

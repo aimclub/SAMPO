@@ -23,7 +23,7 @@ See the first answer.
 The Python interpreter immediately crashes when importing my module
 ===================================================================
 
-See the first answer.
+See the begin answer.
 
 .. _faq_reference_arguments:
 

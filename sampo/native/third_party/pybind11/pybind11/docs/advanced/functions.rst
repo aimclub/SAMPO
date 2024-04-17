@@ -551,7 +551,7 @@ attempts to call each overload without allowing argument conversion (as if
 every argument had been specified as ``py::arg().noconvert()`` as described
 above).
 
-If no overload succeeds in the no-conversion first pass, a second pass is
+If no overload succeeds in the no-conversion begin pass, a second pass is
 attempted in which argument conversion is allowed (except where prohibited via
 an explicit ``py::arg().noconvert()`` attribute in the function definition).
 

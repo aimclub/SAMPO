@@ -38,49 +38,42 @@ public:
         GraphNode *start,
         GraphNode *finish,
         float lag     = 0,
-        EdgeType type = EdgeType::None
+        const EdgeType &type = EdgeType::None
     )
         : start(start), finish(finish), lag(lag), type(type) { }
 };
 
 class GraphNode {
 private:
-    WorkUnit *workUnit;
-    std::vector<GraphEdge> parentEdges;
-    std::vector<GraphEdge> childrenEdges;
+    WorkUnit *work_unit;
+    std::vector<GraphEdge> parent_edges;
+    std::vector<GraphEdge> children_edges;
 public:
-    explicit GraphNode(WorkUnit *workUnit) : workUnit(workUnit) {};
-
     // Create plain node with all edge types = FS
-    GraphNode(WorkUnit *workUnit, std::vector<GraphNode *> &parents)
-        : GraphNode(workUnit) {
-        for (auto p : parents) {
-            auto edge = GraphEdge(p, this, -1, EdgeType::FinishStart);
-            parentEdges.emplace_back(edge);
-            p->childrenEdges.emplace_back(edge);
+    explicit GraphNode(WorkUnit *work_unit, const std::vector<GraphNode *> &parents = {}) : work_unit(work_unit) {
+        for (auto* p : parents) {
+            GraphEdge edge(p, this, -1, EdgeType::FinishStart);
+            parent_edges.push_back(edge);
+            p->children_edges.push_back(edge);
         }
     }
 
     // Create node with custom edge types
-    GraphNode(
-        WorkUnit *workUnit,
-        std::vector<tuple<GraphNode *, float, EdgeType>> &parents
-    )
+    GraphNode(WorkUnit *workUnit, const std::vector<tuple<GraphNode *, float, EdgeType>> &parents)
         : GraphNode(workUnit) {
         add_parents(parents);
     }
 
-    void add_parents(std::vector<tuple<GraphNode *, float, EdgeType>> &parents) {
-        for (auto &tuple : parents) {
-            auto* p    = get<0>(tuple);
-            auto edge = GraphEdge(p, this, get<1>(tuple), get<2>(tuple));
-            parentEdges.emplace_back(edge);
-            p->childrenEdges.emplace_back(edge);
+    void add_parents(const std::vector<tuple<GraphNode *, float, EdgeType>> &parents) {
+        for (const auto&[p, lag, type] : parents) {
+            auto edge = GraphEdge(p, this, lag, type);
+            parent_edges.emplace_back(edge);
+            p->children_edges.emplace_back(edge);
         }
     }
 
-    GraphNode *inseparableSon() {
-        for (GraphEdge &son : childrenEdges) {
+    GraphNode* inseparable_son() const {
+        for (const GraphEdge &son : children_edges) {
             if (son.type == EdgeType::InseparableFinishStart) {
                 return son.finish;
             }
@@ -88,8 +81,8 @@ public:
         return nullptr;
     }
 
-    GraphNode *inseparableParent() {
-        for (GraphEdge &parent : parentEdges) {
+    GraphNode* inseparable_parent() const {
+        for (const GraphEdge &parent : parent_edges) {
             if (parent.type == EdgeType::InseparableFinishStart) {
                 return parent.start;
             }
@@ -97,50 +90,50 @@ public:
         return nullptr;
     }
 
-    std::vector<GraphNode *> parents() {
+    std::vector<GraphNode *> parents() const {
         auto parents = std::vector<GraphNode *>();
-        for (GraphEdge &parent : parentEdges) {
+        for (const GraphEdge &parent : parent_edges) {
             parents.push_back(parent.start);
         }
         return parents;
     }
 
-    std::vector<GraphNode *> children() {
+    std::vector<GraphNode *> children() const {
         auto children = std::vector<GraphNode *>();
-        for (GraphEdge &child : childrenEdges) {
+        for (const GraphEdge &child : children_edges) {
             children.push_back(child.start);
         }
         return children;
     }
 
-    std::vector<GraphEdge> edgesTo() {
-        return parentEdges;
+    std::vector<GraphEdge> edgesTo() const {
+        return parent_edges;
     }
 
-    std::vector<GraphEdge> edgesFrom() {
-        return childrenEdges;
+    std::vector<GraphEdge> edgesFrom() const {
+        return children_edges;
     }
 
-    WorkUnit *getWorkUnit() {
-        return workUnit;
+    WorkUnit *getWorkUnit() const {
+        return work_unit;
     }
 
-    string id() {
+    string id() const {
         return getWorkUnit()->id;
     }
 
     inline bool is_inseparable_parent() {
-        return inseparableSon() != nullptr;
+        return inseparable_son() != nullptr;
     }
 
     inline bool is_inseparable_son() {
-        return inseparableParent() != nullptr;
+        return inseparable_parent() != nullptr;
     }
 
-    std::vector<GraphNode *> getInseparableChainWithSelf() const {
-        std::vector<GraphNode *> chain;
+    std::vector<const GraphNode *> getInseparableChainWithSelf() const {
+        std::vector<const GraphNode *> chain;
         chain.push_back(this);
-        auto* child = inseparableSon();
+        auto* child = inseparable_son();
         if (child) {
             auto sub_chain = child->getInseparableChainWithSelf();
             chain.insert(chain.end(), sub_chain.begin(), sub_chain.end());
@@ -148,9 +141,9 @@ public:
         return chain;
     }
 
-    Time min_start_time(const swork_dict_t &node2swork) {
+    Time min_start_time(const swork_dict_t &node2swork) const {
         Time time;
-        for (auto& edge : this->parentEdges) {
+        for (auto& edge : this->parent_edges) {
             auto it = node2swork.find(edge.start->id());
             if (it == node2swork.end()) {
                 return Time::inf();

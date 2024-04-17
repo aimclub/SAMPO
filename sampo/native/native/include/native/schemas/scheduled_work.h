@@ -14,26 +14,31 @@ using namespace std;
 
 class ScheduledWork {
 public:
-	WorkUnit* work_unit;
+	const WorkUnit* work_unit;
 	pair<Time, Time> start_end_time;
 	vector<Worker> workers;
-	Contractor *contractor;
+	const Contractor *contractor;
 	//string contractor;
 	vector<Equipment> equipments;
 	vector<MaterialDelivery> materials;
 	ConstructionObject object;
-	int _cost;
+	int cost;
 
     ScheduledWork();
 
-	ScheduledWork(WorkUnit* work_unit, pair<Time, Time> start_end_time, vector<Worker> workers, Contractor *contractor,
-		          vector<Equipment> equipments, vector<MaterialDelivery> materials, ConstructionObject object);
+	ScheduledWork(const WorkUnit* work_unit,
+                  pair<Time, Time> start_end_time,
+                  vector<Worker> workers,
+                  const Contractor *contractor,
+		          vector<Equipment> equipments,
+                  vector<MaterialDelivery> materials,
+                  ConstructionObject object);
 
 	Time duration() const;
 
 	const Time& start_time() const;
 
-	void start_time(Time val);
+	void start_time(const Time& val);
 
 	const Time& finish_time() const;
 };

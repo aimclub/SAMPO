@@ -12,12 +12,12 @@ enum EventType {
 
 template <typename T>
 class ScheduleEvent {
-private:
+public:
     EventType type;
     Time time;
     int event_idx;
     T* obj;
-public:
+
     ScheduleEvent(EventType type, Time time, int event_idx, T* obj = nullptr)
         : type(type), time(time), event_idx(event_idx), obj(obj) {}
 };
@@ -38,17 +38,42 @@ class EventSortedList {
 private:
     std::set<ScheduleEvent<T>, decltype(event_cmp<T>)*> data;
 public:
-    size_t bisect_right(const ScheduleEvent<T>& value) const;
+    std::set<ScheduleEvent<T>>::const_iterator begin() const {
+        return data.cbegin();
+    }
 
-    size_t bisect_right(const Time& timestamp) const;
+    std::set<ScheduleEvent<T>>::const_iterator end() const {
+        return data.cend();
+    }
 
-    size_t bisect_left(const ScheduleEvent<T>& value) const;
+    std::set<ScheduleEvent<T>>::const_iterator bisect_right(const ScheduleEvent<T>& value) const {
+        // TODO Test it is equals to Python variant
+        std::set<ScheduleEvent<T>>::const_iterator bound = data.upper_bound(value);
+        if (bound != data.cbegin()) {
+            bound++;
+            if (bound == value) {
+                return bound - 1;
+            }
+        }
+        return bound;
+    }
 
-    size_t bisect_left(const Time& timestamp) const;
+    std::set<ScheduleEvent<T>>::const_iterator bisect_right(const Time& timestamp) const {
+        return bisect_right(ScheduleEvent<T>(EventType::END, timestamp, TIME_INF));
+    }
 
-    ScheduleEvent<T>& operator[](size_t i);
+    std::set<ScheduleEvent<T>>::const_iterator bisect_left(const ScheduleEvent<T>& value) const {
+        // TODO Test it is equals to Python variant
+        return data.lower_bound(value);
+    }
 
-    void add(const ScheduleEvent<T>& value);
+    std::set<ScheduleEvent<T>>::const_iterator bisect_left(const Time& timestamp) const {
+        return bisect_left(ScheduleEvent<T>(EventType::END, timestamp, TIME_INF));
+    }
+
+    void add(const ScheduleEvent<T>& value) {
+        data.insert(value);
+    }
 
     size_t size() const;
 };

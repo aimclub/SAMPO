@@ -1,11 +1,15 @@
+#include <utility>
+
 #include "native/scheduler/chromosome_evaluator.h"
 
 ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
                                          vector<Contractor*> contractors,
+                                         ScheduleSpec spec,
                                          const WorkTimeEstimator *work_estimator)
         : wg(wg),
           contractors(contractors),
-          work_estimator(work_estimator) {
+          work_estimator(work_estimator),
+          spec(std::move(std::move(spec))) {
     unordered_map<string, int> node_id2index;
 
     // construct the outer numeration
@@ -32,7 +36,7 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
     vector<int> inseparable_heads;
     inseparable_heads.resize(wg->nodes.size());
     for (int i = 0; i < wg->nodes.size(); i++) {
-        for (auto* inseparable_node : wg->nodes[i]->getInseparableChainWithSelf()) {
+        for (const auto* inseparable_node : wg->nodes[i]->getInseparableChainWithSelf()) {
             inseparable_heads[i] = node_id2index[inseparable_node->id()];
         }
     }
@@ -152,6 +156,7 @@ void ChromosomeEvaluator::evaluate(vector<Chromosome *> &chromosomes) {
             Time assigned_parent_time;
             swork_dict_t schedule = SGS::serial(chromosome,
                                                 worker_pool,
+                                                spec,
                                                 worker_pool_indices,
                                                 index2node,
                                                 contractors,

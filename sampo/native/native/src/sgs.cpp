@@ -20,6 +20,7 @@ inline vector<Worker> decode_worker_team(GraphNode* node,
 
 swork_dict_t SGS::serial(Chromosome* chromosome,
                          worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
+                         const ScheduleSpec &spec,
                          const vector<vector<Worker*>> &worker_pool_indices,
                          const vector<GraphNode*> &index2node,
                          const vector<Contractor*> &index2contractor,
@@ -69,6 +70,7 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
 
 swork_dict_t SGS::parallel(Chromosome* chromosome,
                            worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
+                           const ScheduleSpec &spec,
                            const vector<vector<Worker*>> &worker_pool_indices,
                            const vector<GraphNode*> &index2node,
                            const vector<Contractor*> &index2contractor,
@@ -90,7 +92,7 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         }
     }
 
-    list<tuple<GraphNode*, Contractor*, vector<Worker>, WorkSpec &, Time>> enumerated_works_remaining;
+    list<tuple<GraphNode*, Contractor*, vector<Worker>, const WorkSpec &, Time>> enumerated_works_remaining;
     for (int i = 0; i < chromosome->numWorks(); i++) {
         int work_index = *chromosome->getOrder()[i];
         GraphNode* node = index2node[work_index];
@@ -98,20 +100,22 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         vector<Worker> worker_team = decode_worker_team(node, worker_pool, chromosome, work_index,
                                                         contractor, worker_name2index);
         Time exec_time = work_estimator.estimateTime(*node->getWorkUnit(), worker_team);
-        enumerated_works_remaining.emplace_back(node, contractor, worker_team, exec_time);
+        const WorkSpec &work_spec = spec.work2spec.find(node->id())->second;
+        enumerated_works_remaining.emplace_back(node, contractor, worker_team, work_spec, exec_time);
     }
 
     GeneralTimeline<GraphNode> work_timeline;
 
     Time start_time;
     Time pred_start_time;
-    size_t cpkt_idx = 0;
+    auto cpkt_it = work_timeline.iterator();
     // while there are unprocessed checkpoints
     while (!enumerated_works_remaining.empty()) {
-        if (cpkt_idx < work_timeline.size()) {
-            start_time = get<0>(work_timeline[cpkt_idx]);
+        const auto& cpkt = *cpkt_it;
+        if (work_timeline.is_end(cpkt_it)) {
+            start_time = cpkt.time;
             if (pred_start_time == start_time) {
-                cpkt_idx++;
+                cpkt_it++;
                 continue;
             }
             if (start_time.is_inf()) {
@@ -125,7 +129,7 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
 
         enumerated_works_remaining.remove_if(
             [&assigned_parent_time, &start_time, &timeline, &node2swork, &work_estimator, &work_timeline]
-                    (tuple<GraphNode *, Contractor *, vector<Worker>, WorkSpec &, Time> &decoded) {
+                    (tuple<GraphNode *, Contractor *, vector<Worker>, const WorkSpec &, Time> &decoded) {
                 const auto &[node, contractor, worker_team, work_spec, exec_time] = decoded;
 
                 if (timeline.can_schedule_at_the_moment(node, worker_team, node2swork,
@@ -147,7 +151,9 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
 
                 return false;
         });
-        cpkt_idx = min(cpkt_idx, work_timeline.size());
+        if (!work_timeline.is_end(cpkt_it)) {
+            cpkt_it++;
+        }
     }
 
     return node2swork;

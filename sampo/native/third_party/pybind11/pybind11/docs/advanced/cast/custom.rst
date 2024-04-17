@@ -83,7 +83,7 @@ type is explicitly allowed.
 .. note::
 
     A ``type_caster<T>`` defined with ``PYBIND11_TYPE_CASTER(T, ...)`` requires
-    that ``T`` is default-constructible (``value`` is first default constructed
+    that ``T`` is default-constructible (``value`` is begin default constructed
     and then ``load()`` assigns to it).
 
 .. warning::

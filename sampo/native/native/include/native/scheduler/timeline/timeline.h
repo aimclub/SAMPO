@@ -13,10 +13,10 @@
 
 class Timeline {
 public:
-    Time find_min_start_time(GraphNode *node,
-                             vector<Worker>& worker_team,
+    Time find_min_start_time(const GraphNode *node,
+                             const vector<Worker>& worker_team,
                              swork_dict_t &node2swork,
-                             WorkSpec &spec,
+                             const WorkSpec &spec,
                              Time parent_time,
                              const WorkTimeEstimator &work_estimator) {
         auto t = this->find_min_start_time_with_additional(node, worker_team, node2swork,
@@ -25,17 +25,17 @@ public:
         return get<0>(t);
     }
 
-    Time schedule_with_inseparables(GraphNode *node,
-                                    vector<Worker>& worker_team,
+    Time schedule_with_inseparables(const GraphNode *node,
+                                    const vector<Worker>& worker_team,
                                     swork_dict_t &node2swork,
-                                    WorkSpec &spec,
-                                    Contractor *contractor,
+                                    const WorkSpec &spec,
+                                    const Contractor *contractor,
                                     Time start_time,
-                                    vector<GraphNode*> &inseparable_chain,
-                                    exec_times_t &exec_times,
+                                    const vector<const GraphNode*> &inseparable_chain,
+                                    const exec_times_t &exec_times,
                                     const WorkTimeEstimator &work_estimator) {
         Time c_ft = start_time;
-        for (auto& dep_node : inseparable_chain) {
+        for (const auto* dep_node : inseparable_chain) {
             Time max_parent_time = dep_node->min_start_time(node2swork);
 
             pair<Time, Time> node_lag_exec_time;
@@ -67,10 +67,10 @@ public:
         return c_ft;
     }
 
-    virtual tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(GraphNode *node,
-                                                                                vector<Worker>& worker_team,
+    virtual tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(const GraphNode *node,
+                                                                                const vector<Worker>& worker_team,
                                                                                 swork_dict_t &node2swork,
-                                                                                WorkSpec &spec,
+                                                                                const WorkSpec &spec,
                                                                                 Time assigned_start_time,
                                                                                 Time assigned_parent_time,
                                                                                 const WorkTimeEstimator &work_estimator) const = 0;

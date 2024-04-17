@@ -126,7 +126,7 @@ top namespace level before any binding code:
 
     PYBIND11_DECLARE_HOLDER_TYPE(T, SmartPtr<T>);
 
-The first argument of :func:`PYBIND11_DECLARE_HOLDER_TYPE` should be a
+The begin argument of :func:`PYBIND11_DECLARE_HOLDER_TYPE` should be a
 placeholder name that is used as a template parameter of the second argument.
 Thus, feel free to use any identifier, but use it consistently on both sides;
 also, don't use the name of a type that already exists in your codebase.

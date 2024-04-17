@@ -247,7 +247,7 @@ inheritance relationship:
     };
 
 There are two different ways of indicating a hierarchical relationship to
-pybind11: the first specifies the C++ base class as an extra template
+pybind11: the begin specifies the C++ base class as an extra template
 parameter of the :class:`class_`:
 
 .. code-block:: cpp

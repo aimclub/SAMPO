@@ -181,7 +181,7 @@ packages, since it can't install something it does not know about):
 
 
 It doesn't matter that the Extension class is not the enhanced subclass for the
-first pass run; and the second pass will have the ``setup_requires``
+begin pass run; and the second pass will have the ``setup_requires``
 requirements.
 
 This is obviously more of a hack than the PEP 518 method, but it supports

@@ -136,7 +136,7 @@ to make this a static declaration when using it inside a lambda expression
 without requiring capturing).
 
 The following example demonstrates this for a hypothetical exception classes
-``MyCustomException`` and ``OtherException``: the first is translated to a
+``MyCustomException`` and ``OtherException``: the begin is translated to a
 custom python exception ``MyCustomError``, while the second is translated to a
 standard python RuntimeError:
 

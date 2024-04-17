@@ -26,10 +26,10 @@ JustInTimeTimeline::JustInTimeTimeline(const worker_pool_t &worker_pool, const L
 JustInTimeTimeline::JustInTimeTimeline(const JustInTimeTimeline &other) : timeline(other.timeline) {}  // copy timeline
 
 tuple<Time, Time, exec_times_t>
-JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
-                                                        vector<Worker>& worker_team,
+JustInTimeTimeline::find_min_start_time_with_additional(const GraphNode *node,
+                                                        const vector<Worker>& worker_team,
                                                         swork_dict_t &node2swork,
-                                                        WorkSpec &spec,
+                                                        const WorkSpec &spec,
                                                         Time assigned_start_time,
                                                         Time assigned_parent_time,
                                                         const WorkTimeEstimator &work_estimator) const {
@@ -83,7 +83,7 @@ JustInTimeTimeline::find_min_start_time_with_additional(GraphNode *node,
     // TODO Remove multiple search time instances, replace with one
     Time c_st = max(max_agent_time, max_parent_time);
     Time new_finish_time = c_st;
-    for (auto* dep_node : node->getInseparableChainWithSelf()) {
+    for (const auto* dep_node : node->getInseparableChainWithSelf()) {
         Time dep_parent_time = dep_node->min_start_time(node2swork);
 
         Time dep_st = max(new_finish_time, dep_parent_time);
@@ -115,7 +115,7 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
     const unordered_map<string, vector<pair<Time, int>>>& contractor_timeline = this->timeline.at(worker_team[0].contractor_id);
 
     if (spec.is_independent) {
-        for (auto& worker : worker_team) {
+        for (const auto& worker : worker_team) {
             const auto& worker_timeline = contractor_timeline.at(worker.name);
             Time last_cpkt_time = worker_timeline[0].first;
             if (last_cpkt_time > start_time) {
@@ -139,7 +139,7 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
     // checking workers
     Time max_agent_time(0);
 
-    for (auto& worker : worker_team) {
+    for (const auto& worker : worker_team) {
         int needed_count = worker.count;
         const auto &offer_stack = contractor_timeline.at(worker.name);
 
@@ -159,9 +159,9 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
     return max_agent_time <= start_time;
 }
 
-void JustInTimeTimeline::update_timeline(GraphNode *node,
-                                         vector<Worker>& worker_team,
-                                         WorkSpec &spec,
+void JustInTimeTimeline::update_timeline(const GraphNode *node,
+                                         const vector<Worker>& worker_team,
+                                         const WorkSpec &spec,
                                          Time finish_time,
                                          Time exec_time) {
     if (worker_team.empty()) {
@@ -173,7 +173,7 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
 
     if (spec.is_independent) {
         // squash all the timeline to the last point
-        for (auto& worker : worker_team) {
+        for (const auto& worker : worker_team) {
             auto &worker_timeline = contractor_timeline[worker.name];
             int count_workers = 0;
             for (auto& entry : worker_timeline) {
@@ -186,7 +186,7 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
         // For each worker type consume the nearest available needed worker amount
         // and re-add it to the time when current work should be finished.
         // Addition performed as step in bubble-sort algorithm.
-        for (auto& worker : worker_team) {
+        for (const auto& worker : worker_team) {
             int needed_count = worker.count;
             auto &worker_timeline = contractor_timeline.at(worker.name);
 
@@ -216,11 +216,11 @@ void JustInTimeTimeline::update_timeline(GraphNode *node,
     }
 }
 
-Time JustInTimeTimeline::schedule(GraphNode *node,
-                                  vector<Worker>& worker_team,
+Time JustInTimeTimeline::schedule(const GraphNode *node,
+                                  const vector<Worker>& worker_team,
                                   swork_dict_t &node2swork,
-                                  WorkSpec &spec,
-                                  Contractor *contractor,
+                                  const WorkSpec &spec,
+                                  const Contractor *contractor,
                                   Time assigned_start_time,
                                   Time assigned_time,
                                   Time assigned_parent_time,
@@ -233,7 +233,7 @@ Time JustInTimeTimeline::schedule(GraphNode *node,
 
     exec_times_t exec_times;
     if (!assigned_time.is_unassigned()) {
-        for (auto* n : inseparable_chain) {
+        for (const auto* n : inseparable_chain) {
             exec_times[n->id()] = { Time(0), assigned_time / int(inseparable_chain.size()) };
         }
     }

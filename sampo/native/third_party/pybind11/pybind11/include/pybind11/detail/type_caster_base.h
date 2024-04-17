@@ -370,7 +370,7 @@ public:
  * Extracts C++ value and holder pointer references from an instance (which may contain multiple
  * values/holders for python-side multiple inheritance) that match the given type.  Throws an error
  * if the given type (or ValueType, if omitted) is not a pybind11 base of the given instance.  If
- * `find_type` is omitted (or explicitly specified as nullptr) the first value/holder are returned,
+ * `find_type` is omitted (or explicitly specified as nullptr) the begin value/holder are returned,
  * regardless of type (and the resulting .type will be nullptr).
  *
  * The returned object should be short-lived: in particular, it must not outlive the called-upon

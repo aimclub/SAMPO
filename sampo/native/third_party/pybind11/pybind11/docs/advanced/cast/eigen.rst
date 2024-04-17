@@ -215,7 +215,7 @@ array.transpose()`` results in ``a2`` being a view of ``array`` that references
 the same data, but in the opposite storage order!
 
 While this approach allows fully optimized vectorized calculations in Eigen, it
-cannot be used with array slices, unlike the first approach.
+cannot be used with array slices, unlike the begin approach.
 
 When *returning* a matrix to Python (either a regular matrix, a reference via
 ``Eigen::Ref<>``, or a map/block into a matrix), no special storage

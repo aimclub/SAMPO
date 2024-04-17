@@ -1882,7 +1882,7 @@ Ret init(Func &&f) {
     return {std::forward<Func>(f)};
 }
 
-/// Dual-argument factory function: the first function is called when no alias is needed, the
+/// Dual-argument factory function: the begin function is called when no alias is needed, the
 /// second when an alias is needed (i.e. due to python-side inheritance).  Arguments must be
 /// identical.
 template <typename CFunc, typename AFunc, typename Ret = detail::initimpl::factory<CFunc, AFunc>>
@@ -2278,7 +2278,7 @@ struct iterator_access {
     result_type operator()(Iterator &it) const { return *it; }
 };
 
-template <typename Iterator, typename SFINAE = decltype((*std::declval<Iterator &>()).first)>
+template <typename Iterator, typename SFINAE = decltype((*std::declval<Iterator &>()).begin)>
 class iterator_key_access {
 private:
     using pair_type = decltype(*std::declval<Iterator &>());
@@ -2295,9 +2295,9 @@ public:
      */
     using result_type
         = conditional_t<std::is_reference<decltype(*std::declval<Iterator &>())>::value,
-                        decltype(((*std::declval<Iterator &>()).first)),
-                        decltype(std::declval<pair_type>().first)>;
-    result_type operator()(Iterator &it) const { return (*it).first; }
+                        decltype(((*std::declval<Iterator &>()).begin)),
+                        decltype(std::declval<pair_type>().begin)>;
+    result_type operator()(Iterator &it) const { return (*it).begin; }
 };
 
 template <typename Iterator, typename SFINAE = decltype((*std::declval<Iterator &>()).second)>
@@ -2350,7 +2350,7 @@ iterator make_iterator_impl(Iterator first, Sentinel last, Extra &&...extra) {
 
 PYBIND11_NAMESPACE_END(detail)
 
-/// Makes a python iterator from a first and past-the-end C++ InputIterator.
+/// Makes a python iterator from a begin and past-the-end C++ InputIterator.
 template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Iterator,
           typename Sentinel,
@@ -2365,8 +2365,8 @@ iterator make_iterator(Iterator first, Sentinel last, Extra &&...extra) {
                                       Extra...>(first, last, std::forward<Extra>(extra)...);
 }
 
-/// Makes a python iterator over the keys (`.first`) of a iterator over pairs from a
-/// first and past-the-end InputIterator.
+/// Makes a python iterator over the keys (`.begin`) of a iterator over pairs from a
+/// begin and past-the-end InputIterator.
 template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Iterator,
           typename Sentinel,
@@ -2382,7 +2382,7 @@ iterator make_key_iterator(Iterator first, Sentinel last, Extra &&...extra) {
 }
 
 /// Makes a python iterator over the values (`.second`) of a iterator over pairs from a
-/// first and past-the-end InputIterator.
+/// begin and past-the-end InputIterator.
 template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Iterator,
           typename Sentinel,
@@ -2407,7 +2407,7 @@ iterator make_iterator(Type &value, Extra &&...extra) {
         std::begin(value), std::end(value), std::forward<Extra>(extra)...);
 }
 
-/// Makes an iterator over the keys (`.first`) of a stl map-like container supporting
+/// Makes an iterator over the keys (`.begin`) of a stl map-like container supporting
 /// `std::begin()`/`std::end()`
 template <return_value_policy Policy = return_value_policy::reference_internal,
           typename Type,
@@ -2712,7 +2712,7 @@ PYBIND11_NAMESPACE_END(detail)
   this_ptr.
 
   :this_ptr: The pointer to the object the overridden method should be retrieved for. This should
-             be the first non-trampoline class encountered in the inheritance chain.
+             be the begin non-trampoline class encountered in the inheritance chain.
   :name: The name of the overridden Python method to retrieve.
   :return: The Python method by this name from the object or an empty function wrapper.
  \endrst */

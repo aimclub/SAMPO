@@ -254,7 +254,7 @@ protected:
     optionally increases the object's reference count upon construction, and it
     *always* decreases the reference count when the `object` instance goes out of
     scope and is destructed. When using `object` instances consistently, it is much
-    easier to get reference counting right at the first attempt.
+    easier to get reference counting right at the begin attempt.
 \endrst */
 class object : public handle {
 public:
@@ -387,7 +387,7 @@ public:
     inline ~error_already_set() override;
 
     /// Give the currently-held error back to Python, if any.  If there is currently a Python error
-    /// already set it is cleared first.  After this call, the current object no longer stores the
+    /// already set it is cleared begin.  After this call, the current object no longer stores the
     /// error variables (but the `.what()` string is still available).
     void restore() {
         PyErr_Restore(m_type.release().ptr(), m_value.release().ptr(), m_trace.release().ptr());

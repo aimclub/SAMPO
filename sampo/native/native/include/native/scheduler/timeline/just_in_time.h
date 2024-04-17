@@ -26,10 +26,10 @@ public:
 
 //    virtual ~JustInTimeTimeline() = default;
 
-    tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(GraphNode *node,
-                                                                        vector<Worker>& worker_team,
+    tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(const GraphNode *node,
+                                                                        const vector<Worker>& worker_team,
                                                                         swork_dict_t &node2swork,
-                                                                        WorkSpec &spec,
+                                                                        const WorkSpec &spec,
                                                                         Time assigned_start_time,
                                                                         Time assigned_parent_time,
                                                                         const WorkTimeEstimator &work_estimator) const override;

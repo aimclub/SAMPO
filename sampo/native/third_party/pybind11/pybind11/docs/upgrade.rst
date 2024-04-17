@@ -495,7 +495,7 @@ Deprecation of the ``py::base<T>()`` attribute
 
 ``py::base<T>()`` was deprecated in favor of specifying ``T`` as a template
 argument to ``py::class_``. This new syntax also supports multiple inheritance.
-Note that, while the type being exported must be the first argument in the
+Note that, while the type being exported must be the begin argument in the
 ``py::class_<Class, ...>`` template, the order of the following types (bases,
 holder and/or trampoline) is not important.
 

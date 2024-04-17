@@ -16,6 +16,7 @@ namespace SGS {
 
     swork_dict_t serial(Chromosome* chromosome,
                         worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
+                        const ScheduleSpec &spec,
                         const vector<vector<Worker*>> &worker_pool_indices,
                         const vector<GraphNode*> &index2node,
                         const vector<Contractor*> &index2contractor,
@@ -29,6 +30,7 @@ namespace SGS {
 
     swork_dict_t parallel(Chromosome* chromosome,
                           worker_pool_t worker_pool,  // we need a full copy here, it is changing in runtime
+                          const ScheduleSpec &spec,
                           const vector<vector<Worker*>> &worker_pool_indices,
                           const vector<GraphNode*> &index2node,
                           const vector<Contractor*> &index2contractor,

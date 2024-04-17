@@ -49,6 +49,8 @@ private:
     unordered_map<string, int> worker_name2index;
     unordered_map<string, int> contractor2index;
 
+    ScheduleSpec spec;
+
 //    const py::object &python_wrapper;
 
     // TODO (?) Make interop with Python work estimators like in old NativeWrapper was
@@ -62,6 +64,7 @@ public:
 
     explicit ChromosomeEvaluator(const WorkGraph *wg,
                                  vector<Contractor*> contractors,
+                                 ScheduleSpec spec,
                                  const WorkTimeEstimator *work_estimator);
 
     // TODO Research why deleting timeEstimator causes Head Corruption crash

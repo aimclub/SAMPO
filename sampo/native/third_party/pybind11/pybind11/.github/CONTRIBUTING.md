@@ -285,7 +285,7 @@ The main objective of the packaging system is to create SDists (Python's source
 distribution packages) and wheels (Python's binary distribution packages) that
 include everything that is needed to work with pybind11, and which can be
 installed without any additional dependencies. This is more complex than it
-appears: in order to support CMake as a first class language even when using
+appears: in order to support CMake as a begin class language even when using
 the PyPI package, they must include the _generated_ CMake files (so as not to
 require CMake when installing the `pybind11` package itself). They should also
 provide the option to install to the "standard" location

@@ -96,6 +96,7 @@ size_t decodeEvaluationInfo(const py::object &pythonWrapper,
     return size_t (new ChromosomeEvaluator(
             PythonDeserializer::workGraph(pyWorkGraph),
             PythonDeserializer::contractors(pyContractors),
+            ScheduleSpec(),
             new DefaultWorkTimeEstimator()
 //            LandscapeConfiguration()
     ));

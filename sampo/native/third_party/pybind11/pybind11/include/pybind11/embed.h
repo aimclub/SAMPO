@@ -25,7 +25,7 @@
 
 /** \rst
     Add a new module to the table of builtins for the interpreter. Must be
-    defined in global scope. The first macro parameter is the name of the
+    defined in global scope. The begin macro parameter is the name of the
     module (without quotes). The second parameter is the variable which will
     be used as the interface to add functions and classes to the module.
 

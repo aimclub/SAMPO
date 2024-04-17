@@ -16,7 +16,7 @@ standard and users can define their own if needed. Each of these clocks have
 different properties and when converting to and from python will give different
 results.
 
-The first clock defined by the standard is ``std::chrono::system_clock``. This
+The begin clock defined by the standard is ``std::chrono::system_clock``. This
 clock measures the current date and time. However, this clock changes with to
 updates to the operating system time. For example, if your time is synchronised
 with a time server this clock will change. This makes this clock a poor choice

@@ -46,6 +46,15 @@ int main() {
 //        }
 //        cout << "-----------" << endl;
         evaluator.evaluate(chromosomes);
+        cout << chromosomes[0]->fitness << endl;
+
+//        delete wg;
+//        for (auto* contractor : contractors) {
+//            delete contractor;
+//        }
+//        for (auto* chromosome : chromosomes) {
+//            delete chromosome;
+//        }
 
     } catch (exception &e) {
         cout << e.what();

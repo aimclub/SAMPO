@@ -176,6 +176,17 @@ void ChromosomeEvaluator::evaluate(vector<Chromosome *> &chromosomes) {
                                                   assigned_parent_time,
                                                   timeline,
                                                   *work_estimator);
+//            vector<ScheduledWork*> sworks;
+//            for (auto&[work_id, swork] : schedule) {
+//                sworks.push_back(&swork);
+//            }
+//            std::sort(sworks.begin(), sworks.end(), [](ScheduledWork* swork1, ScheduledWork* swork2) {
+//                return swork1->work_unit->name > swork2->work_unit->name;
+//            });
+//            for (const auto* node : wg->nodes) {
+//                ScheduledWork& swork = schedule[node->id()];
+//                cout << swork.work_unit->name << " : " << swork.start_time().val() << " " << swork.finish_time().val() << endl;
+//            }
             chromosome->fitness = fitness.evaluate(schedule);
         } else {
             chromosome->fitness = INT_MAX;

@@ -23,9 +23,10 @@ def test_multiprocessing(setup_scheduler_parameters):
                                sgs_type=ScheduleGenerationScheme.Parallel)
 
     start_default = time.time()
-    genetic.schedule(wg, contractors, validate=True, landscape=landscape,
-                     timeline=JustInTimeTimeline(get_worker_contractor_pool(contractors), landscape))
+    schedule = genetic.schedule(wg, contractors, landscape=landscape)
     time_default = time.time() - start_default
+    for work in schedule.works:
+        print(f'{work.name} : {work.start_time} {work.finish_time}')
 
     n_cpus = 10
     SAMPO.backend = NativeComputationalBackend()

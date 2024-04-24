@@ -8,8 +8,8 @@ Time::Time(int value) {
     if (value > TIME_INF) {
         value = TIME_INF;
     }
-    else if (value < 0) {
-        value = 0;
+    else if (value < -1) {
+        value = -1;
     }
     this->value = value;
 }

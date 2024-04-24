@@ -52,7 +52,7 @@ public:
     // Create plain node with all edge types = FS
     explicit GraphNode(WorkUnit *work_unit, const std::vector<GraphNode *> &parents = {}) : work_unit(work_unit) {
         for (auto* p : parents) {
-            GraphEdge edge(p, this, -1, EdgeType::FinishStart);
+            GraphEdge edge(p, this, 0, EdgeType::FinishStart);
             parent_edges.push_back(edge);
             p->children_edges.push_back(edge);
         }
@@ -118,7 +118,7 @@ public:
         return work_unit;
     }
 
-    string id() const {
+    const string& id() const {
         return getWorkUnit()->id;
     }
 
@@ -143,12 +143,12 @@ public:
 
     Time min_start_time(const swork_dict_t &node2swork) const {
         Time time;
-        for (auto& edge : this->parent_edges) {
+        for (const auto& edge : this->parent_edges) {
             auto it = node2swork.find(edge.start->id());
             if (it == node2swork.end()) {
                 return Time::inf();
             }
-            time = max(time, it->second.start_time());
+            time = max(time, it->second.finish_time() + (int) edge.lag);
         }
         return time;
     }

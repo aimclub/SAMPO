@@ -108,8 +108,8 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
 
     GeneralTimeline<GraphNode> work_timeline;
 
-    Time start_time;
-    Time pred_start_time;
+    Time start_time = assigned_parent_time - 1;
+    Time pred_start_time = start_time - 1;
     auto cpkt_it = work_timeline.iterator();
     // while there are unprocessed checkpoints
     while (!enumerated_works_remaining.empty()) {
@@ -151,8 +151,8 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
 
                 timeline.schedule(node, worker_team, node2swork, work_spec, contractor,
                                   st, exec_time, assigned_parent_time, work_estimator);
-
                 work_timeline.update_timeline(st, exec_time, node);
+//                cout << "Scheduled " << node->getWorkUnit()->name << " to " << st.val() << "; start_time = " << start_time.val() << endl;
                 return false;
             }
 

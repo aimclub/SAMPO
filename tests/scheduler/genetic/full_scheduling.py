@@ -16,13 +16,11 @@ def test_multiprocessing(setup_scheduler_parameters):
 
     SAMPO.backend = DefaultComputationalBackend()
 
-    # SAMPO.backend.cache_scheduler_info(wg, contractors, landscape, ScheduleSpec())
-
     genetic = GeneticScheduler(number_of_generation=10,
                                mutate_order=0.05,
                                mutate_resources=0.05,
                                size_of_population=50,
-                               sgs_type=ScheduleGenerationScheme.Serial)
+                               sgs_type=ScheduleGenerationScheme.Parallel)
 
     start_default = time.time()
     genetic.schedule(wg, contractors, validate=True, landscape=landscape,

@@ -25,11 +25,23 @@ public:
 };
 
 class ScheduleSpec {
-public:
+private:
     unordered_map<string, WorkSpec> work2spec;
-
+public:
     explicit ScheduleSpec(unordered_map<string, WorkSpec> work2spec = unordered_map<string, WorkSpec>())
         : work2spec(std::move(work2spec)) {}
+
+    const WorkSpec* for_work(const string &work) const {
+        auto it = work2spec.find(work);
+        if (it == work2spec.end()) {
+            return nullptr;
+        }
+        return &it->second;
+    }
+
+    WorkSpec& operator[](const string &work) {
+        return work2spec[work];
+    }
 };
 
 #endif //SAMPO_SPEC_H

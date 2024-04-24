@@ -10,8 +10,6 @@
 // TODO Make all classes with encapsulation - remove public fields
 // TODO Make parallel runtime
 // TODO Performance measurements
-// TODO Cache data in C++ memory - parse Python WG and Contractors once
-// per-scheduling
 // TODO Split data types' definition and implementation
 
 inline int PyLong_AsInt(const py::handle &object) {

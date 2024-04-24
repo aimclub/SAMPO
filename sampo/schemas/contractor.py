@@ -25,7 +25,7 @@ class Contractor(AutoJSONSerializable['Contractor'], Identifiable):
         for w in self.workers.values():
             w.contractor_id = self.id
 
-    @cached_property
+    @property
     def worker_list(self) -> list[Worker]:
         return list(self.workers.values())
 

@@ -3,6 +3,12 @@
 #include "native/scheduler/sgs.h"
 #include "native/scheduler/timeline/general_timeline.h"
 
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
+
 inline vector<Worker> decode_worker_team(GraphNode* node,
                                          worker_pool_t &worker_pool,
                                          Chromosome* chromosome,
@@ -45,7 +51,7 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
     for (int order_index = 0; order_index < chromosome->numWorks(); order_index++) {
         int work_index = *chromosome->getOrder()[order_index];
         GraphNode* node = index2node[work_index];
-        auto& work_spec = chromosome->getSpec().work2spec[node->id()];
+        const auto* work_spec = chromosome->getSpec().for_work(node->id());
 
         int contractor_index = chromosome->getContractor(work_index);
         Contractor* contractor = index2contractor[contractor_index];
@@ -53,14 +59,10 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
         // decompress worker team
         vector<Worker> worker_team = decode_worker_team(node, worker_pool, chromosome, work_index, contractor, worker_name2index);
 
-//        auto[st, ft, exec_times] = timeline.find_min_start_time_with_additional(node, worker_team, node2swork,
-//                                                                                work_spec, Time::unassigned(),
-//                                                                                assigned_parent_time, work_estimator);
-
         // TODO Check if assigned_parent_time was not applied
         // TODO Check that find_min_start_time() is not calling if start time specified
         timeline.schedule(node, worker_team, node2swork, work_spec, contractor, Time::unassigned(),
-                          work_spec.assigned_time, assigned_parent_time, work_estimator);
+                          work_spec->assigned_time, assigned_parent_time, work_estimator);
 
         // TODO Add other timelines
     }
@@ -92,7 +94,7 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         }
     }
 
-    list<tuple<GraphNode*, Contractor*, vector<Worker>, const WorkSpec &, Time>> enumerated_works_remaining;
+    list<tuple<GraphNode*, Contractor*, vector<Worker>, const WorkSpec *, Time>> enumerated_works_remaining;
     for (int i = 0; i < chromosome->numWorks(); i++) {
         int work_index = *chromosome->getOrder()[i];
         GraphNode* node = index2node[work_index];
@@ -100,7 +102,7 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         vector<Worker> worker_team = decode_worker_team(node, worker_pool, chromosome, work_index,
                                                         contractor, worker_name2index);
         Time exec_time = work_estimator.estimateTime(*node->getWorkUnit(), worker_team);
-        const WorkSpec &work_spec = spec.work2spec.find(node->id())->second;
+        const WorkSpec *work_spec = spec.for_work(node->getWorkUnit()->name);
         enumerated_works_remaining.emplace_back(node, contractor, worker_team, work_spec, exec_time);
     }
 
@@ -111,9 +113,8 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
     auto cpkt_it = work_timeline.iterator();
     // while there are unprocessed checkpoints
     while (!enumerated_works_remaining.empty()) {
-        const auto& cpkt = *cpkt_it;
-        if (work_timeline.is_end(cpkt_it)) {
-            start_time = cpkt.time;
+        if (!work_timeline.is_end(cpkt_it)) {
+            start_time = (*cpkt_it).time;
             if (pred_start_time == start_time) {
                 cpkt_it++;
                 continue;
@@ -125,32 +126,41 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
             pred_start_time = start_time;
         } else {
             start_time++;
+            // TODO Remove
+            if (start_time > 100000) {
+                cout << "start_time = " << start_time.val() << " is going to infinity, breaking. works remaining: "
+                     << enumerated_works_remaining.size() << endl << endl;
+                break;
+            }
         }
 
-        enumerated_works_remaining.remove_if(
-            [&assigned_parent_time, &start_time, &timeline, &node2swork, &work_estimator, &work_timeline]
-                    (tuple<GraphNode *, Contractor *, vector<Worker>, const WorkSpec &, Time> &decoded) {
-                const auto &[node, contractor, worker_team, work_spec, exec_time] = decoded;
+        auto it = std::stable_partition(enumerated_works_remaining.begin(), enumerated_works_remaining.end(),
+        [&assigned_parent_time, &start_time, &timeline, &node2swork, &work_estimator, &work_timeline]
+                (tuple<GraphNode *, Contractor *, vector<Worker>, const WorkSpec *, Time> &decoded) {
+            const auto &[node, contractor, worker_team, work_spec, exec_time] = decoded;
 
-                if (timeline.can_schedule_at_the_moment(node, worker_team, node2swork,
-                                                        work_spec, start_time, exec_time)) {
-                    // TODO Apply spec
-                    Time st = start_time;
-                    if (node->parents().empty()) {
-                        st = assigned_parent_time;
-                    }
-
-                    // TODO Add finalizing zones processing
-
-                    timeline.schedule(node, worker_team, node2swork, work_spec, contractor,
-                                      st, exec_time, assigned_parent_time, work_estimator);
-
-                    work_timeline.update_timeline(st, exec_time, node);
-                    return true;
+            if (timeline.can_schedule_at_the_moment(node, worker_team, node2swork,
+                                                    work_spec, start_time, exec_time)) {
+                // TODO Apply spec
+                Time st = start_time;
+                if (node->parents().empty()) {
+                    st = assigned_parent_time;
                 }
 
+                // TODO Add finalizing zones processing
+
+                timeline.schedule(node, worker_team, node2swork, work_spec, contractor,
+                                  st, exec_time, assigned_parent_time, work_estimator);
+
+                work_timeline.update_timeline(st, exec_time, node);
                 return false;
+            }
+
+            return true;
         });
+
+        enumerated_works_remaining.erase(it, enumerated_works_remaining.end());
+
         if (!work_timeline.is_end(cpkt_it)) {
             cpkt_it++;
         }

@@ -50,6 +50,7 @@ private:
     unordered_map<string, int> contractor2index;
 
     ScheduleSpec spec;
+    ScheduleGenerationScheme sgs;
 
 //    const py::object &python_wrapper;
 
@@ -76,7 +77,9 @@ public:
     //    }
     ~ChromosomeEvaluator();
 
-    bool isValid(Chromosome *chromosome);
+    bool is_valid(Chromosome *chromosome);
+
+    void set_sgs(ScheduleGenerationScheme sgs);
 
     void evaluate(vector<Chromosome *> &chromosomes);
 };

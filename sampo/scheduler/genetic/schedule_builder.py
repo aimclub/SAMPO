@@ -2,6 +2,7 @@ import random
 import time
 from typing import Callable
 
+import dill
 from deap import tools
 from deap.base import Toolbox
 
@@ -166,6 +167,12 @@ def build_schedules(wg: WorkGraph,
 
     hof.update(pop)
     best_fitness = hof[0].fitness.values
+
+    import numpy as np
+
+    np.save('part1', hof[0][0])
+    np.save('part2', hof[0][1])
+    np.save('part3', hof[0][2])
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
 

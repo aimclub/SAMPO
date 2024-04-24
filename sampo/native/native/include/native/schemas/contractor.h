@@ -24,12 +24,12 @@ public:
         string contractor_id = "",
         const IntervalGaussian& productivity = IntervalGaussian()
     )
-        : Identifiable(std::move(id)),
-          name(std::move(name)),
+        : Identifiable(id),
+          name(name),
           count(count),
           cost(cost),
-          contractor_id(std::move(contractor_id)),
-          productivity(productivity) {}
+          contractor_id(contractor_id),
+          productivity(productivity) { }
 
     Worker(const Worker& other) = default;
 
@@ -51,7 +51,9 @@ public:
     explicit Contractor(const string &id, string name, const vector<Worker> &workers)
         : Identifiable(id),
           name(std::move(name)),
-          workers(workers) { }
+          workers(workers) {
+        cout << this->name << endl;
+    }
 };
 
 #endif    // CONTRACTOR_H

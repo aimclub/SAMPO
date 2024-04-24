@@ -5,7 +5,8 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy static analysis." OFF)
 
-option(ENABLE_TEST_EXECUTABLE "Enables test-debug executable assemble" OFF)
+option(ENABLE_TEST_EXECUTABLE "Enables test-debug executable assemble" ON)
+set(ENABLE_TEST_EXECUTABLE ON)
 
 
 get_filename_component(CUR_PROJ ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -90,7 +91,7 @@ sampo_install_python_module(TARGETS ${CUR_PROJ} VERSION ${version} NAME ${CUR_PR
 # Test executable
 
 if (ENABLE_TEST_EXECUTABLE)
-    message("${PYTHON_INCLUDE_DIRS}")
+    message("Executable enabled, building")
 
     # include_directories(${PYTHON_INCLUDE_DIRS} ${NUMPY_INCLUDE_DIR})
 

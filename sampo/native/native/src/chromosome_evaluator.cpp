@@ -14,10 +14,10 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
 
     // construct the outer numeration
     // start with inseparable heads
-    for (auto* node : wg->nodes) {
-        if (!node->is_inseparable_son()) {
-            node_id2index[node->id()] = (int) index2node.size();
-            index2node.push_back(node);
+    for (auto* node_1 : wg->nodes) {
+        if (!node_1->is_inseparable_son()) {
+            node_id2index[node_1->id()] = (int) this->index2node.size();
+            this->index2node.push_back(node_1);
         }
     }
 
@@ -25,10 +25,10 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
     // continue with others
     // this should match the numeration on the Python-size backend,
     // otherwise everything will break
-    for (auto* node : wg->nodes) {
-        if (node->is_inseparable_son()) {
-            node_id2index[node->id()] = (int) index2node.size();
-            index2node.push_back(node);
+    for (auto* node_2 : wg->nodes) {
+        if (node_2->is_inseparable_son()) {
+            node_id2index[node_2->id()] = (int) index2node.size();
+            this->index2node.push_back(node_2);
         }
     }
 
@@ -41,7 +41,7 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
         }
     }
 
-    headParents.resize(heads_count);
+    this->headParents.resize(heads_count);
     for (int i = 0; i < wg->nodes.size(); i++) {
         unordered_set<int> parent_inds;
         for (auto* parent : wg->nodes[inseparable_heads[i]]->parents()) {
@@ -49,7 +49,7 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
         }
         vector<int> parents_vec;
         parents_vec.insert(parents_vec.begin(), parent_inds.begin(), parent_inds.end());
-        headParents.emplace_back(parents_vec);
+        this->headParents.emplace_back(parents_vec);
     }
 
     // TODO
@@ -65,26 +65,27 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
 
     for (auto* contractor : contractors) {
         for (const auto& worker : contractor->workers) {
-            worker_pool[worker.name].emplace(contractor->id, worker);
+            this->worker_pool[worker.name].emplace(contractor->id, worker);
             worker_names.emplace(worker.name);
         }
     }
 
     int ind = 0;
     for (const auto& worker_name : worker_names) {
-        worker_name2index[worker_name] = ind;
+        this->worker_name2index[worker_name] = ind;
         ind++;
     }
 
-    minReqs.resize(index2node.size());
-    maxReqs.resize(index2node.size());
+    this->minReqs.resize(index2node.size());
+    this->maxReqs.resize(index2node.size());
     for (int node = 0; node < index2node.size(); node++) {
-        minReqs[node].resize(worker_names.size());
-        maxReqs[node].resize(worker_names.size());
-        for (auto& worker_req : index2node[node]->getWorkUnit()->worker_reqs) {
-            int worker_ind = worker_name2index[worker_req.kind];
-            minReqs[node][worker_ind] = worker_req.min_count;
-            maxReqs[node][worker_ind] = worker_req.max_count;
+        this->minReqs[node].resize(worker_names.size());
+        this->maxReqs[node].resize(worker_names.size());
+        auto* work_unit = this->index2node[node]->getWorkUnit();
+        for (auto& worker_req : work_unit->worker_reqs) {
+            int worker_ind = this->worker_name2index[worker_req.kind];
+            this->minReqs[node][worker_ind] = worker_req.min_count;
+            this->maxReqs[node][worker_ind] = worker_req.max_count;
         }
     }
 
@@ -111,7 +112,11 @@ ChromosomeEvaluator::~ChromosomeEvaluator() {
     }
 }
 
-bool ChromosomeEvaluator::isValid(Chromosome *chromosome) {
+void ChromosomeEvaluator::set_sgs(ScheduleGenerationScheme sgs) {
+    this->sgs = sgs;
+}
+
+bool ChromosomeEvaluator::is_valid(Chromosome *chromosome) {
     bool visited[chromosome->numWorks()];
 
     // check edges
@@ -120,12 +125,12 @@ bool ChromosomeEvaluator::isValid(Chromosome *chromosome) {
         visited[node] = true;
         for (int parent : headParents[node]) {
             if (!visited[parent]) {
-//                    cout << "Mismatch: " << node << " " << parent << endl;
-//                    cout << "Invalid order: ";
-//                    for (int k = 0; k < chromosome->numWorks(); k++) {
-//                        cout << *chromosome->getOrder()[k] << " ";
-//                    }
-//                    cout << endl;
+//                cout << "Mismatch: " << node << " " << parent << endl;
+//                cout << "Invalid order: ";
+//                for (int k = 0; k < chromosome->numWorks(); k++) {
+//                    cout << *chromosome->getOrder()[k] << " ";
+//                }
+//                cout << endl;
                 return false;
             }
         }
@@ -137,7 +142,11 @@ bool ChromosomeEvaluator::isValid(Chromosome *chromosome) {
         for (int res = 0; res < chromosome->numResources(); res++) {
             int count = chromosome->getResources()[node][res];
             if (count < minReqs[node][res] || count > chromosome->getContractors()[contractor][res]) {
-//                    cout << "Invalid resources: " << minReqs[node][res] << " <= " << count << " <= " << chromosome->getContractors()[contractor][res] << endl;
+//                cout << endl << "Invalid resources: " << minReqs[node][res] << " <= " << count
+//                     << " <= " << chromosome->getContractors()[contractor][res] << endl;
+//                for (const auto &entry : worker_name2index) {
+//                    cout << entry.first << " " << entry.second << endl;
+//                }
                 return false;
             }
         }
@@ -150,28 +159,27 @@ void ChromosomeEvaluator::evaluate(vector<Chromosome *> &chromosomes) {
     auto fitness = TimeFitness();
     // #pragma omp parallel for shared(chromosomes, fitness) default(none) num_threads(this->numThreads)
     for (auto* chromosome : chromosomes) {
-        if (isValid(chromosome)) {
+        if (is_valid(chromosome)) {
             // TODO Add sgs_type parametrization
             JustInTimeTimeline timeline(worker_pool, landscape);
             Time assigned_parent_time;
-            swork_dict_t schedule = SGS::serial(chromosome,
-                                                worker_pool,
-                                                spec,
-                                                worker_pool_indices,
-                                                index2node,
-                                                contractors,
-                                                index2zone,
-                                                worker_name2index,
-                                                contractor2index,
-                                                landscape,
-                                                assigned_parent_time,
-                                                timeline,
-                                                *work_estimator);
+            swork_dict_t schedule = SGS::parallel(chromosome,
+                                                  worker_pool,
+                                                  spec,
+                                                  worker_pool_indices,
+                                                  index2node,
+                                                  contractors,
+                                                  index2zone,
+                                                  worker_name2index,
+                                                  contractor2index,
+                                                  landscape,
+                                                  assigned_parent_time,
+                                                  timeline,
+                                                  *work_estimator);
             chromosome->fitness = fitness.evaluate(schedule);
-            //                cout << "Fitness written out: " << chromosome->fitness << endl;
         } else {
             chromosome->fitness = INT_MAX;
-            //                cout << "Chromosome invalid" << endl;
+//            cout << "Chromosome invalid" << endl;
         }
     }
 }

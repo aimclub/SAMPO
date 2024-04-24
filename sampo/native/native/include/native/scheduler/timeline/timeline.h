@@ -15,8 +15,8 @@ class Timeline {
 public:
     Time find_min_start_time(const GraphNode *node,
                              const vector<Worker>& worker_team,
-                             swork_dict_t &node2swork,
-                             const WorkSpec &spec,
+                             const swork_dict_t &node2swork,
+                             const WorkSpec *spec,
                              Time parent_time,
                              const WorkTimeEstimator &work_estimator) {
         auto t = this->find_min_start_time_with_additional(node, worker_team, node2swork,
@@ -28,7 +28,7 @@ public:
     Time schedule_with_inseparables(const GraphNode *node,
                                     const vector<Worker>& worker_team,
                                     swork_dict_t &node2swork,
-                                    const WorkSpec &spec,
+                                    const WorkSpec *spec,
                                     const Contractor *contractor,
                                     Time start_time,
                                     const vector<const GraphNode*> &inseparable_chain,
@@ -40,13 +40,11 @@ public:
 
             pair<Time, Time> node_lag_exec_time;
             auto it = exec_times.find(dep_node->id());
-//            cout << "111" << endl;
             if (it == exec_times.end()) {
                 node_lag_exec_time = { Time(0), work_estimator.estimateTime(*node->getWorkUnit(), worker_team) };
             } else {
                 node_lag_exec_time = it->second;
             }
-//            cout << "222" << endl;
 
             Time c_st = max(c_ft + node_lag_exec_time.first, max_parent_time);
             Time new_finish_time = c_st + node_lag_exec_time.second;
@@ -57,11 +55,8 @@ public:
                     dep_node->getWorkUnit(),
                     { c_st, new_finish_time },
                     worker_team, contractor, vector<Equipment>(), deliveries, ConstructionObject());
-//            cout << "333" << endl;
             c_ft = new_finish_time;
         }
-
-//        cout << "Works scheduled, update timeline start" << endl;
 
         this->update_timeline(node, worker_team, spec, c_ft, c_ft - start_time);
         return c_ft;
@@ -69,8 +64,8 @@ public:
 
     virtual tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(const GraphNode *node,
                                                                                 const vector<Worker>& worker_team,
-                                                                                swork_dict_t &node2swork,
-                                                                                const WorkSpec &spec,
+                                                                                const swork_dict_t &node2swork,
+                                                                                const WorkSpec *spec,
                                                                                 Time assigned_start_time,
                                                                                 Time assigned_parent_time,
                                                                                 const WorkTimeEstimator &work_estimator) const = 0;
@@ -78,20 +73,20 @@ public:
     virtual bool can_schedule_at_the_moment(const GraphNode *node,
                                             const vector<Worker>& worker_team,
                                             const swork_dict_t &node2swork,
-                                            const WorkSpec &spec,
+                                            const WorkSpec *spec,
                                             Time start_time,
                                             Time exec_time) const = 0;
 
     virtual void update_timeline(const GraphNode *node,
                                  const vector<Worker>& worker_team,
-                                 const WorkSpec &spec,
+                                 const WorkSpec *spec,
                                  Time finish_time,
                                  Time exec_time) = 0;
 
     virtual Time schedule(const GraphNode *node,
                           const vector<Worker>& worker_team,
                           swork_dict_t &node2swork,
-                          const WorkSpec &spec,
+                          const WorkSpec *spec,
                           const Contractor *contractor,
                           Time assigned_start_time,
                           Time assigned_time,

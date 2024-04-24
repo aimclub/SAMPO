@@ -43,4 +43,9 @@ namespace SGS {
                           const WorkTimeEstimator &work_estimator);
 }
 
+enum ScheduleGenerationScheme {
+    Serial,
+    Parallel
+};
+
 #endif //SAMPO_SGS_H

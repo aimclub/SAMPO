@@ -96,10 +96,16 @@ IntervalGaussian decodeIntervalGaussian(const py::handle &pyIntervalGaussian) {
     );
 }
 
+string get_string_attr(const py::handle &obj, const char *name) {
+    return obj.attr(name).cast<std::string>();
+}
+
 Worker decodeWorker(const py::handle &pyWorker) {
+    auto name = get_string_attr(pyWorker, "name"); // pyWorker.attr("name").cast<std::string>();
+    auto id = get_string_attr(pyWorker, "id"); // pyWorker.attr("name").cast<std::string>();
     return Worker(
-            pyWorker.attr("id").cast<string>(),
-            pyWorker.attr("name").cast<string>(),
+            id,
+            name,
             pyWorker.attr("count").cast<int>(),
             pyWorker.attr("cost_one_unit").cast<int>(),
             pyWorker.attr("contractor_id").cast<string>(),
@@ -108,9 +114,10 @@ Worker decodeWorker(const py::handle &pyWorker) {
 }
 
 Contractor *decodeContractor(const py::handle &pyContractor) {
+    auto name = pyContractor.attr("name").cast<string>();
     return new Contractor(
             pyContractor.attr("id").cast<string>(),
-            pyContractor.attr("name").cast<string>(),
+            name,
             PyCodec::fromList(pyContractor.attr("worker_list"), decodeWorker)
     );
 }

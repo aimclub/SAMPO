@@ -28,8 +28,8 @@ public:
 
     tuple<Time, Time, exec_times_t> find_min_start_time_with_additional(const GraphNode *node,
                                                                         const vector<Worker>& worker_team,
-                                                                        swork_dict_t &node2swork,
-                                                                        const WorkSpec &spec,
+                                                                        const swork_dict_t &node2swork,
+                                                                        const WorkSpec *spec,
                                                                         Time assigned_start_time,
                                                                         Time assigned_parent_time,
                                                                         const WorkTimeEstimator &work_estimator) const override;
@@ -37,20 +37,20 @@ public:
     bool can_schedule_at_the_moment(const GraphNode *node,
                                     const vector<Worker>& worker_team,
                                     const swork_dict_t &node2swork,
-                                    const WorkSpec &spec,
+                                    const WorkSpec *spec,
                                     Time start_time,
                                     Time exec_time) const override;
 
     void update_timeline(const GraphNode *node,
                          const vector<Worker>& worker_team,
-                         const WorkSpec &spec,
+                         const WorkSpec *spec,
                          Time finish_time,
                          Time exec_time) override;
 
     Time schedule(const GraphNode *node,
                   const vector<Worker>& worker_team,
                   swork_dict_t &node2swork,
-                  const WorkSpec &spec,
+                  const WorkSpec *spec,
                   const Contractor *contractor,
                   Time assigned_start_time,
                   Time assigned_time,

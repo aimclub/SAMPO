@@ -4,7 +4,7 @@ from typing import Optional, Union
 from sortedcontainers import SortedList
 
 from sampo.scheduler.timeline.base import Timeline
-from sampo.scheduler.timeline.material_timeline import SupplyTimeline
+from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
@@ -67,7 +67,7 @@ class MomentumTimeline(Timeline):
 
         # internal index, earlier - task_index parameter for schedule method
         self._task_index = 0
-        self._material_timeline = SupplyTimeline(landscape)
+        self._material_timeline = HybridSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
     def find_min_start_time_with_additional(self,
@@ -122,9 +122,8 @@ class MomentumTimeline(Timeline):
             exec_time += lag + node_exec_time
 
         if len(worker_team) == 0:
-            max_material_time = self._material_timeline.find_min_material_time(node.id, max_parent_time,
-                                                                               node.work_unit.need_materials(),
-                                                                               node.work_unit.workground_size)
+            max_material_time = self._material_timeline.find_min_material_time(node, max_parent_time,
+                                                                               node.work_unit.need_materials())
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_parent_time, exec_time)
 
             max_parent_time = max(max_parent_time, max_material_time, max_zone_time)
@@ -142,10 +141,9 @@ class MomentumTimeline(Timeline):
                 cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
                                                            cur_start_time, exec_time, worker_team)
 
-                material_time = self._material_timeline.find_min_material_time(node.id,
+                material_time = self._material_timeline.find_min_material_time(node,
                                                                                cur_start_time,
-                                                                               node.work_unit.need_materials(),
-                                                                               node.work_unit.workground_size)
+                                                                               node.work_unit.need_materials())
                 if material_time > cur_start_time:
                     cur_start_time = material_time
                     continue
@@ -159,6 +157,7 @@ class MomentumTimeline(Timeline):
 
             st = cur_start_time
 
+        self._validate(st + exec_time, exec_time, worker_team)
         return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
@@ -316,7 +315,7 @@ class MomentumTimeline(Timeline):
             for w in worker_team:
                 state = self._timeline[w.contractor_id][w.name]
                 start_idx = state.bisect_right(start)
-                end_idx = state.bisect_right(end)
+                end_idx = state.bisect_left((end, -1, EventType.INITIAL))
                 available_workers_count = state[start_idx - 1].available_workers_count
                 # updating all events in between the start and the end of our current task
                 for event in state[start_idx: end_idx]:
@@ -326,17 +325,11 @@ class MomentumTimeline(Timeline):
                 if not available_workers_count >= w.count:
                     return False
 
-                if start_idx < end_idx:
-                    event: ScheduleEvent = state[end_idx - 1]
-                    if not state[0].available_workers_count >= event.available_workers_count + w.count:
-                        return False
-                else:
-                    if not state[0].available_workers_count >= available_workers_count:
-                        return False
+                if not state[0].available_workers_count >= available_workers_count:
+                    return False
 
-            if not self._material_timeline.can_schedule_at_the_moment(node.id, start_time,
-                                                                      node.work_unit.need_materials(),
-                                                                      node.work_unit.workground_size):
+            if not self._material_timeline.can_schedule_at_the_moment(node, start_time,
+                                                                      node.work_unit.need_materials()):
                 return False
             if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs, start_time, exec_time):
                 return False
@@ -436,11 +429,17 @@ class MomentumTimeline(Timeline):
             # node_lag = lag_req if lag_req > 0 else 0
 
             start_work = curr_time + node_lag
+            deliveries, mat_del_time = self._material_timeline.deliver_resources(chain_node,
+                                                                                 start_work,
+                                                                                 chain_node.work_unit.need_materials())
+            start_work = max(start_work, mat_del_time)
+            self._validate(start_work + node_time, node_time, worker_team)
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),
                 workers=worker_team,
-                contractor=contractor
+                contractor=contractor,
+                materials=deliveries
             )
             curr_time = start_work + node_time
             node2swork[chain_node] = swork
@@ -449,3 +448,23 @@ class MomentumTimeline(Timeline):
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]
         node2swork[node].zones_pre = self.zone_timeline.update_timeline(len(node2swork), zones, start_time,
                                                                         curr_time - start_time)
+
+    def _validate(self,
+                  finish_time: Time,
+                  exec_time: Time,
+                  worker_team: list[Worker]):
+        if exec_time == 0:
+            return
+
+        start = finish_time - exec_time
+        end = finish_time
+        for w in worker_team:
+            state = self._timeline[w.contractor_id][w.name]
+            start_idx = state.bisect_right(start)
+            end_idx = state.bisect_left((end, -1, EventType.INITIAL))
+            available_workers_count = state[start_idx - 1].available_workers_count
+            # updating all events in between the start and the end of our current task
+            for event in state[start_idx: end_idx]:
+                assert event.available_workers_count >= w.count
+
+            assert available_workers_count >= w.count

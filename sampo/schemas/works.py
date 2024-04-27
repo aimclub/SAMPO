@@ -62,7 +62,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = float(volume)
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
-        self.workground_size = workground_size
 
     def __del__(self):
         for attr in self.__dict__.values():
@@ -73,6 +72,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
 
     @custom_serializer('worker_reqs')
     @custom_serializer('zone_reqs')
+    @custom_serializer('material_reqs')
     def serialize_serializable_list(self, value) -> list:
         """
         Return serialized list of values.
@@ -82,6 +82,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :return: list of serialized values
         """
         return [t._serialize() for t in value]
+
+    @classmethod
+    @custom_serializer('material_reqs', deserializer=True)
+    def material_reqs_deserializer(cls, value) -> list[MaterialReq]:
+        """
+        Get list of material requirements
+
+        :param value: serialized list of material requirements
+        :return: list of material requirements
+        """
+        return [MaterialReq._deserialize(wr) for wr in value]
 
     @classmethod
     @custom_serializer('worker_reqs', deserializer=True)
@@ -105,6 +116,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         """
         return [ZoneReq._deserialize(wr) for wr in value]
 
+    @classmethod
+    @custom_serializer('material_reqs', deserializer=True)
+    def material_reqs_deserializer(cls, value) -> list[MaterialReq]:
+        """
+        Get list of material requirements
+
+        :param value: serialized list of material requirements
+        :return: list of material requirements
+        """
+        return [MaterialReq._deserialize(wr) for wr in value]
+
     def __getstate__(self):
         # custom method to avoid calling __hash__() on GraphNode objects
         return self._serialize()
@@ -123,4 +145,3 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
-        self.workground_size = new_work_unit.workground_size

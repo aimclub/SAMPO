@@ -1,13 +1,12 @@
 import copy
-from enum import Enum
 
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
-from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
@@ -82,7 +81,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
-                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                   landscape: LandscapeConfiguration,
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),

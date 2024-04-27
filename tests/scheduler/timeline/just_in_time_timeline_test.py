@@ -29,7 +29,6 @@ def test_init_resource_structure(setup_timeline):
         assert len(setup_timeline) == 1
         assert setup_timeline[0][0] == 0
 
-
 # def test_update_resource_structure(setup_timeline):
 #     setup_timeline, _, _, setup_worker_pool = setup_timeline
 #

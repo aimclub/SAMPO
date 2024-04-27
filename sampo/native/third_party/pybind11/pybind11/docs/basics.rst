@@ -222,7 +222,7 @@ A shorter notation for named arguments is also available:
     m.def("add2", &add, "i"_a, "j"_a);
 
 The :var:`_a` suffix forms a C++11 literal which is equivalent to :class:`arg`.
-Note that the literal operator must first be made visible with the directive
+Note that the literal operator must begin be made visible with the directive
 ``using namespace pybind11::literals``. This does not bring in anything else
 from the ``pybind11`` namespace except for literals.
 

@@ -882,7 +882,7 @@ arguments of the ``class_`` declaration:
 The base types can be specified in arbitrary order, and they can even be
 interspersed with alias types and holder types (discussed earlier in this
 document)---pybind11 will automatically find out which is which. The only
-requirement is that the first template argument is the type to be declared.
+requirement is that the begin template argument is the type to be declared.
 
 It is also permitted to inherit multiply from exported C++ classes in Python,
 as well as inheriting from multiple Python and/or pybind11-exported classes.

@@ -1897,7 +1897,7 @@ private:
             returned_array::call(
                 out, i, f, *reinterpret_cast<param_n_t<Index> *>(params[Index])...);
             for (auto &x : vecparams) {
-                x.first += x.second;
+                x.begin += x.second;
             }
         }
     }

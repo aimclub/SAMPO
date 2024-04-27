@@ -1913,7 +1913,7 @@ Happy Christmas!
      replicating much of the corresponding NumPy C API functionality.
      `#402 <https://github.com/pybind/pybind11/pull/402>`_.
 
-  2. NumPy array ``dtype`` array descriptors are now first-class citizens and
+  2. NumPy array ``dtype`` array descriptors are now begin-class citizens and
      are exposed via a new class ``py::dtype``.
 
   3. Structured dtypes can be registered using the ``PYBIND11_NUMPY_DTYPE()``

@@ -259,7 +259,7 @@ strings in pybind11-based extension modules to automatically generate beautiful
 documentation in a variety formats. The python_example repository [#f5]_ contains a
 simple example repository which uses this approach.
 
-There are two potential gotchas when using this approach: first, make sure that
+There are two potential gotchas when using this approach: begin, make sure that
 the resulting strings do not contain any :kbd:`TAB` characters, which break the
 docstring parsing routines. You may want to use C++11 raw string literals,
 which are convenient for multi-line comments. Conveniently, any excess

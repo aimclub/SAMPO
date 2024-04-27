@@ -242,9 +242,11 @@ class GraphNode(JSONSerializable['GraphNode']):
 
         :return: list of GraphNode or None
         """
+        if not self.inseparable_son and not self.inseparable_parent:
+            return [self]
         return [self] + self._get_inseparable_children() \
             if self.inseparable_son and not self.inseparable_parent \
-            else None
+            else []
 
     def get_inseparable_chain_with_self(self) -> list['GraphNode']:
         """

@@ -1,0 +1,93 @@
+if (NOT DEFINED CONAN_FINDPACKAGE_PREFIX)
+    set(CONAN_FINDPACKAGE_PREFIX ${FINDPACKAGE_PACKAGE_NAME})
+endif()
+
+if (
+    NOT DEFINED ${FINDPACKAGE_PACKAGE_NAME}_FOUND
+    OR NOT ${${FINDPACKAGE_PACKAGE_NAME}_CONFIG} STREQUAL ${CMAKE_BUILD_TYPE}
+)
+    conan_cmake_configure(
+        REQUIRES ${CONAN_NAME}/${CONAN_VERSION}
+        GENERATORS cmake_find_package
+        OPTIONS ${FINDPACKAGE_PACKAGE_NAME}:shared=${USE_SHARED_LIBS} ${SAMPO_CONAN_OPTIONS} ${CONAN_OPTIONS}
+        OUTPUT_QUIET
+    )
+
+    message(STATUS "Conan install ${CONAN_NAME}/${CONAN_VERSION}")
+
+    conan_cmake_install(
+        PATH_OR_REFERENCE .
+        BUILD missing
+        REMOTE bnipi_sampo
+        INSTALL_FOLDER ${CMAKE_CURRENT_BINARY_DIR}/conan
+        OUTPUT_FOLDER ${CMAKE_CURRENT_BINARY_DIR}/conan
+        OUTPUT_QUIET
+        SETTINGS ${settings} ${SAMPO_CONAN_SETTINGS} ${CONAN_SETTINGS}
+        ENV_BUILD ${SAMPO_CONAN_ENV_BUILD}
+    )
+
+    message(STATUS "Conan install ${CONAN_NAME}/${CONAN_VERSION} - done")
+endif()
+
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_BINARY_DIR}/conan)
+
+if (DEFINED FINDPACKAGE_COMPONENTS)
+    find_package(
+        ${FINDPACKAGE_PACKAGE_NAME}
+        ${CONAN_VERSION} EXACT REQUIRED
+        COMPONENTS ${FINDPACKAGE_COMPONENTS}
+        GLOBAL
+    )
+else()
+    find_package(${FINDPACKAGE_PACKAGE_NAME} ${CONAN_VERSION} EXACT REQUIRED GLOBAL)
+endif()
+
+set(
+    ${FINDPACKAGE_PACKAGE_NAME}_FOUND True
+    CACHE INTERNAL "Did conan already install ${FINDPACKAGE_PACKAGE_NAME}."
+)
+set(
+    ${FINDPACKAGE_PACKAGE_NAME}_CONFIG ${CMAKE_BUILD_TYPE}
+    CACHE INTERNAL "Installed ${FINDPACKAGE_PACKAGE_NAME} config."
+)
+
+
+set(USE_STATIC_LIBS ON)
+if (USE_SHARED_LIBS)
+    set(USE_STATIC_LIBS OFF)
+endif()
+foreach(component ${${CONAN_FINDPACKAGE_PREFIX}_COMPONENTS})
+    set_target_properties(
+        ${component}
+        PROPERTIES
+        SAMPO_FINDPACKAGE_NAME ${FINDPACKAGE_PACKAGE_NAME}
+        SAMPO_FINDPACKAGE_VERSION ${CONAN_VERSION}
+        SAMPO_FINDPACKAGE_EXACT_VERSION True
+        SAMPO_FINDPACKAGE_COMPONENTS "${FINDPACKAGE_COMPONENTS}"
+        SAMPO_FINDPACKAGE_PRELUDE "${FINDDEPENDENCY_PRELUDE}"
+    )
+endforeach()
+
+if (NOT DEFINED ${CONAN_FINDPACKAGE_PREFIX}_LIBRARY_DIRS)
+    list(GET ${CONAN_FINDPACKAGE_PREFIX}_LIBRARIES 0 some_binary)
+
+    if (NOT some_binary)
+        message(
+            FATAL_ERROR
+            "No binary for ${CONAN_FINDPACKAGE_PREFIX} was found."
+            "It may lead to incorrect results in INSTALL (find runtime dependencies) or ctests."
+            "Please check variable CONAN_FINDPACKAGE_PREFIX."
+        )
+    endif()
+
+    get_filename_component(${CONAN_FINDPACKAGE_PREFIX}_LIBRARY_DIRS ${some_binary} DIRECTORY)
+endif()
+
+if (WIN32)
+    list(APPEND SAMPO_RUNTIME_DEPS_PATHS "${${CONAN_FINDPACKAGE_PREFIX}_LIBRARY_DIRS}/../bin")
+else()
+    list(APPEND SAMPO_RUNTIME_DEPS_PATHS ${${CONAN_FINDPACKAGE_PREFIX}_LIBRARY_DIRS})
+endif()
+
+# Обязательно повышаем область видимости
+set(SAMPO_RUNTIME_DEPS_PATHS ${SAMPO_RUNTIME_DEPS_PATHS} PARENT_SCOPE)

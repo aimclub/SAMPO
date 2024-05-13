@@ -82,6 +82,8 @@ public:
     void set_sgs(ScheduleGenerationScheme sgs);
 
     void evaluate(vector<Chromosome *> &chromosomes);
+
+    vector<py::object> get_schedules(vector<Chromosome *> &chromosomes);
 };
 
 

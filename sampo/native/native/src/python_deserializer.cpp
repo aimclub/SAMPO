@@ -203,4 +203,22 @@ py::object encodeChromosome(Chromosome *incoming) {
 py::list encodeChromosomes(const vector<Chromosome *> &incoming) {
     return PyCodec::toList(incoming, encodeChromosome);
 }
+
+py::object encodeSchedule(const swork_dict_t &schedule) {
+    vector<py::tuple> result;
+    for (const auto&[id, swork] : schedule) {
+        vector<py::tuple> workers;
+        workers.reserve(swork.workers.size());
+        for (const auto& worker : swork.workers) {
+            workers.push_back(py::make_tuple(worker.id, worker.name, worker.count, worker.contractor_id));
+        }
+
+        result.push_back(py::make_tuple(swork.work_unit->id,
+                                        swork.start_time().val(),
+                                        swork.finish_time().val(),
+                                        workers,
+                                        swork.contractor->name));
+    }
+    return PyCodec::toList(result);
+}
 }    // namespace PythonDeserializer

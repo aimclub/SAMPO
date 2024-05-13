@@ -13,15 +13,17 @@
 namespace py = pybind11;
 
 namespace PythonDeserializer {
-WorkGraph *workGraph(const py::handle &pyWorkGraph);
+    WorkGraph *workGraph(const py::handle &pyWorkGraph);
 
-vector<Contractor *> contractors(const py::handle &pyContractors);
+    vector<Contractor *> contractors(const py::handle &pyContractors);
 
-vector<Chromosome *> decodeChromosomes(const py::handle &incoming);
+    vector<Chromosome *> decodeChromosomes(const py::handle &incoming);
 
-py::object encodeChromosome(Chromosome *incoming);
+    py::object encodeChromosome(Chromosome *incoming);
 
-py::list encodeChromosomes(vector<Chromosome *> &incoming);
+    py::list encodeChromosomes(vector<Chromosome *> &incoming);
+
+    py::object encodeSchedule(const swork_dict_t &schedule);
 }    // namespace PythonDeserializer
 
 #endif    // PYTHON_DESERIALIZER_H

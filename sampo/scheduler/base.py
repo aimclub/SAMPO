@@ -102,6 +102,9 @@ class Scheduler(ABC):
             data in its closure and run optimization process when receives `optimize_array`.
             Passing None or default value means this function should only apply spec.
         """
+        worker_reqs = set(wr.kind for wr in work_unit.worker_reqs)
+        worker_team = [worker for worker in worker_team if worker.name in worker_reqs]
+
         if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
             # all resources passed in spec, skipping optimize_resources step
             for worker in worker_team:

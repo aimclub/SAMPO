@@ -38,6 +38,14 @@ vector<vector<float>> evaluate(size_t info_ptr_orig, const py::object &py_chromo
     return fitness;
 }
 
+vector<py::object> get_schedules(size_t info_ptr_orig, const py::object &py_chromosomes) {
+    auto *evaluator = (ChromosomeEvaluator *) info_ptr_orig;
+
+    auto chromosomes = PythonDeserializer::decodeChromosomes(py_chromosomes);
+
+    return evaluator->get_schedules(chromosomes);
+}
+
 //static PyObject *runGenetic(PyObject *self, PyObject *args) {
 //    EvaluateInfo *infoPtr;
 //    PyObject *pyChromosomes;
@@ -134,15 +142,17 @@ PYBIND11_MODULE(native, m) {
           "decodeEvaluationInfo",
           decodeEvaluationInfo,
           "Uploads the scheduling info to C++ memory and caches it"
-    );
-    m.def(
+    ).def(
             "freeEvaluationInfo",
             freeEvaluationInfo,
             "Frees C++ scheduling cache. Must be called in the end of scheduling to avoid memory leaks"
-    );
-    m.def(
+    ).def(
             "evaluate",
             evaluate,
-            "Evaluates the chromosome using Just-In-Time-Timeline"
+            "Evaluates chromosomes using Just-In-Time-Timeline and fitness"
+    ).def(
+            "evaluate_to_schedules",
+            get_schedules,
+            "Evaluates chromosomes to schedules using Just-In-Time-Timeline"
     );
 }

@@ -32,6 +32,16 @@ inline py::list toList(const vector<T> &data, py::object (*encodeValue)(T)) {
     return list_obj;
 }
 
+template <typename T>
+inline py::list toList(const vector<T> &data) {
+    py::list list_obj(data.size());
+
+    for (size_t i = 0; i < data.size(); i++) {
+        list_obj[i] = data[i];
+    }
+    return list_obj;
+}
+
 // =============================
 // ====== Decoder section ======
 // =============================

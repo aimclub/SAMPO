@@ -1,6 +1,7 @@
 #include <utility>
 
 #include "native/scheduler/chromosome_evaluator.h"
+#include "native/python_deserializer.h"
 
 ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
                                          vector<Contractor*> contractors,
@@ -9,7 +10,8 @@ ChromosomeEvaluator::ChromosomeEvaluator(const WorkGraph *wg,
         : wg(wg),
           contractors(contractors),
           work_estimator(work_estimator),
-          spec(std::move(std::move(spec))) {
+          spec(std::move(spec)),
+          sgs(ScheduleGenerationScheme::Parallel) {
     unordered_map<string, int> node_id2index;
 
     // construct the outer numeration
@@ -193,4 +195,36 @@ void ChromosomeEvaluator::evaluate(vector<Chromosome *> &chromosomes) {
 //            cout << "Chromosome invalid" << endl;
         }
     }
+}
+
+vector<py::object> ChromosomeEvaluator::get_schedules(vector<Chromosome *> &chromosomes) {
+    vector<py::object> schedules;
+    auto fitness = TimeFitness();
+    // #pragma omp parallel for shared(chromosomes, fitness) default(none) num_threads(this->numThreads)
+    for (auto* chromosome : chromosomes) {
+        if (is_valid(chromosome)) {
+            // TODO Add sgs_type parametrization
+            JustInTimeTimeline timeline(worker_pool, landscape);
+            Time assigned_parent_time;
+            swork_dict_t schedule = SGS::parallel(chromosome,
+                                                  worker_pool,
+                                                  spec,
+                                                  worker_pool_indices,
+                                                  index2node,
+                                                  contractors,
+                                                  index2zone,
+                                                  worker_name2index,
+                                                  contractor2index,
+                                                  landscape,
+                                                  assigned_parent_time,
+                                                  timeline,
+                                                  *work_estimator);
+
+            schedules.push_back(PythonDeserializer::encodeSchedule(schedule));
+        } else {
+            chromosome->fitness = INT_MAX;
+        }
+    }
+
+    return schedules;
 }

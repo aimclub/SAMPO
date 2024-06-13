@@ -62,7 +62,6 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = float(volume)
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
-        self.workground_size = workground_size
 
     def __del__(self):
         for attr in self.__dict__.values():
@@ -83,6 +82,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :return: list of serialized values
         """
         return [t._serialize() for t in value]
+
+    @classmethod
+    @custom_serializer('material_reqs', deserializer=True)
+    def material_reqs_deserializer(cls, value) -> list[MaterialReq]:
+        """
+        Get list of material requirements
+
+        :param value: serialized list of material requirements
+        :return: list of material requirements
+        """
+        return [MaterialReq._deserialize(wr) for wr in value]
 
     @classmethod
     @custom_serializer('worker_reqs', deserializer=True)
@@ -110,10 +120,10 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     @custom_serializer('material_reqs', deserializer=True)
     def material_reqs_deserializer(cls, value) -> list[MaterialReq]:
         """
-        Get list of worker requirements
+        Get list of material requirements
 
-        :param value: serialized list of work requirements
-        :return: list of worker requirements
+        :param value: serialized list of material requirements
+        :return: list of material requirements
         """
         return [MaterialReq._deserialize(wr) for wr in value]
 

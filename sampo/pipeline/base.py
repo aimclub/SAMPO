@@ -90,5 +90,9 @@ class SchedulePipeline(ABC):
         ...
 
     @abstractmethod
-    def finish(self) -> ScheduledProject:
+    def finish(self) -> list[ScheduledProject]:
+        ...
+
+    @abstractmethod
+    def visualization(self, start_date: str) -> list['Visualization']:
         ...

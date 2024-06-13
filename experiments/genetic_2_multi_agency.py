@@ -37,7 +37,7 @@ if __name__ == '__main__':
     conjuncted = bg.to_work_graph()
     print(f'Conjunction finished: {conjuncted.vertex_count} works')
 
-    # schedule = agents[0].scheduler.schedule(conjuncted, contractors)
+    # schedule = agents[0].scheduler.schedule(conjuncted, contractors)[0]
 
     scheduled_blocks = manager.manage_blocks(bg, logger=print)
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     print(f'Best genetic: {best_genetic}')
 
-    schedule = best_genetic.schedule(conjuncted, contractors)
+    schedule = best_genetic.schedule(conjuncted, contractors)[0]
 
     ma_res = max(sblock.end_time for sblock in scheduled_blocks.values())
     genetic_res = schedule.execution_time

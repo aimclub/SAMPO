@@ -1,0 +1,175 @@
+#Format Style Options - Created with Clang Power Tools
+---
+AccessModifierOffset: -4
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: AcrossEmptyLines
+AlignConsecutiveMacros: AcrossEmptyLines
+AlignEscapedNewlines: Right
+AlignOperands: Align
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllConstructorInitializersOnNextLine: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+AttributeMacros: ['__capability', '__output', '__ununsed', 'CXX17_NODISCARD', 'CXX20_CONSTEXPR']
+BinPackArguments: false
+BinPackParameters: false
+#BasedOnStyle : LLVM
+BreakBeforeBraces: Custom
+BraceWrapping: 
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: false
+PackConstructorInitializers: NextLine
+BreakConstructorInitializers: BeforeColon
+ColumnLimit: 80
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+IncludeCategories:
+#include <Eigen/...>
+  - Regex: '(<|")Eigen.*'
+    Priority: 70
+    CaseSensitive: false
+
+#include <catch2/...>
+  - Regex: '(<|")catch2.*'
+    Priority: 71
+    CaseSensitive: false
+
+#include <flann/...>
+  - Regex: '(<|")flann.*'
+    Priority: 72
+    CaseSensitive: false
+
+#include <cu...>
+  - Regex: '(<|")cu.*\.h'
+    Priority: 73
+    CaseSensitive: false
+
+#include <boost/...>
+  - Regex: '(<|")boost.*'
+    Priority: 74
+    CaseSensitive: false
+
+#include <gtest/...>
+  - Regex: '(<|")gtest.*'
+    Priority: 75
+    CaseSensitive: false
+
+#include <iostream>
+  - Regex: '<[a-z0-9_]*>'
+    Priority: 1
+    CaseSensitive: false
+
+#include <AnyLib/AnyFile.h[pp]>
+  - Regex: '<[A-Za-z0-9_-]*\/.*\.h'
+    Priority: 52
+    CaseSensitive: false
+
+#include <AnyLib/AnyFile>
+  - Regex: '<[A-Za-z0-9_-]*\/.*>'
+    Priority: 50
+    CaseSensitive: false
+
+#include <AnyFile.h[pp]>
+  - Regex: '<.*\.h'
+    Priority: 51
+    CaseSensitive: false
+
+#include <AnyFile>
+  - Regex: '<.*>'
+    Priority: 2
+    CaseSensitive: false
+
+#include "AnyLib/AnyFile.h[pp]"
+  - Regex: '(")[A-Za-z0-9_-]*\/.*\.h'
+    Priority: 92
+    CaseSensitive: false
+
+#include "AnyLib/AnyFile"
+  - Regex: '(")[A-Za-z0-9_-]*\/.*>'
+    Priority: 90
+    CaseSensitive: false
+
+#include "AnyFile.h[pp]"
+  - Regex: '(").*\.h'
+    Priority: 91
+    CaseSensitive: false
+
+#include "AnyFile"
+  - Regex: '(").*'
+    Priority: 999
+    CaseSensitive: false
+
+#include AllOtherVariants
+  - Regex: '.*'
+    Priority: 3
+    CaseSensitive: false
+IndentExternBlock: Indent
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+InsertTrailingCommas: Wrapped
+Standard: c++17
+Language: Cpp
+LambdaBodyIndentation: Signature
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: Inner
+PenaltyBreakComment: 80
+PenaltyBreakFirstLessLess: 80
+PenaltyBreakString: 80
+PenaltyBreakTemplateDeclaration: 80
+PenaltyReturnTypeOnItsOwnLine: 41
+PointerAlignment: Right
+ReflowComments: true
+SpaceAroundPointerQualifiers: Both
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeCaseColon: false
+SpaceBeforeInheritanceColon: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: true
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 8
+SpacesBeforeTrailingComments: 4
+SpacesInContainerLiterals: false
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+StatementMacros:
+  - '_Pragma'
+StatementAttributeLikeMacros:
+  - Q_UNUSED
+  - QT_REQUIRE_VERSION
+TabWidth : 4
+UseTab : Never
+...
+

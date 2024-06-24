@@ -51,7 +51,7 @@ class ZoneConfiguration:
     statuses: ZoneStatuses = field(default_factory=lambda: DefaultZoneStatuses())
 
     def change_cost(self, from_status: int, to_status: int) -> int:
-        return self.time_costs[from_status, to_status]
+        return int(self.time_costs[from_status, to_status])
 
 
 @dataclass

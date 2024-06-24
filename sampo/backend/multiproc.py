@@ -116,30 +116,35 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
     def cache_scheduler_info(self,
                              wg: WorkGraph,
                              contractors: list[Contractor],
-                             landscape: LandscapeConfiguration,
-                             spec: ScheduleSpec,
+                             landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                             spec: ScheduleSpec = ScheduleSpec(),
                              rand: Random | None = None,
                              work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
         self._pool = None
 
     def cache_genetic_info(self,
-                           selection_size: int,
-                           mutate_order: float,
-                           mutate_resources: float,
-                           mutate_zones: float,
-                           deadline: Time | None,
-                           weights: list[int] | None,
-                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...],
-                           sgs_type: ScheduleGenerationScheme,
-                           only_lft_initialization: bool,
-                           is_multiobjective: bool):
-        super().cache_genetic_info(selection_size, mutate_order, mutate_resources, mutate_zones, deadline,
+                           population_size: int = 50,
+                           mutate_order: float = 0.1,
+                           mutate_resources: float = 0.05,
+                           mutate_zones: float = 0.05,
+                           deadline: Time | None = None,
+                           weights: list[int] | None = None,
+                           init_schedules: dict[
+                               str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           assigned_parent_time: Time = Time(0),
+                           fitness_weights: tuple[int | float, ...] = None,
+                           sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                           only_lft_initialization: bool = False,
+                           is_multiobjective: bool = False):
+        super().cache_genetic_info(population_size, mutate_order, mutate_resources, mutate_zones, deadline,
                                    weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
                                    only_lft_initialization, is_multiobjective)
-        self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules, self._landscape)
+        if init_schedules:
+            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules,
+                                                  self._landscape)
+        else:
+            self._init_chromosomes = []
         self._pool = None
 
     def compute_chromosomes(self, fitness: FitnessFunction, chromosomes: list[ChromosomeType]) -> list[float]:
@@ -157,35 +162,36 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
         def mapper(key: str):
             def randomized_init():
                 schedule, _, _, order = RandomizedTopologicalScheduler(g_work_estimator, int(g_rand.random() * 1000000)) \
-                    .schedule_with_cache(g_wg, g_contractors, landscape=g_landscape)
+                    .schedule_with_cache(g_wg, g_contractors, landscape=g_landscape)[0]
                 return schedule, order, g_spec
 
             def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
-                    return scheduler_class(work_estimator=g_work_estimator,
-                                           resource_optimizer=AverageReqResourceOptimizer(k)) \
-                        .schedule(g_wg, g_contractors,
-                                  g_spec,
-                                  landscape=g_landscape), list(reversed(prioritization(g_wg, g_work_estimator))), g_spec
+                    schedule, _, _, node_order = (scheduler_class(work_estimator=g_work_estimator,
+                                                                  resource_optimizer=AverageReqResourceOptimizer(k))
+                                                  .schedule_with_cache(g_wg, g_contractors, g_spec,
+                                                                       landscape=g_landscape))[0]
+                    return schedule, node_order[::-1], g_spec
                 except NoSufficientContractorError:
                     return None, None, None
 
             if g_deadline is None:
                 def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                     try:
-                        return scheduler_class(work_estimator=g_work_estimator).schedule(g_wg, g_contractors,
-                                                                                       landscape=g_landscape), \
-                            list(reversed(prioritization(g_wg, g_work_estimator))), g_spec
+                        schedule, _, _, node_order = (scheduler_class(work_estimator=g_work_estimator)
+                                                      .schedule_with_cache(g_wg, g_contractors, g_spec,
+                                                                           landscape=g_landscape))[0]
+                        return schedule, node_order[::-1], g_spec
                     except NoSufficientContractorError:
                         return None, None, None
 
             else:
                 def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                     try:
-                        (schedule, _, _, _), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
+                        (schedule, _, _, node_order), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                             scheduler_class(work_estimator=g_work_estimator)
                         ).schedule_with_cache(g_wg, g_contractors, g_deadline, g_spec, landscape=g_landscape)
-                        return schedule, list(reversed(prioritization(g_wg, g_work_estimator))), modified_spec
+                        return schedule, node_order[::-1], modified_spec
                     except NoSufficientContractorError:
                         return None, None, None
 

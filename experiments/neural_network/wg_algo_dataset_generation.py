@@ -50,7 +50,7 @@ def display_top(snapshot, key_type='lineno', limit=3):
 def generate() -> tuple:
     wg = ss.work_graph(top_border=GRAPHS_TOP_BORDER)
     encoding = encode_graph(wg)
-    schedulers_results = [int(scheduler.schedule(wg, contractors).execution_time) for scheduler in schedulers]
+    schedulers_results = [int(scheduler.schedule(wg, contractors)[0].execution_time) for scheduler in schedulers]
     generated_label = argmin(schedulers_results)
     del wg
     del schedulers_results

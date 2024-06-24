@@ -1,7 +1,6 @@
 import math
 import random
 from copy import deepcopy
-from functools import partial
 from operator import attrgetter
 from typing import Callable, Iterable
 
@@ -277,10 +276,10 @@ def generate_chromosomes(n: int,
     def randomized_init(is_topological: bool = False) -> ChromosomeType:
         if is_topological:
             schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
-                .schedule(wg, contractors, landscape=landscape)
+                .schedule(wg, contractors, spec, landscape=landscape)[0]
         else:
             schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors, spec,
-                                                                                                 landscape=landscape)
+                                                                                                 landscape=landscape)[0]
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 
@@ -348,7 +347,7 @@ def generate_chromosome(wg: WorkGraph,
     def randomized_init() -> ChromosomeType:
         schedule = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, spec, landscape=landscape)
+            .schedule(wg, contractors, spec, landscape=landscape)[0]
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 

@@ -18,10 +18,10 @@ class DefaultComputationalBackend(ComputationalBackend):
     def cache_scheduler_info(self,
                              wg: WorkGraph,
                              contractors: list[Contractor],
-                             landscape: LandscapeConfiguration,
-                             spec: ScheduleSpec,
+                             landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                             spec: ScheduleSpec = ScheduleSpec(),
                              rand: Random | None = None,
-                             work_estimator: WorkTimeEstimator | None = None):
+                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         self._wg = wg
         self._contractors = contractors
         self._landscape = landscape
@@ -31,18 +31,18 @@ class DefaultComputationalBackend(ComputationalBackend):
         self._toolbox = None
 
     def cache_genetic_info(self,
-                           population_size: int,
-                           mutate_order: float,
-                           mutate_resources: float,
-                           mutate_zones: float,
-                           deadline: Time | None,
-                           weights: list[int] | None,
-                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...],
-                           sgs_type: ScheduleGenerationScheme,
-                           only_lft_initialization: bool,
-                           is_multiobjective: bool):
+                           population_size: int = 50,
+                           mutate_order: float = 0.1,
+                           mutate_resources: float = 0.05,
+                           mutate_zones: float = 0.05,
+                           deadline: Time | None = None,
+                           weights: list[int] | None = None,
+                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           assigned_parent_time: Time = Time(0),
+                           fitness_weights: tuple[int | float, ...] = None,
+                           sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                           only_lft_initialization: bool = False,
+                           is_multiobjective: bool = False):
         self._selection_size = population_size
         self._mutate_order = mutate_order
         self._mutate_resources = mutate_resources
@@ -61,8 +61,11 @@ class DefaultComputationalBackend(ComputationalBackend):
         if self._toolbox is None:
             from sampo.scheduler.genetic.utils import init_chromosomes_f, create_toolbox_using_cached_chromosomes
 
-            init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._init_schedules,
-                                                  self._landscape)
+            if self._init_schedules:
+                init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._init_schedules,
+                                                      self._landscape)
+            else:
+                init_chromosomes = []
 
             rand = self._rand or Random()
             work_estimator = self._work_estimator or DefaultWorkEstimator()

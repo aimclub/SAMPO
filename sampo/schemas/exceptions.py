@@ -9,13 +9,19 @@ class NoSufficientContractorError(Exception):
         super().__init__(message)
 
 
+class NoAvailableResources(Exception):
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class NotEnoughMaterialsInDepots(Exception):
 
     def __init__(self, message):
         super().__init__(message)
 
 
-class NoAvailableResources(Exception):
+class NoDepots(Exception):
 
     def __init__(self, message):
         super().__init__(message)

@@ -1,13 +1,12 @@
 import copy
-from enum import Enum
 
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
 from sampo.scheduler.base import Scheduler
+from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
-from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
@@ -82,7 +81,7 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    worker_pool_indices: dict[int, dict[int, Worker]],
                                    worker_name2index: dict[str, int],
                                    contractor2index: dict[str, int],
-                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                                   landscape: LandscapeConfiguration,
                                    timeline: Timeline | None = None,
                                    assigned_parent_time: Time = Time(0),
                                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -177,7 +176,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
     # declare current checkpoint index
     ckpt_idx = 0
     start_time = assigned_parent_time - 1
-    pred_start_time = start_time - 1
+    prev_start_time = start_time - 1
 
     def work_scheduled(args) -> bool:
         idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
@@ -209,13 +208,13 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
     while len(enumerated_works_remaining) > 0:
         if ckpt_idx < len(work_timeline):
             start_time = work_timeline[ckpt_idx]
-            if pred_start_time == start_time:
+            if prev_start_time == start_time:
                 ckpt_idx += 1
                 continue
             if start_time.is_inf():
                 # break because schedule already contains Time.inf(), that is incorrect schedule
                 break
-            pred_start_time = start_time
+            prev_start_time = start_time
         else:
             start_time += 1
 

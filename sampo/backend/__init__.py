@@ -7,6 +7,7 @@ from typing import TypeVar
 from sampo.api.genetic_api import ChromosomeType, FitnessFunction, Individual, ScheduleGenerationScheme
 from sampo.schemas import WorkGraph, Contractor, LandscapeConfiguration, Schedule, GraphNode, Time, WorkTimeEstimator
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -20,7 +21,7 @@ class ComputationalBackend(ABC):
         self._landscape = None
         self._spec = None
         self._rand = Random()
-        self._work_estimator = None
+        self._work_estimator = DefaultWorkEstimator()
 
         # additional genetic parameters
         self._toolbox = None
@@ -44,28 +45,28 @@ class ComputationalBackend(ABC):
     def cache_scheduler_info(self,
                              wg: WorkGraph,
                              contractors: list[Contractor],
-                             landscape: LandscapeConfiguration,
-                             spec: ScheduleSpec,
+                             landscape: LandscapeConfiguration = LandscapeConfiguration(),
+                             spec: ScheduleSpec = ScheduleSpec(),
                              rand: Random | None = None,
-                             work_estimator: WorkTimeEstimator | None = None):
+                             work_estimator: WorkTimeEstimator  = DefaultWorkEstimator()):
         from sampo.base import SAMPO
         SAMPO.logger.debug(f'Function cache_scheduler_info for {self.__class__.__name__} '
                            f'is not implemented yet, setting fallback')
         return self._default.cache_scheduler_info(wg, contractors, landscape, spec, rand, work_estimator)
 
     def cache_genetic_info(self,
-                           population_size: int,
-                           mutate_order: float,
-                           mutate_resources: float,
-                           mutate_zones: float,
-                           deadline: Time | None,
-                           weights: list[int] | None,
-                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
-                           assigned_parent_time: Time,
-                           fitness_weights: tuple[int | float, ...],
-                           sgs_type: ScheduleGenerationScheme,
-                           only_lft_initialization: bool,
-                           is_multiobjective: bool):
+                           population_size: int = 50,,
+                           mutate_order: float = 0.1,
+                           mutate_resources: float = 0.05,
+                           mutate_zones: float = 0.05,
+                           deadline: Time | None = None,
+                           weights: list[int] | None = None,
+                           init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           assigned_parent_time: Time = Time(0),
+                           fitness_weights: tuple[int | float, ...] = None,
+                           sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
+                           only_lft_initialization: bool = False,
+                           is_multiobjective: bool = False):
         from sampo.base import SAMPO
         SAMPO.logger.debug(f'Function cache_genetic_info for {self.__class__.__name__} '
                            f'is not implemented yet, setting fallback')

@@ -2,13 +2,9 @@ import time
 
 from sampo.api.genetic_api import ScheduleGenerationScheme
 from sampo.backend.default import DefaultComputationalBackend
-from sampo.backend.multiproc import MultiprocessingComputationalBackend
 from sampo.backend.native import NativeComputationalBackend
 from sampo.base import SAMPO
 from sampo.scheduler import GeneticScheduler
-from sampo.scheduler.timeline import JustInTimeTimeline
-from sampo.scheduler.utils import get_worker_contractor_pool
-from sampo.schemas.schedule_spec import ScheduleSpec
 
 
 def test_multiprocessing(setup_scheduler_parameters):

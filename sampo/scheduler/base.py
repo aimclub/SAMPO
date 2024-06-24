@@ -53,7 +53,7 @@ class Scheduler(ABC):
                  start_time: Time = Time(0),
                  timeline: Timeline | None = None,
                  landscape: LandscapeConfiguration = LandscapeConfiguration()) \
-            -> Schedule:
+            -> list[Schedule]:
         """
         Implementation of a scheduling process. 'schedule' version returns only Schedule.
 
@@ -63,20 +63,21 @@ class Scheduler(ABC):
             raise ValueError('None or empty WorkGraph')
         if contractors is None or len(contractors) == 0:
             raise ValueError('None or empty contractor list')
-        schedule = self.schedule_with_cache(wg, contractors, landscape, spec, validate, start_time, timeline)[0]
+        schedules = self.schedule_with_cache(wg, contractors, spec, validate, start_time, timeline, landscape)
+        schedules = [schedule[0] for schedule in schedules]
         # print(f'Schedule exec time: {schedule.execution_time} days')
-        return schedule
+        return schedules
 
     @abstractmethod
     def schedule_with_cache(self,
                             wg: WorkGraph,
                             contractors: list[Contractor],
-                            landscape: LandscapeConfiguration = LandscapeConfiguration(),
                             spec: ScheduleSpec = ScheduleSpec(),
                             validate: bool = False,
                             assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None) \
-            -> tuple[Schedule, Time, Timeline, list[GraphNode]]:
+                            timeline: Timeline | None = None,
+                            landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         """
         Extended version of 'schedule' method. Returns much inner info
         about a scheduling process, not only Schedule.
@@ -101,6 +102,9 @@ class Scheduler(ABC):
             data in its closure and run optimization process when receives `optimize_array`.
             Passing None or default value means this function should only apply spec.
         """
+        worker_reqs = set(wr.kind for wr in work_unit.worker_reqs)
+        worker_team = [worker for worker in worker_team if worker.name in worker_reqs]
+
         if len(work_spec.assigned_workers) == len(work_unit.worker_reqs):
             # all resources passed in spec, skipping optimize_resources step
             for worker in worker_team:

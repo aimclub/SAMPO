@@ -78,3 +78,4 @@ venv.bak/
 
 # C/C++ native files
 /sampo/native/cmake-build-debug/
+/sampo/native/cmake-build-release/

@@ -113,35 +113,11 @@ void freeEvaluationInfo(size_t info_ptr_orig) {
     delete info_ptr;
 }
 
-//static PyMethodDef nativeMethods[] = {
-//    {            "evaluate",
-//     evaluate, METH_VARARGS,
-//     "Evaluates the chromosome using Just-In-Time-Timeline"                             },
-//    {          "runGenetic", runGenetic, METH_VARARGS,    "Runs the whole genetic cycle"},
-//    {"decodeEvaluationInfo",
-//     decodeEvaluationInfo, METH_VARARGS,
-//     "Uploads the scheduling info to C++ memory and caches it"                          },
-//    {"ddd",
-//            ddd, METH_VARARGS,
-//            "Uploads the scheduling info to C++ memory and caches it"                          },
-//    {  "freeEvaluationInfo",
-//     freeEvaluationInfo, METH_VARARGS,
-//     "Frees C++ scheduling cache. Must be called in the end of scheduling to "
-//     "avoid memory leaks."                                                              },
-//    {               nullptr,    nullptr,            0,                           nullptr}
-//};
-//
-//static PyModuleDef nativeModule = { PyModuleDef_HEAD_INIT,
-//                                    "native",
-//                                    "The high-efficient native implementation of SAMPO modules",
-//                                    -1,
-//                                    nativeMethods };
-
 PYBIND11_MODULE(native, m) {
     m.def(
-          "decodeEvaluationInfo",
-          decodeEvaluationInfo,
-          "Uploads the scheduling info to C++ memory and caches it"
+            "decodeEvaluationInfo",
+            decodeEvaluationInfo,
+            "Uploads the scheduling info to C++ memory and caches it"
     ).def(
             "freeEvaluationInfo",
             freeEvaluationInfo,

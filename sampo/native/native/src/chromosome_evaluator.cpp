@@ -165,7 +165,7 @@ void ChromosomeEvaluator::evaluate(vector<Chromosome *> &chromosomes) {
             // TODO Add sgs_type parametrization
             JustInTimeTimeline timeline(worker_pool, landscape);
             Time assigned_parent_time;
-            swork_dict_t schedule = SGS::parallel(chromosome,
+            swork_dict_t schedule = SGS::serial(chromosome,
                                                   worker_pool,
                                                   spec,
                                                   worker_pool_indices,

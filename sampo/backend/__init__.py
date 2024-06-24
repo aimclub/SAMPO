@@ -86,3 +86,9 @@ class ComputationalBackend(ABC):
         SAMPO.logger.debug(f'Function generate_first)population for {self.__class__.__name__} '
                            f'is not implemented yet, setting fallback')
         return self._default.generate_first_population(size_population)
+
+    def compute_chromosomes_to_schedules(self, chromosomes: list[ChromosomeType]) -> list[Schedule]:
+        from sampo.base import SAMPO
+        SAMPO.logger.debug(f'Function generate_first)population for {self.__class__.__name__} '
+                           f'is not implemented yet, setting fallback')
+        return self._default.compute_chromosomes_to_schedules(chromosomes)

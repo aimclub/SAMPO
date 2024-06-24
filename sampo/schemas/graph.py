@@ -281,8 +281,17 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._children_edges.append(child)
 
     def min_start_time(self, node2swork: dict['GraphNode', ScheduledWork]) -> Time:
-        return max((node2swork[edge.start].finish_time + int(edge.lag)
-                    for edge in self.edges_to if edge.start in node2swork), default=Time(0))
+        time = Time(0)
+        for edge in self.edges_to:
+            swork = node2swork.get(edge.start, None)
+            if swork is None:
+                if edge.type == EdgeType.InseparableFinishStart:
+                    continue
+                swork_finish_time = Time.inf()
+            else:
+                swork_finish_time = swork.finish_time + int(edge.lag)
+            time = max(time, swork_finish_time)
+        return time
 
 
 def get_start_stage(work_id: str | None = None, rand: Random | None = None) -> GraphNode:

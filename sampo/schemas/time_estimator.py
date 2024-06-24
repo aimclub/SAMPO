@@ -78,12 +78,12 @@ class DefaultWorkEstimator(WorkTimeEstimator):
     def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
         self._productivity_mode = mode
 
-    def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
-        if not worker_list:
+    def estimate_time(self, work_unit: WorkUnit, workers: list[Worker]) -> Time:
+        if not workers:
             return Time(0)
 
         times = [Time(0)]  # if there are no requirements for the work, it is done instantly
-        name2worker = build_index(worker_list, attrgetter('name'))
+        name2worker = build_index(workers, attrgetter('name'))
 
         for req in work_unit.worker_reqs:
             if req.min_count == 0:

@@ -94,3 +94,8 @@ class DefaultComputationalBackend(ComputationalBackend):
     def generate_first_population(self, size_population: int) -> list[Individual]:
         self._ensure_toolbox_created()
         return self._toolbox.population(size_population)
+
+    def compute_chromosomes_to_schedules(self, chromosomes: list[ChromosomeType]) -> list[Schedule]:
+        self._ensure_toolbox_created()
+        return [self._toolbox.evaluate_chromosome(chromosome) for chromosome in chromosomes]
+

@@ -144,6 +144,9 @@ public:
     Time min_start_time(const swork_dict_t &node2swork) const {
         Time time;
         for (const auto& edge : this->parent_edges) {
+            if (edge.type == EdgeType::InseparableFinishStart) {
+                continue;
+            }
             auto it = node2swork.find(edge.start->id());
             if (it == node2swork.end()) {
                 return Time::inf();

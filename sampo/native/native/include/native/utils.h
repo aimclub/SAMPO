@@ -46,7 +46,7 @@ std::unordered_map<K, V> build_index(vector<T> items,
     return diction;
 }
 
-template <typename T, typename K>
+template <typename K, typename T>
 std::unordered_map<K, T> build_index(vector<T> items,
                                      K (*get_key)(const T&)) {
     std::unordered_map<K, T> diction;

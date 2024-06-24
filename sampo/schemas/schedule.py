@@ -141,16 +141,6 @@ class Schedule(JSONSerializable['Schedule']):
         """
         ordered_task_ids = order_nodes_by_start_time(works, wg) if wg else None
 
-        def sed(time1, time2, swork) -> tuple:
-            """
-            Sorts times and calculates difference.
-            :param time1: time 1.
-            :param time2: time 2.
-            :return: tuple: start, end, duration.
-            """
-            start, end = tuple(sorted((time1, time2)))
-            return start, end, end - start
-
         data_frame = [(i,                                                 # idx
                        w.id,                                              # task_id
                        w.display_name,                                    # task_name
@@ -159,7 +149,8 @@ class Schedule(JSONSerializable['Schedule']):
                        w.cost,                                            # work cost
                        w.volume,                                          # work volume
                        w.volume_type,                                     # work volume type
-                       *sed(*(t.value for t in w.start_end_time), w),     # start, end, duration
+                       *w.start_end_time,                                 # start, end
+                       w.duration,                                        # duration
                        repr(dict((i.name, i.count) for i in w.workers)),  # workers
                        w  # full ScheduledWork info
                        ) for i, w in enumerate(works)]

@@ -98,6 +98,8 @@ class IntervalGaussian(Interval):
     max_val: Optional[float] = INF
     rand: Optional[Random] = Random()
 
+    ignored_fields = ['rand']
+
     def rand_float(self, rand: Optional[random.Random] = None) -> float:
         """
         Returns a random float in the interval boundary according to the distribution of the class

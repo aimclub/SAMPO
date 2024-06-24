@@ -20,13 +20,13 @@ def test_multiprocessing(setup_scheduler_parameters):
                                mutate_order=0.05,
                                mutate_resources=0.05,
                                size_of_population=50,
-                               sgs_type=ScheduleGenerationScheme.Parallel)
+                               sgs_type=ScheduleGenerationScheme.Serial)
 
     start_default = time.time()
     schedule = genetic.schedule(wg, contractors, landscape=landscape)
     time_default = time.time() - start_default
-    for work in schedule.works:
-        print(f'{work.name} : {work.start_time} {work.finish_time}')
+    # for work in schedule.works:
+    #     print(f'{work.name} : {work.start_time} {work.finish_time}')
 
     n_cpus = 10
     SAMPO.backend = NativeComputationalBackend()
@@ -35,9 +35,9 @@ def test_multiprocessing(setup_scheduler_parameters):
     genetic.schedule(wg, contractors, landscape=landscape)
     time_multiproc = time.time() - start_multiproc
 
-    print('\n------------------\n')
-    print(f'Graph size: {wg.vertex_count}')
-    print(f'Time default: {time_default} s')
-    print(f'Time multiproc: {time_multiproc} s')
-    print(f'CPUs used: {n_cpus}')
-    print(f'Ratio: {time_default / time_multiproc}')
+    # print('\n------------------\n')
+    # print(f'Graph size: {wg.vertex_count}')
+    # print(f'Time default: {time_default} s')
+    # print(f'Time multiproc: {time_multiproc} s')
+    # print(f'CPUs used: {n_cpus}')
+    # print(f'Ratio: {time_default / time_multiproc}')

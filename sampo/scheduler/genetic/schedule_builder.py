@@ -1,6 +1,6 @@
 import random
 import time
-from typing import Callable
+from typing import Callable, Iterable
 
 import dill
 from deap import tools
@@ -13,6 +13,7 @@ from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, Fitn
 from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas import ScheduledWork
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -168,11 +169,11 @@ def build_schedules(wg: WorkGraph,
     hof.update(pop)
     best_fitness = hof[0].fitness.values
 
-    import numpy as np
-
-    np.save('part1', hof[0][0])
-    np.save('part2', hof[0][1])
-    np.save('part3', hof[0][2])
+    # import numpy as np
+    #
+    # np.save('part1', hof[0][0])
+    # np.save('part2', hof[0][1])
+    # np.save('part3', hof[0][2])
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
 
@@ -316,8 +317,33 @@ def build_schedules(wg: WorkGraph,
     best_schedules = [({node.id: work for node, work in scheduled_works.items()},
                        schedule_start_time, timeline, order_nodes)
                       for scheduled_works, schedule_start_time, timeline, order_nodes in best_schedules]
+    best_schedules1 = SAMPO.backend.compute_chromosomes_to_schedules(best_chromosomes)[0]
+    best_schedules2 = Schedule.from_scheduled_works(best_schedules[0][0].values(), wg)
+
+    from sampo.utilities.validation import validate_schedule
+
+    validate_schedule(best_schedules1, wg, contractors)
+    validate_schedule(best_schedules2, wg, contractors)
+
+    # import numpy as np
+    #
+    # np.save('part1', hof[0][0])
+    # np.save('part2', hof[0][1])
+    # np.save('part3', hof[0][2])
+    #
+    # wg.dump('.', 'wg')
+    # contractors[0].dump('.', 'contractor')
 
     return best_schedules
+
+
+def schedule_difference(s1: Schedule, s2: Schedule, labels: list[str] = ['task_id', 'start', 'finish']) \
+        -> list[tuple[ScheduledWork, ScheduledWork]]:
+    s1_works = set(tuple(row) for _, row in s1.full_schedule_df[labels].iterrows())
+    s2_works = set(tuple(row) for _, row in s2.full_schedule_df[labels].iterrows())
+    diff = list(s1_works.difference(s2_works))
+    # list(sorted(schedule_difference(best_schedules1, best_schedules2), key=lambda x: x[0].start_time))
+    return [(s1.to_schedule_work_dict.get(t[0], None), s2.to_schedule_work_dict.get(t[0], None)) for t in diff]
 
 
 def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:

@@ -1,4 +1,6 @@
 #include <list>
+#include <functional>
+#include <utility>
 
 #include "native/scheduler/sgs.h"
 #include "native/scheduler/timeline/general_timeline.h"
@@ -16,9 +18,11 @@ inline vector<Worker> decode_worker_team(GraphNode* node,
                                          Contractor* contractor,
                                          const unordered_map<string, int> &worker_name2index) {
     vector<Worker> worker_team;
+//    cout << "Decoding " << work_index << " ";
     for (auto& wreq : node->getWorkUnit()->worker_reqs) {
         auto &v = worker_pool[wreq.kind];
         int count = chromosome->getResources()[work_index][worker_name2index.at(wreq.kind)];
+//        cout << wreq.kind << " " << count << endl;
         worker_team.emplace_back(v[contractor->id].copy().with_count(count));
     }
     return worker_team;
@@ -62,12 +66,26 @@ swork_dict_t SGS::serial(Chromosome* chromosome,
         // TODO Check if assigned_parent_time was not applied
         // TODO Check that find_min_start_time() is not calling if start time specified
         timeline.schedule(node, worker_team, node2swork, work_spec, contractor, Time::unassigned(),
-                          work_spec->assigned_time, assigned_parent_time, work_estimator);
+                          work_spec != nullptr ? work_spec->assigned_time : Time::unassigned(),
+                          assigned_parent_time, work_estimator);
 
         // TODO Add other timelines
     }
 
     return node2swork;
+}
+
+template <typename T>
+void remove_iff(std::list<T> &lst, std::function<bool(const T&)> predicate) {
+//     std::list<T>::iterator it = lst.begin();
+    auto it = lst.begin();
+    while (it != lst.end()) {
+        if (predicate(*it)) {
+            it = lst.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 swork_dict_t SGS::parallel(Chromosome* chromosome,
@@ -101,10 +119,17 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
         Contractor* contractor = index2contractor[chromosome->getContractor(work_index)];
         vector<Worker> worker_team = decode_worker_team(node, worker_pool, chromosome, work_index,
                                                         contractor, worker_name2index);
-        Time exec_time = work_estimator.estimateTime(*node->getWorkUnit(), worker_team);
         const WorkSpec *work_spec = spec.for_work(node->getWorkUnit()->name);
+        Time exec_time;
+        if (work_spec == nullptr) {
+            exec_time = work_estimator.estimateTime(*node->getWorkUnit(), worker_team);
+        } else {
+            exec_time = work_spec->assigned_time;
+        }
+//        cout << work_index << " ";
         enumerated_works_remaining.emplace_back(node, contractor, worker_team, work_spec, exec_time);
     }
+//    cout << endl;
 
     GeneralTimeline<GraphNode> work_timeline;
 
@@ -134,13 +159,19 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
             }
         }
 
-        auto it = std::stable_partition(enumerated_works_remaining.begin(), enumerated_works_remaining.end(),
-        [&assigned_parent_time, &start_time, &timeline, &node2swork, &work_estimator, &work_timeline]
-                (tuple<GraphNode *, Contractor *, vector<Worker>, const WorkSpec *, Time> &decoded) {
+        auto v = [&assigned_parent_time, &start_time, &timeline, &node2swork, &work_estimator, &work_timeline, &index2node]
+                (const tuple<GraphNode*, Contractor*, vector<Worker>, const WorkSpec *, Time> &decoded) {
             const auto &[node, contractor, worker_team, work_spec, exec_time] = decoded;
+
+//            for (int i = 0; i < index2node.size(); i++) {
+//                if (index2node[i] == node) {
+//                    cout << "Scheduling " << i << endl;
+//                }
+//            }
 
             if (timeline.can_schedule_at_the_moment(node, worker_team, node2swork,
                                                     work_spec, start_time, exec_time)) {
+//                cout << node->getWorkUnit()->name << endl;
                 // TODO Apply spec
                 Time st = start_time;
                 if (node->parents().empty()) {
@@ -153,13 +184,15 @@ swork_dict_t SGS::parallel(Chromosome* chromosome,
                                   st, exec_time, assigned_parent_time, work_estimator);
                 work_timeline.update_timeline(st, exec_time, node);
 //                cout << "Scheduled " << node->getWorkUnit()->name << " to " << st.val() << "; start_time = " << start_time.val() << endl;
-                return false;
+                return true;
             }
 
-            return true;
-        });
+            return false;
+        };
 
-        enumerated_works_remaining.erase(it, enumerated_works_remaining.end());
+        remove_iff<tuple<GraphNode*, Contractor*, vector<Worker>, const WorkSpec *, Time>>(enumerated_works_remaining, v);
+
+        // enumerated_works_remaining.erase(it, enumerated_works_remaining.end());
 
         if (!work_timeline.is_end(cpkt_it)) {
             cpkt_it++;

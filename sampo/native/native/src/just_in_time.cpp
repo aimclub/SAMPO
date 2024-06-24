@@ -19,6 +19,13 @@ JustInTimeTimeline::JustInTimeTimeline(const worker_pool_t &worker_pool, const L
             this->timeline[it_contractor.first].insert(std::make_pair(it.first, resource_state));
         }
     }
+//    for (const auto& it_contractor : timeline) {
+//        cout << it_contractor.first << ":" << endl;
+//        for (const auto &it : it_contractor.second) {
+//            cout << it.first << " " << it.second[0].second << " ";
+//        }
+//        cout << endl;
+//    }
     // TODO Add other timelines
 }
 
@@ -110,13 +117,21 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
     }
     // checking edges
     for (const auto* dep_node : node->getInseparableChainWithSelf()) {
-        for (auto* p : dep_node->parents()) {
-            if (p != dep_node->inseparable_parent()) {
-                auto swork_it = node2swork.find(p->id());
-                if (swork_it == node2swork.end() || swork_it->second.finish_time() > start_time) {
-                    return false;
-                }
-            }
+//        for (auto* p : dep_node->parents()) {
+//            if (p != dep_node->inseparable_parent()) {
+//                auto swork_it = node2swork.find(p->id());
+//                if (swork_it == node2swork.end() || swork_it->second.finish_time() > start_time) {
+//                    cout << node->getWorkUnit()->name << " not passing on time "
+//                         << start_time.val() << " because of edges" << endl;
+//                    return false;
+//                }
+//            }
+//        }
+        Time dep_node_time = dep_node->min_start_time(node2swork);
+        if (dep_node_time > start_time) {
+//            cout << dep_node->getWorkUnit()->name << " not passing on time "
+//                 << start_time.val() << " because of edges" << endl;
+            return false;
         }
     }
 
@@ -146,6 +161,13 @@ bool JustInTimeTimeline::can_schedule_at_the_moment(const GraphNode *node,
             ind--;
         }
     }
+
+//    if (max_agent_time > start_time) {
+//        cout << node->getWorkUnit()->name << " with agent time " << max_agent_time.val()
+//             << " not passing on time " << start_time.val() << " because of workers" << endl;
+//    } else {
+//        cout << node->getWorkUnit()->name << " passed" << endl;
+//    }
 
     return max_agent_time <= start_time;
 }
@@ -180,6 +202,7 @@ void JustInTimeTimeline::update_timeline(const GraphNode *node,
         for (const auto& worker : worker_team) {
             int needed_count = worker.count;
             auto &worker_timeline = contractor_timeline.at(worker.name);
+//            cout << worker.name << " size: " << worker_timeline.size() << endl;
 
             // consume needed workers
             while (needed_count > 0) {
@@ -219,6 +242,7 @@ Time JustInTimeTimeline::schedule(const GraphNode *node,
     auto inseparable_chain = node->getInseparableChainWithSelf();
     Time start_time = assigned_start_time;
     if (start_time.is_unassigned()) {
+//        cout << "Start time unassigned, searching" << endl;
         start_time = this->find_min_start_time(node, worker_team, node2swork, spec, assigned_parent_time, work_estimator);
     }
 

@@ -403,7 +403,8 @@ class MomentumTimeline(Timeline):
                                                      assigned_parent_time, work_estimator)
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
-                          for n in inseparable_chain}
+                          for n in inseparable_chain[:-1]}
+            exec_times[inseparable_chain[-1]] = Time(0), assigned_time - sum([v for _, v in exec_times.values()])
 
         # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
         self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,

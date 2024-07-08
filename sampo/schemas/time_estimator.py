@@ -36,8 +36,9 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def find_work_resources(self, work_name: str, work_volume: float, measurement: str | None = None,
-                            resource_name: list[str] | None = None) \
+    def find_work_resources(self, work_name: str, work_volume: float,
+                            resource_name: list[str] | None = None,
+                            measurement: str | None = None) \
             -> list[WorkerReq]:
         ...
 

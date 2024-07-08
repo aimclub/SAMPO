@@ -1,4 +1,3 @@
-import math
 from itertools import chain
 from operator import attrgetter
 from random import Random
@@ -8,18 +7,16 @@ from typing import Type
 
 from sampo.utilities.collections_util import build_index
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
-from idbadapter import MschmAdapter, Schedules
+from idbadapter import MschmAdapter
 from stairsres.res_time_model import ResTimeModel
-
-URL = "postgresql+psycopg2://testuser:pwd@10.32.15.30:25432/test"
-
-dbwrapper = MschmAdapter(URL)
-model = ResTimeModel(dbwrapper)
 
 
 class FieldDevWorkEstimator(WorkTimeEstimator):
     def __init__(self,
+                 url: str,
                  rand: Random = Random()):
+        self._url = url
+        self._model = ResTimeModel(MschmAdapter(url))
         self._use_idle = True
         self._estimation_mode = WorkEstimationMode.Realistic
         self.rand = rand
@@ -45,38 +42,20 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
                            'finish of project']:
             return Time(0)
         try:
-            return Time(int(model.estimate_time(work_unit=w_u, worker_list=w_l, mode=mode_str)))
+            return Time(int(self._model.estimate_time(work_unit=w_u, worker_list=w_l, mode=mode_str)))
         except:
             print(w_u['name'])
 
-    def find_work_resources(self, work_name: str, work_volume: float, measurement: str = None,
-                            resource_name: list[str] | None = None) \
+    def find_work_resources(self, work_name: str, work_volume: float,
+                            resource_name: list[str] | None = None,
+                            measurement: str = None) \
             -> list[WorkerReq]:
         if work_name in ['Начало работ по марке', 'Окончание работ по марке', 'NaN', 'start of project',
                          'finish of project']:
             return []
-        worker_req_dict = model.get_resources_volumes(work_name=work_name, work_volume=work_volume,
-                                                      measurement=measurement)
-        avg_work_duration = 1
-        if worker_req_dict:
-            w_l = [{'name': req['kind'], '_count': req['volume']} for req in worker_req_dict['worker_reqs']]
-            avg_work_duration = model.estimate_time({'name': work_name,
-                                                     'volume': work_volume,
-                                                     'measurement':  measurement}, w_l)
+        worker_req_dict = self._model.get_resources_volumes(work_name=work_name, work_volume=work_volume,
+                                                            measurement=measurement)
 
-        # worker_reqs = [[WorkerReq(kind=req['kind'],
-        #                           volume=Time(math.ceil(req['volume'] / avg_work_duration)),
-        #                           min_count=math.ceil(req['min_count'] / avg_work_duration) if (req[
-        #                                                                                             'min_count'] != 0.0 and
-        #                                                                                         req[
-        #                                                                                             'volume'] != 0.0) or (
-        #                                                                                                req[
-        #                                                                                                    'min_count'] == 0.0 and
-        #                                                                                                req[
-        #                                                                                                    'volume'] == 0.0) else 1,
-        #                           max_count=math.ceil(req['max_count'] / avg_work_duration)) for req in worker_req] for
-        #                worker_req in
-        #                worker_req_dict.values()]
         worker_reqs = [[WorkerReq(kind=req['kind'],
                                   volume=Time(req['volume']),
                                   min_count=req['min_count'],
@@ -93,4 +72,4 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
         self._productivity_mode = mode
 
     def get_recreate_info(self) -> tuple[Type, tuple]:
-        return FieldDevWorkEstimator, ()
+        return FieldDevWorkEstimator, tuple(self._url)

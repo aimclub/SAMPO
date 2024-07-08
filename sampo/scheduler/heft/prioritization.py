@@ -86,12 +86,19 @@ def stochastic_prioritization(wg: StochasticGraph, work_estimator: WorkTimeEstim
     # cannot be implemented because of maximization task
     while len(pending_works) > 0:
         for node in pending_works:
-            if len(seen_set.intersection(node.children_set)) == len(node.children_set):
+            if len(seen_set.intersection(node.parents_set)) == len(node.parents_set):
                 # edges satisfied, adding to priority
                 max_path_to_node = max([seen[v] for v in node.parents])
                 node_cumulative_path = max_path_to_node + wg.average_labor_cost(node)
                 seen[node] = node_cumulative_path
                 seen_set.add(node)
+                for child in node.children_set:
+                    pending_works.add(child)
+
                 yield node
 
-                inner_prioritization = prioritization_nodes(wg.next())
+                generated_graphs = wg.generate_next(node)
+                for generated_nodes in generated_graphs:
+                    inner_prioritization = prioritization_nodes(generated_nodes, work_estimator)
+                    for v in inner_prioritization:
+                        yield v

@@ -20,6 +20,10 @@ class StochasticGraph(ABC):
         return WorkGraph.from_nodes(list(self.iterate()))
 
     @abstractmethod
+    def first(self):
+        ...
+
+    @abstractmethod
     def iterate(self) -> Iterator[GraphNode]:
         """
         Returns the iterable of the resulting stochastic graph,
@@ -76,6 +80,9 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         self._node2followers = node2followers
         self._start = start
         self._averages = averages
+
+    def first(self):
+        return self._start
 
     def iterate(self) -> Iterator[GraphNode]:
         node = self._start

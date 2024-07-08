@@ -16,6 +16,7 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
     def __init__(self,
                  url: str,
                  rand: Random = Random()):
+        self._url = url
         self._model = ResTimeModel(MschmAdapter(url))
         self._use_idle = True
         self._estimation_mode = WorkEstimationMode.Realistic
@@ -77,4 +78,4 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
         self._productivity_mode = mode
 
     def get_recreate_info(self) -> tuple[Type, tuple]:
-        return FieldDevWorkEstimator, ()
+        return FieldDevWorkEstimator, tuple(self._url)

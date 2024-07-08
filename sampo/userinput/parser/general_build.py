@@ -245,7 +245,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
                                               row['min_req'][res_name],
                                               row['max_req'][res_name]))
         else:
-            reqs = work_estimator.find_work_resources(row['granular_name'], float(row['volume']))
+            reqs = work_estimator.find_work_resources(row['granular_name'], float(row['volume']), row['measurement'])
         is_service_unit = len(reqs) == 0
 
         zone_reqs = [ZoneReq(*v) for v in eval(row['required_statuses']).items()] \

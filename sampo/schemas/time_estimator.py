@@ -36,7 +36,8 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
+    def find_work_resources(self, work_name: str, work_volume: float, measurement: str | None = None,
+                            resource_name: list[str] | None = None) \
             -> list[WorkerReq]:
         ...
 
@@ -60,7 +61,8 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._productivity = {worker: {'__ALL__': IntervalGaussian(1, 0.2, 1, 0)}
                               for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']}
 
-    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
+    def find_work_resources(self, work_name: str, work_volume: float, measurement: str | None = None,
+                            resource_name: list[str] | None = None) \
             -> list[WorkerReq]:
         if resource_name is None:
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']

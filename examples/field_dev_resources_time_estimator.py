@@ -1,4 +1,3 @@
-import math
 from itertools import chain
 from operator import attrgetter
 from random import Random
@@ -8,7 +7,7 @@ from typing import Type
 
 from sampo.utilities.collections_util import build_index
 from sampo.schemas import WorkTimeEstimator, WorkUnit, Worker, WorkerReq, WorkEstimationMode, WorkerProductivityMode
-from idbadapter import MschmAdapter, Schedules
+from idbadapter import MschmAdapter
 from stairsres.res_time_model import ResTimeModel
 
 
@@ -47,20 +46,15 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
         except:
             print(w_u['name'])
 
-    def find_work_resources(self, work_name: str, work_volume: float, measurement: str = None,
-                            resource_name: list[str] | None = None) \
+    def find_work_resources(self, work_name: str, work_volume: float,
+                            resource_name: list[str] | None = None,
+                            measurement: str = None) \
             -> list[WorkerReq]:
         if work_name in ['Начало работ по марке', 'Окончание работ по марке', 'NaN', 'start of project',
                          'finish of project']:
             return []
         worker_req_dict = self._model.get_resources_volumes(work_name=work_name, work_volume=work_volume,
-                                                      measurement=measurement)
-        avg_work_duration = 1
-        if worker_req_dict:
-            w_l = [{'name': req['kind'], '_count': req['volume']} for req in worker_req_dict['worker_reqs']]
-            avg_work_duration = self._model.estimate_time({'name': work_name,
-                                                     'volume': work_volume,
-                                                     'measurement':  measurement}, w_l)
+                                                            measurement=measurement)
 
         worker_reqs = [[WorkerReq(kind=req['kind'],
                                   volume=Time(req['volume']),

@@ -52,12 +52,15 @@ class GraphNode(JSONSerializable['GraphNode']):
     Class to describe Node in graph
     """
 
-    def __init__(self, work_unit: WorkUnit,
-                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
+    def __init__(self,
+                 work_unit: WorkUnit,
+                 parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]],
+                 followers: list['GraphNode'] = None):
         self._work_unit = work_unit
         self._parent_edges = []
         self.add_parents(parent_works)
         self._children_edges = []
+        self._followers = followers or []
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -273,6 +276,14 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [inseparable_child] + inseparable_child._get_inseparable_children() \
             if inseparable_child \
             else []
+
+    def get_following_nodes(self) -> list['GraphNode']:
+        """
+        Returns nodes 'following' this node by semantics.
+        These nodes are already in WorkGraph, so they are not similar with inseparables.
+        Returns
+        """
+        return self._followers
 
     def _add_child_edge(self, child: GraphEdge):
         """

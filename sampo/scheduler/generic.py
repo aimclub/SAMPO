@@ -109,7 +109,7 @@ class GenericScheduler(Scheduler):
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         ordered_nodes = self.prioritization(wg, self.work_estimator)
 
-        schedule, schedule_start_time, timeline = \
+        schedule, schedule_start_time, timeline, nodes_order = \
             self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator,
                                  assigned_parent_time, timeline)
         schedule = Schedule.from_scheduled_works(
@@ -120,7 +120,7 @@ class GenericScheduler(Scheduler):
         if validate:
             validate_schedule(schedule, wg, contractors)
 
-        return [(schedule, schedule_start_time, timeline, ordered_nodes)]
+        return [(schedule, schedule_start_time, timeline, nodes_order)]
 
     def build_scheduler(self,
                         ordered_nodes: list[GraphNode],
@@ -130,7 +130,7 @@ class GenericScheduler(Scheduler):
                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                         assigned_parent_time: Time = Time(0),
                         timeline: Timeline | None = None) \
-            -> tuple[Iterable[ScheduledWork], Time, Timeline]:
+            -> tuple[Iterable[ScheduledWork], Time, Timeline, list[GraphNode]]:
         """
         Find optimal number of workers who ensure the nearest finish time.
         Finish time is combination of two dependencies: max finish time, max time of waiting of needed workers
@@ -152,7 +152,10 @@ class GenericScheduler(Scheduler):
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
-        for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
+        nodes_order = []
+
+        for index, node in enumerate(ordered_nodes):  # the tasks with the highest rank will be done first
+            nodes_order.append(node)
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
 
@@ -179,4 +182,4 @@ class GenericScheduler(Scheduler):
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
-        return node2swork.values(), assigned_parent_time, timeline
+        return node2swork.values(), assigned_parent_time, timeline, nodes_order

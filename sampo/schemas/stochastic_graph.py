@@ -5,6 +5,7 @@ from typing import Iterable, Iterator
 from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade, work_priority
 from sampo.schemas import WorkGraph, GraphNode, WorkTimeEstimator
 from sampo.schemas.time_estimator import DefaultWorkEstimator
+from sampo.utilities.nodes import copy_nodes
 
 
 class StochasticGraph(ABC):
@@ -97,7 +98,7 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         result = self._node2followers.get(node.work_unit.name, None)
         if result is None:
             return None
-        return [nodes for nodes, prob in result if self._rand.random() < prob]
+        return [copy_nodes(nodes) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
 
     def average_labor_cost(self, node: GraphNode):
         """

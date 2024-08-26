@@ -69,7 +69,7 @@ def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimat
 
     path_weights = ford_bellman(nodes, weights)
 
-    ordered_nodes = [i[0] for i in sorted(path_weights.items(), key=lambda x: (x[1], x[0].id), reverse=True)
+    ordered_nodes = [i[0] for i in sorted(path_weights.items(), key=lambda x: (x[1], x[0].id))
                      if not i[0].is_inseparable_son()]
 
     return ordered_nodes

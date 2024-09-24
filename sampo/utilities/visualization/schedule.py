@@ -108,7 +108,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
         .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
     schedule_dataframe['idx'] = (schedule_dataframe[['idx', 'task_name']]
                                  .apply(lambda r: schedule_dataframe[schedule_dataframe['task_name'] ==
-                                                                     r['task_name'].split(':')[0]]['idx'].iloc[0]
+                                                                     r['task_name'].split('&')[0]]['idx'].iloc[0]
                                  if ':' in r['task_name'] else r['idx'], axis=1))
 
     fig = px.timeline(schedule_dataframe, x_start='start', x_end='finish', y='idx', hover_name='task_name',

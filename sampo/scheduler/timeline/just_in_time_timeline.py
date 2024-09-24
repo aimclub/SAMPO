@@ -250,7 +250,8 @@ class JustInTimeTimeline(Timeline):
 
         if assigned_time is not None:
             exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
-                          for n in inseparable_chain}
+                          for n in inseparable_chain[:-1]}
+            exec_times[inseparable_chain[-1]] = Time(0), assigned_time - sum([v for _, v in exec_times.values()])
             return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
                                                     inseparable_chain, start_time, exec_times, work_estimator)
         else:

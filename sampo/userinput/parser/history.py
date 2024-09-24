@@ -204,9 +204,9 @@ def get_all_seq_statistic(history_data: pd.DataFrame,
                                                                       count])
                         else:
                             if order_con == 1:
-                                predecessors_info_dict[w2_id].append([w1_id, 'FS', 1.0, count])
+                                predecessors_info_dict[w2_id].append([w1_id, 'FS', 0.0, count])
                             else:
-                                predecessors_info_dict[w1_id].append([w2_id, 'FS', 1.0, count])
+                                predecessors_info_dict[w1_id].append([w2_id, 'FS', 0.0, count])
                     elif ss > ffs:
                         if order_con == 1:
                                 predecessors_info_dict[w2_id].append([w1_id, 'SS',

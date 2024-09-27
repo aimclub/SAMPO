@@ -7,6 +7,7 @@ from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections_util import build_index
 from sampo.utilities.linked_list import LinkedList
+from sampo.utilities.nodes import insert_nodes_between
 
 
 def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dict[GraphNode, float]:
@@ -98,7 +99,10 @@ def stochastic_prioritization(wg: StochasticGraph, work_estimator: WorkTimeEstim
                 yield node
 
                 generated_graphs = wg.generate_next(node)
+
                 for generated_nodes in generated_graphs:
                     inner_prioritization = prioritization_nodes(generated_nodes, work_estimator)
+                    insert_nodes_between(generated_nodes, [node], node.children)
+
                     for v in inner_prioritization:
                         yield v

@@ -1,4 +1,4 @@
-from sampo.schemas import GraphNode
+from sampo.schemas import GraphNode, EdgeType
 
 
 def copy_nodes(nodes: list[GraphNode]) -> list[GraphNode]:
@@ -16,3 +16,15 @@ def copy_nodes(nodes: list[GraphNode]) -> list[GraphNode]:
         nodes_dict[wu.id] = graph_node
 
     return nodes
+
+
+def insert_nodes_between(nodes: list[GraphNode], starts: list[GraphNode], finishes: list[GraphNode]):
+    without_successors = []
+    for node in nodes:
+        if len(node.parents) == 0:
+            node.add_parents(starts)
+        if len(node.children) == 0:
+            without_successors.append(node)
+
+    for finish in finishes:
+        finish.add_parents(without_successors)

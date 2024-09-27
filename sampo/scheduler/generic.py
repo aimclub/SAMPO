@@ -1,6 +1,7 @@
 from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
+from sampo.scheduler.heft.prioritization import stochastic_prioritization
 from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
@@ -13,6 +14,7 @@ from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
+from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.validation import validate_schedule
@@ -122,8 +124,29 @@ class GenericScheduler(Scheduler):
 
         return [(schedule, schedule_start_time, timeline, nodes_order)]
 
+    def stochastic_schedule_with_cache(self,
+                                       stochastic_wg: StochasticGraph,
+                                       contractors: list[Contractor],
+                                       spec: ScheduleSpec = ScheduleSpec(),
+                                       assigned_parent_time: Time = Time(0),
+                                       timeline: Timeline | None = None,
+                                       landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+        ordered_nodes = list(stochastic_prioritization(stochastic_wg, self.work_estimator))
+        wg = WorkGraph.from_nodes(ordered_nodes)
+
+        schedule, schedule_start_time, timeline, nodes_order = \
+            self.build_scheduler(ordered_nodes, contractors, landscape, spec, self.work_estimator,
+                                 assigned_parent_time, timeline)
+        schedule = Schedule.from_scheduled_works(
+            schedule,
+            wg
+        )
+
+        return [(schedule, schedule_start_time, timeline, nodes_order)]
+
     def build_scheduler(self,
-                        ordered_nodes: list[GraphNode],
+                        ordered_nodes: Iterable[GraphNode],
                         contractors: list[Contractor],
                         landscape: LandscapeConfiguration = LandscapeConfiguration(),
                         spec: ScheduleSpec = ScheduleSpec(),
@@ -171,7 +194,7 @@ class GenericScheduler(Scheduler):
                 start_time = assigned_parent_time
                 finish_time += start_time
 
-            if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
+            if len(node.children) == 0:  # we are scheduling the work `end of the project`
                 finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
                 start_time = max(start_time, finish_time)
 
@@ -179,7 +202,7 @@ class GenericScheduler(Scheduler):
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
                               start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
 
-            if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
+            if len(node.children) == 0:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
         return node2swork.values(), assigned_parent_time, timeline, nodes_order

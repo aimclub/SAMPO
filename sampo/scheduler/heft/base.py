@@ -28,7 +28,6 @@ class HEFTScheduler(GenericScheduler):
             resource_optimize_f = self.get_default_res_opt_function()
         super().__init__(scheduler_type, resource_optimizer, timeline_type,
                          prioritization_f, resource_optimize_f, work_estimator)
-        self._timeline_type = timeline_type
 
 
 class HEFTBetweenScheduler(HEFTScheduler):

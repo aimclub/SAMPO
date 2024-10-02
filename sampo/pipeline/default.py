@@ -70,13 +70,13 @@ class DefaultInputPipeline(InputPipeline):
         self._all_connections: bool = False
         self._change_connections_info: bool = False
         self._name_mapper: NameMapper | None = None
-        self.sep_wg = ';'
-        self.sep_history = ';'
+        self.sep_wg = ','
+        self.sep_history = ','
 
     def wg(self,
            wg: WorkGraph | pd.DataFrame | str,
            change_base_on_history: bool = False,
-           sep: str = ';',
+           sep: str = ',',
            all_connections: bool = False,
            change_connections_info: bool = False) -> 'InputPipeline':
         """

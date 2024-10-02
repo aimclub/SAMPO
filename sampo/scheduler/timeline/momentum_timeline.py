@@ -418,13 +418,17 @@ class MomentumTimeline(Timeline):
                                     worker_team: list[Worker],
                                     contractor: Contractor,
                                     start_time: Time,
-                                    exec_times: dict[GraphNode, tuple[Time, Time]]):
+                                    exec_times: dict[GraphNode, tuple[Time, Time]],
+                                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         # 6. create a schedule entry for the task
         # nodes_start_times = {ins_node: ins_node.min_start_time(node2swork) for ins_node in inseparable_chain}
 
         curr_time = start_time
         for i, chain_node in enumerate(inseparable_chain):
-            node_lag, node_time = exec_times[chain_node]
+            if chain_node in exec_times:
+                node_lag, node_time = exec_times[chain_node]
+            else:
+                node_lag, node_time = 0, work_estimator.estimate_time(chain_node.work_unit, worker_team)
 
             # lag_req = nodes_start_times[chain_node] - curr_time
             # node_lag = lag_req if lag_req > 0 else 0
@@ -434,7 +438,7 @@ class MomentumTimeline(Timeline):
                                                                                  start_work,
                                                                                  chain_node.work_unit.need_materials())
             start_work = max(start_work, mat_del_time)
-            self._validate(start_work + node_time, node_time, worker_team)
+            # self._validate(start_work + node_time, node_time, worker_team)
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),

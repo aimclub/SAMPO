@@ -299,7 +299,7 @@ class JustInTimeTimeline(Timeline):
             if dep_node in exec_times:
                 lag, working_time = exec_times[dep_node]
             else:
-                lag, working_time = 0, work_estimator.estimate_time(node.work_unit, workers)
+                lag, working_time = 0, work_estimator.estimate_time(dep_node.work_unit, workers)
             c_st = max(c_ft + lag, max_parent_time)
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,

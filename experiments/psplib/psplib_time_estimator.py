@@ -21,3 +21,30 @@ class PSPlibWorkTimeEstimator(WorkTimeEstimator):
 
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
         return Time(self.times.get(work_unit.id, 0))
+
+# to avoid changing PSPlibWorkTimeEstimator for now
+class ConstantWorkTimeEstimator(WorkTimeEstimator):
+    """Helper class for a constant activity time"""
+    
+    def __init__(self, job_durations: dict[str, int]):
+        self.times = {
+            # ensure correct data types
+            str(job_id): Time(time_int)
+            for job_id, time_int in job_durations.items()
+        }
+
+    def estimate_time(self, work_unit: WorkUnit, *args):
+        estimate = self.times[work_unit.id]
+        return Time(estimate)
+
+    def find_work_resources(self, *args):
+        return dict()
+
+    def set_estimation_mode(self, *args):
+        return None
+
+    def set_productivity_mode(self, *args):
+        return None
+    
+    def get_recreate_info(self, *args):
+        return None

@@ -1,0 +1,865 @@
+{
+  "n_jobs_full": 122,
+  "resource_pool": [
+    16,
+    19,
+    15,
+    17
+  ],
+  "jobs": [
+    {
+      "id_": 0,
+      "duration": 0,
+      "resources": [0,0,0,0],
+      "successors": [1,2,3],
+      "predecessors": []
+    },
+    {
+      "id_": 1,
+      "duration": 7,
+      "resources": [0,0,0,9],
+      "successors": [13,57,72],
+      "predecessors": [0]
+    },
+    {
+      "id_": 2,
+      "duration": 1,
+      "resources": [7,0,0,0],
+      "successors": [4,25,42],
+      "predecessors": [0]
+    },
+    {
+      "id_": 3,
+      "duration": 1,
+      "resources": [0,0,6,0],
+      "successors": [5,7,12],
+      "predecessors": [0]
+    },
+    {
+      "id_": 4,
+      "duration": 10,
+      "resources": [0,5,0,0],
+      "successors": [6,10,20],
+      "predecessors": [2]
+    },
+    {
+      "id_": 5,
+      "duration": 9,
+      "resources": [0,5,0,0],
+      "successors": [8,9,29],
+      "predecessors": [3]
+    },
+    {
+      "id_": 6,
+      "duration": 5,
+      "resources": [0,0,1,0],
+      "successors": [22],
+      "predecessors": [4]
+    },
+    {
+      "id_": 7,
+      "duration": 8,
+      "resources": [0,0,1,0],
+      "successors": [16,23,100],
+      "predecessors": [3]
+    },
+    {
+      "id_": 8,
+      "duration": 2,
+      "resources": [0,2,0,0],
+      "successors": [15],
+      "predecessors": [5]
+    },
+    {
+      "id_": 9,
+      "duration": 10,
+      "resources": [10,0,0,0],
+      "successors": [11],
+      "predecessors": [5]
+    },
+    {
+      "id_": 10,
+      "duration": 1,
+      "resources": [0,0,0,3],
+      "successors": [14,21,33],
+      "predecessors": [4]
+    },
+    {
+      "id_": 11,
+      "duration": 4,
+      "resources": [4,0,0,0],
+      "successors": [58,85,98],
+      "predecessors": [9]
+    },
+    {
+      "id_": 12,
+      "duration": 6,
+      "resources": [0,5,0,0],
+      "successors": [65,84],
+      "predecessors": [3]
+    },
+    {
+      "id_": 13,
+      "duration": 2,
+      "resources": [0,0,7,0],
+      "successors": [19,59,75],
+      "predecessors": [1]
+    },
+    {
+      "id_": 14,
+      "duration": 8,
+      "resources": [0,9,0,0],
+      "successors": [24,73,118],
+      "predecessors": [10]
+    },
+    {
+      "id_": 15,
+      "duration": 4,
+      "resources": [0,9,0,0],
+      "successors": [17,67],
+      "predecessors": [8]
+    },
+    {
+      "id_": 16,
+      "duration": 4,
+      "resources": [9,0,0,0],
+      "successors": [18,48,111],
+      "predecessors": [7]
+    },
+    {
+      "id_": 17,
+      "duration": 1,
+      "resources": [0,0,9,0],
+      "successors": [71],
+      "predecessors": [15]
+    },
+    {
+      "id_": 18,
+      "duration": 3,
+      "resources": [1,0,0,0],
+      "successors": [35,41,69],
+      "predecessors": [16]
+    },
+    {
+      "id_": 19,
+      "duration": 4,
+      "resources": [0,0,0,8],
+      "successors": [53,99,103],
+      "predecessors": [13]
+    },
+    {
+      "id_": 20,
+      "duration": 1,
+      "resources": [0,8,0,0],
+      "successors": [26,34,39],
+      "predecessors": [4]
+    },
+    {
+      "id_": 21,
+      "duration": 8,
+      "resources": [0,0,3,0],
+      "successors": [28,61,63],
+      "predecessors": [10]
+    },
+    {
+      "id_": 22,
+      "duration": 2,
+      "resources": [0,7,0,0],
+      "successors": [74],
+      "predecessors": [6]
+    },
+    {
+      "id_": 23,
+      "duration": 8,
+      "resources": [8,0,0,0],
+      "successors": [56],
+      "predecessors": [7]
+    },
+    {
+      "id_": 24,
+      "duration": 7,
+      "resources": [10,0,0,0],
+      "successors": [75],
+      "predecessors": [14]
+    },
+    {
+      "id_": 25,
+      "duration": 4,
+      "resources": [8,0,0,0],
+      "successors": [43,47,60],
+      "predecessors": [2]
+    },
+    {
+      "id_": 26,
+      "duration": 3,
+      "resources": [1,0,0,0],
+      "successors": [27,30,80],
+      "predecessors": [20]
+    },
+    {
+      "id_": 27,
+      "duration": 7,
+      "resources": [8,0,0,0],
+      "successors": [51],
+      "predecessors": [26]
+    },
+    {
+      "id_": 28,
+      "duration": 9,
+      "resources": [0,0,4,0],
+      "successors": [32,79],
+      "predecessors": [21]
+    },
+    {
+      "id_": 29,
+      "duration": 1,
+      "resources": [0,0,0,1],
+      "successors": [31,38,106],
+      "predecessors": [5]
+    },
+    {
+      "id_": 30,
+      "duration": 4,
+      "resources": [0,0,0,2],
+      "successors": [62,77,83],
+      "predecessors": [26]
+    },
+    {
+      "id_": 31,
+      "duration": 3,
+      "resources": [0,3,0,0],
+      "successors": [37,40,55],
+      "predecessors": [29]
+    },
+    {
+      "id_": 32,
+      "duration": 1,
+      "resources": [2,0,0,0],
+      "successors": [36,96,113],
+      "predecessors": [28]
+    },
+    {
+      "id_": 33,
+      "duration": 3,
+      "resources": [0,8,0,0],
+      "successors": [90],
+      "predecessors": [10]
+    },
+    {
+      "id_": 34,
+      "duration": 5,
+      "resources": [0,0,9,0],
+      "successors": [68,113],
+      "predecessors": [20]
+    },
+    {
+      "id_": 35,
+      "duration": 5,
+      "resources": [10,0,0,0],
+      "successors": [119],
+      "predecessors": [18]
+    },
+    {
+      "id_": 36,
+      "duration": 2,
+      "resources": [0,0,8,0],
+      "successors": [52],
+      "predecessors": [32]
+    },
+    {
+      "id_": 37,
+      "duration": 6,
+      "resources": [0,0,0,8],
+      "successors": [54],
+      "predecessors": [31]
+    },
+    {
+      "id_": 38,
+      "duration": 10,
+      "resources": [0,0,0,9],
+      "successors": [49,75,108],
+      "predecessors": [29]
+    },
+    {
+      "id_": 39,
+      "duration": 3,
+      "resources": [0,4,0,0],
+      "successors": [44,46,54],
+      "predecessors": [20]
+    },
+    {
+      "id_": 40,
+      "duration": 8,
+      "resources": [0,0,0,10],
+      "successors": [115],
+      "predecessors": [31]
+    },
+    {
+      "id_": 41,
+      "duration": 7,
+      "resources": [2,0,0,0],
+      "successors": [45],
+      "predecessors": [18]
+    },
+    {
+      "id_": 42,
+      "duration": 5,
+      "resources": [0,0,0,5],
+      "successors": [59],
+      "predecessors": [2]
+    },
+    {
+      "id_": 43,
+      "duration": 6,
+      "resources": [0,0,0,6],
+      "successors": [109],
+      "predecessors": [25]
+    },
+    {
+      "id_": 44,
+      "duration": 10,
+      "resources": [0,0,5,0],
+      "successors": [99],
+      "predecessors": [39]
+    },
+    {
+      "id_": 45,
+      "duration": 8,
+      "resources": [0,0,4,0],
+      "successors": [84],
+      "predecessors": [41]
+    },
+    {
+      "id_": 46,
+      "duration": 5,
+      "resources": [0,3,0,0],
+      "successors": [66],
+      "predecessors": [39]
+    },
+    {
+      "id_": 47,
+      "duration": 5,
+      "resources": [0,4,0,0],
+      "successors": [66,71,78],
+      "predecessors": [25]
+    },
+    {
+      "id_": 48,
+      "duration": 7,
+      "resources": [0,0,4,0],
+      "successors": [50],
+      "predecessors": [16]
+    },
+    {
+      "id_": 49,
+      "duration": 10,
+      "resources": [0,0,5,0],
+      "successors": [92],
+      "predecessors": [38]
+    },
+    {
+      "id_": 50,
+      "duration": 1,
+      "resources": [0,0,5,0],
+      "successors": [115],
+      "predecessors": [48]
+    },
+    {
+      "id_": 51,
+      "duration": 7,
+      "resources": [0,7,0,0],
+      "successors": [64,88],
+      "predecessors": [27]
+    },
+    {
+      "id_": 52,
+      "duration": 7,
+      "resources": [0,1,0,0],
+      "successors": [111],
+      "predecessors": [36]
+    },
+    {
+      "id_": 53,
+      "duration": 8,
+      "resources": [0,6,0,0],
+      "successors": [76],
+      "predecessors": [19]
+    },
+    {
+      "id_": 54,
+      "duration": 6,
+      "resources": [0,3,0,0],
+      "successors": [64],
+      "predecessors": [37,39]
+    },
+    {
+      "id_": 55,
+      "duration": 9,
+      "resources": [0,0,2,0],
+      "successors": [97],
+      "predecessors": [31]
+    },
+    {
+      "id_": 56,
+      "duration": 6,
+      "resources": [0,0,0,10],
+      "successors": [70,87],
+      "predecessors": [23]
+    },
+    {
+      "id_": 57,
+      "duration": 5,
+      "resources": [0,0,9,0],
+      "successors": [74],
+      "predecessors": [1]
+    },
+    {
+      "id_": 58,
+      "duration": 4,
+      "resources": [0,0,0,7],
+      "successors": [61],
+      "predecessors": [11]
+    },
+    {
+      "id_": 59,
+      "duration": 4,
+      "resources": [0,1,0,0],
+      "successors": [86,102],
+      "predecessors": [13,42]
+    },
+    {
+      "id_": 60,
+      "duration": 1,
+      "resources": [0,0,0,7],
+      "successors": [97],
+      "predecessors": [25]
+    },
+    {
+      "id_": 61,
+      "duration": 4,
+      "resources": [0,0,0,4],
+      "successors": [83],
+      "predecessors": [21,58]
+    },
+    {
+      "id_": 62,
+      "duration": 6,
+      "resources": [0,0,8,0],
+      "successors": [117],
+      "predecessors": [30]
+    },
+    {
+      "id_": 63,
+      "duration": 2,
+      "resources": [0,3,0,0],
+      "successors": [81],
+      "predecessors": [21]
+    },
+    {
+      "id_": 64,
+      "duration": 10,
+      "resources": [0,0,8,0],
+      "successors": [97],
+      "predecessors": [51,54]
+    },
+    {
+      "id_": 65,
+      "duration": 8,
+      "resources": [0,3,0,0],
+      "successors": [119],
+      "predecessors": [12]
+    },
+    {
+      "id_": 66,
+      "duration": 2,
+      "resources": [0,2,0,0],
+      "successors": [95,107],
+      "predecessors": [46,47]
+    },
+    {
+      "id_": 67,
+      "duration": 10,
+      "resources": [0,7,0,0],
+      "successors": [119],
+      "predecessors": [15]
+    },
+    {
+      "id_": 68,
+      "duration": 10,
+      "resources": [0,9,0,0],
+      "successors": [96],
+      "predecessors": [34]
+    },
+    {
+      "id_": 69,
+      "duration": 3,
+      "resources": [0,0,5,0],
+      "successors": [95],
+      "predecessors": [18]
+    },
+    {
+      "id_": 70,
+      "duration": 2,
+      "resources": [0,6,0,0],
+      "successors": [89],
+      "predecessors": [56]
+    },
+    {
+      "id_": 71,
+      "duration": 1,
+      "resources": [0,7,0,0],
+      "successors": [114],
+      "predecessors": [17,47]
+    },
+    {
+      "id_": 72,
+      "duration": 2,
+      "resources": [4,0,0,0],
+      "successors": [82],
+      "predecessors": [1]
+    },
+    {
+      "id_": 73,
+      "duration": 8,
+      "resources": [0,4,0,0],
+      "successors": [93],
+      "predecessors": [14]
+    },
+    {
+      "id_": 74,
+      "duration": 8,
+      "resources": [0,0,2,0],
+      "successors": [78],
+      "predecessors": [22,57]
+    },
+    {
+      "id_": 75,
+      "duration": 8,
+      "resources": [0,0,0,1],
+      "successors": [90],
+      "predecessors": [13,24,38]
+    },
+    {
+      "id_": 76,
+      "duration": 7,
+      "resources": [0,6,0,0],
+      "successors": [94],
+      "predecessors": [53]
+    },
+    {
+      "id_": 77,
+      "duration": 8,
+      "resources": [0,0,2,0],
+      "successors": [81],
+      "predecessors": [30]
+    },
+    {
+      "id_": 78,
+      "duration": 9,
+      "resources": [4,0,0,0],
+      "successors": [83],
+      "predecessors": [47,74]
+    },
+    {
+      "id_": 79,
+      "duration": 6,
+      "resources": [0,10,0,0],
+      "successors": [86],
+      "predecessors": [28]
+    },
+    {
+      "id_": 80,
+      "duration": 4,
+      "resources": [0,0,4,0],
+      "successors": [91],
+      "predecessors": [26]
+    },
+    {
+      "id_": 81,
+      "duration": 5,
+      "resources": [9,0,0,0],
+      "successors": [105],
+      "predecessors": [63,77]
+    },
+    {
+      "id_": 82,
+      "duration": 3,
+      "resources": [0,1,0,0],
+      "successors": [90],
+      "predecessors": [72]
+    },
+    {
+      "id_": 83,
+      "duration": 2,
+      "resources": [0,0,0,8],
+      "successors": [107],
+      "predecessors": [30,61,78]
+    },
+    {
+      "id_": 84,
+      "duration": 8,
+      "resources": [0,0,6,0],
+      "successors": [104],
+      "predecessors": [12,45]
+    },
+    {
+      "id_": 85,
+      "duration": 1,
+      "resources": [0,0,5,0],
+      "successors": [93],
+      "predecessors": [11]
+    },
+    {
+      "id_": 86,
+      "duration": 10,
+      "resources": [9,0,0,0],
+      "successors": [110],
+      "predecessors": [59,79]
+    },
+    {
+      "id_": 87,
+      "duration": 1,
+      "resources": [0,0,0,10],
+      "successors": [99],
+      "predecessors": [56]
+    },
+    {
+      "id_": 88,
+      "duration": 4,
+      "resources": [6,0,0,0],
+      "successors": [91],
+      "predecessors": [51]
+    },
+    {
+      "id_": 89,
+      "duration": 1,
+      "resources": [0,0,8,0],
+      "successors": [92],
+      "predecessors": [70]
+    },
+    {
+      "id_": 90,
+      "duration": 4,
+      "resources": [0,1,0,0],
+      "successors": [96,98],
+      "predecessors": [33,75,82]
+    },
+    {
+      "id_": 91,
+      "duration": 8,
+      "resources": [0,0,0,10],
+      "successors": [95],
+      "predecessors": [80,88]
+    },
+    {
+      "id_": 92,
+      "duration": 6,
+      "resources": [0,7,0,0],
+      "successors": [120],
+      "predecessors": [49,89]
+    },
+    {
+      "id_": 93,
+      "duration": 7,
+      "resources": [7,0,0,0],
+      "successors": [117],
+      "predecessors": [73,85]
+    },
+    {
+      "id_": 94,
+      "duration": 2,
+      "resources": [0,0,2,0],
+      "successors": [108],
+      "predecessors": [76]
+    },
+    {
+      "id_": 95,
+      "duration": 3,
+      "resources": [2,0,0,0],
+      "successors": [101],
+      "predecessors": [66,69,91]
+    },
+    {
+      "id_": 96,
+      "duration": 9,
+      "resources": [0,0,0,9],
+      "successors": [111],
+      "predecessors": [32,68,90]
+    },
+    {
+      "id_": 97,
+      "duration": 3,
+      "resources": [0,0,0,4],
+      "successors": [108],
+      "predecessors": [55,60,64]
+    },
+    {
+      "id_": 98,
+      "duration": 2,
+      "resources": [1,0,0,0],
+      "successors": [101],
+      "predecessors": [11,90]
+    },
+    {
+      "id_": 99,
+      "duration": 1,
+      "resources": [0,0,1,0],
+      "successors": [106,113],
+      "predecessors": [19,44,87]
+    },
+    {
+      "id_": 100,
+      "duration": 8,
+      "resources": [0,6,0,0],
+      "successors": [104],
+      "predecessors": [7]
+    },
+    {
+      "id_": 101,
+      "duration": 9,
+      "resources": [0,8,0,0],
+      "successors": [120],
+      "predecessors": [95,98]
+    },
+    {
+      "id_": 102,
+      "duration": 6,
+      "resources": [0,0,0,7],
+      "successors": [107,110],
+      "predecessors": [59]
+    },
+    {
+      "id_": 103,
+      "duration": 4,
+      "resources": [0,0,0,10],
+      "successors": [105],
+      "predecessors": [19]
+    },
+    {
+      "id_": 104,
+      "duration": 1,
+      "resources": [0,3,0,0],
+      "successors": [106,110],
+      "predecessors": [84,100]
+    },
+    {
+      "id_": 105,
+      "duration": 9,
+      "resources": [0,0,0,10],
+      "successors": [116],
+      "predecessors": [81,103]
+    },
+    {
+      "id_": 106,
+      "duration": 4,
+      "resources": [9,0,0,0],
+      "successors": [112],
+      "predecessors": [29,99,104]
+    },
+    {
+      "id_": 107,
+      "duration": 7,
+      "resources": [0,3,0,0],
+      "successors": [112],
+      "predecessors": [66,83,102]
+    },
+    {
+      "id_": 108,
+      "duration": 5,
+      "resources": [8,0,0,0],
+      "successors": [118],
+      "predecessors": [38,94,97]
+    },
+    {
+      "id_": 109,
+      "duration": 7,
+      "resources": [0,8,0,0],
+      "successors": [114],
+      "predecessors": [43]
+    },
+    {
+      "id_": 110,
+      "duration": 7,
+      "resources": [4,0,0,0],
+      "successors": [112],
+      "predecessors": [86,102,104]
+    },
+    {
+      "id_": 111,
+      "duration": 5,
+      "resources": [6,0,0,0],
+      "successors": [117],
+      "predecessors": [16,52,96]
+    },
+    {
+      "id_": 112,
+      "duration": 6,
+      "resources": [1,0,0,0],
+      "successors": [116],
+      "predecessors": [106,107,110]
+    },
+    {
+      "id_": 113,
+      "duration": 7,
+      "resources": [8,0,0,0],
+      "successors": [114],
+      "predecessors": [32,34,99]
+    },
+    {
+      "id_": 114,
+      "duration": 1,
+      "resources": [0,0,9,0],
+      "successors": [115],
+      "predecessors": [71,109,113]
+    },
+    {
+      "id_": 115,
+      "duration": 9,
+      "resources": [10,0,0,0],
+      "successors": [116],
+      "predecessors": [40,50,114]
+    },
+    {
+      "id_": 116,
+      "duration": 4,
+      "resources": [4,0,0,0],
+      "successors": [118],
+      "predecessors": [105,112,115]
+    },
+    {
+      "id_": 117,
+      "duration": 4,
+      "resources": [0,0,0,4],
+      "successors": [120],
+      "predecessors": [62,93,111]
+    },
+    {
+      "id_": 118,
+      "duration": 8,
+      "resources": [9,0,0,0],
+      "successors": [121],
+      "predecessors": [14,108,116]
+    },
+    {
+      "id_": 119,
+      "duration": 1,
+      "resources": [0,0,0,7],
+      "successors": [121],
+      "predecessors": [35,65,67]
+    },
+    {
+      "id_": 120,
+      "duration": 7,
+      "resources": [0,5,0,0],
+      "successors": [121],
+      "predecessors": [92,101,117]
+    },
+    {
+      "id_": 121,
+      "duration": 0,
+      "resources": [0,0,0,0],
+      "successors": [],
+      "predecessors": [118,119,120]
+    }
+  ]
+}

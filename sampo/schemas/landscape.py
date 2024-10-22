@@ -87,7 +87,7 @@ class LandscapeConfiguration:
                  holders: list[ResourceHolder] = None,
                  lg: LandGraph = None,
                  zone_config: ZoneConfiguration = ZoneConfiguration()):
-        self.WAY_LENGTH = np.Inf
+        self.WAY_LENGTH = np.inf
         self.dist_mx: list[list[float]] = None
         self.path_mx: np.array = None
         self.road_mx: list[list[str]] = None
@@ -178,7 +178,7 @@ class LandscapeConfiguration:
             for u in range(self.lg.vertex_count):
                 if v == u:
                     path_mx[v][u] = 0
-                elif adj_matrix[v][u] != np.Inf and self.road_mx[v][u] in roads_available_set:
+                elif adj_matrix[v][u] != np.inf and self.road_mx[v][u] in roads_available_set:
                     path_mx[v][u] = v
 
         from_ind = self._node2ind[from_node]
@@ -246,7 +246,7 @@ class LandscapeConfiguration:
             for u in range(count):
                 if v == u:
                     path_mx[v][u] = 0
-                elif dist_mx[v][u] != np.Inf:
+                elif dist_mx[v][u] != np.inf:
                     path_mx[v][u] = v
                     for road in self.lg.nodes[v].roads:
                         if self.lg.node2ind[road.finish] == u:
@@ -257,8 +257,8 @@ class LandscapeConfiguration:
         for i in range(self.lg.vertex_count):
             for u in range(self.lg.vertex_count):
                 for v in range(self.lg.vertex_count):
-                    if (dist_mx[u][i] != np.Inf and dist_mx[u][i] != 0
-                            and dist_mx[i][v] != np.Inf and dist_mx[i][v] != 0
+                    if (dist_mx[u][i] != np.inf and dist_mx[u][i] != 0
+                            and dist_mx[i][v] != np.inf and dist_mx[i][v] != 0
                             and dist_mx[u][i] + dist_mx[i][v] < dist_mx[u][v]):
                         dist_mx[u][v] = dist_mx[u][i] + dist_mx[i][v]
                         path_mx[u][v] = path_mx[i][v]

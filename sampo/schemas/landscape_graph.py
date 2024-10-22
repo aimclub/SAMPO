@@ -136,7 +136,7 @@ class LandGraph:
         id2ind = {
             v.id: i for i, v in enumerate(self.nodes)
         }
-        adj_mtrx = np.full((len(node2ind), len(node2ind)), np.Inf)
+        adj_mtrx = np.full((len(node2ind), len(node2ind)), np.inf)
         for v, i in node2ind.items():
             for child in v.roads:
                 c_i = node2ind[child.finish]

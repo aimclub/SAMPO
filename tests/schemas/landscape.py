@@ -24,7 +24,7 @@ def test_building_routes(setup_landscape_many_holders):
 
         return distances[node_ind][target_node_ind]
 
-    MAX_WEIGHT = np.Inf
+    MAX_WEIGHT = np.inf
     landscape = setup_landscape_many_holders
     landscape.build_landscape()
 
@@ -49,7 +49,7 @@ def test_holder_sorting(setup_lg, setup_landscape_many_holders):
     correct = 0
     for node in lg.nodes:
         target_holder = landscape.get_sorted_holders(lg.node2ind[node])[0][1]
-        min_dist = np.Inf
+        min_dist = np.inf
         received_holder = 0
         for holder in holders:
             dist = landscape.dist_mx[lg.node2ind[node]][lg.node2ind[holder]]

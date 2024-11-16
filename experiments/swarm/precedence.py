@@ -93,6 +93,10 @@ class PrecedenceManager:
         return self.convert_priorities_to_valid_order(priorities_array)
 
 
+    def get_what_can_start(self):
+        return sorted(list(self.what_can_start))
+
+
 
 # # Saved for later, might be useful for integration
 # def get_predecessors_dict_from_adj_matrix(adj_matrix):

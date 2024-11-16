@@ -5,21 +5,22 @@ class EvolutionHistory:
     
     def __init__(self):
         self.history_fitness = []
-        self.best_fitness = -np.inf
+
+        self.best_fitness = np.inf
         self.best_solution = None
     
     def add_generation(self, fitness_array, solution_array):
         self.history_fitness.append(fitness_array)
         
-        this_generation_best = max(fitness_array)
-        if this_generation_best > self.best_fitness:
+        this_generation_best = min(fitness_array)
+        if this_generation_best < self.best_fitness:
             self.best_fitness = this_generation_best
-            self.best_solution = solution_array[np.argmax(fitness_array)]
+            self.best_solution = solution_array[np.argmin(fitness_array)]
         
     def get_stats(self):
         n_generations = len(self.history_fitness)
         generation_best = [
-            np.max(g)
+            np.min(g)
             for g in self.history_fitness
         ]
         generation_mean = [
@@ -27,15 +28,25 @@ class EvolutionHistory:
             for g in self.history_fitness
         ]
         
-        best_so_far = np.maximum.accumulate(generation_best)
-        best_overall = np.max(best_so_far)
+        best_so_far = np.minimum.accumulate(generation_best)
+        best_overall = np.min(best_so_far)
         
+        record_break = []
+        current_record = np.inf
+        for i in generation_best:
+            if i < current_record:
+                record_break.append(i)
+                current_record = i
+            else:
+                record_break.append(None)
+
         return dict(
             n_generations=n_generations, 
             generation_best=generation_best, 
             generation_mean=generation_mean, 
             best_so_far=best_so_far,
-            best_overall=best_overall
+            best_overall=best_overall,
+            record_break=record_break
         )
 
     @staticmethod

@@ -33,7 +33,7 @@ def load_psplib_data(
     with open(path_to_json, "r") as json_data:
         psplib_json_data = json.load(json_data)
 
-    #     
+    # 
     n_contractors = psplib_json_data["n_resources"]
     workers_names = [f"Resource{i+1}" for i in range(n_contractors)]
 
@@ -90,10 +90,13 @@ def load_psplib_data(
     job_durations = {job["name"]: job["duration"] for job in psplib_json_data["jobs"]}
     work_estimator = ConstantWorkTimeEstimator(job_durations)
 
-    return (wg, contractors, work_estimator)
+    # 6. Get best known solution
+    best_known_makespan = psplib_json_data.get("best_known_makespan", -1)
+
+    return (wg, contractors, work_estimator, best_known_makespan)
 
 
-# 
+# todo change
 def get_dict_of_optimized_data_structures(wg, contractors, landscape=LandscapeConfiguration()):
     ods_tuple = prepare_optimized_data_structures(wg, contractors, landscape)
     ods_names = [
@@ -149,14 +152,9 @@ class Launcher:
 
         return (scheduled_works, *other_info)
 
-
-    @staticmethod
-    def get_makespan(scheduled_works):
-        return scheduled_works.full_schedule_df["finish"].max()
-
     def __call__(self, chromosome_order):
         scheduled_works = self.get_schedule(chromosome_order)[0]
-        makespan = self.get_makespan(scheduled_works)
+        makespan = scheduled_works.full_schedule_df["finish"].max()
         return makespan
 
     # next few methods are just for correctly calling other functions 
@@ -191,26 +189,18 @@ class Launcher:
 
 
 
-# def get_earliest_finish_time(self):
-#     """
-#     Get earliest finish time for the whole project
-#     Earliest finish time is used in heuristics and benchmarks
-#     One interpretation of EFT is duration of the project if we had infinite resources 
-#     """
-    
-#     # get these out to not reference project_data every time
-#     job_durations = self.project_data["job_durations"]
-#     predecessors_dict = self.project_data["predecessors_dict"]
+import functools
+def get_earliest_finish_time(job_durations, predecessors_dict):
 
-#     # recursion is easier to implement
-#     @functools.cache
-#     def eft(job_id):
-#         return job_durations[job_id] + max(
-#             (eft(p) for p in predecessors_dict[job_id]),
-#             default=0  # if there are no predecessors, EFT for job is zero
-#         )
+    # recursion is easier to implement
+    @functools.cache
+    def eft(job_id):
+        return job_durations[job_id] + max(
+            (eft(p) for p in predecessors_dict[job_id]),
+            default=0  # if there are no predecessors, EFT for job is zero
+        )
 
-#     # EFT for the whole project is the max from each job
-#     project_eft = max(eft(job_id) for job_id in job_durations.keys())
-#     return project_eft
+    # EFT for the whole project is the max from each job
+    project_eft = max(eft(job_id) for job_id in job_durations.keys())
+    return project_eft
 

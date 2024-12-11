@@ -25,6 +25,9 @@ class PrecedenceManager:
         # reset the states of nodes
         self.reset_completion()
 
+        self.all_choices_ever_count = {}
+
+
     def reset_completion(self):
         """Clear the info about what jobs were completed"""
         # why use a class with reset(), and not just a function?
@@ -62,12 +65,12 @@ class PrecedenceManager:
                 self.what_can_start.add(successor)
 
 
-    def convert_priorities_to_valid_order(self, priorities_array: list[int] | list[float] | list[tuple]):
+    def convert_priorities_to_valid_order(self, priorities_array: list[float]):
         """
         Convert list of priorities for jobs to a valid order
         If priorities_array[A] > priorities_array[B], then
             job A will be added first to order
-        (if precedence constraints will allow it)
+            (if precedence constraints will allow it)
         """
         # first, reset any previos info
         self.reset_completion()
@@ -89,12 +92,12 @@ class PrecedenceManager:
         return activity_list
 
     # converting to valid order is the main reason for this class
-    def __call__(self, priorities_array: list[int] | list[float] | list[tuple]):
+    def __call__(self, priorities_array: list[float]):
         return self.convert_priorities_to_valid_order(priorities_array)
 
 
-    def get_what_can_start(self):
-        return sorted(list(self.what_can_start))
+    # def get_what_can_start(self):
+    #     return sorted(list(self.what_can_start))
 
 
 

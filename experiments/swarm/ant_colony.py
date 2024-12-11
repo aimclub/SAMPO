@@ -43,12 +43,12 @@ class AntColony:
         for generation_number in range(n_generations):
             # create a generation, add it to history
             # size = (5 * n_per_generation) if (generation_number == 0) else n_per_generation
-            priorities_array, fitness_array = self.generate_one_generation(size=n_per_generation, sort_by_fitness=True)
+            priorities_array, fitness_array = self.generate_one_generation(size=n_per_generation, sort_by_fitness=False)
             self.history.add_generation(fitness_array, priorities_array)
             
             # get pheromone values for the generation
             # for more stable values, use last few generation for quantiles
-            reference_array = self.history.get_last_k_generations_fitness(k=5)
+            reference_array = self.history.get_last_k_generations_fitness(k=10)
             
             # updating pheromones
             self.pheromones.update_pheromones(priorities_array, fitness_array, reference_array)

@@ -1,108 +1,3 @@
-import numpy as np
-
-class NestedBinsPheromones:
-    
-    def __init__(self, 
-                 n_tasks: int, 
-                 n_bins: int, 
-                 n_sub_bins: int, 
-                 random, 
-                 start_amount: float = 0, 
-                 evaporation_rate: float = 0.25):
-        # number of choices to make
-        self.n_tasks = n_tasks
-        # number of bins and subbins for each choice
-        self.n_bins = n_bins
-        self.n_sub_bins = n_sub_bins
-
-        # start from uniform (for now) 
-        self.bins_pheromones = \
-            start_amount * np.ones((n_tasks, n_bins))
-        self.sub_bins_pheromones = \
-            start_amount * np.ones((n_tasks, n_bins, n_sub_bins))
-
-        # evaporation rate controls speed of changing old pheromones to new
-        self.evaporation_rate = evaporation_rate
-        # to make sure the seed is right everywhere, random is an attribute
-        self.random = random
-
-    def weighted_choice(self, array: list, weights: list):
-        # probabilities = weights / np.sum(weights)
-        probabilities = self.softmax(weights)
-        choice = self.random.choice(array, p=probabilities)
-        return choice
-
-    def generate_one_path(self) -> list[tuple[int, int]]:
-        """Create one random path using current pheromones"""
-
-        priority_list = []
-        for i in range(0, self.n_tasks):
-            # main priority value
-            chosen_bin = self.weighted_choice(
-                np.arange(self.n_bins), 
-                self.bins_pheromones[i]
-            )
-            chosen_bin = int(chosen_bin)
-            # sub priority value
-            chosen_sub_bin = self.weighted_choice(
-                np.arange(self.n_sub_bins), 
-                self.sub_bins_pheromones[i][chosen_bin]
-            )
-            chosen_sub_bin = int(chosen_sub_bin)
-            
-            priority_list.append((chosen_bin, chosen_sub_bin))
-
-        return np.array(priority_list)
-
-    def get_pheromones(self, 
-                       path_list: list, 
-                       pheromone_amount_list: list[float]
-                       ) -> None:
-        """
-        Add new pheromones based on one generation
-        path_list: list of paths 
-        pheromone_amount_list: list of amounts to add
-        """
-        new_pheromone = (0 * self.bins_pheromones)
-        new_sub_pheromone = (0 * self.sub_bins_pheromones)
-
-        for path, pheromone_amount in zip(path_list, pheromone_amount_list):
-
-            for node, value in enumerate(path):
-                new_pheromone[node, value[0]] += pheromone_amount                
-                new_sub_pheromone[node, value[0], value[1]] += pheromone_amount
-
-        return new_pheromone, new_sub_pheromone
-
-    def update_pheromones(self, path_list, pheromone_amount_list) -> None:
-        """Evaporate current pheromones"""
-        new_pheromone, new_sub_pheromone = self.get_pheromones(path_list, pheromone_amount_list)
-        
-        # fig = px.imshow(new_pheromone.T)
-        # fig.update_layout(title_text="Diff")
-        # fig.show()
-
-        self.bins_pheromones = (
-            (1 - self.evaporation_rate) * self.bins_pheromones + 
-            self.evaporation_rate * new_pheromone
-        )
-        self.sub_bins_pheromones = (
-            (1 - self.evaporation_rate) * self.sub_bins_pheromones +
-            self.evaporation_rate * new_sub_pheromone
-        )
-
-        # fig = px.imshow(self.bins_pheromones.T)
-        # fig.update_layout(title_text="Current")
-        # fig.show()
-
-
-    @staticmethod
-    def softmax(array, beta=1):
-        w = np.exp(beta * array)
-        return w / np.sum(w)
-
-
-
 class BinsPheromones:
     
     def __init__(self, 
@@ -138,24 +33,26 @@ class BinsPheromones:
     def generate_one_path(self) -> list[int]:
         """Create one random path using current pheromones"""
 
-        priority_list = []
+        priority_list = np.zeros(self.n_tasks)
         for i in range(0, self.n_tasks):
             
-            # smoothed = np.correlate(
-            #     self.bins_pheromones[i], 
-            #     (0.25, 0.50, 0.25), 
-            #     mode="same"
-            # )
+            # if self.random.random() < 0.01:
+            #     weights = np.ones(self.n_bins) 
+            # else:
+            #     weights = self.bins_pheromones[i]
 
             chosen_bin = self.weighted_choice(
                 np.arange(self.n_bins),
                 self.bins_pheromones[i]
-                # (self.bins_pheromones[i] ** 0.90) * (smoothed ** 0.10)
             )
-            
-            priority_list.append(int(chosen_bin))
 
-        return np.array(priority_list)
+            value = int(chosen_bin)
+
+            priority_list[i] = value
+
+        # priority_list += self.random.random(self.n_tasks)
+
+        return priority_list
 
     def update_pheromones(self, priorities_array, fitness_array, reference_array) -> None:
         """Evaporate current pheromones"""
@@ -164,28 +61,12 @@ class BinsPheromones:
         if sum(is_good_solution) == 0:
             return None
         priorities_best = priorities_array[is_good_solution]
-        
-        # priorities_std = np.std(priorities_best, axis=0)
-        # is_std_low = priorities_std < 5  # np.quantile(priorities_std, 0.50)
-        # if sum(is_std_low) == 0:
-        #     return None
-
-
-        # fig = px.scatter(
-        #     x=np.std(self.bins_pheromones, axis=1),
-        #     y=priorities_std,
-        #     template="plotly_white",
-        #     trendline="ols"
-        # )
-        # fig.update_layout(height=400, width=400)
-        # fig.show()
 
 
         new_pheromone = (0 * self.bins_pheromones)
         for path in priorities_best:
             for node, value in enumerate(path):
-                # if is_std_low[node]:
-                new_pheromone[node, value] += 25   
+                new_pheromone[node, int(value)] += 100 
 
 
         # fig = px.imshow(
@@ -202,7 +83,7 @@ class BinsPheromones:
         )
 
         # fig = px.imshow(
-        #     self.bins_pheromones.T / self.bins_pheromones.sum(axis=1),
+        #     self.bins_pheromones.T,
         #     color_continuous_scale=["white", "blue", "navy"],
         #     template="plotly_dark"
         # )
@@ -210,9 +91,15 @@ class BinsPheromones:
         # fig.show()
 
 
+
     def stretch(self, k):
         self.n_bins *= k
-        self.bins_pheromones = np.repeat(self.bins_pheromones, repeats=k, axis=1)
+        self.bins_pheromones = np.repeat(self.bins_pheromones, repeats=k, axis=1) / k
+
+    def renormalize(self):
+        for i in range(self.bins_pheromones.shape[0]):
+            self.bins_pheromones[i] = self.bins_pheromones[i] / self.bins_pheromones[i].max() * 10
+
 
 
     # @staticmethod
@@ -236,6 +123,5 @@ class BinsPheromones:
     #     #         pheromone_amount[i] *= 2
         
     #     return pheromone_amount
-
 
 

@@ -1,20 +1,20 @@
+import numpy as np
 
 class PrecedenceManager:
     """Responsible for managing precedence relations"""
     
-    def __init__(self, 
-                 n_nodes: int, 
+    def __init__(self,
                  successors: dict[int, set], 
-                 n_predecessors: dict[int, int]
+                 predecessors: dict[int, int]
                  ):
         # number of nodes in a graph
         # not really necessary, but keep it just in case
-        self.n_nodes = n_nodes
+        self.n_nodes = len(successors)
         # dictionary {node id: set of successors/children}
         self.successors = successors
         # dictionary {node id: number of predecessors}
         # we don't need exact predecessors, just the number is enough
-        self.n_predecessors = n_predecessors
+        self.n_predecessors = {key: len(value) for key, value in predecessors.items()}
 
         # track how many predecessors were completed
         # will be set by the reset method
@@ -24,9 +24,7 @@ class PrecedenceManager:
         self.what_can_start = None 
         # reset the states of nodes
         self.reset_completion()
-
-        self.all_choices_ever_count = {}
-
+        
 
     def reset_completion(self):
         """Clear the info about what jobs were completed"""
@@ -39,17 +37,6 @@ class PrecedenceManager:
         # at the start, only jobs with no predecessors can start
         self.what_can_start = {node_id for node_id, k in self.n_predecessors.items() if (not k)}
 
-    @classmethod
-    def from_workgraph(cls, wg):
-        """Create a class from sampo workgraph"""
-        n_nodes = len(wg.nodes)
-        # use index of a node instead of node itself
-        # later we need index of a job as int (because matrices need index)
-        # so might as well convert it to int right away
-        node2index = {node: i for i, node in enumerate(wg.nodes)}
-        successors = {node2index[node]: {node2index[i] for i in node.children_set} for node in wg.nodes}
-        n_predecessors = {node2index[node]: len(node.parents_set) for node in wg.nodes}
-        return cls(n_nodes, successors, n_predecessors)
 
     def set_complete(self, node_index: int):
         """Update state after completing a job"""
@@ -64,8 +51,7 @@ class PrecedenceManager:
                 # if it is, then the job can start
                 self.what_can_start.add(successor)
 
-
-    def convert_priorities_to_valid_order(self, priorities_array: list[float]):
+    def get_activity_list(self, priorities_array: list[float]):
         """
         Convert list of priorities for jobs to a valid order
         If priorities_array[A] > priorities_array[B], then
@@ -89,28 +75,33 @@ class PrecedenceManager:
             self.set_complete(next_to_add)
             activity_list.append(next_to_add)
         
-        return activity_list
+        return np.array(activity_list)
+
+    def convert_al_to_valid_order(self, activity_list: list[int]):
+        # first, reset any previos info
+        self.reset_completion()
+        # order of jobs added
+        valid_activity_list = []
+        # now, constructing the list
+        for _ in range(self.n_nodes):
+            what_can_start = self.what_can_start
+            for i in activity_list:
+                if i in what_can_start:
+                    next_to_add = i
+                    break
+            
+            # set selected job as completed
+            self.set_complete(next_to_add)
+            valid_activity_list.append(next_to_add)
+        
+        return np.array(valid_activity_list)
 
     # converting to valid order is the main reason for this class
     def __call__(self, priorities_array: list[float]):
         return self.convert_priorities_to_valid_order(priorities_array)
 
 
-    # def get_what_can_start(self):
-    #     return sorted(list(self.what_can_start))
 
 
 
-# # Saved for later, might be useful for integration
-# def get_predecessors_dict_from_adj_matrix(adj_matrix):
-#     return {
-#         node: [
-#             i for i, bit in enumerate(adj_matrix[:, node])
-#             if bit and (i != node)
-#         ]
-#         for node in range(len(adj_matrix))
-#     }
-
-
-
-
+        

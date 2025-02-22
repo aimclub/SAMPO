@@ -8,6 +8,7 @@ class ProjectInfo:
 
     def __init__(self, wg, contractors, landscape=LandscapeConfiguration()):
 
+        # !! index2contractor_obj _obj?
         self.worker_pool, self.index2node, self.index2zone, self.work_id2index, self.worker_name2index, self.index2contractor_obj, \
         self.worker_pool_indices, self.contractor2index, self.contractor_borders, self.node_indices, self.parents, self.children, \
         self.resources_border = prepare_optimized_data_structures(wg, contractors, landscape)

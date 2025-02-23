@@ -80,14 +80,14 @@ class Population:
         new_activity_list = solution.activity_list.copy()
         new_resources_matrix = solution.resources_matrix.copy()
         
-        n_resource_mutations = np.random.binomial(len(self.project_info.nonzero_resources_indices), 0.02)
+        n_resource_mutations = np.random.randint(0, 3+1)
         for _ in range(n_resource_mutations):
             n_nonzero_resources = len(self.project_info.nonzero_resources_indices)
             work_to_mutate, worker_to_mutate = self.project_info.nonzero_resources_indices[np.random.choice(n_nonzero_resources)]
             min_amount, max_amount = self.project_info.get_resource_borders(work_id=work_to_mutate, worker_id=worker_to_mutate)
             new_resources_matrix[work_to_mutate, worker_to_mutate] = np.random.randint(min_amount, max_amount+1)
     
-        n_order_mutations = np.random.binomial(self.project_info.n_works, 0.02)
+        n_order_mutations = np.random.randint(0, 3+1)
         for _ in range(n_order_mutations):
             a, b = np.random.randint(self.project_info.n_works, size=2)
             new_activity_list[[a, b]] = new_activity_list[[b, a]]
@@ -113,9 +113,13 @@ class Population:
     def is_multi_fitness_better(a, b):
         if len(a) == len(b) == 1:
             return a < b
-        return ((a[0] < b[0]) and (a[1] <= b[1])) or ((a[0] <= b[0]) and (a[1] < b[1])) 
+        return ((a[0] < b[0]) and (a[1] <= b[1])) or ((a[0] <= b[0]) and (a[1] < b[1]))
 
-
+    def get_normalized_fitness(self):
+        affinity = [solution.fitness[0] for solution in self.solutions]
+        affinity = (-1) * np.array(affinity)
+        affinity = (affinity - np.min(affinity)) / (np.max(affinity) - np.min(affinity))
+        return affinity
 
 
 
@@ -129,21 +133,21 @@ class BeeColony(Population):
         new_solutions = []
 
         # random direction solutions
-        for _ in range(self.population_size):
-            solution_index = np.random.choice(self.population_size)
-            new_solutions.append( self.mutation(self.solutions[solution_index]) )
+        for i in range(self.population_size):
+            new_solutions.append( self.mutation(self.solutions[i]) )
         
         # toward other solutions
-        for _ in range(self.population_size):
-            solution_1_index = np.random.choice(self.population_size)
+        for i in range(self.population_size):
+            solution_1_index = i
             solution_2_index = np.random.choice(self.population_size)
-            new_solutions.append(
-                self.crossover(
-                    self.solutions[solution_1_index],
-                    self.solutions[solution_2_index],
-                    inherit_from_first=0.90,
-                )
+            inherit_from_first = np.random.triangular(0.80, 0.90, 1.00)
+            
+            new_solution = self.crossover(
+                self.solutions[solution_1_index],
+                self.solutions[solution_2_index],
+                inherit_from_first=inherit_from_first,
             )
+            new_solutions.append(new_solution)
         
         # calculate and set fitness
         new_fitness = self.fitness_function(new_solutions)
@@ -153,7 +157,6 @@ class BeeColony(Population):
         # update positions
         for i in range(len(new_solutions)):
             # if improve: move
-            # if new_solutions[i].fitness < self.solutions[new_solutions[i].id_].fitness:
             if self.is_multi_fitness_better(new_solutions[i].fitness, self.solutions[new_solutions[i].id_].fitness):
                 self.solutions[new_solutions[i].id_] = new_solutions[i]
 
@@ -163,9 +166,7 @@ class ArtificialImmune(Population):
 
     def update(self):
 
-        affinity = [solution.fitness[0] for solution in self.solutions]
-        affinity = (-1) * np.array(affinity)
-        affinity = (affinity - np.min(affinity)) / (np.max(affinity) - np.min(affinity))
+        affinity = self.get_normalized_fitness()
         # number of clones
         n_clones = np.ceil(affinity * 4).astype(np.int16)
         
@@ -194,7 +195,39 @@ class ArtificialImmune(Population):
 
 
 
+class SimulatedAnnealing(Population):
 
+    def update(self):
+        # get new solutions
+        new_solutions = []
+
+        # random direction solutions
+        for i in range(self.population_size):
+            new_solutions.append( self.mutation(self.solutions[i]) )
+        
+        # toward other solutions
+        for i in range(self.population_size):
+            solution_1_index = i
+            solution_2_index = np.random.choice(self.population_size)
+            inherit_from_first = np.random.triangular(0.80, 0.90, 1.00)
+            
+            new_solution = self.crossover(
+                self.solutions[solution_1_index],
+                self.solutions[solution_2_index],
+                inherit_from_first=inherit_from_first,
+            )
+            new_solutions.append(new_solution)
+        
+        # calculate and set fitness
+        new_fitness = self.fitness_function(new_solutions)
+        for i in range(len(new_solutions)):
+            new_solutions[i].fitness = new_fitness[i]
+
+        # update positions
+        for i in range(len(new_solutions)):
+            # if improve: move
+            if self.is_multi_fitness_better(new_solutions[i].fitness, self.solutions[new_solutions[i].id_].fitness) or (np.random.random() < 0.05):
+                self.solutions[new_solutions[i].id_] = new_solutions[i]
 
 
 
@@ -252,52 +285,6 @@ class RandomScheduler(PopulationScheduler):
             solutions[i].fitness = fitness_values[i]
 
         return Population(solutions, wg, contractors, self.fitness_function).to_population()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class Bee(Solution):
-
-    def __init__(
-            self, 
-            id_: int, 
-            activity_list: np.array, 
-            resources_matrix: np.array, 
-            ceil_list: np.array, 
-            fitness: tuple|None = None,
-            n_tries: int = 0
-        ):
-        super().__init__(id_, activity_list, resources_matrix, ceil_list, fitness)
-        self.n_tries = n_tries
         
 
 
@@ -352,7 +339,30 @@ class ImmuneScheduler(PopulationScheduler):
         return population
 
 
+class AnnealingScheduler(PopulationScheduler):
+    
+    def __init__(self, wg, contractors, fitness_function):
+        self.wg = wg
+        self.contractors = contractors
+        self.fitness_function = fitness_function
+        
+        self.project_info = ProjectInfo(wg, contractors)
+        self.precedence_manager = PrecedenceManager(self.project_info.children, self.project_info.parents)
 
+    
+    def schedule(self,
+                 initial_population: list,
+                 wg: WorkGraph,
+                 contractors: list,
+                 spec: ScheduleSpec = ScheduleSpec(),
+                 assigned_parent_time: Time = Time(0),
+                 landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list:
+    
+        colony = SimulatedAnnealing.from_population(initial_population, wg, contractors, self.fitness_function)
+        for i in range(1):
+            colony.update()
+        population = colony.to_population()
+        return population
 
 
 

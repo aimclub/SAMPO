@@ -80,14 +80,14 @@ class Population:
         new_activity_list = solution.activity_list.copy()
         new_resources_matrix = solution.resources_matrix.copy()
         
-        n_resource_mutations = np.random.randint(0, 5+1)
+        n_resource_mutations = np.random.binomial(len(self.project_info.nonzero_resources_indices), 0.02)
         for _ in range(n_resource_mutations):
             n_nonzero_resources = len(self.project_info.nonzero_resources_indices)
             work_to_mutate, worker_to_mutate = self.project_info.nonzero_resources_indices[np.random.choice(n_nonzero_resources)]
             min_amount, max_amount = self.project_info.get_resource_borders(work_id=work_to_mutate, worker_id=worker_to_mutate)
             new_resources_matrix[work_to_mutate, worker_to_mutate] = np.random.randint(min_amount, max_amount+1)
     
-        n_order_mutations = np.random.randint(0, 5+1)
+        n_order_mutations = np.random.binomial(self.project_info.n_works, 0.02)
         for _ in range(n_order_mutations):
             a, b = np.random.randint(self.project_info.n_works, size=2)
             new_activity_list[[a, b]] = new_activity_list[[b, a]]
@@ -101,7 +101,7 @@ class Population:
         new_activity_list = solution_1.activity_list.copy()
     
         new_resources_matrix = np.where(
-            np.random.choice([0, 1], p=[inherit_from_first, 1-inherit_from_first], size=(self.project_info.n_works, self.project_info.n_workers+1)),
+            np.random.choice([0, 1], p=[1-inherit_from_first, inherit_from_first], size=(self.project_info.n_works, self.project_info.n_workers+1)),
             solution_1.resources_matrix,
             solution_2.resources_matrix
         )

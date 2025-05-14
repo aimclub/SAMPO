@@ -4,9 +4,9 @@ from sampo.generator import SyntheticGraphType
 from sampo.generator.environment import get_contractor
 from sampo.generator.environment.landscape import get_landscape_by_wg
 from sampo.generator.pipeline.extension import extend_names, extend_resources
-from sampo.generator.pipeline.project import get_small_graph, get_graph
+from sampo.generator.pipeline.project import get_small_graph, get_graph, get_nodes
 from sampo.schemas import LandscapeConfiguration, MaterialReq
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 
 
 class SimpleSynthetic:
@@ -46,6 +46,25 @@ class SimpleSynthetic:
             work_graph: WorkGraph - the desired work graph
         """
         return get_graph(mode=mode, cluster_counts=cluster_counts, bottom_border=bottom_border, top_border=top_border,
+                         rand=self._rand)
+
+    def graph_nodes(self,
+                    mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
+                    cluster_counts: int | None = 0,
+                    bottom_border: int | None = 0,
+                    top_border: int | None = 0) -> list[GraphNode]:
+        """
+        Invokes a graph of the given type if at least one positive value of
+            cluster_counts, bottom_border or top_border is given;
+
+        :param mode: str - 'general' or 'sequence' or 'parallel - the type of the returned graph
+        :param cluster_counts: Optional[int] - Number of clusters for the graph
+        :param bottom_border: Optional[int] - bottom border for number of works for the graph
+        :param top_border: Optional[int] - top border for number of works for the graph
+        :return:
+            work_graph: WorkGraph - the desired work graph
+        """
+        return get_nodes(mode=mode, cluster_counts=cluster_counts, bottom_border=bottom_border, top_border=top_border,
                          rand=self._rand)
 
     def contractor(self, pack_worker_count: float):

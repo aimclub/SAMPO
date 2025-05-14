@@ -8,7 +8,7 @@ from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_wo
 from sampo.schemas.graph import GraphNode, WorkGraph
 
 
-def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
+def get_small_nodes(cluster_name: str | None = 'C1', rand: Random | None = None) -> list[GraphNode]:
     """
     Creates a small graph of works consisting of 30-50 vertices
 
@@ -25,7 +25,19 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     c1, c_nodes, _ = get_cluster_works(cluster_name=cluster_name, pipe_nodes_count=pipe_nodes_count,
                                        pipe_net_count=pipe_net_count, light_masts_count=light_masts_count,
                                        borehole_counts=[borehole_count], rand=rand)
-    return WorkGraph.from_nodes(list(c_nodes.values()) + [c1])
+    return list(c_nodes.values()) + [c1]
+
+
+def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
+    """
+    Creates a small graph of works consisting of 30-50 vertices
+
+    :param cluster_name: str - the first cluster name
+    :param rand: Optional[Random] - generator of numbers with a given seed or None
+    :return: work_graph: WorkGraph - work graph where count of vertex between 30 and 50
+    """
+
+    return WorkGraph.from_nodes(get_small_nodes(cluster_name, rand))
 
 
 def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,
@@ -62,14 +74,14 @@ def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,
     return checkpoints, roads, count_nodes
 
 
-def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
+def get_nodes(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
               cluster_name_prefix: str | None = 'C',
               cluster_counts: int | None = 0,
               branching_probability: float | None = BRANCHING_PROBABILITY,
               addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
               bottom_border: int | None = 0,
               top_border: int | None = 0,
-              rand: Random | None = None) -> WorkGraph:
+              rand: Random | None = None) -> list[GraphNode]:
     """
     Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability,
     bottom_border is given
@@ -121,11 +133,40 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
             break
 
     if len(stages) == 1:
-        return get_small_graph(cluster_name=f'{cluster_name_prefix}1')
+        return get_small_nodes(cluster_name=f'{cluster_name_prefix}1')
 
     nodes = [road for _, roads in stages for road in roads.values()]
     nodes.extend([c for c, _ in stages])
-    return WorkGraph.from_nodes(nodes)
+    return nodes
+
+
+def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
+              cluster_name_prefix: str | None = 'C',
+              cluster_counts: int | None = 0,
+              branching_probability: float | None = BRANCHING_PROBABILITY,
+              addition_cluster_probability: float | None = ADDITION_CLUSTER_PROBABILITY,
+              bottom_border: int | None = 0,
+              top_border: int | None = 0,
+              rand: Random | None = None) -> WorkGraph:
+    """
+    Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability,
+    bottom_border is given
+
+    :param mode: str - 'general' or 'sequence' or 'parallel - the type of the returned graph
+    :param cluster_name_prefix: str -  cluster name prefix, if the prefix is 'C',
+        the clusters will be called 'C1', 'C2' etc.
+    :param cluster_counts: Optional[int] - Number of clusters for the graph
+    :param branching_probability: Optional[float] - The probability that the node will not be connected to the last
+        cluster, but to any other cluster for the general mode
+    :param addition_cluster_probability: Optional[float] - probability of a slave (example C3_1) cluster
+        to the main cluster
+    :param bottom_border: Optional[int] - bottom border for number of works for the graph
+    :param top_border: Optional[int] - top border for number of works for the graph
+    :param rand: Optional[Random] - generator of numbers with a given seed or None
+    :return:
+        work_graph: WorkGraph - the desired work graph
+    """
+    return WorkGraph.from_nodes(get_nodes(mode, cluster_name_prefix, cluster_counts, branching_probability, addition_cluster_probability, bottom_border, top_border, rand))
 
 
 def _graph_mode_to_callable(mode: SyntheticGraphType) -> \

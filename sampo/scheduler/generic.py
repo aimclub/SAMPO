@@ -1,7 +1,6 @@
 from typing import Type, Callable, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
-from sampo.scheduler.heft.prioritization import stochastic_prioritization
 from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
 from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.scheduler.resource.base import ResourceOptimizer
@@ -47,11 +46,13 @@ class GenericScheduler(Scheduler):
                  resource_optimizer: ResourceOptimizer,
                  timeline_type: Type,
                  prioritization_f: PRIORITIZATION_F,
+                 stochastic_prioritization_f,  # TODO Add type
                  optimize_resources_f: RESOURCE_OPTIMIZE_F,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().__init__(scheduler_type, resource_optimizer, work_estimator)
         self._timeline_type = timeline_type
         self.prioritization = prioritization_f
+        self.stochastic_prioritization = stochastic_prioritization_f
         self.optimize_resources = optimize_resources_f
 
     def get_default_res_opt_function(self, get_finish_time=get_finish_time_default) \
@@ -132,7 +133,7 @@ class GenericScheduler(Scheduler):
                                        timeline: Timeline | None = None,
                                        landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
-        ordered_nodes = list(stochastic_prioritization(stochastic_wg, self.work_estimator))
+        ordered_nodes = list(self.stochastic_prioritization(stochastic_wg, self.work_estimator))
         wg = WorkGraph.from_nodes(ordered_nodes)
 
         schedule, schedule_start_time, timeline, nodes_order = \

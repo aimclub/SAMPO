@@ -195,6 +195,9 @@ class JSONSerializable(Serializable[dict[str,
         """
         ...
 
+    def copy(self):
+        return self._deserialize(self._serialize())
+
     @classmethod
     def loadd(cls, dict_representation: dict) -> JS:
         """

@@ -6,7 +6,7 @@ from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.collections_util import build_index
-from sampo.utilities.linked_list import LinkedList
+from sampo.utilities.linked_list import LinkedList, Iterator
 from sampo.utilities.nodes import insert_nodes_between
 
 
@@ -76,7 +76,7 @@ def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimat
     return ordered_nodes
 
 
-def stochastic_prioritization(wg: StochasticGraph, work_estimator: WorkTimeEstimator) -> Generator[GraphNode]:
+def stochastic_prioritization(wg: StochasticGraph, work_estimator: WorkTimeEstimator) -> Iterator[GraphNode]:
     it = wg.iterate()
     first_node = next(it)
     seen_set = set()

@@ -17,7 +17,7 @@ class StochasticGraph(ABC):
         Fully simulates stochastic process and returns sample
         work graph satisfies the stochastic scheme
         """
-        return WorkGraph.from_nodes(list(self.iterate()))
+        return WorkGraph.from_nodes(list(self.iterate()), self._rand)
 
     @abstractmethod
     def first(self):
@@ -81,20 +81,42 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
 
         # should make things in topological way..
 
+        seen = set()
+        seen_queue = set()
+        # seen.add(self._start)
+
         while queue:
             node = queue.pop()
+
+            assert node not in seen, 'Duplicate returned'
+
             yield node
+            seen.add(node)
 
             additions = self.next(node)
             # TODO now performing like DFS, swap places to make BFS
-            new_queue = [task for subgraph in additions for task in subgraph]
+            new_queue = [task for subgraph in additions for task in subgraph if task not in seen_queue]
+
+            seen_queue.update(new_queue)
+
+
+            # assert len(new_queue) == len(set(new_queue)), 'Duplicate in generation!'
+            # assert len(queue) == len(set(queue)), 'Duplicate in queue!'
+            # new_queue_1 = new_queue + queue
+
+            # assert len(new_queue_1) == len(set(new_queue_1)), 'Duplicate in new queue!'
+
+            # assert len(queue) == len(set(queue)), 'Duplicate in queue!'
+
             new_queue.extend(queue)
             queue = new_queue
+
+            # assert len(new_queue) == len(set(new_queue)), 'Duplicate in new queue!'
 
             # print(len(queue))
 
     def next(self, node: GraphNode, min_prob: float = 0) -> list[list[GraphNode]] | None:
-        result = self._node2followers.get(node.work_unit.name, None)
+        result = self._node2followers.get(node.id, None)
         if result is None:
             return []
         generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
@@ -116,8 +138,8 @@ class ProbabilisticFollowingStochasticGraphScheme(StochasticGraphScheme):
                  wg: WorkGraph = None):
         super().__init__(rand)
         self._fixed_graph = wg.copy()
-        self._node2followers = {node.id: [([child], 1.0) for child in edge.children]
-                                for node in wg.nodes for edge in node.children}
+        self._node2followers = {node.id: [([child], 1.0) for child in node.children]
+                                for node in self._fixed_graph.nodes}
         self._work_estimator = work_estimator
 
         from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade, work_priority

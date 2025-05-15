@@ -240,4 +240,7 @@ def get_cluster_works(cluster_name: str, pipe_nodes_count: int,
 
     all_stages = [roads['final']] + power_lines + pipe_lines_and_nodes + boreholes_all + boreholes_eq_general
     handing_stage = _get_handing_stage(all_stages, cluster_name, sum(borehole_counts), group_ind=0, rand=rand)
+
+    assert len(all_stages) == len(set(all_stages))
+
     return handing_stage, roads, count_nodes

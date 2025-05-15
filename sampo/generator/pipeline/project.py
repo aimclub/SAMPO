@@ -37,7 +37,7 @@ def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None)
     :return: work_graph: WorkGraph - work graph where count of vertex between 30 and 50
     """
 
-    return WorkGraph.from_nodes(get_small_nodes(cluster_name, rand))
+    return WorkGraph.from_nodes(get_small_nodes(cluster_name, rand), rand)
 
 
 def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,
@@ -124,6 +124,8 @@ def get_nodes(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
             for checkpoint in checkpoints:
                 checkpoint.add_parents([root_stage])
 
+        assert len(set(roads)) == len(roads)
+
         stages += [(c, roads) for c in checkpoints]
         masters_clusters_ind += 1
         works_generated += count_works
@@ -133,10 +135,13 @@ def get_nodes(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
             break
 
     if len(stages) == 1:
-        return get_small_nodes(cluster_name=f'{cluster_name_prefix}1')
+        return get_small_nodes(cluster_name=f'{cluster_name_prefix}1', rand=rand)
 
-    nodes = [road for _, roads in stages for road in roads.values()]
+    nodes = list(set([road for _, roads in stages for road in roads.values()]))
     nodes.extend([c for c, _ in stages])
+
+    assert len(set(nodes)) == len(nodes)
+
     return nodes
 
 
@@ -166,7 +171,8 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
     :return:
         work_graph: WorkGraph - the desired work graph
     """
-    return WorkGraph.from_nodes(get_nodes(mode, cluster_name_prefix, cluster_counts, branching_probability, addition_cluster_probability, bottom_border, top_border, rand))
+    return WorkGraph.from_nodes(get_nodes(mode, cluster_name_prefix, cluster_counts, branching_probability,
+                                          addition_cluster_probability, bottom_border, top_border, rand), rand)
 
 
 def _graph_mode_to_callable(mode: SyntheticGraphType) -> \

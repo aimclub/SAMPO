@@ -358,10 +358,20 @@ class WorkGraph(JSONSerializable['WorkGraph']):
     def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
         start = get_start_stage(rand=rand)
         for node in nodes:
-            if len(node.parents) == 0:
-                node.add_parents([(start, 0, EdgeType.FinishStart)])
+            # if len(node.parents) == 0:
+            node.add_parents([(start, 0, EdgeType.FinishStart)])
         without_successors = [node for node in nodes if len(node.children) == 0]
         finish = get_finish_stage(parents=without_successors, rand=rand)
+        # seen = set()
+        # def dfs(node: GraphNode):
+        #     if node in seen:
+        #         return
+        #     seen.add(node)
+        #     for child in node.children:
+        #         dfs(child)
+        #
+        # dfs(start)
+
         return WorkGraph(start, finish)
 
     def to_frame(self, save_req=False) -> pd.DataFrame:

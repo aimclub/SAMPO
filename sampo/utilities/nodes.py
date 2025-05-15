@@ -29,8 +29,8 @@ def copy_nodes(nodes: list[GraphNode], drop_outer_works: bool = False) -> list[G
 
 def add_default_predecessor(nodes: list[GraphNode], predecessor: GraphNode):
     for node in nodes:
-        if not node.parents:
-            node.add_parents([predecessor])
+        # if not node.parents:
+        node.add_parents([predecessor])
 
 
 def insert_nodes_between(nodes: list[GraphNode], starts: list[GraphNode], finishes: list[GraphNode]):

@@ -20,11 +20,11 @@ def copy_nodes(nodes: list[GraphNode], drop_outer_works: bool = False) -> list[G
             predecessors = [(nodes_dict[p_id], p_lag, p_type) for p_id, p_lag, p_type in parent_info]
         graph_node = GraphNode(wu, predecessors)
         # TODO Hate
-        if drop_outer_works:
-            graph_node.children = [node for node in graph_node.children if node.id in nodes_dict]
+        # if drop_outer_works:
+        #     graph_node.children = [node for node in graph_node.children if node.id in nodes_dict]
         nodes_dict[wu.id] = graph_node
 
-    return nodes
+    return list(nodes_dict.values())
 
 
 def add_default_predecessor(nodes: list[GraphNode], predecessor: GraphNode):

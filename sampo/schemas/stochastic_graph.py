@@ -79,6 +79,8 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
     def iterate(self) -> Iterator[GraphNode]:
         queue = copy_nodes([self._start], drop_outer_works=True)
 
+        # should make things in topological way..
+
         while queue:
             node = queue.pop()
             yield node
@@ -89,14 +91,16 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
             new_queue.extend(queue)
             queue = new_queue
 
+            # print(len(queue))
+
     def next(self, node: GraphNode, min_prob: float = 0) -> list[list[GraphNode]] | None:
-        result = self._node2followers.get(node.id, None)
+        result = self._node2followers.get(node.work_unit.name, None)
         if result is None:
             return []
-        generated_subgraph = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
-        for subgraph in generated_subgraph:
+        generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
+        for subgraph in generated_subgraphs:
             add_default_predecessor(subgraph, node)
-        return generated_subgraph
+        return generated_subgraphs
 
     def average_labor_cost(self, node: GraphNode):
         """

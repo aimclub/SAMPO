@@ -18,7 +18,7 @@ def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dic
     # cache graph edges
     edges: list[tuple[GraphNode, GraphNode, float]] = sorted([(finish, start, weights[finish])
                                                               for start in nodes
-                                                              for finish in start.parents],
+                                                              for finish in start.parents if finish in path_weights],
                                                              key=lambda x: (x[0].id, x[1].id))
     # for changes heuristic
     changed = False

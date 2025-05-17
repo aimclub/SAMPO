@@ -3,6 +3,7 @@ from random import Random
 from typing import Iterator
 
 from sampo.schemas import WorkGraph, GraphNode, WorkTimeEstimator
+from sampo.schemas.graph import get_start_stage
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 from sampo.utilities.nodes import copy_nodes, add_default_predecessor
 
@@ -120,8 +121,12 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         if result is None:
             return []
         generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
+        inner_start = get_start_stage(rand=self._rand)
+        inner_start.add_parents([node])
         for subgraph in generated_subgraphs:
-            add_default_predecessor(subgraph, node)
+            add_default_predecessor(subgraph, inner_start)
+            inner_start.add_followers(subgraph)
+        generated_subgraphs.append([inner_start])
         return generated_subgraphs
 
     def average_labor_cost(self, node: GraphNode):

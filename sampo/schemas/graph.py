@@ -89,6 +89,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         return {
             'work_unit': self._work_unit._serialize(),
             'parent_edges': [(e.start.id, e.lag, e.type.value) for e in self._parent_edges],
+            'followers': [follower.id for follower in self._followers],
             # 'child_edges': [(e.finish.work_unit.id, e.lag, e.type.value) for e in self._children_edges]
         }
 
@@ -96,6 +97,7 @@ class GraphNode(JSONSerializable['GraphNode']):
     def _deserialize(cls, representation: T) -> dict:
         representation['work_unit'] = WorkUnit._deserialize(representation['work_unit'])
         representation['parent_edges'] = [(e[0], e[1], EdgeType(e[2])) for e in representation['parent_edges']]
+        # representation['followers'] = [representation['followers']]
         # representation['child_edges'] = [(e[0], e[1], EdgeType(e[2])) for e in representation['child_edges']]
         return representation
 
@@ -276,6 +278,9 @@ class GraphNode(JSONSerializable['GraphNode']):
         return [inseparable_child] + inseparable_child._get_inseparable_children() \
             if inseparable_child \
             else []
+
+    def add_followers(self, nodes: list['GraphNode']):
+        self._followers.extend(nodes)
 
     def get_following_nodes(self) -> list['GraphNode']:
         """
@@ -477,6 +482,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         for node_info in serialized_nodes:
             wu, parent_info = (node_info[member] for member in ('work_unit', 'parent_edges'))
             graph_node = GraphNode(wu, [(nodes_dict[p_id], p_lag, p_type) for p_id, p_lag, p_type in parent_info])
+            graph_node.add_followers(node_info['followers'])
             nodes_dict[wu.id] = graph_node
 
         return WorkGraph(nodes_dict[start_id], nodes_dict[finish_id])

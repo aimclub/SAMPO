@@ -23,11 +23,12 @@ class HEFTScheduler(GenericScheduler):
                  timeline_type: Type = JustInTimeTimeline,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  prioritization_f: Callable = prioritization,
+                 stochastic_prioritization_f=None,
                  resource_optimize_f: Callable = None):
         if resource_optimize_f is None:
             resource_optimize_f = self.get_default_res_opt_function()
         super().__init__(scheduler_type, resource_optimizer, timeline_type,
-                         prioritization_f, resource_optimize_f, work_estimator)
+                         prioritization_f, stochastic_prioritization_f, resource_optimize_f, work_estimator)
 
 
 class HEFTBetweenScheduler(HEFTScheduler):

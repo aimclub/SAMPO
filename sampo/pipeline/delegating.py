@@ -12,11 +12,16 @@ class DelegatingScheduler(GenericScheduler):
                          delegate.resource_optimizer,
                          delegate._timeline_type,
                          self.delegate_prioritization(delegate.prioritization),
+                         self.delegate_stochastic_prioritization(delegate.stochastic_prioritization),
                          self.delegate_optimize_resources(delegate.optimize_resources),
                          delegate.work_estimator)
 
     # noinspection PyMethodMayBeStatic
     def delegate_prioritization(self, prioritization) -> PRIORITIZATION_F:
+        return prioritization
+
+    # noinspection PyMethodMayBeStatic
+    def delegate_stochastic_prioritization(self, prioritization) -> PRIORITIZATION_F:
         return prioritization
 
     # noinspection PyMethodMayBeStatic

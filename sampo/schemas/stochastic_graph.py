@@ -125,7 +125,8 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         inner_start.add_parents([node])
         for subgraph in generated_subgraphs:
             add_default_predecessor(subgraph, inner_start)
-            inner_start.add_followers(subgraph)
+            node.add_followers(subgraph)
+            node.add_followers([inner_start])
         generated_subgraphs.append([inner_start])
         return generated_subgraphs
 

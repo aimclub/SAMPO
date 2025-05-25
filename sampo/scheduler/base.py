@@ -13,6 +13,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
+from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.works import WorkUnit
@@ -77,6 +78,25 @@ class Scheduler(ABC):
                             assigned_parent_time: Time = Time(0),
                             timeline: Timeline | None = None,
                             landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+        """
+        Extended version of 'schedule' method. Returns much inner info
+        about a scheduling process, not only Schedule.
+
+        :return: resulting schedule, finish time,
+                 resulting timeline used for scheduling
+                 and node_order used for scheduling
+        """
+        ...
+
+    @abstractmethod
+    def stochastic_schedule_with_cache(self,
+                                       stochastic_wg: StochasticGraph,
+                                       contractors: list[Contractor],
+                                       spec: ScheduleSpec = ScheduleSpec(),
+                                       assigned_parent_time: Time = Time(0),
+                                       timeline: Timeline | None = None,
+                                       landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
         """
         Extended version of 'schedule' method. Returns much inner info

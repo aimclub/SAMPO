@@ -17,6 +17,7 @@ from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.project import ScheduledProject
 from sampo.schemas.schedule import Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.structurator import graph_restructuring
@@ -54,6 +55,7 @@ class DefaultInputPipeline(InputPipeline):
 
     def __init__(self):
         self._wg: WorkGraph | pd.DataFrame | str | None = None
+        self._stochastic_wg: StochasticGraph | None = None
         self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int] | None \
             = ContractorGenerationMethod.AVG, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
@@ -95,6 +97,10 @@ class DefaultInputPipeline(InputPipeline):
         self._all_connections = all_connections
         self._change_connections_info = change_connections_info
         self.sep_wg = sep
+        return self
+
+    def stochastic_wg(self, stochastic_wg: StochasticGraph):
+        self._stochastic_wg = stochastic_wg
         return self
 
     def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
@@ -278,6 +284,15 @@ class DefaultInputPipeline(InputPipeline):
                 self._node_orders = node_orders
 
         return DefaultSchedulePipeline(self, wg, schedules)
+
+    def stochastic_schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+        # TODO
+        schedules = scheduler.stochastic_schedule_with_cache(self._stochastic_wg, self._contractors, self._spec,
+                                                             landscape=self._landscape_config,
+                                                             assigned_parent_time=self._assigned_parent_time)
+        # TODO WG????? wtf..
+        return DefaultSchedulePipeline(self, wg, schedules)
+
 
 
 # noinspection PyProtectedMember

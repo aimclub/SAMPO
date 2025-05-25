@@ -79,6 +79,10 @@ class InputPipeline(ABC):
     def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
         ...
 
+    @abstractmethod
+    def stochastic_schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+        ...
+
 
 class SchedulePipeline(ABC):
     """

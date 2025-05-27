@@ -61,6 +61,7 @@ class GraphNode(JSONSerializable['GraphNode']):
         self.add_parents(parent_works)
         self._children_edges = []
         self._followers = followers or []
+        self._labor = 0
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -279,8 +280,9 @@ class GraphNode(JSONSerializable['GraphNode']):
             if inseparable_child \
             else []
 
-    def add_followers(self, nodes: list['GraphNode']):
+    def add_followers(self, nodes: list['GraphNode'], labor: float = 0):
         self._followers.extend(nodes)
+        self._labor += labor
 
     def get_following_nodes(self) -> list['GraphNode']:
         """
@@ -361,6 +363,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     @classmethod
     def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
+        if len(set(nodes)) != len(nodes):
+            raise ValueError('Duplicates passed to WorkGraph')
+
         start = get_start_stage(rand=rand)
         for node in nodes:
             # if len(node.parents) == 0:

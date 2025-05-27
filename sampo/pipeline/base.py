@@ -10,6 +10,7 @@ from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.project import ScheduledProject
 from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.stochastic_graph import StochasticGraph
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator
 from sampo.utilities.name_mapper import NameMapper
@@ -21,10 +22,15 @@ class InputPipeline(ABC):
     """
 
     @abstractmethod
-    def wg(self, wg: WorkGraph | pd.DataFrame | str,
+    def wg(self,
+           wg: WorkGraph | pd.DataFrame | str,
            all_connections: bool = False,
            change_connections_info: bool = False,
            sep: str = ',') -> 'InputPipeline':
+        ...
+
+    @abstractmethod
+    def stochastic_wg(self, stochastic_wg: StochasticGraph):
         ...
 
     @abstractmethod

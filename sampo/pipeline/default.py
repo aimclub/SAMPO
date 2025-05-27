@@ -286,13 +286,17 @@ class DefaultInputPipeline(InputPipeline):
         return DefaultSchedulePipeline(self, wg, schedules)
 
     def stochastic_schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
-        # TODO
+        # TODO Make ability to fix all random curcumstances in stochastic wg generation,
+        #  e.g. every full generation should be the same as others
         schedules = scheduler.stochastic_schedule_with_cache(self._stochastic_wg, self._contractors, self._spec,
                                                              landscape=self._landscape_config,
                                                              assigned_parent_time=self._assigned_parent_time)
+        # FIXME now without multi-schedule (pareto) support
+        schedule = schedules[0][0]
+        stochastic_wg_realized = schedules[0][4]
+        self._node_orders = [schedules[0][3]]
         # TODO WG????? wtf..
-        return DefaultSchedulePipeline(self, wg, schedules)
-
+        return DefaultSchedulePipeline(self, stochastic_wg_realized, [schedule])
 
 
 # noinspection PyProtectedMember

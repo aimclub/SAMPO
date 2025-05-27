@@ -1,3 +1,4 @@
+from collections import deque
 from operator import attrgetter
 from typing import Generator
 
@@ -20,6 +21,7 @@ def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dic
                                                               for start in nodes
                                                               for finish in start.parents if finish in path_weights],
                                                              key=lambda x: (x[0].id, x[1].id))
+
     # for changes heuristic
     changed = False
     # run standard ford-bellman on reversed edges
@@ -64,6 +66,9 @@ def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimat
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
     """
+    if len(nodes) == 1:
+        return nodes
+
     # inverse weights
     weights = {node: -work_priority(node, calculate_working_time_cascade, work_estimator)
                for node in nodes}
@@ -81,28 +86,35 @@ def stochastic_prioritization(wg: StochasticGraph, work_estimator: WorkTimeEstim
     first_node = next(it)
     seen_set = set()
     seen: dict[GraphNode, float] = {}
-    pending_works = {first_node}
+    pending_works = deque([first_node])
+    added = {first_node}
 
     # this algo seems to be quadratic, but Dijkstra-like algo
     # cannot be implemented because of maximization task
     while len(pending_works) > 0:
-        for node in pending_works:
+        for i in range(len(pending_works)):
+            node = pending_works[i]
             if len(seen_set.intersection(node.parents_set)) == len(node.parents_set):
+                pending_works.pop()
                 # edges satisfied, adding to priority
-                max_path_to_node = max([seen[v] for v in node.parents])
+                max_path_to_node = max([seen[v] for v in node.parents], default=0)
                 node_cumulative_path = max_path_to_node + wg.average_labor_cost(node)
                 seen[node] = node_cumulative_path
                 seen_set.add(node)
-                for child in node.children_set:
-                    pending_works.add(child)
+                # for child in node.children_set:
+                #     pending_works.add(child)
 
                 yield node
 
-                generated_graphs = wg.generate_next(node)
+                generated_graphs = wg.next(node)
 
                 for generated_nodes in generated_graphs:
                     inner_prioritization = prioritization_nodes(generated_nodes, work_estimator)
-                    insert_nodes_between(generated_nodes, [node], node.children)
+                    # insert_nodes_between(generated_nodes, [node], node.children)
 
                     for v in inner_prioritization:
-                        yield v
+                        # yield v
+                        if v not in added:
+                            pending_works.append(v)
+                            added.add(v)
+                break

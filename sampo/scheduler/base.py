@@ -97,7 +97,7 @@ class Scheduler(ABC):
                                        assigned_parent_time: Time = Time(0),
                                        timeline: Timeline | None = None,
                                        landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
-            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode], WorkGraph]]:
         """
         Extended version of 'schedule' method. Returns much inner info
         about a scheduling process, not only Schedule.

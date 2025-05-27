@@ -132,7 +132,7 @@ class GenericScheduler(Scheduler):
                                        assigned_parent_time: Time = Time(0),
                                        timeline: Timeline | None = None,
                                        landscape: LandscapeConfiguration() = LandscapeConfiguration()) \
-            -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+            -> list[tuple[Schedule, Time, Timeline, list[GraphNode], WorkGraph]]:
         ordered_nodes = list(self.stochastic_prioritization(stochastic_wg, self.work_estimator))
         wg = WorkGraph.from_nodes(ordered_nodes)
 
@@ -144,7 +144,7 @@ class GenericScheduler(Scheduler):
             wg
         )
 
-        return [(schedule, schedule_start_time, timeline, nodes_order)]
+        return [(schedule, schedule_start_time, timeline, nodes_order, wg)]
 
     def build_scheduler(self,
                         ordered_nodes: Iterable[GraphNode],

@@ -66,6 +66,7 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
 
     def __init__(self,
                  rand: Random,
+                 work_estimator: WorkTimeEstimator,
                  start: GraphNode,
                  node2followers: dict[str, list[tuple[list[GraphNode], float]]],
                  averages: dict[str, float]):
@@ -73,6 +74,7 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         self._start = start
         self._averages = averages
         self._node2followers = node2followers
+        self._work_estimator = work_estimator
 
     def first(self):
         return self._start
@@ -91,10 +93,11 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
 
             assert node not in seen, 'Duplicate returned'
 
+            additions = self.next(node)
+
             yield node
             seen.add(node)
 
-            additions = self.next(node)
             # TODO now performing like DFS, swap places to make BFS
             new_queue = [task for subgraph in additions for task in subgraph if task not in seen_queue]
 
@@ -116,17 +119,18 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
 
             # print(len(queue))
 
-    def next(self, node: GraphNode, min_prob: float = 0) -> list[list[GraphNode]] | None:
+    def next(self, node: GraphNode, min_prob: float = 0, max_prob: float = 1) -> list[list[GraphNode]] | None:
         result = self._node2followers.get(node.id, None)
         if result is None:
             return []
-        generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and self._rand.random() < prob]
+        generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and prob <= max_prob and self._rand.random() < prob]
         inner_start = get_start_stage(rand=self._rand)
         inner_start.add_parents([node])
         for subgraph in generated_subgraphs:
             add_default_predecessor(subgraph, inner_start)
-            node.add_followers(subgraph)
-            node.add_followers([inner_start])
+            node.add_followers(subgraph, 0)
+
+        node.add_followers([inner_start], 0)
         generated_subgraphs.append([inner_start])
         return generated_subgraphs
 
@@ -134,7 +138,7 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         """
         Returns the labor cost for the given node plus average following subgraph
         """
-        return self._averages[node.work_unit.name]
+        return self._averages.get(node.id, 0)
 
 
 class ProbabilisticFollowingStochasticGraphScheme(StochasticGraphScheme):
@@ -169,5 +173,12 @@ class ProbabilisticFollowingStochasticGraphScheme(StochasticGraphScheme):
         averages = {node.id: sum(self._get_subgraph_labor(entry)
                                  for entry in self._node2followers.get(node.id, []))
                     for node in self._fixed_graph.nodes}
-        return ProbabilisticFollowingStochasticGraph(self._rand, self._fixed_graph.start,
+        # # add followers
+        # for follower_info in self._node2followers.values():
+        #     for follower_subgraph, _ in follower_info:
+        #         for follower in follower_subgraph:
+        #             if follower.id not in averages:
+        #                 averages[follower.id] = self._work_priority_f(follower, self._working_time_f, self._work_estimator)
+
+        return ProbabilisticFollowingStochasticGraph(self._rand, self._work_estimator, self._fixed_graph.start,
                                                      self._node2followers, averages)

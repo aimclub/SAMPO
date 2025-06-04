@@ -123,12 +123,18 @@ class ProbabilisticFollowingStochasticGraph(StochasticGraph):
         result = self._node2followers.get(node.id, None)
         if result is None:
             return []
-        generated_subgraphs = [copy_nodes(nodes, drop_outer_works=True) for nodes, prob in result if prob >= min_prob and prob <= max_prob and self._rand.random() < prob]
+        generated_subgraphs = [(prob, copy_nodes(nodes, drop_outer_works=True)) for nodes, prob in result if prob >= min_prob and prob <= max_prob and self._rand.random() < prob]
         inner_start = get_start_stage(rand=self._rand)
         inner_start.add_parents([node])
+
+        for prob, subgraph in generated_subgraphs:
+            if prob < 1:
+                node.add_followers(subgraph, 0)
+
+        generated_subgraphs = [v for _, v in generated_subgraphs]
+
         for subgraph in generated_subgraphs:
             add_default_predecessor(subgraph, inner_start)
-            node.add_followers(subgraph, 0)
 
         node.add_followers([inner_start], 0)
         generated_subgraphs.append([inner_start])

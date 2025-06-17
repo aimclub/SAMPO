@@ -38,12 +38,17 @@ class HEFTBetweenScheduler(HEFTScheduler):
     """
 
     def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.HEFTAddBetween,
+                 scheduler_type: SchedulerType = SchedulerType.HEFTAddEnd,
                  resource_optimizer: ResourceOptimizer = FullScanResourceOptimizer(),
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
-        super().__init__(scheduler_type, resource_optimizer, MomentumTimeline,
-                         resource_optimize_f=self.get_default_res_opt_function(self.get_finish_time),
-                         work_estimator=work_estimator)
+                 timeline_type: Type = JustInTimeTimeline,
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+                 prioritization_f: Callable = prioritization,
+                 stochastic_prioritization_f=None,
+                 resource_optimize_f: Callable = None):
+        if resource_optimize_f is None:
+            resource_optimize_f = self.get_default_res_opt_function(self.get_finish_time)
+        super().__init__(scheduler_type, resource_optimizer, timeline_type, work_estimator,
+                         prioritization_f, stochastic_prioritization_f, resource_optimize_f)
 
     @staticmethod
     def get_finish_time(node, worker_team, node2swork, spec, assigned_parent_time, timeline, work_estimator) -> Time:

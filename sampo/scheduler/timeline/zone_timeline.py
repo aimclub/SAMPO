@@ -128,9 +128,9 @@ class ZoneTimeline:
         # we can stop and put the task at the very end
         i = 0
         while len(state[current_start_idx:]) > 0:
-            if i > 0 and i % 50 == 0:
-                print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
-                print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
+            # if i > 0 and i % 50 == 0:
+            #     print(f'Warning! Probably cycle in looking for earliest time slot: {i} iteration')
+            #     print(f'Current start time: {current_start_time}, current start idx: {current_start_idx}')
             i += 1
 
             current_start_status = state[current_start_idx].available_workers_count

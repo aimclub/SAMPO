@@ -22,6 +22,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  zone_reqs: list[ZoneReq] = None,
                  description: str = '',
                  group: str = 'main project',
+                 priority: int = 1,
                  is_service_unit: bool = False,
                  volume: float = 0,
                  volume_type: str = 'unit',
@@ -62,6 +63,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume = float(volume)
         self.volume_type = volume_type
         self.display_name = display_name if display_name else name
+        self.priority = priority
 
     def __del__(self):
         for attr in self.__dict__.values():
@@ -145,3 +147,4 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
+        self.priority = new_work_unit.priority

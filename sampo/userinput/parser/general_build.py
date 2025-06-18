@@ -255,11 +255,12 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
 
         description = row['description'] if 'description' in frame.columns else ''
         group = row['group'] if 'group' in frame.columns else 'main project'
+        priority = row['priority'] if 'priority' in frame.columns else 1
 
         work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=group,
                              description=description, volume=row['volume'], volume_type=row['measurement'],
                              is_service_unit=is_service_unit, display_name=row['activity_name_original'],
-                             zone_reqs=zone_reqs)
+                             zone_reqs=zone_reqs, priority=priority)
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]
         node = GraphNode(work_unit, parents)
         id_to_node[row['activity_id']] = node

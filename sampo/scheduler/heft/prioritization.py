@@ -11,13 +11,13 @@ def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dic
     # cache graph edges
     edges: list[tuple[GraphNode, GraphNode, float]] = sorted([(finish, start, weights[finish])
                                                               for start in nodes
-                                                              for finish in start.parents],
+                                                              for finish in start.parents if finish in path_weights],
                                                              key=lambda x: (x[0].id, x[1].id))
     # for changes heuristic
     changed = False
     # run standard ford-bellman on reversed edges
     # optimize dict access to finish weight
-    for i in range(wg.vertex_count):
+    for i in range(len(nodes)):
         cur_finish = edges[0][0]
         cur_finish_weight = path_weights[cur_finish]
         # relax on edges
@@ -49,6 +49,9 @@ def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimat
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
     """
+    if len(nodes) == 1:
+        return nodes
+
     # inverse weights
     weights = {node: -work_priority(node, calculate_working_time_cascade, work_estimator)
                for node in nodes}
@@ -66,4 +69,13 @@ def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[Gra
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
     """
-    return prioritization_nodes(wg.nodes, work_estimator)
+    # form groups
+    groups = {priority: [] for priority in set(node.work_unit.priority for node in wg.nodes)}
+    for node in wg.nodes:
+        groups[node.work_unit.priority].append(node)
+
+    result = []
+    for group in groups.values():
+        result.extend(prioritization_nodes(group, work_estimator))
+
+    return result

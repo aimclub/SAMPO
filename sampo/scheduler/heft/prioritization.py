@@ -1,3 +1,5 @@
+from operator import itemgetter
+
 from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -75,7 +77,7 @@ def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[Gra
         groups[node.work_unit.priority].append(node)
 
     result = []
-    for group in groups.values():
+    for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):
         result.extend(prioritization_nodes(group, work_estimator))
 
     return result

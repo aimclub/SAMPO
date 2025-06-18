@@ -284,8 +284,8 @@ def generate_chromosomes(n: int,
                                               contractor2index, contractor_borders, schedule, spec, landscape)
 
     if only_lft_initialization:
-        chromosomes = [randomized_init(is_topological=False) for _ in range(n - 1)]
-        chromosomes.append(init_chromosomes['lft'][0])
+        chromosomes = [toolbox.Individual(randomized_init(is_topological=False)) for _ in range(n - 1)]
+        chromosomes.append(toolbox.Individual(init_chromosomes['lft'][0]))
         return chromosomes
 
     count_for_specified_types = (n // 3) // len(init_chromosomes)

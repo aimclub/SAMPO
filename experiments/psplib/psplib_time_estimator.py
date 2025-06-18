@@ -9,8 +9,9 @@ class PSPlibWorkTimeEstimator(WorkTimeEstimator):
     def __init__(self, times: dict[str, Time]):
         self.times = dict(times)
 
-    def find_work_resources(self, work_name: str, work_volume: float, resource_name: list[str] | None = None) \
-            -> dict[str, int]:
+    def find_work_resources(self, work_name: str, work_volume: float,
+                            resource_name: list[str] | None = None,
+                            measurement: str | None = None) -> dict[str, int]:
         return dict()
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
@@ -21,3 +22,7 @@ class PSPlibWorkTimeEstimator(WorkTimeEstimator):
 
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
         return Time(self.times.get(work_unit.id, 0))
+
+    def get_recreate_info(self):
+        return PSPlibWorkTimeEstimator, ()
+

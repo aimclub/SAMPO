@@ -12,13 +12,17 @@ class ScheduleVisualization:
     def __init__(self, schedule: Schedule, start_date: str):
         self._schedule = schedule.merged_stages_datetime_df(start_date)
         self._shape = 10, 10
+        self._color_type = 'contractor'
 
     def fig(self, shape: tuple[int, int]) -> 'ScheduleVisualization':
         self._shape = shape
         return self
 
+    def color_type(self, color_type: str):
+        self._color_type = color_type
+
     def gant_chart(self, visualization_mode: VisualizationMode = VisualizationMode.ReturnFig) -> Figure | None:
-        return schedule_gant_chart_fig(self._schedule, visualization=visualization_mode)
+        return schedule_gant_chart_fig(self._schedule, visualization=visualization_mode, color_type=self._color_type)
 
     def date_labeled_resource_chart(self, visualization_mode: VisualizationMode = VisualizationMode.ReturnFig) \
             -> Figure | None:
@@ -68,6 +72,10 @@ class Visualization:
     def shape(self, fig_shape: tuple[int, int]) -> 'Visualization':
         self.wg_vis.fig(fig_shape)
         self.schedule_vis.fig(fig_shape)
+        return self
+
+    def color_type(self, color_type: str):
+        self.schedule_vis.color_type(color_type)
         return self
 
     def show_gant_chart(self) -> 'Visualization':

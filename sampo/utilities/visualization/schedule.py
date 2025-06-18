@@ -12,7 +12,8 @@ from sampo.utilities.visualization.base import VisualizationMode, visualize
 def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                             visualization: VisualizationMode,
                             remove_service_tasks: bool = False,
-                            fig_file_name: Optional[str] = None) -> Figure | None:
+                            fig_file_name: Optional[str] = None,
+                            color_type: str = 'contractor') -> Figure | None:
     """
     Creates and saves a gant chart of the scheduled tasks to the specified path.
 
@@ -20,6 +21,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     :param visualization:
     :param remove_service_tasks:
     :param schedule_dataframe: Pandas DataFrame with the information about schedule
+    :param color_type defines what tasks color means
     """
     if remove_service_tasks:
         schedule_dataframe = schedule_dataframe.loc[~schedule_dataframe.loc[:, 'task_name'].str.contains('марке')]
@@ -62,8 +64,6 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
     # create material delivery information
     for i, swork in zip(idx, sworks):
         delivery = swork.materials.delivery
-        if not delivery:
-            mat_delivery_row.append(create_delivery_row(0, '', (0, Time(0), Time(0), '')))
         for name, mat_info in delivery.items():
             if delivery:
                 mat_delivery_row.append(create_delivery_row(i, name, mat_info[0]))
@@ -104,15 +104,19 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
 
     schedule_dataframe = pd.concat([schedule_dataframe, pd.DataFrame.from_records(access_cards), pd.DataFrame.from_records(mat_delivery_row)])
 
-    schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
-        .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
+    if color_type == 'contractor':
+        schedule_dataframe['color'] = schedule_dataframe[['task_name', 'contractor']] \
+            .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
+    elif color_type == 'priority':
+        schedule_dataframe['color'] = schedule_dataframe['scheduled_work_object'].apply(lambda x: f'Priority {x.priority}')
+
     schedule_dataframe['idx'] = (schedule_dataframe[['idx', 'task_name']]
                                  .apply(lambda r: schedule_dataframe[schedule_dataframe['task_name'] ==
                                                                      r['task_name'].split('&')[0]]['idx'].iloc[0]
                                  if ':' in r['task_name'] else r['idx'], axis=1))
 
     fig = px.timeline(schedule_dataframe, x_start='start', x_end='finish', y='idx', hover_name='task_name',
-                      color=schedule_dataframe.loc[:, 'color'],
+                      color=schedule_dataframe.loc[:, 'color'] if 'color' in schedule_dataframe.columns else None,
                       hover_data={'start': True,
                                   'finish': True,
                                   'task_name_mapped': True,

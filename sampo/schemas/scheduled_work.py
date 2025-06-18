@@ -43,6 +43,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.is_service_unit = work_unit.is_service_unit
         self.volume = work_unit.volume
         self.volume_type = work_unit.volume_type
+        self.priority = work_unit.priority
         self.start_end_time = start_end_time
         self.workers = workers if workers is not None else []
         self.equipments = equipments if equipments is not None else []
@@ -127,5 +128,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
             'start': self.start_time.value,
             'finish': self.finish_time.value,
             'contractor_id': self.contractor,
+            'priority': self.priority,
             'workers': {worker.name: worker.count for worker in self.workers},
         }

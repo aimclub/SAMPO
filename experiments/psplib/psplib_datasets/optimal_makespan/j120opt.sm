@@ -1,0 +1,196 @@
+This files contains the upper bounds (UB) and lower bounds (LB) 
+for the 120-job problems contained in j120.sm.tgz.
+
+The upper bounds are as given in the file j120hrs.sm.
+
+Instances where LB=UB holds, i.e., where the optimal makespan has be
+verified to be LB=UB, are marked with an "*".
+
+============================================================================
+Par  Inst    UB   LB         Author LB
+============================================================================
+  1   1   105   104         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  1   2   109   109    *    Schutt, Feydy, Stuckey, Wallace
+  1   3   125   125    *    Schutt, Feydy, Stuckey, Wallace
+  1   4    97    97    *    Brucker & Knust
+  1   5   112   112    *    Schutt, Feydy, Stuckey, Wallace
+  1   6    84    84    *    Brucker & Knust
+  1   7   117   117    *    Schutt, Feydy, Stuckey, Wallace
+  1   8   109   109    *    Schutt, Feydy, Stuckey, Wallace
+  1   9   112   112    *    Schutt, Feydy, Stuckey, Wallace
+  1  10   108   108    *    Schutt, Feydy, Stuckey, Wallace
+  2   1    87    87    *    Schutt, Feydy, Stuckey, Wallace
+  2   2    75    75    *    Schutt, Feydy, Stuckey, Wallace
+  2   3    92    92    *    Schutt, Feydy, Stuckey, Wallace
+  2   4    95    95    *    Schutt, Feydy, Stuckey, Wallace
+  2   5   103   103    *    Schutt, Feydy, Stuckey, Wallace
+  2   6    92    92    *    Schutt, Feydy, Stuckey, Wallace
+  2   7    90    90    *    Brucker & Knust
+  2   8    83    83    *    Schutt, Feydy, Stuckey, Wallace
+  2   9    94    94    *    Schutt, Feydy, Stuckey, Wallace
+  2  10    96    96    *    Schutt, Feydy, Stuckey, Wallace
+  3   1    80    80    *    Schutt, Feydy, Stuckey, Wallace
+  3   2    88    88    *    R. Kolisch/S. Hartmann
+  3   3   100   100    *    R. Kolisch/S. Hartmann
+  3   4    71    71    *    R. Kolisch/S. Hartmann
+  3   5    84    84    *    Brucker & Knust
+  3   6   102   102    *    R. Kolisch/S. Hartmann
+  3   7    93    93    *    R. Kolisch/S. Hartmann
+  3   8    77    77    *    R. Kolisch/S. Hartmann
+  3   9    86    86    *    R. Kolisch/S. Hartmann
+  3  10   103   103    *    R. Kolisch/S. Hartmann
+  4   1    74    74    *    Brucker & Knust
+  4   2   107   107    *    R. Kolisch/S. Hartmann
+  4   3    95    95    *    Brucker & Knust
+  4   4    75    75    *    R. Kolisch/S. Hartmann
+  4   5    74    74    *    R. Kolisch/S. Hartmann
+  4   6    90    90    *    Brucker & Knust
+  4   7    81    81    *    R. Kolisch/S. Hartmann
+  4   8    90    90    *    R. Kolisch/S. Hartmann
+  4   9    79    79    *    R. Kolisch/S. Hartmann
+  4  10    77    77    *    R. Kolisch/S. Hartmann
+  5   1    92    92    *    R. Kolisch/S. Hartmann
+  5   2    80    80    *    R. Kolisch/S. Hartmann
+  5   3    72    72    *    R. Kolisch/S. Hartmann
+  5   4    97    97    *    R. Kolisch/S. Hartmann
+  5   5    77    77    *    R. Kolisch/S. Hartmann
+  5   6    88    88    *    R. Kolisch/S. Hartmann
+  5   7    84    84    *    R. Kolisch/S. Hartmann
+  5   8    78    78    *    R. Kolisch/S. Hartmann
+  5   9   106   106    *    R. Kolisch/S. Hartmann
+  5  10    92    92    *    R. Kolisch/S. Hartmann
+  6   1   144   132         Brucker & Knust
+  6   2   135   125         Brucker & Knust
+  6   3   135   135    *    Brucker & Knust
+  6   4   154   151         Brucker & Knust
+  6   5   125   115         Brucker & Knust
+  6   6   155   140         Brucker & Knust
+  6   7   168   154         Brucker & Knust
+  6   8   147   140         Schutt, Feydy, Stuckey, Wallace
+  6   9   161   145         Schutt, Feydy, Stuckey, Wallace
+  6  10   172   156         Brucker & Knust
+  7   1   102    97         Brucker & Knust
+  7   2   114   113         Schutt, Feydy, Stuckey, Wallace
+  7   3   100    97         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  7   4   112   103         Brucker & Knust
+  7   5   131   123         Brucker & Knust
+  7   6   124   115         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  7   7   118   112         Brucker & Knust
+  7   8    97    91         Schutt, Feydy, Stuckey, Wallace
+  7   9    89    84         Brucker & Knust
+  7  10   118   110         Brucker & Knust
+  8   1    95    95    *    R. Kolisch/S. Hartmann
+  8   2   103   101         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  8   3    96    95         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  8   4    94    91         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  8   5   104    99         Brucker & Knust
+  8   6    85    84         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  8   7    87    87    *    R. Kolisch/S. Hartmann
+  8   8    87    87    *    R. Kolisch/S. Hartmann
+  8   9    94    87         Brucker & Knust
+  8  10    93    91         Brucker & Knust
+  9   1    88    88    *    R. Kolisch/S. Hartmann
+  9   2    94    94    *    R. Kolisch/S. Hartmann
+  9   3    87    87    *    R. Kolisch/S. Hartmann
+  9   4    87    84         A. Schutt, T. Feydy, P. J. Stuckey, and 
+  9   5   114   114    *    R. Kolisch/S. Hartmann
+  9   6    98    98    *    R. Kolisch/S. Hartmann
+  9   7    80    80    *    R. Kolisch/S. Hartmann
+  9   8    80    80    *    R. Kolisch/S. Hartmann
+  9   9    87    87    *    R. Kolisch/S. Hartmann
+  9  10    84    84    *    R. Kolisch/S. Hartmann
+ 10   1   111   111    *    R. Kolisch/S. Hartmann
+ 10   2    91    91    *    R. Kolisch/S. Hartmann
+ 10   3    99    99    *    R. Kolisch/S. Hartmann
+ 10   4    95    95    *    R. Kolisch/S. Hartmann
+ 10   5    97    97    *    R. Kolisch/S. Hartmann
+ 10   6    92    92    *    R. Kolisch/S. Hartmann
+ 10   7    79    79    *    R. Kolisch/S. Hartmann
+ 10   8   114   114    *    R. Kolisch/S. Hartmann
+ 10   9    77    77    *    R. Kolisch/S. Hartmann
+ 10  10    66    66    *    R. Kolisch/S. Hartmann
+ 11   1   173   155         Brucker & Knust
+ 11   2   158   145         Brucker & Knust
+ 11   3   203   186         Brucker & Knust
+ 11   4   196   177         Schutt, Feydy, Stuckey, Wallace
+ 11   5   211   191         Brucker & Knust
+ 11   6   212   189         Brucker & Knust
+ 11   7   163   148         Brucker & Knust
+ 11   8   162   151         Brucker & Knust
+ 11   9   173   167         Brucker & Knust
+ 11  10   181   163         Brucker & Knust
+ 12   1   138   125         Brucker & Knust
+ 12   2   117   110         Brucker & Knust
+ 12   3   136   130         Brucker & Knust
+ 12   4   125   121         Brucker & Knust
+ 12   5   162   153         Brucker & Knust
+ 12   6   121   115         Brucker & Knust
+ 12   7   120   115         Brucker & Knust
+ 12   8   119   112         M. Vanhoucke and J. Coelho
+ 12   9   105   100         Brucker & Knust
+ 12  10   143   142         Brucker & Knust
+ 13   1   127   121         R. Kolisch/S. Hartmann
+ 13   2    89    88         Brucker & Knust
+ 13   3   118   114         Brucker & Knust
+ 13   4   112   107         Brucker & Knust
+ 13   5    91    89         Brucker & Knust
+ 13   6    99    95         Brucker & Knust
+ 13   7   109   107         Brucker & Knust
+ 13   8    94    90         Brucker & Knust
+ 13   9    85    82         Brucker & Knust
+ 13  10    92    87         M. Vanhoucke and J. Coelho
+ 14   1    85    84         Brucker & Knust
+ 14   2    93    89         Brucker & Knust
+ 14   3    88    88    *    R. Kolisch/S. Hartmann
+ 14   4    88    85         R. Kolisch/S. Hartmann
+ 14   5    97    93         Brucker & Knust
+ 14   6    91    91    *    R. Kolisch/S. Hartmann
+ 14   7    91    89         R. Kolisch/S. Hartmann
+ 14   8   112   108         Brucker & Knust
+ 14   9   101   101    *    R. Kolisch/S. Hartmann
+ 14  10    81    80         R. Kolisch/S. Hartmann
+ 15   1    81    81    *    R. Kolisch/S. Hartmann
+ 15   2    75    75    *    R. Kolisch/S. Hartmann
+ 15   3    87    87    *    R. Kolisch/S. Hartmann
+ 15   4    82    82    *    R. Kolisch/S. Hartmann
+ 15   5    87    87    *    R. Kolisch/S. Hartmann
+ 15   6    97    97    *    R. Kolisch/S. Hartmann
+ 15   7    75    75    *    R. Kolisch/S. Hartmann
+ 15   8   126   126    *    R. Kolisch/S. Hartmann
+ 15   9   109   109    *    R. Kolisch/S. Hartmann
+ 15  10    91    91    *    R. Kolisch/S. Hartmann
+ 16   1   196   179         Brucker & Knust
+ 16   2   232   218         Brucker & Knust
+ 16   3   234   219         Brucker & Knust
+ 16   4   200   189         Brucker & Knust
+ 16   5   200   184         Brucker & Knust
+ 16   6   206   194         Brucker & Knust
+ 16   7   186   174         Brucker & Knust
+ 16   8   195   182         Brucker & Knust
+ 16   9   205   188         Brucker & Knust
+ 16  10   213   202         Brucker & Knust
+ 17   1   140   135         Brucker & Knust
+ 17   2   123   120         Brucker & Knust
+ 17   3   108   106         Brucker & Knust
+ 17   4   120   117         Brucker & Knust
+ 17   5   129   122         Brucker & Knust
+ 17   6   136   133         Brucker & Knust
+ 17   7   146   141         Brucker & Knust
+ 17   8   127   126         Brucker & Knust
+ 17   9   134   128         Brucker & Knust
+ 17  10   134   131         Brucker & Knust
+ 18   1   138   137         Brucker & Knust
+ 18   2   116   111         R. Kolisch/S. Hartmann
+ 18   3   101   100         Berthold/Heinz/Möhring/Lübbecke/Schulz
+ 18   4   101    98         Brucker & Knust
+ 18   5   118   117         Brucker & Knust
+ 18   6   134   130         Brucker & Knust
+ 18   7   118   111         Brucker & Knust
+ 18   8   106   101         Brucker & Knust
+ 18   9    91    88         Berthold/Heinz/Möhring/Lübbecke/Schulz
+ 18  10    98    96         Brucker & Knust
+ 19   1    88    88    *    R. Kolisch/S. Hartmann
+ 19   2    83    81         R. Kolisch/S. Hartmann
+ 19   3    85    83         Brucker & Knust
+ 19   4   106   101         M. Vanhoucke and J. Coelho
+============================================================================

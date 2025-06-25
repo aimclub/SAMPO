@@ -1,10 +1,10 @@
 import os
 import time
 import uuid
-import multiprocess as mp
 
 import numpy as np
 import pandas as pd
+from pathos.multiprocessing import ProcessPool
 
 from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
@@ -93,7 +93,7 @@ if __name__ == '__main__':
         dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
 
         for attempt in range(attempts):
-            with mp.Pool(16) as pool:
+            with ProcessPool(16) as pool:
                 result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
 
             for wg_idx, (res, val) in enumerate(zip(result, true_val)):

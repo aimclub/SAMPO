@@ -4,7 +4,7 @@ import uuid
 
 import numpy as np
 import pandas as pd
-import multiprocess as mp
+import multiprocessing as mp
 
 from sampo.scheduler import GeneticScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme

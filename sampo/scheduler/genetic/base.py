@@ -47,7 +47,8 @@ class GeneticScheduler(Scheduler):
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
                  is_multiobjective: bool = False,
-                 only_lft_initialization: bool = False):
+                 only_lft_initialization: bool = False,
+                 max_plateau_steps: int | None = None):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)

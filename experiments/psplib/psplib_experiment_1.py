@@ -56,7 +56,10 @@ def run_scheduler(wg_info):
 
     work_estimator = PSPlibWorkTimeEstimator(wu_id2times)
 
-    scheduler = GeneticScheduler(50, size_of_population=50, work_estimator=work_estimator,
+    scheduler = GeneticScheduler(number_of_generation=50,
+                                 size_of_population=50,
+                                 max_plateau_steps=5,
+                                 work_estimator=work_estimator,
                                  sgs_type=ScheduleGenerationScheme.Serial)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)[0]

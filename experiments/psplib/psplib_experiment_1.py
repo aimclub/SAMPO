@@ -93,7 +93,7 @@ if __name__ == '__main__':
         dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
 
         for attempt in range(attempts):
-            with mp.Pool(16) as pool:
+            with mp.Pool(32) as pool:
                 result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
 
             for wg_idx, (res, val) in enumerate(zip(result, true_val)):
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
                 schedule.dump('experiment_results/schedules', schedule_file_name)
 
-                results.append((wg_size, attempt, wg_idx, val, exec_time, makespan, psplib_time, peak_resource_usage))
+                results.append((wg_size, attempt, wg_idx, val, exec_time, makespan, peak_resource_usage))
 
         pd.DataFrame.from_records(results, columns=['wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
-                                                    'makespan', 'psplib_time', 'peak_resource_usage']).to_csv(f'experiment_results/psplib_experiment_j{wg_size}_results.csv')
+                                                    'makespan', 'peak_resource_usage']).to_csv(f'experiment_results/psplib_experiment_j{wg_size}_results.csv')

@@ -16,11 +16,9 @@ from sampo.schemas.time import Time
 from psplib_time_estimator import PSPlibWorkTimeEstimator
 from sampo.schemas.works import WorkUnit
 from sampo.utilities.resource_usage import resources_peaks_sum
-from sampo.utilities.visualization import (VisualizationMode, resource_employment_fig, EmploymentFigType,
-                                           schedule_gant_chart_fig)
 
 
-instances = [30]
+instances = [30, 60, 90, 120]
 workers = ['R1', 'R2', 'R3', 'R4']
 
 
@@ -58,8 +56,8 @@ def run_scheduler(wg_info):
 
     work_estimator = PSPlibWorkTimeEstimator(wu_id2times)
 
-    scheduler = GeneticScheduler(20, size_of_population=50, work_estimator=work_estimator,
-                                 sgs_type=ScheduleGenerationScheme.Serial, only_lft_initialization=True)
+    scheduler = GeneticScheduler(50, size_of_population=50, work_estimator=work_estimator,
+                                 sgs_type=ScheduleGenerationScheme.Serial)
     start = time.time()
     schedule = scheduler.schedule(wg, contractor)[0]
     finish = time.time()
@@ -105,6 +103,5 @@ if __name__ == '__main__':
 
                 results.append((wg_size, attempt, wg_idx, val, exec_time, makespan, psplib_time, peak_resource_usage))
 
-
-    pd.DataFrame.from_records(results, columns=['wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
-                                                'makespan', 'psplib_time', 'peak_resource_usage']).to_csv('psplib_experiment_1_results.csv')
+        pd.DataFrame.from_records(results, columns=['wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
+                                                    'makespan', 'psplib_time', 'peak_resource_usage']).to_csv(f'experiment_results/psplib_experiment_j{wg_size}_results.csv')

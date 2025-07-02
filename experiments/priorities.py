@@ -9,7 +9,7 @@ from sampo.scheduler.heft.base import HEFTScheduler
 scheduler = HEFTScheduler()
 
 project = SchedulingPipeline.create() \
-    .wg('test_for_priority.csv', sep=';', all_connections=True) \
+    .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
     .schedule(scheduler) \
     .visualization('2022-01-01')[0] \

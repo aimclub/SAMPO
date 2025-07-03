@@ -1,3 +1,4 @@
+import logging
 from itertools import chain
 from operator import attrgetter
 from random import Random
@@ -15,6 +16,7 @@ SERVICE_WORKS = ["Начало работ по марке", "Окончание 
 URL = "test"
 model = ResTimeModel(MschmAdapter(url=URL))
 
+logger = logging.getLogger('field-dev-estimator-log')
 
 class FieldDevWorkEstimator(WorkTimeEstimator):
     def __init__(self, rand: Random = Random()):
@@ -57,7 +59,6 @@ class FieldDevWorkEstimator(WorkTimeEstimator):
     ) -> list[WorkerReq]:
         if work_name in SERVICE_WORKS:
             return []
-        print(work_name, work_volume, measurement)
         worker_req_dict = self._model.get_resources_volumes(
             work_name=work_name, work_volume=work_volume, measurement=measurement
         ) or {}

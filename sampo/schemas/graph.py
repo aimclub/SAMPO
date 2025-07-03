@@ -360,6 +360,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                               'granular_name': [],
                               'volume': [],
                               'measurement': [],
+                              'priority': [],
                               'predecessor_ids': [],
                               'connection_types': [],
                               'lags': []}
@@ -382,6 +383,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
                 graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
                 graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
+                graph_df_structure['priority'].append(node_info_dict['work_unit']['priority'])
 
                 if save_req:
                     min_req_dict = dict()

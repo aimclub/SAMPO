@@ -1,3 +1,5 @@
+from typing import Type
+
 from sampo.schemas.resources import Worker
 from sampo.schemas.resources import WorkerProductivityMode
 from sampo.schemas.time import Time
@@ -19,6 +21,9 @@ class PSPlibWorkTimeEstimator(WorkTimeEstimator):
 
     def set_productivity_mode(self, mode: WorkerProductivityMode = WorkerProductivityMode.Static):
         return
+
+    def get_recreate_info(self) -> tuple[Type, tuple]:
+        return PSPlibWorkTimeEstimator, ()
 
     def estimate_time(self, work_unit: WorkUnit, worker_list: list[Worker]) -> Time:
         return Time(self.times.get(work_unit.id, 0))

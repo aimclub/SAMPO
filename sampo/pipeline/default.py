@@ -188,7 +188,7 @@ class DefaultInputPipeline(InputPipeline):
         self._local_optimize_stack.add(optimizer.optimize, area)
         return self
 
-    def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+    def schedule(self, scheduler: Scheduler, validate: bool = False) -> 'SchedulePipeline':
         if isinstance(self._wg, pd.DataFrame) or isinstance(self._wg, str):
             self._wg, self._contractors = \
                 CSVParser.work_graph_and_contractors(
@@ -233,7 +233,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]
                 self._node_orders = node_orders
@@ -244,7 +245,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg1, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders1 = [node_order for _, _, _, node_order in schedules]
                 schedules1 = [schedule for schedule, _, _, _ in schedules]
                 min_time1 = min([schedule.execution_time for schedule in schedules1])
@@ -253,7 +255,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg2, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders2 = [node_order for _, _, _, node_order in schedules]
                 schedules2 = [schedule for schedule, _, _, _ in schedules]
                 min_time2 = min([schedule.execution_time for schedule in schedules2])
@@ -272,7 +275,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]
                 self._node_orders = node_orders

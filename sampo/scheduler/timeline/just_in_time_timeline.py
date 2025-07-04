@@ -151,13 +151,12 @@ class JustInTimeTimeline(Timeline):
             return True
         else:
             # checking edges
+            chain = set(node.get_inseparable_chain_with_self())
+            for dep_node in chain:
+                if any(p not in chain and p not in node2swork for p in dep_node.parents):
+                    return False
             if node.min_start_time(node2swork) > start_time:
                 return False
-            for dep_node in node.get_inseparable_chain_with_self():
-                for p in dep_node.parents:
-                    if p != dep_node.inseparable_parent:
-                        if node2swork.get(p, None) is None:
-                            return False
 
             max_agent_time = Time(0)
             for worker in worker_team:

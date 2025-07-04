@@ -3,16 +3,15 @@ from uuid import uuid4
 import numpy as np
 
 from sampo.schemas import GraphNode, Worker, WorkTimeEstimator
+from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 
 
-def work_chain_durations(node: GraphNode, assigned_workers_amounts: np.ndarray, work_estimator: WorkTimeEstimator) \
-        -> list[int]:
+def get_chain_duration(node: GraphNode, assigned_workers_amounts: np.ndarray, work_estimator: WorkTimeEstimator) -> int:
     work_unit = node.work_unit
 
     passed_workers = [Worker(str(uuid4()), req.kind, assigned_amount)
                       for req, assigned_amount in zip(work_unit.worker_reqs, assigned_workers_amounts)]
 
-    chain_durations = [work_estimator.estimate_time(dep_node.work_unit, passed_workers).value + 1
-                       for dep_node in node.get_inseparable_chain_with_self()]
+    chain_duration = calculate_working_time_cascade(node, passed_workers, work_estimator).value + 1
 
-    return chain_durations
+    return chain_duration

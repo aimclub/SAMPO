@@ -5,7 +5,7 @@ from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
-from sampo.scheduler.utils import get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool, get_head_nodes_with_connections_mappings
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
@@ -54,7 +54,8 @@ def test_init_resource_structure(setup_timeline):
 def test_schedule(setup_timeline):
     setup_timeline, setup_wg, setup_contractors, setup_worker_pool = setup_timeline
 
-    ordered_nodes = prioritization(setup_wg, DefaultWorkEstimator())
+    nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(setup_wg)
+    ordered_nodes = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
     node = ordered_nodes[-1]
 
     reqs = build_index(node.work_unit.worker_reqs, attrgetter('kind'))

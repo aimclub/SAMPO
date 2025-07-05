@@ -3,6 +3,7 @@ from _pytest.fixtures import fixture
 
 from sampo.scheduler.heft.prioritization import prioritization
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
+from sampo.scheduler.utils import get_head_nodes_with_connections_mappings
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 
@@ -18,7 +19,8 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
         pytest.skip('Non landscape test')
     timeline = HybridSupplyTimeline(landscape)
 
-    ordered_nodes = prioritization(wg, DefaultWorkEstimator())
+    nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(wg)
+    ordered_nodes = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
     for node in ordered_nodes:
         if node.work_unit.is_service_unit:
             continue

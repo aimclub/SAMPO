@@ -5,10 +5,11 @@ from typing import Type, Iterable
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.timeline import Timeline, MomentumTimeline
-from sampo.scheduler.utils import WorkerContractorPool, get_worker_contractor_pool
+from sampo.scheduler.utils import (WorkerContractorPool, get_worker_contractor_pool,
+                                   get_head_nodes_with_connections_mappings)
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
-from sampo.scheduler.lft.time_computaion import work_chain_durations
+from sampo.scheduler.lft.time_computaion import get_chain_duration
 
 from sampo.schemas import (Contractor, WorkGraph, GraphNode, LandscapeConfiguration, Schedule, ScheduledWork,
                            Time, WorkUnit)
@@ -94,7 +95,7 @@ class LFTScheduler(Scheduler):
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().__init__(scheduler_type, None, work_estimator)
         self._timeline_type = timeline_type
-        self.prioritization = lft_prioritization
+        self._prioritization = lft_prioritization
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
@@ -108,12 +109,15 @@ class LFTScheduler(Scheduler):
         # get contractors borders
         worker_pool = get_worker_contractor_pool(contractors)
 
-        # first of all assign workers and contractors to nodes
-        # and estimate nodes' durations
-        node_id2duration = self._contractor_workers_assignment(wg, contractors, worker_pool, spec)
+        # get head nodes with mappings
+        head_nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(wg)
 
-        # order nodes based on estimated nodes' durations
-        ordered_nodes = self.prioritization(wg, node_id2duration)
+        # first of all assign workers and contractors to head nodes
+        # and estimate head nodes' durations
+        node_id2duration = self._contractor_workers_assignment(head_nodes, contractors, worker_pool, spec)
+
+        # order head nodes based on estimated durations
+        ordered_nodes = self._prioritization(head_nodes, node_id2parent_ids, node_id2child_ids, node_id2duration)
 
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
@@ -179,18 +183,16 @@ class LFTScheduler(Scheduler):
 
         return node2swork.values(), assigned_parent_time, timeline
 
-    def _contractor_workers_assignment(self, wg: WorkGraph, contractors: list[Contractor],
+    def _contractor_workers_assignment(self, head_nodes: list[GraphNode], contractors: list[Contractor],
                                        worker_pool: WorkerContractorPool, spec: ScheduleSpec = ScheduleSpec()
                                        ) -> dict[str, int]:
-        # get only heads of chains from work graph nodes
-        nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
         # counter for contractors assignments to the works
         contractors_assignments_count = np.ones_like(contractors)
         # mapper of nodes and assigned workers
         self._node_id2workers = {}
         # mapper of nodes and estimated duration
         node_id2duration = {}
-        for node in nodes:
+        for node in head_nodes:
             work_unit = node.work_unit
             # get contractors that can perform this work and workers amounts for them
             accepted_contractors, workers_amounts = get_contractors_and_workers_amounts_for_work(work_unit,
@@ -199,10 +201,8 @@ class LFTScheduler(Scheduler):
                                                                                                  worker_pool)
 
             # estimate chain durations for each accepted contractor
-            durations_for_chain = [work_chain_durations(node, amounts, self.work_estimator)
-                                   for amounts in workers_amounts]
-            # get the sum of the estimated durations for each contractor
-            durations = np.array([sum(chain_durations) for chain_durations in durations_for_chain])
+            durations = np.array([get_chain_duration(node, amounts, self.work_estimator)
+                                  for amounts in workers_amounts])
 
             # assign a score for each contractor equal to the sum of the ratios of
             # the duration of this work for this contractor to all durations
@@ -227,9 +227,8 @@ class LFTScheduler(Scheduler):
                        for req, amount in zip(work_unit.worker_reqs, assigned_amount)]
             self._node_id2workers[node.id] = (assigned_contractor, workers)
 
-            # assign the received durations to each node in the chain
-            for duration, dep_node in zip(durations_for_chain[contractor_index], node.get_inseparable_chain_with_self()):
-                node_id2duration[dep_node.id] = duration
+            # assign the received duration to the node
+            node_id2duration[node.id] = durations[contractor_index]
 
         return node_id2duration
 
@@ -250,7 +249,7 @@ class RandomizedLFTScheduler(LFTScheduler):
                  rand: random.Random = random.Random()):
         super().__init__(scheduler_type, timeline_type, work_estimator)
         self._random = rand
-        self.prioritization = partial(lft_randomized_prioritization, rand=self._random)
+        self._prioritization = partial(lft_randomized_prioritization, rand=self._random)
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0

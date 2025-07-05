@@ -1,20 +1,22 @@
 from operator import itemgetter
 
 from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
-from sampo.schemas.graph import GraphNode, WorkGraph
+from sampo.schemas.graph import GraphNode
 from sampo.schemas.time_estimator import WorkTimeEstimator
 
 
-def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dict[GraphNode, float]:
+def ford_bellman(nodes: list[GraphNode],
+                 weights: dict[str, float],
+                 node_id2parent_ids: dict[str, set[str]]) -> dict[str, float]:
     """
     Runs heuristic ford-bellman algorithm for given graph and weights.
     """
-    path_weights: dict[GraphNode, float] = {node: 0 for node in nodes}
+    path_weights: dict[str, float] = {node.id: 0 for node in nodes}
     # cache graph edges
-    edges: list[tuple[GraphNode, GraphNode, float]] = sorted([(finish, start, weights[finish])
-                                                              for start in nodes
-                                                              for finish in start.parents if finish in path_weights],
-                                                             key=lambda x: (x[0].id, x[1].id))
+    edges: list[tuple[str, str, float]] = sorted([(finish, start.id, weights[finish])
+                                                  for start in nodes
+                                                  for finish in node_id2parent_ids[start.id]
+                                                  if finish in path_weights])
     # for changes heuristic
     changed = False
     # run standard ford-bellman on reversed edges
@@ -26,7 +28,7 @@ def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dic
         for finish, start, weight in edges:
             # we are running through the equality class by finish node
             # so if it changes renew the parameters of current equality class
-            if cur_finish.id != finish.id:
+            if cur_finish != finish:
                 path_weights[cur_finish] = cur_finish_weight
                 cur_finish = finish
                 cur_finish_weight = path_weights[cur_finish]
@@ -46,7 +48,9 @@ def ford_bellman(nodes: list[GraphNode], weights: dict[GraphNode, float]) -> dic
     return path_weights
 
 
-def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimator) -> list[GraphNode]:
+def prioritization_nodes(nodes: list[GraphNode],
+                         node_id2parent_ids: dict[str, set[str]],
+                         work_estimator: WorkTimeEstimator) -> list[GraphNode]:
     """
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
@@ -55,29 +59,53 @@ def prioritization_nodes(nodes: list[GraphNode], work_estimator: WorkTimeEstimat
         return nodes
 
     # inverse weights
-    weights = {node: -work_priority(node, calculate_working_time_cascade, work_estimator)
+    weights = {node.id: -work_priority(node, calculate_working_time_cascade, work_estimator)
                for node in nodes}
 
-    path_weights = ford_bellman(nodes, weights)
+    path_weights = ford_bellman(nodes, weights, node_id2parent_ids)
 
-    ordered_nodes = [i[0] for i in sorted(path_weights.items(), key=lambda x: (x[1], x[0].id), reverse=True)
-                     if not i[0].is_inseparable_son()]
+    ordered_nodes = sorted(nodes, key=lambda node: path_weights[node.id], reverse=True)
 
     return ordered_nodes
 
 
-def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator) -> list[GraphNode]:
+def prioritization(head_nodes: list[GraphNode],
+                   node_id2parent_ids: dict[str, set[str]],
+                   node_id2child_ids: dict[str, set[str]],
+                   work_estimator: WorkTimeEstimator) -> list[GraphNode]:
     """
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
     """
+
+    def update_priority(node, priority_value, visited=None):
+        if visited is None:
+            visited = set()
+
+        if node in visited:
+            return
+
+        visited.add(node)
+
+        node.work_unit.priority = min(node.work_unit.priority, priority_value)
+
+        for parent in getattr(node, "parents", []):
+            update_priority(parent, priority_value, visited)
+
+    # check priorities
+    for node in head_nodes:
+        for parent_node in node.parents:
+            if node.work_unit.priority < parent_node.work_unit.priority:
+                update_priority(parent_node, node.work_unit.priority)
+                # parent_node.work_unit.priority = node.work_unit.priority
+
     # form groups
-    groups = {priority: [] for priority in set(node.work_unit.priority for node in wg.nodes)}
-    for node in wg.nodes:
+    groups = {priority: [] for priority in set(node.work_unit.priority for node in head_nodes)}
+    for node in head_nodes:
         groups[node.work_unit.priority].append(node)
 
     result = []
     for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):
-        result.extend(prioritization_nodes(group, work_estimator))
+        result.extend(prioritization_nodes(group, node_id2parent_ids, work_estimator))
 
     return result

@@ -6,6 +6,7 @@ from sortedcontainers import SortedList
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
+from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
@@ -402,9 +403,7 @@ class MomentumTimeline(Timeline):
             self.find_min_start_time_with_additional(node, workers, node2swork, spec, assigned_start_time,
                                                      assigned_parent_time, work_estimator)
         if assigned_time is not None:
-            exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
-                          for n in inseparable_chain[:-1]}
-            exec_times[inseparable_chain[-1]] = Time(0), assigned_time - sum([v for _, v in exec_times.values()])
+            exec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, assigned_time)
 
         # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
         self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,

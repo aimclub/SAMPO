@@ -217,9 +217,14 @@ class DefaultInputPipeline(InputPipeline):
                     super().__init__(delegate)
 
                 def delegate_prioritization(self, orig_prioritization):
-                    def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator):
+                    def prioritization(head_nodes: list[GraphNode],
+                                       node_id2parent_ids: dict[str, set[str]],
+                                       node_id2child_ids: dict[str, set[str]],
+                                       work_estimator: WorkTimeEstimator):
                         # call delegate's prioritization and apply local optimizations
-                        return s_self._local_optimize_stack.apply(orig_prioritization(wg, work_estimator))
+                        return s_self._local_optimize_stack.apply(
+                            orig_prioritization(head_nodes, node_id2parent_ids, node_id2child_ids, work_estimator)
+                        )
 
                     return prioritization
 

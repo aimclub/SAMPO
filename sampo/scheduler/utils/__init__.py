@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Iterable
 
+from toposort import toposort_flatten
+
 from sampo.schemas import Worker, Contractor, WorkGraph, GraphNode
 from sampo.schemas.types import WorkerName, ContractorName
 
@@ -32,9 +34,9 @@ def get_head_nodes_with_connections_mappings(wg: WorkGraph
 
     Returns:
         A tuple containing:
-            - A list containing only the head nodes
+            - A list sorted in topological order and containing only the head nodes
               (first node of inseparable chain or node that is not a part of inseparable chain), i.e.
-              a list of nodes from work graph without inseparable children.
+              nodes from work graph without inseparable children.
             - A dictionary that maps head node IDs to the set of head node IDs to which the parent edge now belongs.
             - A dictionary that maps head node IDs to the set of head node IDs to which the child edge now belongs.
     """
@@ -54,4 +56,7 @@ def get_head_nodes_with_connections_mappings(wg: WorkGraph
                                       for child in inseparable.children_set) - {node.id}
                          for node in nodes}
 
-    return nodes, node_id2parent_ids, node_id2child_ids
+    tsorted_nodes_ids = toposort_flatten(node_id2parent_ids, sort=True)
+    tsorted_nodes = [wg[node_id] for node_id in tsorted_nodes_ids]
+
+    return tsorted_nodes, node_id2parent_ids, node_id2child_ids

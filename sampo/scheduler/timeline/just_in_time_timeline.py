@@ -3,6 +3,7 @@ from typing import Optional
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
+from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
 from sampo.schemas.graph import GraphNode
@@ -249,10 +250,7 @@ class JustInTimeTimeline(Timeline):
                                           work_estimator)
 
         if assigned_time is not None:
-            # TODO this does not take into account volumes
-            exec_times = {n: (Time(0), assigned_time // len(inseparable_chain))
-                          for n in inseparable_chain[:-1]}
-            exec_times[inseparable_chain[-1]] = Time(0), assigned_time - sum([v for _, v in exec_times.values()])
+            exec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, assigned_time)
             return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
                                                     inseparable_chain, start_time, exec_times, work_estimator)
         else:

@@ -40,7 +40,9 @@ def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNod
     # Time is distributed based on the node's volume relative to the *remaining* total volume.
     for i, n in enumerate(inseparable_chain[:-1]):
         # Calculate the proportion of the current node's volume to the remaining total volume.
-        volume_proportion = n.work_unit.volume / total_volume
+        volume_proportion = 0
+        if total_volume > 0:
+            volume_proportion = n.work_unit.volume / total_volume
 
         # Calculate execution time for the current node and convert to integer.
         # This takes a portion of the *remaining* time.
@@ -50,8 +52,6 @@ def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNod
         # Deduct the current node's volume and allocated time from the totals
         total_volume -= n.work_unit.volume
         remaining_time -= exec_time
-        assert total_volume > 0
-        assert remaining_time >= 0
 
     # The last node receives all remaining time to account for any rounding errors
     # during the distribution to previous nodes.

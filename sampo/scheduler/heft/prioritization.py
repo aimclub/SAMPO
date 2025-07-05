@@ -77,6 +77,28 @@ def prioritization(head_nodes: list[GraphNode],
     Return ordered critical nodes.
     Finish time is depended on these ordered nodes.
     """
+
+    def update_priority(node, priority_value, visited=None):
+        if visited is None:
+            visited = set()
+
+        if node in visited:
+            return
+
+        visited.add(node)
+
+        node.work_unit.priority = priority_value
+
+        for parent in getattr(node, "parents", []):
+            update_priority(parent, priority_value, visited)
+
+    # check priorities
+    for node in head_nodes:
+        for parent_node in node.parents:
+            if node.work_unit.priority < parent_node.work_unit.priority:
+                update_priority(parent_node, node.work_unit.priority)
+                # parent_node.work_unit.priority = node.work_unit.priority
+
     # form groups
     groups = {priority: [] for priority in set(node.work_unit.priority for node in head_nodes)}
     for node in head_nodes:

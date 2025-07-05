@@ -312,7 +312,9 @@ def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works', is_service_unit=True)
+    finish_priority = max(node.work_unit.priority for node in parents)
+    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works',
+                    priority=finish_priority, is_service_unit=True)
     return GraphNode(work, parents)
 
 

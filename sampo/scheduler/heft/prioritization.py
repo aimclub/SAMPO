@@ -87,7 +87,7 @@ def prioritization(head_nodes: list[GraphNode],
 
         visited.add(node)
 
-        node.work_unit.priority = priority_value
+        node.work_unit.priority = min(node.work_unit.priority, priority_value)
 
         for parent in getattr(node, "parents", []):
             update_priority(parent, priority_value, visited)

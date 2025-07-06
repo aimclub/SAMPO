@@ -522,12 +522,12 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random,
             # find max index of parent of the current work
             # +1 because insertion should be righter
             i_parent = np.max(np.where(np.isin(order[:i], list(parents[work]), assume_unique=True))[0],
-                              initial=i - 1) + 1
+                              initial=0) + 1
             # find min index of child of the current work
             # +i because the slice [i + 1:] was taken, and +1 is not needed because these indexes will be shifted left
             # after current work deletion
             i_children = np.min(np.where(np.isin(order[i + 1:], list(children[work]), assume_unique=True))[0],
-                                initial=0) + i
+                                initial=i - 1) + i
             if i_parent == i_children:
                 # if child and parent indexes are equal then no mutation can be done
                 continue

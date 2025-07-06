@@ -1,20 +1,18 @@
 from typing import Set
 
 from sampo.scheduler.heft.prioritization import prioritization
+from sampo.scheduler.utils import get_head_nodes_with_connections_mappings
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time_estimator import DefaultWorkEstimator
 
 
 def test_correct_order(setup_wg):
-    order = prioritization(setup_wg, DefaultWorkEstimator())
-    seen: Set[GraphNode] = set()
+    nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(setup_wg)
+    order = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
 
+    seen: Set[GraphNode] = set()
     for node in reversed(order):
-        if not node.children:
-            break
-        assert all([parent in seen for parent in node.parents])
-        seen.add(node)
-        while node.is_inseparable_parent():
-            node = node.inseparable_son
-            seen.add(node)
+        seen.update(node.get_inseparable_chain_with_self())
+        for inode in node.get_inseparable_chain_with_self():
+            assert all(pnode in seen for pnode in inode.parents)
 

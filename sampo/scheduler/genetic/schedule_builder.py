@@ -250,8 +250,6 @@ def build_schedules_with_cache(wg: WorkGraph,
     if have_deadline:
         fitness_resource_f = fitness_object
         toolbox.register_individual_constructor(fitness_weights)
-
-        SAMPO.logger.info(f'Deadline not reached !!! Deadline {deadline} < best time {best_fitness}')
         # clear best individuals
         hof.clear()
 

@@ -4,7 +4,7 @@ from typing import Optional
 from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.genetic.operators import FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.schedule_builder import build_schedules, build_schedules_with_cache
+from sampo.scheduler.genetic.schedule_builder import build_schedules, build_schedules_with_cache, create_toolbox
 from sampo.scheduler.genetic.converter import ScheduleGenerationScheme
 from sampo.scheduler.heft.base import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.lft.base import LFTScheduler
@@ -142,6 +142,28 @@ class GeneticScheduler(Scheduler):
 
     def set_only_lft_initialization(self, only_lft_initialization: bool):
         self._only_lft_initialization = only_lft_initialization
+
+    def create_toolbox(self,
+                       wg: WorkGraph,
+                       contractors: list[Contractor],
+                       spec: ScheduleSpec = ScheduleSpec(),
+                       init_schedules = None,
+                       assigned_parent_time: Time = Time(0),
+                       landscape: LandscapeConfiguration = LandscapeConfiguration()):
+        init_schedules = init_schedules or GeneticScheduler.generate_first_population(wg,
+                                                                                      contractors,
+                                                                                      landscape,
+                                                                                      spec,
+                                                                                      self.work_estimator,
+                                                                                      self._deadline,
+                                                                                      self._weights)
+
+        return create_toolbox(wg, contractors, self.size_of_population,
+                              self.mutate_order, self.mutate_resources, self.mutate_zones, init_schedules,
+                              self.rand, spec, self.fitness_weights, self.work_estimator,
+                              self.sgs_type, assigned_parent_time, landscape,
+                              self._only_lft_initialization, self._is_multiobjective)
+
 
     @staticmethod
     def generate_first_population(wg: WorkGraph,

@@ -1,13 +1,17 @@
 import os
 import time
 import uuid
+from random import Random
 
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
 
-from sampo.scheduler import GeneticScheduler
+from examples.stochastic_maintenance.aircraft_stochastic_maintenance import work_estimator
+from sampo.api.genetic_api import ChromosomeType
+from sampo.scheduler import GeneticScheduler, RandomizedTopologicalScheduler, RandomizedLFTScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
+from sampo.scheduler.genetic.schedule_builder import create_toolbox
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -22,8 +26,34 @@ instances = [30, 60, 90, 120]
 workers = ['R1', 'R2', 'R3', 'R4']
 
 
-def run_scheduler(wg_info):
-    adj_matrix, res_matrix, contractor_info = wg_info
+def run_basic_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: list[Contractor]):
+    toolbox = scheduler.create_toolbox(wg, contractors, init_schedules=[])
+    pop = [randomized_init(wg, contractors, toolbox, i >= 25, scheduler.rand) for i in range(50)]
+    final_chromosome = scheduler.upgrade_pop(wg, contractors, pop)[0]
+    return toolbox.evaluate_chromosome(final_chromosome)
+
+
+def randomized_init(wg: WorkGraph,
+                    contractors: list[Contractor],
+                    toolbox,
+                    is_topological: bool = False,
+                    rand: Random = Random()) -> ChromosomeType:
+    if is_topological:
+        seed = int(rand.random() * 1000000)
+        schedule, _, _, node_order = RandomizedTopologicalScheduler(work_estimator,
+                                                                    seed).schedule_with_cache(wg, contractors)[0]
+    else:
+        schedule, _, _, node_order = RandomizedLFTScheduler(work_estimator=work_estimator,
+                                                            rand=rand).schedule_with_cache(wg, contractors)[0]
+    return toolbox.schedule_to_chromosome(schedule)
+
+
+def run_our_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: list[Contractor]):
+    return scheduler.schedule(wg, contractors)[0]
+
+
+def run_scheduler(args):
+    adj_matrix, res_matrix, contractor_info = args
     sum_of_time = res_matrix[:, 0].sum()
 
     nodes = []
@@ -44,7 +74,7 @@ def run_scheduler(wg_info):
                 parents.append((nodes[parent_id], 0, EdgeType.FinishStart))
         nodes[child_id].add_parents(parents)
 
-    contractor = [
+    contractors = [
         Contractor(id=str(1),
                    name="OOO Berezka",
                    workers={name: Worker(str(uuid.uuid4()), name, count, contractor_id=str(1))
@@ -56,28 +86,34 @@ def run_scheduler(wg_info):
 
     work_estimator = PSPlibWorkTimeEstimator(wu_id2times)
 
-    scheduler = GeneticScheduler(number_of_generation=50,
+    scheduler = GeneticScheduler(number_of_generation=100,
                                  size_of_population=50,
-                                 max_plateau_steps=5,
                                  work_estimator=work_estimator,
                                  sgs_type=ScheduleGenerationScheme.Serial)
-    start = time.time()
-    schedule = scheduler.schedule(wg, contractor)[0]
-    finish = time.time()
 
     # merged_schedule = schedule.merged_stages_datetime_df('2022-01-01')
     # schedule_gant_chart_fig(merged_schedule, VisualizationMode.ShowFig)
     #
     # resource_employment_fig(merged_schedule, fig_type=EmploymentFigType.DateLabeled, vis_mode=VisualizationMode.ShowFig)
 
-    return (finish - start), schedule.execution_time, sum_of_time, schedule
+    start_basic = time.time()
+    schedule_basic = run_basic_genetic(scheduler, wg, contractors)
+    finish_basic = time.time()
+    results_basic = (finish_basic - start_basic), schedule_basic.execution_time, sum_of_time, schedule_basic
+
+    start_our = time.time()
+    schedule_our = run_our_genetic(scheduler, wg, contractors)
+    finish_our = time.time()
+    results_our = (finish_our - start_our), schedule_our.execution_time, sum_of_time, schedule_our
+
+    return results_basic, results_our
 
 
 if __name__ == '__main__':
     result = []
     makespans = []
     exec_times = []
-    attempts = 10
+    attempts = 1
 
     os.makedirs('experiment_results', exist_ok=True)
     os.makedirs('experiment_results/schedules', exist_ok=True)
@@ -94,18 +130,22 @@ if __name__ == '__main__':
 
         for attempt in range(attempts):
             with mp.Pool(32) as pool:
-                result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
+                result = pool.starmap(run_scheduler, np.expand_dims(dataset[:1], 1))
 
-            for wg_idx, (res, val) in enumerate(zip(result, true_val)):
-                exec_time, makespan, psplib_time, schedule = res
+            for wg_idx, ((res_basic, res_our), val) in enumerate(zip(result, true_val)):
+                def make_result(res, type):
+                    exec_time, makespan, psplib_time, schedule = res
 
-                peak_resource_usage = resources_peaks_sum(schedule)
+                    peak_resource_usage = resources_peaks_sum(schedule)
 
-                schedule_file_name = f'{wg_size}_{attempt}_{wg_idx}'
+                    schedule_file_name = f'{wg_size}_{attempt}_{wg_idx}'
 
-                schedule.dump('experiment_results/schedules', schedule_file_name)
+                    schedule.dump('experiment_results/schedules', schedule_file_name)
 
-                results.append((wg_size, attempt, wg_idx, val, exec_time, makespan, peak_resource_usage))
+                    results.append((type, wg_size, attempt, wg_idx, val, exec_time, makespan, peak_resource_usage))
 
-        pd.DataFrame.from_records(results, columns=['wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
+                make_result(res_basic, 'basic')
+                make_result(res_our, 'our')
+
+        pd.DataFrame.from_records(results, columns=['type', 'wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
                                                     'makespan', 'peak_resource_usage']).to_csv(f'experiment_results/psplib_experiment_j{wg_size}_results.csv')

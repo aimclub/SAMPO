@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 import multiprocessing as mp
 
-from examples.stochastic_maintenance.aircraft_stochastic_maintenance import work_estimator
 from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler import GeneticScheduler, RandomizedTopologicalScheduler, RandomizedLFTScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
-from sampo.scheduler.genetic.schedule_builder import create_toolbox
+from sampo.schemas import WorkTimeEstimator
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -26,9 +25,12 @@ instances = [30, 60, 90, 120]
 workers = ['R1', 'R2', 'R3', 'R4']
 
 
-def run_basic_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: list[Contractor]):
+def run_basic_genetic(scheduler: GeneticScheduler,
+                      wg: WorkGraph,
+                      contractors: list[Contractor],
+                      work_estimator: WorkTimeEstimator):
     toolbox = scheduler.create_toolbox(wg, contractors, init_schedules=[])
-    pop = [randomized_init(wg, contractors, toolbox, i >= 25, scheduler.rand) for i in range(50)]
+    pop = [randomized_init(wg, contractors, toolbox, work_estimator, i >= 25, scheduler.rand) for i in range(50)]
     final_chromosome = scheduler.upgrade_pop(wg, contractors, pop)[0]
     return toolbox.evaluate_chromosome(final_chromosome)
 
@@ -36,6 +38,7 @@ def run_basic_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: l
 def randomized_init(wg: WorkGraph,
                     contractors: list[Contractor],
                     toolbox,
+                    work_estimator: WorkTimeEstimator,
                     is_topological: bool = False,
                     rand: Random = Random()) -> ChromosomeType:
     if is_topological:
@@ -45,7 +48,7 @@ def randomized_init(wg: WorkGraph,
     else:
         schedule, _, _, node_order = RandomizedLFTScheduler(work_estimator=work_estimator,
                                                             rand=rand).schedule_with_cache(wg, contractors)[0]
-    return toolbox.schedule_to_chromosome(schedule)
+    return toolbox.schedule_to_chromosome(schedule=schedule)
 
 
 def run_our_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: list[Contractor]):
@@ -97,7 +100,7 @@ def run_scheduler(args):
     # resource_employment_fig(merged_schedule, fig_type=EmploymentFigType.DateLabeled, vis_mode=VisualizationMode.ShowFig)
 
     start_basic = time.time()
-    schedule_basic = run_basic_genetic(scheduler, wg, contractors)
+    schedule_basic = run_basic_genetic(scheduler, wg, contractors, work_estimator)
     finish_basic = time.time()
     results_basic = (finish_basic - start_basic), schedule_basic.execution_time, sum_of_time, schedule_basic
 
@@ -113,7 +116,7 @@ if __name__ == '__main__':
     result = []
     makespans = []
     exec_times = []
-    attempts = 1
+    attempts = 10
 
     os.makedirs('experiment_results', exist_ok=True)
     os.makedirs('experiment_results/schedules', exist_ok=True)
@@ -130,7 +133,7 @@ if __name__ == '__main__':
 
         for attempt in range(attempts):
             with mp.Pool(32) as pool:
-                result = pool.starmap(run_scheduler, np.expand_dims(dataset[:1], 1))
+                result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
 
             for wg_idx, ((res_basic, res_our), val) in enumerate(zip(result, true_val)):
                 def make_result(res, type):
@@ -149,3 +152,4 @@ if __name__ == '__main__':
 
         pd.DataFrame.from_records(results, columns=['type', 'wg_size', 'attempt', 'wg_idx', 'true_val', 'exec_time',
                                                     'makespan', 'peak_resource_usage']).to_csv(f'experiment_results/psplib_experiment_j{wg_size}_results.csv')
+        results = []

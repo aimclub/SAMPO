@@ -1,25 +1,22 @@
-This files contains the upper bounds (UB) and lower bounds (LB) 
-for the 90-job problems contained in j90.sm.tgz. The lower bounds
-were calculated by
-
-P. Brucker, S. Knust (1998): Lower bounds for the RCPSP with column-gene
-ration
-
-presented at the DFG-Workshop "Projektplanung bei beschraenkten
-Ressourcen", Dagstuhl, 29.-31.1.98
-
-and
-
-R. Heilmann, C. Schwindt (1997): New lower bounds for the RCPSP/max
-
-presented at the DFG-Workshop "Projektplanung bei beschraenkten
-Ressourcen", Kiel, 3.-5.7.1997
-
-The upper bounds are as given in the file j90hrs.sm.
-
-Instances where LB=UB holds, i.e., where the optimal makespan has bee
-veriefied to be LB=UB, are marked with an "*".
-
+==================================================================
+Authors' Name           : E. Demeulemeester / W. Herroelen
+Authors' Email          : erik.demeulemeester@econ.kuleuven.ac.be
+Instance Set            : j30
+Type                    : sm
+Date                    : June 95
+==================================================================
+Research Report:        New benchmark Results for the
+                        resource-constrained project scheduling
+                        problem
+==================================================================
+Computer         : IBM PC PS2 Model p75
+Processor        : 80486
+Clockpulse       : 25 MHz
+Operating System : Windows NT
+Memory Code      : 110 MB
+Memory Data      : 16 MB
+Language         : MS Visual C++
+Average CPU-Time : 28.97
 ===============================================================================
 Par  Inst UB   LB                         Author LB
 ===============================================================================

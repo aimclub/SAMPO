@@ -40,8 +40,8 @@ class AverageReqResourceOptimizer(ResourceOptimizer):
         if optimize_array:
             for worker, up, down, optimize in zip(worker_team, up_border, down_border, optimize_array):
                 if optimize:
-                    worker.count = max(1, down) + int((up - down) / self.k)
+                    worker.count = max(0, down) + int((up - down) / self.k)
         else:
             # TODO Remove max()
             for worker, up, down in zip(worker_team, up_border, down_border):
-                worker.count = max(1, down) + int((up - down) / self.k)
+                worker.count = max(0, down) + int((up - down) / self.k)

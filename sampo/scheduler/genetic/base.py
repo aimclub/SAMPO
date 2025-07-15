@@ -34,19 +34,25 @@ class GeneticScheduler(Scheduler):
                  number_of_generation: Optional[int] = 50,
                  mutate_order: Optional[float or None] = None,
                  mutate_resources: Optional[float or None] = None,
-                 mutate_zones: Optional[float or None] = None,
+                 mutate_zones: Optional[float or None] = None,  # TODO: update info about zones mutation
                  size_of_population: Optional[float or None] = None,
                  rand: Optional[random.Random] = None,
                  seed: Optional[float or None] = None,
                  weights: Optional[list[int] or None] = None,
                  fitness_constructor: FitnessFunction = TimeFitness(),
+                 # for each fitness function we try to maximize its value,
+                 # otherwise we should specify a multiplicator (-1) as a fitness weight (tuple for multicriterial)
                  fitness_weights: tuple[int | float, ...] = (-1,),
-                 scheduler_type: SchedulerType = SchedulerType.Genetic,
+                 scheduler_type: SchedulerType = SchedulerType.Genetic,  # TODO: is it necessary ?
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                  optimize_resources: bool = False,
+                 # if True - Pareto-based selection will be used, otherwise it will be sequential optimization
+                 # of the given criteries from the FitnessFunction
+                 # for optimization on one criteria set False
                  is_multiobjective: bool = False,
+                 # for experiments with classic RCPSP formulation (initialize population with LFT)
                  only_lft_initialization: bool = False,
                  max_plateau_steps: int | None = None):
         super().__init__(scheduler_type=scheduler_type,
@@ -109,15 +115,17 @@ class GeneticScheduler(Scheduler):
                 size_of_population = works_count // 25
         return mutate_order, mutate_resources, mutate_zones, size_of_population
 
+    # Time border for genetic evaluation
     def set_time_border(self, time_border: int):
         self._time_border = time_border
 
+    # Max steps without improvement for genetic evaluation
     def set_max_plateau_steps(self, max_plateau_steps: int):
         self._max_plateau_steps = max_plateau_steps
 
     def set_deadline(self, deadline: Time):
         """
-        Set the deadline of tasks
+        Set the project deadline
 
         :param deadline:
         """
@@ -144,7 +152,7 @@ class GeneticScheduler(Scheduler):
                                   deadline: Time = None,
                                   weights=None):
         """
-        Algorithm, that generate first population
+        Algorithm, that generate initial population
 
         :param landscape:
         :param wg: graph of works

@@ -312,7 +312,9 @@ def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]
     :return: desired node
     """
     work_id = work_id or uuid_str(rand)
-    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works', is_service_unit=True)
+    finish_priority = max(node.work_unit.priority for node in parents)
+    work = WorkUnit(str(work_id), 'finish of project', [], group='service_works',
+                    priority=finish_priority, is_service_unit=True)
     return GraphNode(work, parents)
 
 
@@ -360,6 +362,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                               'granular_name': [],
                               'volume': [],
                               'measurement': [],
+                              'priority': [],
                               'predecessor_ids': [],
                               'connection_types': [],
                               'lags': []}
@@ -382,6 +385,7 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
                 graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
                 graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
+                graph_df_structure['priority'].append(node_info_dict['work_unit']['priority'])
 
                 if save_req:
                     min_req_dict = dict()

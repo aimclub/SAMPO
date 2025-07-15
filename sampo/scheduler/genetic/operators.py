@@ -29,12 +29,13 @@ class TimeFitness(FitnessFunction):
     """
     Fitness function that relies on finish time.
     """
+
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
-        return (schedule.execution_time.value, )
+            return (Time.inf().value,)
+        return (schedule.execution_time.value,)
 
 
 class SumOfResourcesPeaksFitness(FitnessFunction):
@@ -48,8 +49,8 @@ class SumOfResourcesPeaksFitness(FitnessFunction):
     def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
-        return (resources_peaks_sum(schedule, self._resources_names), )
+            return (Time.inf().value,)
+        return (resources_peaks_sum(schedule, self._resources_names),)
 
 
 class SumOfResourcesFitness(FitnessFunction):
@@ -60,11 +61,11 @@ class SumOfResourcesFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return resources_sum(schedule, self._resources_names)
+            return (Time.inf().value,)
+        return (resources_sum(schedule, self._resources_names),)
 
 
 class TimeWithResourcesFitness(FitnessFunction):
@@ -75,11 +76,11 @@ class TimeWithResourcesFitness(FitnessFunction):
     def __init__(self, resources_names: Iterable[str] | None = None):
         self._resources_names = list(resources_names) if resources_names is not None else None
 
-    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> float:
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) -> tuple[float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return Time.inf().value
-        return schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names)
+            return (Time.inf().value,)
+        return (schedule.execution_time.value + resources_peaks_sum(schedule, self._resources_names),)
 
 
 class DeadlineResourcesFitness(FitnessFunction):
@@ -97,9 +98,9 @@ class DeadlineResourcesFitness(FitnessFunction):
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
+            return (Time.inf().value,)
         return (resources_peaks_sum(schedule, self._resources_names) \
-                    * max(1.0, schedule.execution_time.value / self._deadline.value), )
+                * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
 class DeadlineCostFitness(FitnessFunction):
@@ -117,9 +118,9 @@ class DeadlineCostFitness(FitnessFunction):
             -> tuple[int | float]:
         schedule = evaluator(chromosome)
         if schedule is None:
-            return (Time.inf().value, )
+            return (Time.inf().value,)
         return (resources_costs_sum(schedule, self._resources_names) \
-                * max(1.0, schedule.execution_time.value / self._deadline.value), )
+                * max(1.0, schedule.execution_time.value / self._deadline.value),)
 
 
 class TimeAndResourcesFitness(FitnessFunction):
@@ -275,13 +276,16 @@ def generate_chromosomes(n: int,
 
     def randomized_init(is_topological: bool = False) -> ChromosomeType:
         if is_topological:
-            schedule = RandomizedTopologicalScheduler(work_estimator, int(rand.random() * 1000000)) \
-                .schedule(wg, contractors, spec, landscape=landscape)[0]
+            seed = int(rand.random() * 1000000)
+            schedule, _, _, node_order = RandomizedTopologicalScheduler(work_estimator,
+                                                                        seed).schedule_with_cache(wg, contractors, spec,
+                                                                                                  landscape=landscape)[0]
         else:
-            schedule = RandomizedLFTScheduler(work_estimator=work_estimator, rand=rand).schedule(wg, contractors, spec,
-                                                                                                 landscape=landscape)[0]
-        return convert_schedule_to_chromosome(work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec, landscape)
+            schedule, _, _, node_order = RandomizedLFTScheduler(work_estimator=work_estimator,
+                                                                rand=rand).schedule_with_cache(wg, contractors, spec,
+                                                                                               landscape=landscape)[0]
+        return convert_schedule_to_chromosome(work_id2index, worker_name2index, contractor2index, contractor_borders,
+                                              schedule, spec, landscape, node_order[::-1])
 
     if only_lft_initialization:
         chromosomes = [toolbox.Individual(randomized_init(is_topological=False)) for _ in range(n - 1)]
@@ -518,12 +522,12 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random,
             # find max index of parent of the current work
             # +1 because insertion should be righter
             i_parent = np.max(np.where(np.isin(order[:i], list(parents[work]), assume_unique=True))[0],
-                              initial=i - 1) + 1
+                              initial=0) + 1
             # find min index of child of the current work
             # +i because the slice [i + 1:] was taken, and +1 is not needed because these indexes will be shifted left
             # after current work deletion
             i_children = np.min(np.where(np.isin(order[i + 1:], list(children[work]), assume_unique=True))[0],
-                                initial=0) + i
+                                initial=len(order) - 2 - i) + i
             if i_parent == i_children:
                 # if child and parent indexes are equal then no mutation can be done
                 continue

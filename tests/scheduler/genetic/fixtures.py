@@ -4,7 +4,7 @@ import numpy as np
 from pytest import fixture
 
 from sampo.scheduler.genetic.schedule_builder import create_toolbox
-from sampo.scheduler.utils import get_worker_contractor_pool
+from sampo.scheduler.utils import get_worker_contractor_pool, get_head_nodes_with_connections_mappings
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
 
@@ -37,7 +37,7 @@ def setup_toolbox(setup_default_schedules) -> tuple:
     rand = Random(123)
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
-    nodes = [node for node in wg.nodes if not node.is_inseparable_son()]
+    nodes, *_ = get_head_nodes_with_connections_mappings(wg)
     worker_name2index = {worker_name: index for index, worker_name in enumerate(setup_worker_pool)}
     resources_border = np.zeros((2, len(setup_worker_pool), len(nodes)))
     for work_index, node in enumerate(nodes):

@@ -120,6 +120,8 @@ if __name__ == '__main__':
 
     os.makedirs('experiment_results', exist_ok=True)
     os.makedirs('experiment_results/schedules', exist_ok=True)
+    os.makedirs('experiment_results/basic', exist_ok=True)
+    os.makedirs('experiment_results/our', exist_ok=True)
 
     results = []
 
@@ -143,7 +145,7 @@ if __name__ == '__main__':
 
                     schedule_file_name = f'{wg_size}_{attempt}_{wg_idx}'
 
-                    schedule.dump('experiment_results/schedules', schedule_file_name)
+                    schedule.dump(f'experiment_results/schedules/{type}', schedule_file_name)
 
                     results.append((type, wg_size, attempt, wg_idx, val, exec_time, makespan, peak_resource_usage))
 

@@ -9,6 +9,7 @@ from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
+from sampo.scheduler.utils.priority import check_and_correct_priorities
 from sampo.schemas.apply_queue import ApplyQueue
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
@@ -202,6 +203,8 @@ class DefaultInputPipeline(InputPipeline):
                     contractor_info=self._contractors,
                     work_resource_estimator=self._work_estimator
                 )
+
+        check_and_correct_priorities(self._wg)
 
         if not contractors_can_perform_work_graph(self._contractors, self._wg):
             raise NoSufficientContractorError('Contractors are not able to perform the graph of works')

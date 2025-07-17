@@ -1,12 +1,14 @@
+from operator import itemgetter
 from typing import Optional
 
 import numpy as np
-from toposort import toposort
+from toposort import CircularDependencyError
 
 from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
+from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -39,7 +41,48 @@ class TopologicalScheduler(GenericScheduler):
         :param work_estimator: function that calculates execution time of the work
         :return: list of sorted nodes in graph
         """
+        # TODO WTF???
         return list(reversed(head_nodes))
+
+
+def toposort(data):
+    """\
+    Dependencies are expressed as a dictionary whose keys are items
+    and whose values are a set of dependent items. Output is a list of
+    sets in topological order. The first set consists of items with no
+    dependences, each subsequent set consists of items that depend upon
+    items in the preceeding sets.
+    """
+
+    # Special case empty input.
+    if len(data) == 0:
+        return
+
+    # Copy the input so as to leave it unmodified.
+    # Discard self-dependencies and copy two levels deep.
+    data = {item: set(e for e in dep if e != item) for item, dep in data.items()}
+
+    # Find all items that don't depend on anything.
+    extra_items_in_deps = {value for values in data.values() for value in values} - set(
+        data.keys()
+    )
+    # The line below does N unions of value sets, which is much slower than the
+    # set comprehension above which does 1 union of N value sets. The speedup
+    # gain is around 200x on a graph with 190k nodes.
+    # extra_items_in_deps = _reduce(set.union, data.values()) - set(data.keys())
+
+    # Add empty dependences where needed.
+    data.update({item: set() for item in extra_items_in_deps})
+    while True:
+        ordered = set(item for item, dep in data.items() if len(dep) == 0)
+        if not ordered:
+            break
+        yield ordered
+        data = {
+            item: (dep - ordered) for item, dep in data.items() if item not in ordered
+        }
+    if len(data) != 0:
+        raise CircularDependencyError(data)
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):
@@ -53,7 +96,8 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
-    def _topological_sort(self, head_nodes: list[GraphNode],
+    def _topological_sort(self,
+                          head_nodes: list[GraphNode],
                           node_id2parent_ids: dict[str, set[str]],
                           node_id2child_ids: dict[str, set[str]],
                           work_estimator: WorkTimeEstimator) -> list[GraphNode]:
@@ -69,11 +113,20 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
             self._random_state.shuffle(indices)
             return [nds[ind] for ind in indices]
 
-        tsorted_node_ids: list[str] = [
-            node_id for level in toposort(node_id2parent_ids)
-            for node_id in shuffle(level)
-        ]
+        ordered_nodes = []
 
-        ordered_nodes = sorted(head_nodes, key=lambda node: tsorted_node_ids.index(node.id), reverse=True)
+        priority_groups = extract_priority_groups_from_nodes(head_nodes)
+
+        id2node = {node.id: node for node in head_nodes}
+
+        for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0), reverse=True):
+            priority_group_set = set(node.id for node in priority_group)
+            priority_group_dict = {k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
+                                   for k in priority_group}
+            tsorted_node_ids: list[str] = [node_id
+                                           for level in toposort(priority_group_dict)
+                                           for node_id in shuffle(level)]
+
+            ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
 
         return ordered_nodes

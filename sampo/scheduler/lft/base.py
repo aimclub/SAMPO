@@ -8,7 +8,8 @@ from sampo.scheduler.timeline import Timeline, MomentumTimeline
 from sampo.scheduler.utils import (WorkerContractorPool, get_worker_contractor_pool,
                                    get_head_nodes_with_connections_mappings)
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization
+from sampo.scheduler.lft.prioritization import lft_prioritization, lft_randomized_prioritization_core, \
+    lft_prioritization_core
 from sampo.scheduler.lft.time_computaion import get_chain_duration
 
 from sampo.schemas import (Contractor, WorkGraph, GraphNode, LandscapeConfiguration, Schedule, ScheduledWork,
@@ -95,7 +96,7 @@ class LFTScheduler(Scheduler):
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         super().__init__(scheduler_type, None, work_estimator)
         self._timeline_type = timeline_type
-        self._prioritization = lft_prioritization
+        self._prioritization = partial(lft_prioritization, core_f=lft_prioritization_core)
 
     def schedule_with_cache(self,
                             wg: WorkGraph,
@@ -249,7 +250,7 @@ class RandomizedLFTScheduler(LFTScheduler):
                  rand: random.Random = random.Random()):
         super().__init__(scheduler_type, timeline_type, work_estimator)
         self._random = rand
-        self._prioritization = partial(lft_randomized_prioritization, rand=self._random)
+        self._prioritization = partial(lft_prioritization, rand=self._random, core_f=lft_randomized_prioritization_core)
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0

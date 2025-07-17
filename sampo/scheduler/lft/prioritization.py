@@ -1,6 +1,9 @@
+from operator import itemgetter
+
 import numpy as np
 import random
 
+from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
 
 
@@ -12,8 +15,8 @@ def map_lft_lst(head_nodes: list[GraphNode],
     node_id2lst = {head_nodes[-1].id: project_max_duration - node_id2duration[head_nodes[-1].id]}
 
     for node in reversed(head_nodes[:-1]):
-        suc_lst = [node_id2lst[child_id] for child_id in node_id2child_ids[node.id]]
-        node_id2lft[node.id] = min(suc_lst)
+        suc_lst = [node_id2lst[child_id] for child_id in node_id2child_ids[node.id] if child_id in node_id2lst]
+        node_id2lft[node.id] = min(suc_lst, default=0)
         node_id2lst[node.id] = node_id2lft[node.id] - node_id2duration[node.id]
 
     return node_id2lft, node_id2lst
@@ -22,7 +25,29 @@ def map_lft_lst(head_nodes: list[GraphNode],
 def lft_prioritization(head_nodes: list[GraphNode],
                        node_id2parent_ids: dict[str, set[str]],
                        node_id2child_ids: dict[str, set[str]],
-                       node_id2duration: dict[str, int]) -> list[GraphNode]:
+                       node_id2duration: dict[str, int],
+                       core_f,
+                       rand: random.Random() = random.Random()) -> list[GraphNode]:
+    """
+    Return ordered critical nodes.
+    Finish time is depended on these ordered nodes.
+    """
+
+    # form groups
+    groups = extract_priority_groups_from_nodes(head_nodes)
+
+    result = []
+    for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):
+        result.extend(core_f(group, node_id2parent_ids, node_id2child_ids, node_id2duration, rand))
+
+    return result
+
+
+def lft_prioritization_core(head_nodes: list[GraphNode],
+                            node_id2parent_ids: dict[str, set[str]],
+                            node_id2child_ids: dict[str, set[str]],
+                            node_id2duration: dict[str, int],
+                            rand: random.Random = random.Random()) -> list[GraphNode]:
     """
     Return nodes ordered by MIN-LFT priority rule.
     """
@@ -33,17 +58,19 @@ def lft_prioritization(head_nodes: list[GraphNode],
     return ordered_nodes
 
 
-def lft_randomized_prioritization(head_nodes: list[GraphNode],
-                                  node_id2parent_ids: dict[str, set[str]],
-                                  node_id2child_ids: dict[str, set[str]],
-                                  node_id2duration: dict[str, int],
-                                  rand: random.Random = random.Random()) -> list[GraphNode]:
+def lft_randomized_prioritization_core(head_nodes: list[GraphNode],
+                                       node_id2parent_ids: dict[str, set[str]],
+                                       node_id2child_ids: dict[str, set[str]],
+                                       node_id2duration: dict[str, int],
+                                       rand: random.Random = random.Random()) -> list[GraphNode]:
     """
     Return ordered nodes sampled by MIN-LFT and MIN-LST priority rules.
     """
 
+    head_nodes_set = set([node.id for node in head_nodes])
+
     def is_eligible(node_id):
-        return node_id2parent_ids[node_id].issubset(selected_ids_set)
+        return node_id2parent_ids[node_id].intersection(head_nodes_set).issubset(selected_ids_set)
 
     nodes2lft, nodes2lst = map_lft_lst(head_nodes, node_id2child_ids, node_id2duration)
 
@@ -65,7 +92,7 @@ def lft_randomized_prioritization(head_nodes: list[GraphNode],
         ordered_node_ids.append(selected_id)
         selected_ids_set.add(selected_id)
         candidates.remove(selected_id)
-        candidates.update([child_id for child_id in node_id2child_ids[selected_id]])
+        candidates.update([child_id for child_id in node_id2child_ids[selected_id] if child_id in head_nodes_set])
 
     ordered_nodes = sorted(head_nodes, key=lambda node: ordered_node_ids.index(node.id), reverse=True)
 

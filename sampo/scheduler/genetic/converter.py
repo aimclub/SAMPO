@@ -43,8 +43,8 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     :return:
     """
 
-    order: list[ScheduledWork] = order if order is not None else [work for work in schedule.works
-                                                                  if work.id in work_id2index]
+    order: list[GraphNode] = order if order is not None else [work for work in schedule.works
+                                                              if work.id in work_id2index]
 
     # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in order])

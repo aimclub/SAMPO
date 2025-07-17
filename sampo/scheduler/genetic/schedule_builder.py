@@ -40,7 +40,7 @@ def create_toolbox(wg: WorkGraph,
     start = time.time()
 
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
-        worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
+        worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
@@ -75,6 +75,7 @@ def create_toolbox(wg: WorkGraph,
                         contractor2index,
                         contractor_borders,
                         node_indices,
+                        priorities,
                         parents,
                         children,
                         resources_border,

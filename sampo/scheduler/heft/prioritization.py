@@ -1,5 +1,6 @@
 from operator import itemgetter
 
+from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
 from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time_estimator import WorkTimeEstimator
@@ -78,31 +79,8 @@ def prioritization(head_nodes: list[GraphNode],
     Finish time is depended on these ordered nodes.
     """
 
-    def update_priority(node, priority_value, visited=None):
-        if visited is None:
-            visited = set()
-
-        if node in visited:
-            return
-
-        visited.add(node)
-
-        node.work_unit.priority = min(node.work_unit.priority, priority_value)
-
-        for parent in getattr(node, "parents", []):
-            update_priority(parent, priority_value, visited)
-
-    # check priorities
-    for node in head_nodes:
-        for parent_node in node.parents:
-            if node.work_unit.priority < parent_node.work_unit.priority:
-                update_priority(parent_node, node.work_unit.priority)
-                # parent_node.work_unit.priority = node.work_unit.priority
-
     # form groups
-    groups = {priority: [] for priority in set(node.work_unit.priority for node in head_nodes)}
-    for node in head_nodes:
-        groups[node.work_unit.priority].append(node)
+    groups = extract_priority_groups_from_nodes(head_nodes)
 
     result = []
     for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):

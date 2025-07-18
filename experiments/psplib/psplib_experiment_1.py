@@ -120,8 +120,8 @@ if __name__ == '__main__':
 
     os.makedirs('experiment_results', exist_ok=True)
     os.makedirs('experiment_results/schedules', exist_ok=True)
-    os.makedirs('experiment_results/basic', exist_ok=True)
-    os.makedirs('experiment_results/our', exist_ok=True)
+    os.makedirs('experiment_results/schedules/basic', exist_ok=True)
+    os.makedirs('experiment_results/schedules/our', exist_ok=True)
 
     results = []
 

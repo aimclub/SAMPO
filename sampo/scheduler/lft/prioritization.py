@@ -76,7 +76,8 @@ def lft_randomized_prioritization_core(head_nodes: list[GraphNode],
 
     ordered_node_ids = []
     selected_ids_set = set()
-    candidates = {head_nodes[0].id}
+    candidates = {node.id for node in head_nodes
+                  if not node_id2parent_ids[node.id].intersection(head_nodes_set)}
 
     while candidates:
         eligibles = [node_id for node_id in candidates if is_eligible(node_id)]

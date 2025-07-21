@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from sampo.structurator import STAGE_SEP
+from sampo.api.const import STAGE_SEP
 from sampo.utilities.datetime_util import add_time_delta
 
 

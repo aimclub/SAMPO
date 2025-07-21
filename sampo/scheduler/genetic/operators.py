@@ -15,7 +15,6 @@ from sampo.scheduler.genetic.converter import (convert_schedule_to_chromosome, c
 from sampo.scheduler.lft.base import RandomizedLFTScheduler
 from sampo.scheduler.topological.base import RandomizedTopologicalScheduler
 from sampo.scheduler.utils import WorkerContractorPool
-from sampo.scheduler.utils.priority import extract_priority_groups_from_indices
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration

@@ -1,6 +1,6 @@
 from operator import itemgetter
 
-from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
+from sampo.utilities.priority import extract_priority_groups_from_nodes
 from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time_estimator import WorkTimeEstimator

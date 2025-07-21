@@ -3,11 +3,11 @@ from typing import Optional
 from operator import itemgetter
 from math import ceil
 
+from sampo.api.const import STAGE_SEP
 from sampo.schemas.graph import GraphNode, GraphEdge, WorkGraph, EdgeType
 from sampo.schemas.works import WorkUnit
 from sampo.schemas.requirements import WorkerReq, MaterialReq, ConstructionObjectReq, EquipmentReq
-
-STAGE_SEP = '_stage_'
+from sampo.utilities.priority import check_and_correct_priorities
 
 
 def make_new_node_id(work_unit_id: str, ind: int) -> str:
@@ -370,4 +370,7 @@ def graph_restructuring(wg: WorkGraph, use_lag_edge_optimization: Optional[bool]
                                use_lag_edge_optimization)
         fill_parents_to_new_nodes(node, id2new_nodes, restructuring_edges2new_nodes_id, use_lag_edge_optimization)
 
-    return WorkGraph(id2new_nodes[wg.start.id], id2new_nodes[wg.finish.id])
+    result = WorkGraph(id2new_nodes[wg.start.id], id2new_nodes[wg.finish.id])
+    # TODO Make structurator natively work with priorities
+    check_and_correct_priorities(result)
+    return result

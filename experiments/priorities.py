@@ -7,12 +7,12 @@ from sampo.generator import SyntheticGraphType
 from sampo.pipeline import SchedulingPipeline
 from sampo.scheduler.heft.base import HEFTScheduler
 
-scheduler = RandomizedLFTScheduler()
+scheduler = GeneticScheduler()
 
 project = SchedulingPipeline.create() \
     .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
-    .schedule(scheduler) \
+    .schedule(scheduler, validate=True) \
     .visualization('2022-01-01')[0] \
     .shape((14, 14)) \
     .color_type('priority') \

@@ -127,7 +127,7 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
 
         id2node = {node.id: node for node in head_nodes}
 
-        for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0), reverse=True):
+        for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0)):
             priority_group_set = set(node.id for node in priority_group)
             priority_group_dict = {k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
                                    for k in priority_group}
@@ -135,8 +135,8 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
                                            for level in toposort(priority_group_dict)
                                            for node_id in shuffle(level)]
 
-            ordered_nodes.extend(reversed([id2node[node] for node in tsorted_node_ids]))
+            ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
 
-        validate_order(ordered_nodes)
+        # validate_order(ordered_nodes)
 
         return ordered_nodes

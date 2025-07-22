@@ -154,7 +154,7 @@ class LFTScheduler(Scheduler):
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
-        for index, node in enumerate(reversed(ordered_nodes)):  # the tasks with the highest rank will be done first
+        for index, node in enumerate(ordered_nodes):
             work_unit = node.work_unit
             work_spec = spec.get_work_spec(work_unit.id)
 

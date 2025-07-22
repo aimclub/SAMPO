@@ -325,7 +325,7 @@ def generate_chromosomes(n: int,
                 ind = init_chromosomes[generated_type][0]
 
         if not toolbox.validate(ind):
-            print()
+            SAMPO.logger.warn('HELP')
 
         ind = toolbox.Individual(ind)
         chromosomes.append(ind)
@@ -412,8 +412,7 @@ def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]], i
         # validate priorities
         work_node = index2node[work_index]
         if any(index2node[parent].work_unit.priority > work_node.work_unit.priority for parent in parents[work_index]):
-            # TODO Remove log
-            SAMPO.logger.error(f'Order validation failed')
+            # SAMPO.logger.error(f'Order validation failed')
             return False
     return True
 
@@ -580,18 +579,19 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
     order = ind[0]
 
     priority_groups_count = len(set(priorities))
-    mutpb_for_priority_group = mutpb / priority_groups_count
+    mutpb_for_priority_group = mutpb #/ priority_groups_count
 
     # priorities of tasks with same order-index should be the same (if chromosome is valid)
     cur_priority = priorities[order[0]]
     cur_priority_group_start = 0
     for i in range(len(order)):
         if priorities[order[i]] != cur_priority:
-            cur_priority = priorities[order[i]]
-
             mutate_scheduling_order_core(order[cur_priority_group_start:i],
                                          mutpb_for_priority_group,
                                          rand, parents, children)
+
+            cur_priority = priorities[order[i]]
+            cur_priority_group_start = i
 
     return ind
 
@@ -738,7 +738,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set
 
     :return: mutated individual
     """
-    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children, priorities)
+    mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)

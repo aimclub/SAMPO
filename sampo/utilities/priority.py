@@ -6,12 +6,8 @@ def update_priority(node, priority_value, visited=None):
     if visited is None:
         visited = set()
 
-    if node in visited:
-        return
-
     visited.add(node)
 
-    # TODO
     node.work_unit.priority = min(node.work_unit.priority, priority_value)
 
     for parent in getattr(node, "parents", []):
@@ -21,8 +17,8 @@ def update_priority(node, priority_value, visited=None):
 def check_and_correct_priorities(wg: WorkGraph, verbose: bool = True):
     # check priorities
     for node in wg.nodes:
-        if node.is_inseparable_son():
-            continue
+        # if node.is_inseparable_son():
+        #     continue
         for parent_node in node.parents:
             if node.work_unit.priority < parent_node.work_unit.priority:
                 if verbose:

@@ -18,6 +18,9 @@ def ford_bellman(nodes: list[GraphNode],
                                                   for start in nodes
                                                   for finish in node_id2parent_ids[start.id]
                                                   if finish in path_weights])
+    if not edges:
+        return path_weights
+
     # for changes heuristic
     changed = False
     # run standard ford-bellman on reversed edges
@@ -65,7 +68,7 @@ def prioritization_nodes(nodes: list[GraphNode],
 
     path_weights = ford_bellman(nodes, weights, node_id2parent_ids)
 
-    ordered_nodes = sorted(nodes, key=lambda node: path_weights[node.id], reverse=True)
+    ordered_nodes = sorted(nodes, key=lambda node: path_weights[node.id])
 
     return ordered_nodes
 
@@ -83,7 +86,7 @@ def prioritization(head_nodes: list[GraphNode],
     groups = extract_priority_groups_from_nodes(head_nodes)
 
     result = []
-    for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):
+    for _, group in sorted(groups.items(), key=itemgetter(0)):
         result.extend(prioritization_nodes(group, node_id2parent_ids, work_estimator))
 
     return result

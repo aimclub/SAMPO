@@ -37,7 +37,7 @@ def lft_prioritization(head_nodes: list[GraphNode],
     groups = extract_priority_groups_from_nodes(head_nodes)
 
     result = []
-    for _, group in sorted(groups.items(), key=itemgetter(0), reverse=True):
+    for _, group in sorted(groups.items(), key=itemgetter(0)):
         result.extend(core_f(group, node_id2parent_ids, node_id2child_ids, node_id2duration, rand))
 
     return result
@@ -53,7 +53,7 @@ def lft_prioritization_core(head_nodes: list[GraphNode],
     """
     node_id2lft, _ = map_lft_lst(head_nodes, node_id2child_ids, node_id2duration)
 
-    ordered_nodes = sorted(head_nodes, key=lambda node: node_id2lft[node.id], reverse=True)
+    ordered_nodes = sorted(head_nodes, key=lambda node: node_id2lft[node.id])
 
     return ordered_nodes
 
@@ -95,6 +95,9 @@ def lft_randomized_prioritization_core(head_nodes: list[GraphNode],
         candidates.remove(selected_id)
         candidates.update([child_id for child_id in node_id2child_ids[selected_id] if child_id in head_nodes_set])
 
-    ordered_nodes = sorted(head_nodes, key=lambda node: ordered_node_ids.index(node.id), reverse=True)
+    ordered_nodes = sorted(head_nodes, key=lambda node: ordered_node_ids.index(node.id))
+
+    assert all(ordered_nodes[i].work_unit.priority <= ordered_nodes[i + 1].work_unit.priority
+               for i in range(len(ordered_nodes) - 1))
 
     return ordered_nodes

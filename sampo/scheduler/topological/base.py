@@ -8,7 +8,7 @@ from sampo.scheduler.base import SchedulerType
 from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.resource.average_req import AverageReqResourceOptimizer
 from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
-from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
+from sampo.utilities.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator

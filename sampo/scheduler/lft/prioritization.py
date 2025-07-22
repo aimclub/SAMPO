@@ -3,7 +3,7 @@ from operator import itemgetter
 import numpy as np
 import random
 
-from sampo.scheduler.utils.priority import extract_priority_groups_from_nodes
+from sampo.utilities.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
 
 

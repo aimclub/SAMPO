@@ -11,6 +11,7 @@ def update_priority(node, priority_value, visited=None):
 
     visited.add(node)
 
+    # TODO
     node.work_unit.priority = min(node.work_unit.priority, priority_value)
 
     for parent in getattr(node, "parents", []):

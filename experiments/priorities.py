@@ -7,7 +7,7 @@ from sampo.generator import SyntheticGraphType
 from sampo.pipeline import SchedulingPipeline
 from sampo.scheduler.heft.base import HEFTScheduler
 
-scheduler = RandomizedLFTScheduler()
+scheduler = GeneticScheduler()
 
 project = SchedulingPipeline.create() \
     .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \

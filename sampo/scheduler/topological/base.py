@@ -85,6 +85,14 @@ def toposort(data):
         raise CircularDependencyError(data)
 
 
+def validate_order(order: list[GraphNode]):
+    seen = set()
+
+    for node in order:
+        assert all(parent in seen for parent in node.parents)
+        seen.add(node)
+
+
 class RandomizedTopologicalScheduler(TopologicalScheduler):
     """
     Scheduler, that represent 'WorkGraph' in topological order with random.
@@ -127,6 +135,8 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
                                            for level in toposort(priority_group_dict)
                                            for node_id in shuffle(level)]
 
-            ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
+            ordered_nodes.extend(reversed([id2node[node] for node in tsorted_node_ids]))
+
+        validate_order(ordered_nodes)
 
         return ordered_nodes

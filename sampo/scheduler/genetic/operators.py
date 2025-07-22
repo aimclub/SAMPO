@@ -201,12 +201,12 @@ def init_toolbox(wg: WorkGraph,
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
-                     statuses_available=statuses_available)
+                     statuses_available=statuses_available, priorities=priorities)
     # crossover for order
     toolbox.register('mate_order', mate_scheduling_order, rand=rand, toolbox=toolbox, priorities=priorities)
     # mutation for order
     toolbox.register('mutate_order', mutate_scheduling_order, mutpb=mut_order_pb, rand=rand, parents=parents,
-                     children=children)
+                     children=children, priorities=priorities)
     # crossover for resources
     toolbox.register('mate_resources', mate_resources, rand=rand, toolbox=toolbox)
     # mutation for resources
@@ -412,7 +412,7 @@ def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]], i
 
         # validate priorities
         work_node = index2node[work_index]
-        if any(index2node[parent].work_unit.priority > work_node.work_unit.priority for parent in parents):
+        if any(index2node[parent].work_unit.priority > work_node.work_unit.priority for parent in parents[work_index]):
             # TODO Remove log
             SAMPO.logger.error(f'Order validation failed')
             return False
@@ -517,20 +517,8 @@ def two_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_m
     return child
 
 
-def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random,
-                            parents: dict[int, set[int]], children: dict[int, set[int]]) -> Individual:
-    """
-    Mutation operator for works scheduling order.
-
-    :param ind: the individual to be mutated
-    :param mutpb: probability of gene mutation
-    :param rand: the rand object used for randomized operations
-    :param parents: mapping object of works and their parent-works to create valid order
-    :param children: mapping object of works and their children-works to create valid order
-
-    :return: mutated individual
-    """
-    order = ind[0]
+def mutate_scheduling_order_core(order: np.ndarray, mutpb: float, rand: random.Random,
+                                 parents: dict[int, set[int]], children: dict[int, set[int]]):
     # number of possible mutations = number of works except start and finish works
     num_possible_muts = len(order) - 2
     # generate mask of works to mutate based on mutation probability
@@ -574,6 +562,37 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random,
                 # shift work indexes (which are to the right or equal to the new index) to the right
                 # after the current work insertion in new generated index
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
+
+
+def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, priorities: np.ndarray,
+                            parents: dict[int, set[int]], children: dict[int, set[int]]) -> Individual:
+    """
+    Mutation operator for works scheduling order.
+
+    :param ind: the individual to be mutated
+    :param mutpb: probability of gene mutation
+    :param rand: the rand object used for randomized operations
+    :param priorities: node priorities
+    :param parents: mapping object of works and their parent-works to create valid order
+    :param children: mapping object of works and their children-works to create valid order
+
+    :return: mutated individual
+    """
+    order = ind[0]
+
+    priority_groups_count = len(set(priorities))
+    mutpb_for_priority_group = mutpb / priority_groups_count
+
+    # priorities of tasks with same order-index should be the same (if chromosome is valid)
+    cur_priority = priorities[order[0]]
+    cur_priority_group_start = 0
+    for i in range(len(order)):
+        if priorities[order[i]] != cur_priority:
+            cur_priority = priorities[order[i]]
+
+            mutate_scheduling_order_core(order[cur_priority_group_start:i],
+                                         mutpb_for_priority_group,
+                                         rand, parents, children)
 
     return ind
 
@@ -702,7 +721,7 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
 
 
 def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set[int]],
-           children: dict[int, set[int]], statuses_available: int,
+           children: dict[int, set[int]], statuses_available: int, priorities: np.ndarray,
            order_mutpb: float, res_mutpb: float, zone_mutpb: float,
            rand: random.Random) -> Individual:
     """
@@ -720,7 +739,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set
 
     :return: mutated individual
     """
-    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children)
+    mutant = mutate_scheduling_order(ind, order_mutpb, rand, parents, children, priorities)
     mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)

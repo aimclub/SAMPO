@@ -21,7 +21,7 @@ from sampo.schemas.works import WorkUnit
 from sampo.utilities.resource_usage import resources_peaks_sum
 
 
-instances = [30, 60, 90, 120]
+instances = [120]
 workers = ['R1', 'R2', 'R3', 'R4']
 
 
@@ -56,36 +56,9 @@ def run_our_genetic(scheduler: GeneticScheduler, wg: WorkGraph, contractors: lis
 
 
 def run_scheduler(args):
-    adj_matrix, res_matrix, contractor_info = args
-    sum_of_time = res_matrix[:, 0].sum()
-
-    nodes = []
-    wu_id2times = {}
-
-    for node_id, res_matrix_row in enumerate(res_matrix):
-        worker_reqs = [WorkerReq(workers[idx_req - 1], Time(0), res_matrix_row[idx_req],
-                                 res_matrix_row[idx_req], workers[idx_req - 1]) for idx_req in range(1, 5)]
-        work_unit = WorkUnit(str(node_id), str(node_id), worker_reqs)
-        wu_id2times[work_unit.id] = Time(int(res_matrix_row[0]))
-        node = GraphNode(work_unit, [])
-        nodes.append(node)
-
-    for child_id in range(len(adj_matrix)):
-        parents = []
-        for parent_id in range(len(adj_matrix)):
-            if child_id != parent_id and adj_matrix[parent_id][child_id] == 1:
-                parents.append((nodes[parent_id], 0, EdgeType.FinishStart))
-        nodes[child_id].add_parents(parents)
-
-    contractors = [
-        Contractor(id=str(1),
-                   name="OOO Berezka",
-                   workers={name: Worker(str(uuid.uuid4()), name, count, contractor_id=str(1))
-                            for name, count in zip(workers, contractor_info)},
-                   equipments={})
-    ]
-
-    wg = WorkGraph(nodes[0], nodes[-1])
+    filename = args
+    with open(filename, 'r') as f:
+        wg, contractors, wu_id2times, _ = parse_sm_file(f.readlines())
 
     work_estimator = PSPlibWorkTimeEstimator(wu_id2times)
 
@@ -102,31 +75,35 @@ def run_scheduler(args):
     start_basic = time.time()
     schedule_basic = run_basic_genetic(scheduler, wg, contractors, work_estimator)
     finish_basic = time.time()
-    results_basic = (finish_basic - start_basic), schedule_basic.execution_time, sum_of_time, schedule_basic
+    results_basic = (finish_basic - start_basic), schedule_basic.execution_time, schedule_basic
 
     start_our = time.time()
     schedule_our = run_our_genetic(scheduler, wg, contractors)
     finish_our = time.time()
-    results_our = (finish_our - start_our), schedule_our.execution_time, sum_of_time, schedule_our
+    results_our = (finish_our - start_our), schedule_our.execution_time, schedule_our
 
     return results_basic, results_our
 
 
 def read_sm_line(line: str) -> list[int]:
-    return list(map(int, line.split('\\w')))
+    return list(map(int, line.split()))
 
 
-def parse_sm_file(file: list[str]) -> tuple[WorkGraph, list[Contractor], int]:
-    tasks_count = int(file[5].split('\\w:\\w')[1].strip())
-    project_duration = int(file[15].split('\\w')[3].strip())
+def parse_sm_file(file: list[str]) -> tuple[WorkGraph, list[Contractor], dict[str, int], int]:
+    tasks_count = int(file[5].split(':')[1].strip())
+    project_duration = int(file[14].split()[3])
     resources_count = 4
 
+    PRECEDENCE_START = 18
+
     tasks = []
+    wu_id2times = {}
 
     # read resources
-    for i in range(19 + tasks_count + 4):
+    for i in range(PRECEDENCE_START + tasks_count + 4, PRECEDENCE_START + tasks_count + 4 + tasks_count):
         job_index, _, duration, *resources = read_sm_line(file[i])
-        tasks.append(GraphNode(WorkUnit(id=str(uuid.uuid4()),
+        wu_id = str(uuid.uuid4())
+        tasks.append(GraphNode(WorkUnit(id=wu_id,
                                         name=f'Task #{job_index}',
                                         worker_reqs=[WorkerReq(kind=f'R{j}',
                                                                volume=Time(0),
@@ -135,22 +112,23 @@ def parse_sm_file(file: list[str]) -> tuple[WorkGraph, list[Contractor], int]:
                                                      for j in range(resources_count)
                                                      if resources[j] > 0]),
                                parent_works=[]))
+        wu_id2times[wu_id] = duration
 
     # read precedence
-    for i in range(19, 19 + tasks_count):
+    for i in range(PRECEDENCE_START, PRECEDENCE_START + tasks_count):
         job_index, _, _, *successors = read_sm_line(file[i])
         for successor in successors:
-            tasks[successor].add_parents([tasks[job_index]])
+            tasks[successor - 1].add_parents([tasks[job_index - 1]])
 
     # read contractor
-    contractor_info = list(map(int, file[19 + tasks_count + tasks_count + 4 + 3].split('\\w')))
+    contractor_info = list(map(int, file[PRECEDENCE_START + tasks_count + tasks_count + 4 + 3].split()))
     contractor = Contractor(id=str(uuid.uuid4()),
                             name='OOO Berezka',
                             workers={f'R{j}': Worker(id=str(uuid.uuid4()),
                                                      name=f'R{j}',
                                                      count=contractor_info[j])
                                      for j in range(resources_count)})
-    return WorkGraph.from_nodes(tasks), [contractor], project_duration
+    return WorkGraph.from_nodes(tasks), [contractor], wu_id2times, project_duration
 
 
 if __name__ == '__main__':
@@ -172,15 +150,23 @@ if __name__ == '__main__':
             lines = lines[22:-2]
         true_val = np.array([int(line.split()[2]) for line in lines])
 
-        dataset = np.load(f'psplib_datasets/problems_{str(wg_size)}.npy', allow_pickle=True)
+        def psplib_index_comparator(a: str):
+            a = a[len(str(wg_size)) + 1:-3]
+            a_tuple = list(map(int, a.split('_')))
+            return a_tuple
+
+        dataset = []
+        for file in sorted(os.listdir(f'psplib_datasets/j{wg_size}.sm'), key=psplib_index_comparator)[:len(true_val) + 1]:
+            filename = f'psplib_datasets/j{wg_size}.sm/{file}'
+            dataset.append(filename)
 
         for attempt in range(attempts):
-            with mp.Pool(32) as pool:
-                result = pool.starmap(run_scheduler, np.expand_dims(dataset, 1))
+            with mp.Pool(10) as pool:
+                result = pool.map(run_scheduler, dataset[:10])
 
             for wg_idx, ((res_basic, res_our), val) in enumerate(zip(result, true_val)):
                 def make_result(res, type):
-                    exec_time, makespan, psplib_time, schedule = res
+                    exec_time, makespan, schedule = res
 
                     peak_resource_usage = resources_peaks_sum(schedule)
 

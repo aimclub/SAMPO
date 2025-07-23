@@ -17,7 +17,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.landscape import LandscapeConfiguration
-from sampo.schemas.schedule import Schedule
+from sampo.schemas.schedule import Schedule, ScheduleWorkDict
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
@@ -269,6 +269,45 @@ class GeneticScheduler(Scheduler):
                                                 self._only_lft_initialization,
                                                 self._is_multiobjective)
         return new_pop
+
+    def schedule_with_pop(self,
+                          wg: WorkGraph,
+                          contractors: list[Contractor],
+                          pop: list[ChromosomeType],
+                          spec: ScheduleSpec = ScheduleSpec(),
+                          assigned_parent_time: Time = Time(0),
+                          timeline: Timeline | None = None,
+                          landscape: LandscapeConfiguration = LandscapeConfiguration()) \
+            -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
+        mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
+        deadline = None if self._optimize_resources else self._deadline
+
+        schedules, _ = build_schedules_with_cache(wg,
+                                                  contractors,
+                                                  size_of_population,
+                                                  self.number_of_generation,
+                                                  mutate_order,
+                                                  mutate_resources,
+                                                  mutate_zones,
+                                                  {},
+                                                  self.rand,
+                                                  spec,
+                                                  self._weights,
+                                                  pop,
+                                                  landscape,
+                                                  self.fitness_constructor,
+                                                  self.fitness_weights,
+                                                  self.work_estimator,
+                                                  self.sgs_type,
+                                                  assigned_parent_time,
+                                                  timeline,
+                                                  self._time_border,
+                                                  self._max_plateau_steps,
+                                                  self._optimize_resources,
+                                                  deadline,
+                                                  self._only_lft_initialization,
+                                                  self._is_multiobjective)
+        return schedules
 
     def schedule_with_cache(self,
                             wg: WorkGraph,

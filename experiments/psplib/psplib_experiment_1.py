@@ -10,7 +10,7 @@ import multiprocessing as mp
 from sampo.api.genetic_api import ChromosomeType
 from sampo.scheduler import GeneticScheduler, RandomizedTopologicalScheduler, RandomizedLFTScheduler
 from sampo.scheduler.genetic import ScheduleGenerationScheme
-from sampo.schemas import WorkTimeEstimator
+from sampo.schemas import WorkTimeEstimator, Schedule
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph, GraphNode, EdgeType
 from sampo.schemas.requirements import WorkerReq
@@ -31,8 +31,8 @@ def run_basic_genetic(scheduler: GeneticScheduler,
                       work_estimator: WorkTimeEstimator):
     toolbox = scheduler.create_toolbox(wg, contractors, init_schedules=[])
     pop = [randomized_init(wg, contractors, toolbox, work_estimator, i >= 25, scheduler.rand) for i in range(50)]
-    final_chromosome = scheduler.upgrade_pop(wg, contractors, pop)[0]
-    return toolbox.evaluate_chromosome(final_chromosome)
+    scheduled_works = scheduler.schedule_with_pop(wg, contractors, pop)[0][0]
+    return Schedule.from_scheduled_works(scheduled_works.values(), wg)
 
 
 def randomized_init(wg: WorkGraph,

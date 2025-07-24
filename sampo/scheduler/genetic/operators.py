@@ -287,7 +287,7 @@ def generate_chromosomes(n: int,
                                                                 rand=rand).schedule_with_cache(wg, contractors, spec,
                                                                                                landscape=landscape)[0]
         return convert_schedule_to_chromosome(work_id2index, worker_name2index, contractor2index, contractor_borders,
-                                              schedule, spec, landscape, node_order[::-1])
+                                              schedule, spec, landscape, node_order)
 
     if only_lft_initialization:
         chromosomes = [toolbox.Individual(randomized_init(is_topological=False)) for _ in range(n - 1)]
@@ -354,11 +354,12 @@ def generate_chromosome(wg: WorkGraph,
     """
 
     def randomized_init() -> ChromosomeType:
-        schedule = RandomizedTopologicalScheduler(work_estimator,
+        schedule, _, _, node_order = RandomizedTopologicalScheduler(work_estimator,
                                                   int(rand.random() * 1000000)) \
-            .schedule(wg, contractors, spec, landscape=landscape)[0]
+            .schedule_with_cache(wg, contractors, spec, landscape=landscape)[0]
         return convert_schedule_to_chromosome(work_id2index, worker_name2index,
-                                              contractor2index, contractor_borders, schedule, spec, landscape)
+                                              contractor2index, contractor_borders,
+                                              schedule, spec, landscape, node_order)
 
     chance = rand.random()
     if chance < 0.2:

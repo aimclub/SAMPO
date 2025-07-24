@@ -13,7 +13,7 @@ def test_correct_order(setup_schedulers_and_parameters):
                                core_f=lft_prioritization_core)
 
     seen: set[GraphNode] = set()
-    for node in reversed(order):
+    for node in order:
         seen.update(node.get_inseparable_chain_with_self())
         for inode in node.get_inseparable_chain_with_self():
             assert all(pnode in seen for pnode in inode.parents)

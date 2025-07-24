@@ -41,8 +41,7 @@ class TopologicalScheduler(GenericScheduler):
         :param work_estimator: function that calculates execution time of the work
         :return: list of sorted nodes in graph
         """
-        # TODO WTF???
-        return list(reversed(head_nodes))
+        return list(head_nodes)
 
 
 def toposort(data):

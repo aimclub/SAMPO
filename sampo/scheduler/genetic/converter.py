@@ -48,7 +48,7 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     #                                                           if work.id in work_id2index]
 
     # order works part of chromosome
-    order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in reversed(order)])
+    order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in order])
 
     # convert to convenient form
     schedule = schedule.to_schedule_work_dict

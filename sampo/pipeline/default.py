@@ -319,4 +319,4 @@ class DefaultSchedulePipeline(SchedulePipeline):
 
     def visualization(self, start_date: str) -> list['Visualization']:
         from sampo.utilities.visualization import Visualization
-        return [Visualization.from_project(project, start_date) for project in self.finish()]
+        return [Visualization.from_project(project, start_date, self._input._work_estimator) for project in self.finish()]

@@ -1,16 +1,18 @@
 from datetime import timedelta
+from operator import attrgetter
 from typing import Optional
 
 import pandas as pd
 import plotly.express as px
 from matplotlib.figure import Figure
 
-from sampo.schemas import Time
+from sampo.schemas import Time, WorkGraph, WorkTimeEstimator, GraphNode
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 
 
 def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                             visualization: VisualizationMode,
+                            critical_path: list[GraphNode] = None,
                             remove_service_tasks: bool = False,
                             fig_file_name: Optional[str] = None,
                             color_type: str = 'contractor') -> Figure | None:
@@ -19,6 +21,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
 
     :param fig_file_name:
     :param visualization:
+    :param wg:
     :param remove_service_tasks:
     :param schedule_dataframe: Pandas DataFrame with the information about schedule
     :param color_type defines what tasks color means
@@ -109,6 +112,10 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
             .apply(lambda r: 'Defect' if ':' in r['task_name'] else r['contractor'], axis=1)
     elif color_type == 'priority':
         schedule_dataframe['color'] = schedule_dataframe['scheduled_work_object'].apply(lambda x: f'Priority {x.priority}')
+    elif color_type == 'critical_path':
+        critical_path_nodes = set(map(attrgetter('id'), critical_path))
+        schedule_dataframe['color'] = schedule_dataframe['scheduled_work_object'] \
+                .apply(lambda x: 'Critical path' if x.id in critical_path_nodes else 'Not critical path')
 
     schedule_dataframe['idx'] = (schedule_dataframe[['idx', 'task_name']]
                                  .apply(lambda r: schedule_dataframe[schedule_dataframe['task_name'] ==

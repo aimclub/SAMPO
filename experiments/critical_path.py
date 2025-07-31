@@ -10,6 +10,7 @@ scheduler = HEFTScheduler()
 
 project = SchedulingPipeline.create() \
     .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \
+    .contractors((ContractorGenerationMethod.MAX, 1, 10000)) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
     .schedule(scheduler) \
     .visualization('2022-01-01')[0] \

@@ -139,8 +139,8 @@ class CSVParser:
 
     @staticmethod
     def work_graph_and_contractors(works_info: pd.DataFrame,
-                                   contractor_info: str | list[Contractor] | tuple[ContractorGenerationMethod, int]
-                                   = (ContractorGenerationMethod.AVG, 1),
+                                   contractor_info: str | list[Contractor] | tuple[ContractorGenerationMethod, int, float]
+                                   = (ContractorGenerationMethod.AVG, 1, 1),
                                    contractor_types: list[int] | None = None,
                                    name_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
@@ -196,11 +196,12 @@ class CSVParser:
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:
-            generation_method, contractors_number = contractor_info
+            generation_method, contractors_number, scaler = contractor_info
             contractors = [get_contractor_by_wg(work_graph,
                                                 method=generation_method,
                                                 contractor_id=str(i),
-                                                contractor_name='Contractor' + ' ' + str(i + 1))
+                                                contractor_name='Contractor' + ' ' + str(i + 1),
+                                                scaler=scaler)
                            for i in range(contractors_number)]
 
         return work_graph, contractors

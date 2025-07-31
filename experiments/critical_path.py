@@ -8,8 +8,19 @@ from sampo.scheduler.heft.base import HEFTScheduler
 
 scheduler = HEFTScheduler()
 
+r_seed = 231
+ss = SimpleSynthetic(r_seed)
+
+simple_wg = ss.work_graph(mode=SyntheticGraphType.GENERAL,
+                          cluster_counts=10,
+                          bottom_border=100,
+                          top_border=200)
+
+contractors = [get_contractor_by_wg(simple_wg, 10, ContractorGenerationMethod.MAX)]
+
 project = SchedulingPipeline.create() \
     .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \
+    .contractors((ContractorGenerationMethod.MAX, 10)) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
     .schedule(scheduler) \
     .visualization('2022-01-01')[0] \

@@ -1,7 +1,7 @@
 from matplotlib.figure import Figure
 
 from sampo.pipeline import PipelineError
-from sampo.scheduler.utils.critical_path import critical_path
+from sampo.scheduler.utils.critical_path import critical_path_graph, critical_path_schedule
 from sampo.schemas import Schedule, WorkGraph, ScheduledProject, WorkTimeEstimator, GraphNode
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 from sampo.utilities.visualization.resources import resource_employment_fig, EmploymentFigType
@@ -70,7 +70,7 @@ class Visualization:
         self.wg_vis = WorkGraphVisualization(wg)
 
     def schedule(self, schedule: Schedule, start_date: str, work_estimator: WorkTimeEstimator | None = None):
-        critical_path_value = critical_path(self.wg_vis.wg.nodes, work_estimator) if work_estimator else None
+        critical_path_value = critical_path_schedule(self.wg_vis.wg.nodes, schedule.to_schedule_work_dict)
         self.schedule_vis = ScheduleVisualization(critical_path_value, schedule, start_date)
 
     def shape(self, fig_shape: tuple[int, int]) -> 'Visualization':

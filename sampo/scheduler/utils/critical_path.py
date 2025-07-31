@@ -1,9 +1,11 @@
+from functools import partial
 from operator import itemgetter
 
 from sampo.scheduler.utils import get_head_nodes_with_connections_mappings, \
     get_head_nodes_with_connections_mappings_nodes
-from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade
-from sampo.schemas import GraphNode, WorkTimeEstimator
+from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade, \
+    calculate_scheduled_time_cascade
+from sampo.schemas import GraphNode, WorkTimeEstimator, ScheduledWork
 
 
 def ford_bellman(nodes: list[GraphNode],
@@ -49,15 +51,21 @@ def ford_bellman(nodes: list[GraphNode],
     return path_weights
 
 
-def critical_path(nodes: list[GraphNode], work_estimator: WorkTimeEstimator):
+def critical_path_graph(nodes: list[GraphNode], work_estimator: WorkTimeEstimator):
     weights = {node.id: -work_priority(node, calculate_working_time_cascade, work_estimator) for node in nodes}
     head_nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings_nodes(nodes)
-    return critical_path_inner(head_nodes, weights, node_id2parent_ids)
+    return _critical_path(head_nodes, weights, node_id2parent_ids)
 
 
-def critical_path_inner(nodes: list[GraphNode],
-                        weights: dict[str, float],
-                        node_id2parent_ids: dict[str, set[str]]):
+def critical_path_schedule(nodes: list[GraphNode], scheduled_works: dict[str, ScheduledWork]):
+    weights = {node.id: -work_priority(node, partial(calculate_scheduled_time_cascade, id2swork=scheduled_works), None) for node in nodes}
+    head_nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings_nodes(nodes)
+    return _critical_path(head_nodes, weights, node_id2parent_ids)
+
+
+def _critical_path(nodes: list[GraphNode],
+                   weights: dict[str, float],
+                   node_id2parent_ids: dict[str, set[str]]):
     cum_weights = ford_bellman(nodes, weights, node_id2parent_ids)
     node_dict = {node.id: node for node in nodes}
 
@@ -69,6 +77,9 @@ def critical_path_inner(nodes: list[GraphNode],
     while node.children:
         critical_path.append(node)
 
+        # sorted_nodes = sorted(node.children, key=lambda x: cum_weights[x.id])
+
+        # node = sorted_nodes[0]
         node = min(node.children, key=lambda x: cum_weights[x.id])
 
     return critical_path

@@ -97,7 +97,7 @@ class DefaultInputPipeline(InputPipeline):
         self.sep_wg = sep
         return self
 
-    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, float]) \
             -> 'InputPipeline':
         """
         Mandatory argument.

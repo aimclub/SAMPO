@@ -20,7 +20,7 @@ contractors = [get_contractor_by_wg(simple_wg, 10, ContractorGenerationMethod.MA
 
 project = SchedulingPipeline.create() \
     .wg('9-1-ukpg-full-with-priority.csv', sep=';', all_connections=True) \
-    .contractors((ContractorGenerationMethod.MAX, 10)) \
+    .contractors((ContractorGenerationMethod.MAX, 1, 1000)) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
     .schedule(scheduler) \
     .visualization('2022-01-01')[0] \

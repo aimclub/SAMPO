@@ -204,11 +204,12 @@ class DefaultInputPipeline(InputPipeline):
                 )
 
         if not isinstance(self._contractors, list):
-            generation_method, contractors_number = self._contractors
+            generation_method, contractors_number, scaler = self._contractors
             self._contractors = [get_contractor_by_wg(self._wg,
                                                       method=generation_method,
                                                       contractor_id=str(i),
-                                                      contractor_name='Contractor' + ' ' + str(i + 1))
+                                                      contractor_name='Contractor' + ' ' + str(i + 1),
+                                                      scaler=scaler)
                            for i in range(contractors_number)]
 
         if not contractors_can_perform_work_graph(self._contractors, self._wg):

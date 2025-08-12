@@ -41,6 +41,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
 
     def create_delivery_row(i, mat_name, material) -> dict:
         return {'idx': i,
+                'task_id': 'None',
                 'contractor': material[-1],
                 'cost': 0,
                 'volume': material[0],
@@ -73,6 +74,7 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
 
     def create_zone_row(i, zone_names, zone) -> dict:
         return {'idx': i,
+                'task_id': 'None',
                 'contractor': 'Access cards',
                 'cost': 0,
                 'volume': 0,
@@ -122,9 +124,11 @@ def schedule_gant_chart_fig(schedule_dataframe: pd.DataFrame,
                                                                      r['task_name'].split('&')[0]]['idx'].iloc[0]
                                  if ':' in r['task_name'] else r['idx'], axis=1))
 
+
     fig = px.timeline(schedule_dataframe, x_start='start', x_end='finish', y='idx', hover_name='task_name',
                       color=schedule_dataframe.loc[:, 'color'] if 'color' in schedule_dataframe.columns else None,
-                      hover_data={'start': True,
+                      hover_data={'task_id': True,
+                                  'start': True,
                                   'finish': True,
                                   'task_name_mapped': True,
                                   'cost': True,

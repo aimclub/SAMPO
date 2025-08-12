@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+from sampo.generator.environment import ContractorGenerationMethod
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
@@ -28,7 +29,7 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
-    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str) -> 'InputPipeline':
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, int]) -> 'InputPipeline':
         ...
 
     @abstractmethod

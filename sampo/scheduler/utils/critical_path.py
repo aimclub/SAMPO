@@ -1,8 +1,7 @@
 from functools import partial
 from operator import itemgetter
 
-from sampo.scheduler.utils import get_head_nodes_with_connections_mappings, \
-    get_head_nodes_with_connections_mappings_nodes
+from sampo.scheduler.utils import get_head_nodes_with_connections_mappings_nodes
 from sampo.scheduler.utils.time_computaion import work_priority, calculate_working_time_cascade, \
     calculate_scheduled_time_cascade
 from sampo.schemas import GraphNode, WorkTimeEstimator, ScheduledWork
@@ -20,6 +19,10 @@ def ford_bellman(nodes: list[GraphNode],
                                                   for start in nodes
                                                   for finish in node_id2parent_ids[start.id]
                                                   if finish in path_weights])
+
+    if not edges:
+        return path_weights
+
     # for changes heuristic
     changed = False
     # run standard ford-bellman on reversed edges
@@ -51,21 +54,36 @@ def ford_bellman(nodes: list[GraphNode],
     return path_weights
 
 
-def critical_path_graph(nodes: list[GraphNode], work_estimator: WorkTimeEstimator):
+def critical_path_graph(nodes: list[GraphNode], work_estimator: WorkTimeEstimator) -> list[GraphNode]:
     weights = {node.id: -work_priority(node, calculate_working_time_cascade, work_estimator) for node in nodes}
     head_nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings_nodes(nodes)
-    return _critical_path(head_nodes, weights, node_id2parent_ids)
+    return _critical_path(head_nodes, weights, node_id2parent_ids, node_id2child_ids)
 
 
-def critical_path_schedule(nodes: list[GraphNode], scheduled_works: dict[str, ScheduledWork]):
+def critical_path_schedule(nodes: list[GraphNode], scheduled_works: dict[str, ScheduledWork]) -> list[GraphNode]:
     weights = {node.id: -work_priority(node, partial(calculate_scheduled_time_cascade, id2swork=scheduled_works), None) for node in nodes}
     head_nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings_nodes(nodes)
-    return _critical_path(head_nodes, weights, node_id2parent_ids)
+    return _critical_path(head_nodes, weights, node_id2parent_ids, node_id2child_ids)
+
+
+def critical_path_schedule_lag_optimized(nodes_optimized: list[GraphNode],
+                                         scheduled_works_optimized: dict[str, ScheduledWork],
+                                         nodes: list[GraphNode]) -> list[GraphNode]:
+    node_dict = {node.id: node for node in nodes}
+
+    cp_optimized = critical_path_schedule(nodes_optimized, scheduled_works_optimized)
+    cp = []
+    for node in cp_optimized:
+        while node.is_inseparable_parent():
+            node = node.inseparable_son
+        cp.append(node_dict[node.id])
+    return cp
 
 
 def _critical_path(nodes: list[GraphNode],
                    weights: dict[str, float],
-                   node_id2parent_ids: dict[str, set[str]]):
+                   node_id2parent_ids: dict[str, set[str]],
+                   node_id2child_ids: dict[str, set[str]]) -> list[GraphNode]:
     cum_weights = ford_bellman(nodes, weights, node_id2parent_ids)
     node_dict = {node.id: node for node in nodes}
 
@@ -78,8 +96,8 @@ def _critical_path(nodes: list[GraphNode],
         critical_path.append(node)
 
         # sorted_nodes = sorted(node.children, key=lambda x: cum_weights[x.id])
-
+        # [(node, cum_weights[node.id]) for node in critical_path]
         # node = sorted_nodes[0]
-        node = min(node.children, key=lambda x: cum_weights[x.id])
+        node = node_dict[min(node_id2child_ids[node.id], key=lambda x: cum_weights[x])]
 
     return critical_path

@@ -1,7 +1,8 @@
 from matplotlib.figure import Figure
 
 from sampo.pipeline import PipelineError
-from sampo.scheduler.utils.critical_path import critical_path_graph, critical_path_schedule
+from sampo.scheduler.utils.critical_path import critical_path_graph, critical_path_schedule, \
+    critical_path_schedule_lag_optimized
 from sampo.schemas import Schedule, WorkGraph, ScheduledProject, WorkTimeEstimator, GraphNode
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 from sampo.utilities.visualization.resources import resource_employment_fig, EmploymentFigType
@@ -41,8 +42,9 @@ class ScheduleVisualization:
 
 
 class WorkGraphVisualization:
-    def __init__(self, wg: WorkGraph):
+    def __init__(self, wg: WorkGraph, raw_wg: WorkGraph):
         self.wg = wg
+        self.raw_wg = raw_wg
         self._shape = 10, 10
 
     def fig(self, shape: tuple[int, int]) -> 'WorkGraphVisualization':
@@ -60,17 +62,19 @@ class Visualization:
         self.schedule_vis = None
 
     @staticmethod
-    def from_project(project: ScheduledProject, start_date: str, work_estimator: WorkTimeEstimator | None = None) -> 'Visualization':
+    def from_project(project: ScheduledProject, start_date: str) -> 'Visualization':
         vis = Visualization()
-        vis.wg(project.wg)
-        vis.schedule(project.schedule, start_date, work_estimator)
+        vis.wg(project.wg, project.raw_wg)
+        vis.schedule(project.schedule, project.raw_schedule, start_date)
         return vis
 
-    def wg(self, wg: WorkGraph):
-        self.wg_vis = WorkGraphVisualization(wg)
+    def wg(self, wg: WorkGraph, raw_wg: WorkGraph):
+        self.wg_vis = WorkGraphVisualization(wg, raw_wg)
 
-    def schedule(self, schedule: Schedule, start_date: str, work_estimator: WorkTimeEstimator | None = None):
-        critical_path_value = critical_path_schedule(self.wg_vis.wg.nodes, schedule.to_schedule_work_dict)
+    def schedule(self, schedule: Schedule, raw_schedule: Schedule, start_date: str):
+        critical_path_value = critical_path_schedule_lag_optimized(self.wg_vis.raw_wg.nodes,
+                                                                   raw_schedule.to_schedule_work_dict,
+                                                                   self.wg_vis.wg.nodes)
         self.schedule_vis = ScheduleVisualization(critical_path_value, schedule, start_date)
 
     def shape(self, fig_shape: tuple[int, int]) -> 'Visualization':

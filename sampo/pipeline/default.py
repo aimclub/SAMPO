@@ -58,7 +58,7 @@ class DefaultInputPipeline(InputPipeline):
             = ContractorGenerationMethod.AVG, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_orders: list[list[GraphNode]] | None = None
-        self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
+        self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.FALSE
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
@@ -242,17 +242,6 @@ class DefaultInputPipeline(InputPipeline):
             print('Trying to apply local optimizations to non-generic scheduler, ignoring it')
 
         match self._lag_optimize:
-            case LagOptimizationStrategy.NONE:
-                wg = self._wg
-                schedules = scheduler.schedule_with_cache(wg, self._contractors,
-                                                          self._spec,
-                                                          landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time,
-                                                          validate=validate)
-                node_orders = [node_order for _, _, _, node_order in schedules]
-                schedules = [schedule for schedule, _, _, _ in schedules]
-                self._node_orders = node_orders
-
             case LagOptimizationStrategy.AUTO:
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
@@ -328,4 +317,4 @@ class DefaultSchedulePipeline(SchedulePipeline):
 
     def visualization(self, start_date: str) -> list['Visualization']:
         from sampo.utilities.visualization import Visualization
-        return [Visualization.from_project(project, start_date, self._input._work_estimator) for project in self.finish()]
+        return [Visualization.from_project(project, start_date) for project in self.finish()]

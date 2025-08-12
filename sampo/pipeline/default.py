@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sampo.generator.environment import ContractorGenerationMethod
+from sampo.generator.environment import ContractorGenerationMethod, get_contractor_by_wg
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -97,7 +97,7 @@ class DefaultInputPipeline(InputPipeline):
         self.sep_wg = sep
         return self
 
-    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, float]) \
             -> 'InputPipeline':
         """
         Mandatory argument.
@@ -202,6 +202,14 @@ class DefaultInputPipeline(InputPipeline):
                     contractor_info=self._contractors,
                     work_resource_estimator=self._work_estimator
                 )
+
+        if not isinstance(self._contractors, list):
+            generation_method, contractors_number = self._contractors
+            self._contractors = [get_contractor_by_wg(self._wg,
+                                                      method=generation_method,
+                                                      contractor_id=str(i),
+                                                      contractor_name='Contractor' + ' ' + str(i + 1))
+                           for i in range(contractors_number)]
 
         if not contractors_can_perform_work_graph(self._contractors, self._wg):
             raise NoSufficientContractorError('Contractors are not able to perform the graph of works')
@@ -319,4 +327,4 @@ class DefaultSchedulePipeline(SchedulePipeline):
 
     def visualization(self, start_date: str) -> list['Visualization']:
         from sampo.utilities.visualization import Visualization
-        return [Visualization.from_project(project, start_date) for project in self.finish()]
+        return [Visualization.from_project(project, start_date, self._input._work_estimator) for project in self.finish()]

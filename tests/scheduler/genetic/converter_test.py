@@ -14,10 +14,10 @@ from tests.scheduler.genetic.fixtures import setup_toolbox
 def test_convert_schedule_to_chromosome(setup_toolbox):
     tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
 
-    schedule = HEFTScheduler().schedule(setup_wg, setup_contractors, validate=True,
-                                        landscape=setup_landscape_many_holders)[0]
+    schedule, _, _, node_order = HEFTScheduler().schedule_with_cache(setup_wg, setup_contractors, validate=True,
+                                                                     landscape=setup_landscape_many_holders)[0]
 
-    chromosome = tb.schedule_to_chromosome(schedule=schedule)
+    chromosome = tb.schedule_to_chromosome(schedule=schedule, order=node_order)
     assert tb.validate(chromosome)
 
 

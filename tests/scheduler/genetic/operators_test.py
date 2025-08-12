@@ -77,11 +77,11 @@ def test_mate_resources(setup_toolbox, setup_wg):
         individual1, individual2 = random.sample(population, 2)
         individual1, individual2 = tb.mate_resources(individual1, individual2, optimize_resources=False)
 
-        # check there are correct resources at mate positions
+        # check there are correct resource amounts
         assert (resources_border[0] <= individual1[1].T[:-1]).all() and \
                (individual1[1].T[:-1] <= resources_border[1]).all()
-        assert (resources_border[0] <= individual1[1].T[:-1]).all() and \
-               (individual1[1].T[:-1] <= resources_border[1]).all()
+        assert (resources_border[0] <= individual2[1].T[:-1]).all() and \
+               (individual2[1].T[:-1] <= resources_border[1]).all()
 
         # check the whole chromosomes
         assert tb.validate(individual1)

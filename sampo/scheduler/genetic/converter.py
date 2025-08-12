@@ -3,11 +3,13 @@ import copy
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
+from sampo.base import SAMPO
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
 from sampo.scheduler.utils import WorkerContractorPool
+from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
@@ -42,8 +44,8 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     :return:
     """
 
-    order: list[ScheduledWork] = order if order is not None else [work for work in schedule.works
-                                                                  if work.id in work_id2index]
+    # order: list[GraphNode] = order if order is not None else [work for work in schedule.works
+    #                                                           if work.id in work_id2index]
 
     # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in order])
@@ -165,7 +167,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
         if cur_work_spec.assigned_time is not None:
             cur_exec_time = cur_work_spec.assigned_time
         else:
-            cur_exec_time = work_estimator.estimate_time(cur_node.work_unit, cur_worker_team)
+            cur_exec_time = calculate_working_time_cascade(cur_node, cur_worker_team, work_estimator)
         return cur_node, cur_worker_team, cur_contractor, cur_exec_time, cur_work_spec
 
     # account the remaining works

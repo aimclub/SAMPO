@@ -9,6 +9,7 @@ from sampo.scheduler.base import Scheduler
 from sampo.scheduler.generic import GenericScheduler
 from sampo.scheduler.utils import get_worker_contractor_pool
 from sampo.scheduler.utils.local_optimization import OrderLocalOptimizer, ScheduleLocalOptimizer
+from sampo.utilities.priority import check_and_correct_priorities
 from sampo.schemas.apply_queue import ApplyQueue
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
@@ -188,7 +189,7 @@ class DefaultInputPipeline(InputPipeline):
         self._local_optimize_stack.add(optimizer.optimize, area)
         return self
 
-    def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+    def schedule(self, scheduler: Scheduler, validate: bool = False) -> 'SchedulePipeline':
         if isinstance(self._wg, pd.DataFrame) or isinstance(self._wg, str):
             self._wg, self._contractors = \
                 CSVParser.work_graph_and_contractors(
@@ -202,6 +203,8 @@ class DefaultInputPipeline(InputPipeline):
                     contractor_info=self._contractors,
                     work_resource_estimator=self._work_estimator
                 )
+
+        check_and_correct_priorities(self._wg)
 
         if not contractors_can_perform_work_graph(self._contractors, self._wg):
             raise NoSufficientContractorError('Contractors are not able to perform the graph of works')
@@ -217,9 +220,14 @@ class DefaultInputPipeline(InputPipeline):
                     super().__init__(delegate)
 
                 def delegate_prioritization(self, orig_prioritization):
-                    def prioritization(wg: WorkGraph, work_estimator: WorkTimeEstimator):
+                    def prioritization(head_nodes: list[GraphNode],
+                                       node_id2parent_ids: dict[str, set[str]],
+                                       node_id2child_ids: dict[str, set[str]],
+                                       work_estimator: WorkTimeEstimator):
                         # call delegate's prioritization and apply local optimizations
-                        return s_self._local_optimize_stack.apply(orig_prioritization(wg, work_estimator))
+                        return s_self._local_optimize_stack.apply(
+                            orig_prioritization(head_nodes, node_id2parent_ids, node_id2child_ids, work_estimator)
+                        )
 
                     return prioritization
 
@@ -233,7 +241,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]
                 self._node_orders = node_orders
@@ -244,7 +253,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg1, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders1 = [node_order for _, _, _, node_order in schedules]
                 schedules1 = [schedule for schedule, _, _, _ in schedules]
                 min_time1 = min([schedule.execution_time for schedule in schedules1])
@@ -253,7 +263,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg2, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders2 = [node_order for _, _, _, node_order in schedules]
                 schedules2 = [schedule for schedule, _, _, _ in schedules]
                 min_time2 = min([schedule.execution_time for schedule in schedules2])
@@ -272,7 +283,8 @@ class DefaultInputPipeline(InputPipeline):
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time)
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
                 node_orders = [node_order for _, _, _, node_order in schedules]
                 schedules = [schedule for schedule, _, _, _ in schedules]
                 self._node_orders = node_orders

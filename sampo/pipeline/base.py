@@ -76,7 +76,7 @@ class InputPipeline(ABC):
         ...
 
     @abstractmethod
-    def schedule(self, scheduler: Scheduler) -> 'SchedulePipeline':
+    def schedule(self, scheduler: Scheduler, validate: bool = False) -> 'SchedulePipeline':
         ...
 
 

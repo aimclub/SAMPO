@@ -29,19 +29,41 @@ class TopologicalScheduler(GenericScheduler):
                          optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
                          work_estimator=work_estimator)
 
+    def _shuffle(self, nodes: set[str]) -> list[str]:
+        """
+        Shuffle nodes that are on the same level.
+
+        :param nodes: list of nodes
+        :return: list of shuffled indices
+        """
+        return list(nodes)
+
     # noinspection PyMethodMayBeStatic
-    def _topological_sort(self, head_nodes: list[GraphNode],
+    def _topological_sort(self,
+                          head_nodes: list[GraphNode],
                           node_id2parent_ids: dict[str, set[str]],
                           node_id2child_ids: dict[str, set[str]],
                           work_estimator: WorkTimeEstimator) -> list[GraphNode]:
-        """
-        Sort 'WorkGraph' in topological order.
 
-        :param head_nodes: A list sorted in topological order and containing only the head nodes
-        :param work_estimator: function that calculates execution time of the work
-        :return: list of sorted nodes in graph
-        """
-        return list(head_nodes)
+        ordered_nodes = []
+
+        priority_groups = extract_priority_groups_from_nodes(head_nodes)
+
+        id2node = {node.id: node for node in head_nodes}
+
+        for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0)):
+            priority_group_set = set(node.id for node in priority_group)
+            priority_group_dict = {k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
+                                   for k in priority_group}
+            tsorted_node_ids: list[str] = [node_id
+                                           for level in toposort(priority_group_dict)
+                                           for node_id in self._shuffle(level)]
+
+            ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
+
+        # validate_order(ordered_nodes)
+
+        return ordered_nodes
 
 
 def toposort(data):
@@ -103,39 +125,14 @@ class RandomizedTopologicalScheduler(TopologicalScheduler):
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
-    def _topological_sort(self,
-                          head_nodes: list[GraphNode],
-                          node_id2parent_ids: dict[str, set[str]],
-                          node_id2child_ids: dict[str, set[str]],
-                          work_estimator: WorkTimeEstimator) -> list[GraphNode]:
-        def shuffle(nodes: set[str]) -> list[str]:
-            """
-            Shuffle nodes that are on the same level.
+    def _shuffle(self, nodes: set[str]) -> list[str]:
+        """
+        Shuffle nodes that are on the same level.
 
-            :param nodes: list of nodes
-            :return: list of shuffled indices
-            """
-            nds = list(nodes)
-            indices = np.arange(len(nds))
-            self._random_state.shuffle(indices)
-            return [nds[ind] for ind in indices]
-
-        ordered_nodes = []
-
-        priority_groups = extract_priority_groups_from_nodes(head_nodes)
-
-        id2node = {node.id: node for node in head_nodes}
-
-        for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0)):
-            priority_group_set = set(node.id for node in priority_group)
-            priority_group_dict = {k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
-                                   for k in priority_group}
-            tsorted_node_ids: list[str] = [node_id
-                                           for level in toposort(priority_group_dict)
-                                           for node_id in shuffle(level)]
-
-            ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
-
-        # validate_order(ordered_nodes)
-
-        return ordered_nodes
+        :param nodes: list of nodes
+        :return: list of shuffled indices
+        """
+        nds = list(nodes)
+        indices = np.arange(len(nds))
+        self._random_state.shuffle(indices)
+        return [nds[ind] for ind in indices]

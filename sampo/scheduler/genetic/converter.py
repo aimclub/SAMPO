@@ -3,6 +3,7 @@ import copy
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
+from sampo.base import SAMPO
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
@@ -43,8 +44,8 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     :return:
     """
 
-    order: list[ScheduledWork] = order if order is not None else [work for work in schedule.works
-                                                                  if work.id in work_id2index]
+    # order: list[GraphNode] = order if order is not None else [work for work in schedule.works
+    #                                                           if work.id in work_id2index]
 
     # order works part of chromosome
     order_chromosome: np.ndarray = np.array([work_id2index[work.id] for work in order])

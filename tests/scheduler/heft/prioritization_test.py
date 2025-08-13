@@ -11,7 +11,7 @@ def test_correct_order(setup_wg):
     order = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
 
     seen: Set[GraphNode] = set()
-    for node in reversed(order):
+    for node in order:
         seen.update(node.get_inseparable_chain_with_self())
         for inode in node.get_inseparable_chain_with_self():
             assert all(pnode in seen for pnode in inode.parents)

@@ -55,8 +55,8 @@ class DefaultInputPipeline(InputPipeline):
 
     def __init__(self):
         self._wg: WorkGraph | pd.DataFrame | str | None = None
-        self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int] | None \
-            = ContractorGenerationMethod.AVG, 1
+        self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, int] | None \
+            = ContractorGenerationMethod.AVG, 1, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_orders: list[list[GraphNode]] | None = None
         self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.FALSE

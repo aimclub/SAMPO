@@ -16,7 +16,7 @@ def init_chromosomes_f(wg: WorkGraph,
                        init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                        landscape: LandscapeConfiguration = LandscapeConfiguration()):
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
-        worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
+        worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
@@ -52,12 +52,15 @@ def prepare_optimized_data_structures(wg: WorkGraph,
 
     nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(wg)
     node_indices = list(range(len(nodes)))
+
     index2node: dict[int, GraphNode] = {index: node for index, node in enumerate(nodes)}
     work_id2index: dict[str, int] = {node.id: index for index, node in index2node.items()}
     children = {work_id2index[node_id]: set(work_id2index[child_id] for child_id in child_ids)
                 for node_id, child_ids in node_id2child_ids.items()}
     parents = {work_id2index[node_id]: set(work_id2index[parent_id] for parent_id in parent_ids)
                for node_id, parent_ids in node_id2parent_ids.items()}
+
+    priorities = np.array([index2node[i].work_unit.priority for i in range(len(index2node))])
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
     for work_index, node in index2node.items():
@@ -67,8 +70,8 @@ def prepare_optimized_data_structures(wg: WorkGraph,
             resources_border[1, worker_index, work_index] = req.max_count
 
     return (worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj,
-            worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children,
-            resources_border)
+            worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents,
+            children, resources_border)
 
 
 def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
@@ -88,7 +91,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                                             only_lft_initialization: bool = False,
                                             is_multiobjective: bool = False) -> Toolbox:
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
-        worker_pool_indices, contractor2index, contractor_borders, node_indices, parents, children, \
+        worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
 
     return init_toolbox(wg,
@@ -112,6 +115,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         contractor2index,
                         contractor_borders,
                         node_indices,
+                        priorities,
                         parents,
                         children,
                         resources_border,

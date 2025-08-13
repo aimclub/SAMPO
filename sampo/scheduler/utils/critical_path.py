@@ -76,7 +76,8 @@ def critical_path_schedule_lag_optimized(nodes_optimized: list[GraphNode],
     for node in cp_optimized:
         while node.is_inseparable_parent():
             node = node.inseparable_son
-        cp.append(node_dict[node.id])
+        if node_dict[node.id] not in cp:
+            cp.append(node_dict[node.id])
     return cp
 
 

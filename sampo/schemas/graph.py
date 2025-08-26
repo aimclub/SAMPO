@@ -56,8 +56,11 @@ class GraphNode(JSONSerializable['GraphNode']):
                  parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
         self._work_unit = work_unit
         self._parent_edges = []
-        self.add_parents(parent_works)
         self._children_edges = []
+        self.add_parents(parent_works)
+
+        if any(w.id == self.id for w in self.children):
+            raise ValueError('Cycle')
 
     def __hash__(self) -> int:
         return hash(self.id)

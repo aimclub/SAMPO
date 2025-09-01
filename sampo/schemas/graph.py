@@ -1,3 +1,8 @@
+"""Core graph structures for works scheduling.
+
+Основные структуры графов для планирования работ.
+"""
+
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
@@ -18,8 +23,9 @@ from sampo.schemas.works import WorkUnit
 
 
 class EdgeType(Enum):
-    """
-    Class to define a certain type of edge in graph
+    """Types of edges in the work graph.
+
+    Типы ребер в графе работ.
     """
     InseparableFinishStart = 'IFS'
     LagFinishStart = 'FFS'
@@ -29,6 +35,18 @@ class EdgeType(Enum):
 
     @staticmethod
     def is_dependency(edge) -> bool:
+        """Check whether the edge represents a dependency.
+
+        Проверяет, представляет ли ребро зависимость.
+
+        Args:
+            edge (str | EdgeType): edge value to inspect.
+                Значение ребра для проверки.
+
+        Returns:
+            bool: ``True`` if the edge denotes a dependency.
+                ``True``, если ребро обозначает зависимость.
+        """
         if edge == '-1':  # ... no comments
             return True
         if isinstance(edge, EdgeType):
@@ -38,9 +56,21 @@ class EdgeType(Enum):
 
 @dataclass
 class GraphEdge:
+    """Edge connecting two nodes in a work graph.
+
+    Ребро, соединяющее две вершины графа работ.
+
+    Attributes:
+        start (GraphNode): start node.
+            Начальная вершина.
+        finish (GraphNode): finish node.
+            Конечная вершина.
+        lag (float | None): delay between nodes.
+            Задержка между вершинами.
+        type (EdgeType | None): type of connection.
+            Тип связи.
     """
-    The edge of graph with start and finish vertexes
-    """
+
     start: 'GraphNode'
     finish: 'GraphNode'
     lag: float | None = 0
@@ -48,12 +78,24 @@ class GraphEdge:
 
 
 class GraphNode(JSONSerializable['GraphNode']):
-    """
-    Class to describe Node in graph
+    """Node of a work graph.
+
+    Узел графа работ.
     """
 
     def __init__(self, work_unit: WorkUnit,
                  parent_works: list['GraphNode'] | list[tuple['GraphNode', float, EdgeType]]):
+        """Initialize node with work unit and parents.
+
+        Инициализирует узел рабочей единицей и родителями.
+
+        Args:
+            work_unit (WorkUnit): associated work unit.
+                Связанная рабочая единица.
+            parent_works (list[GraphNode] | list[tuple[GraphNode, float, EdgeType]]):
+                parent nodes with lag and edge type.
+                родительские узлы с лагом и типом связи.
+        """
         self._work_unit = work_unit
         self._parent_edges = []
         self.add_parents(parent_works)
@@ -100,10 +142,14 @@ class GraphNode(JSONSerializable['GraphNode']):
         self._work_unit = work_unit
 
     def add_parents(self, parent_works: list['GraphNode'] or list[tuple['GraphNode', float, EdgeType]]) -> None:
-        """
-        Two-sided linking of successors and predecessors
+        """Link node with parent works.
 
-        :param parent_works: list of parent works
+        Связывает узел с родительскими работами.
+
+        Args:
+            parent_works (list[GraphNode] | list[tuple[GraphNode, float, EdgeType]]):
+                list of parent works.
+                список родительских работ.
         """
         edges: list[GraphEdge] = []
         if parent_works:
@@ -142,10 +188,17 @@ class GraphNode(JSONSerializable['GraphNode']):
         return self.inseparable_parent is not None
 
     def traverse_children(self, topologically: bool = False):
-        """
-        DFS from current vertex to down
-        :param topologically: is DFS need to go in topologically way
-        :return:
+        """Iterate over child nodes in depth-first order.
+
+        Итеративно обходит дочерние узлы в порядке обхода в глубину.
+
+        Args:
+            topologically (bool): whether traversal respects topological order.
+                Следует ли соблюдать топологический порядок при обходе.
+
+        Yields:
+            GraphNode: next node in traversal.
+                Очередной узел обхода.
         """
         visited_vertexes = set()
         vertexes_to_visit = deque([self])
@@ -161,9 +214,13 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     @cached_property
     def inseparable_son(self) -> Optional['GraphNode']:
-        """
-        Return inseparable son (amount of inseparable sons at most 1)
-        :return: inseparable son
+        """Return inseparable successor if it exists.
+
+        Возвращает несепарабельного потомка, если он существует.
+
+        Returns:
+            Optional[GraphNode]: inseparable successor or ``None``.
+                Несепарабельный потомок или ``None``.
         """
         inseparable_children = [x.finish for x in self._children_edges
                                 if x.type == EdgeType.InseparableFinishStart]
@@ -171,62 +228,98 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     @cached_property
     def inseparable_parent(self) -> Optional['GraphNode']:
-        """
-        Return predecessor of current vertex in inseparable chain
-        :return: inseparable parent
+        """Return predecessor in an inseparable chain.
+
+        Возвращает предшественника в несепарабельной цепочке.
+
+        Returns:
+            Optional[GraphNode]: inseparable parent or ``None``.
+                Несепарабельный родитель или ``None``.
         """
         inseparable_parents = [x.start for x in self._parent_edges if x.type == EdgeType.InseparableFinishStart]
         return inseparable_parents[0] if inseparable_parents else None
 
     @cached_property
     def parents(self) -> list['GraphNode']:
-        """
-        Return list of predecessors of current vertex
-        :return: list of parents
+        """List of predecessor nodes.
+
+        Список узлов-предшественников.
+
+        Returns:
+            list[GraphNode]: parent nodes.
+                Узлы-предшественники.
         """
         return [edge.start for edge in self.edges_to if EdgeType.is_dependency(edge.type)]
 
     @cached_property
     def parents_set(self) -> set['GraphNode']:
-        """
-        Return unique predecessors of current vertex
-        :return: set of parents
+        """Unique set of predecessors.
+
+        Уникальный набор предшественников.
+
+        Returns:
+            set[GraphNode]: unique parent nodes.
+                Уникальные узлы-предшественники.
         """
         return set(self.parents)
 
     @cached_property
     def children(self) -> list['GraphNode']:
-        """
-        Return list of successors of current vertex
-        :return: list of children
+        """List of successor nodes.
+
+        Список узлов-потомков.
+
+        Returns:
+            list[GraphNode]: child nodes.
+                Узлы-потомки.
         """
         return [edge.finish for edge in self.edges_from if EdgeType.is_dependency(edge.type)]
 
     @cached_property
     def children_set(self) -> set['GraphNode']:
-        """
-        Return unique successors of current vertex
-        :return: set of children
+        """Unique set of successors.
+
+        Уникальный набор потомков.
+
+        Returns:
+            set[GraphNode]: unique child nodes.
+                Уникальные узлы-потомки.
         """
         return set(self.children)
 
     @cached_property
     def neighbors(self):
-        """
-        Get all edges that have types SS with current vertex
-        :return: list of neighbours
+        """Nodes connected by Start-Start edges.
+
+        Узлы, соединенные ребрами типа Start-Start.
+
+        Returns:
+            list[GraphNode]: neighboring nodes.
+                Соседние узлы.
         """
         return [edge.start for edge in self._parent_edges if edge.type == EdgeType.StartStart]
 
     @property
     def edges_to(self) -> list[GraphEdge]:
+        """Incoming edges.
+
+        Входящие ребра.
+
+        Returns:
+            list[GraphEdge]: edges leading to this node.
+                Ребра, ведущие к этому узлу.
+        """
         return self._parent_edges
 
     @property
     def edges_from(self) -> list[GraphEdge]:
-        """
-        Return all successors of current vertex
-        :return: list of successors
+        """Outgoing edges from the node.
+
+        Исходящие из узла ребра.
+
+        Returns:
+            list[GraphEdge]: edges leading to child nodes.
+                Ребра, ведущие к дочерним узлам.
         """
         return self._children_edges
 
@@ -240,34 +333,38 @@ class GraphNode(JSONSerializable['GraphNode']):
 
     @cache
     def get_inseparable_chain(self) -> Optional[list['GraphNode']]:
-        """
-        Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
-        'INSEPARABLE',
-        IF self NODE IS THE START NODE OF SUCH CHAIN. Otherwise, None.
+        """Return chain of nodes connected by inseparable edges.
 
-        :return: list of GraphNode or None
+        Возвращает цепочку узлов, соединенных несепарабельными ребрами.
+
+        Returns:
+            list[GraphNode] | None: chain if current node starts it, otherwise ``None``.
+                Цепочка, если текущий узел является начальным, иначе ``None``.
         """
         return [self] + self._get_inseparable_children() \
             if self.inseparable_son and not self.inseparable_parent \
             else None
 
     def get_inseparable_chain_with_self(self) -> list['GraphNode']:
-        """
-        Gets an ordered list of whole chain of nodes, connected with edges of type INSEPARABLE_FINISH_START =
-        'INSEPARABLE'.
+        """Return inseparable chain including current node.
 
-        :return: list of `inseparable chain` with starting node
+        Возвращает несепарабельную цепочку, включая текущий узел.
+
+        Returns:
+            list[GraphNode]: inseparable chain with starting node.
+                Несепарабельная цепочка с начальным узлом.
         """
         chain = self.get_inseparable_chain()
         return chain if chain else [self]
 
     def _get_inseparable_children(self) -> list['GraphNode']:
-        """
-        Recursively gets a child, connected with INSEPARABLE_FINISH_START edge, its inseparable child, etc.
-        As any node may contain an inseparable connection with only one of its children, there is no need to choose.
-        If no children are connected inseparably, returns None.
+        """Recursively collect inseparable children.
 
-        :return: list[GraphNode]. Empty, if there is no inseparable children
+        Рекурсивно собирает несепарабельных потомков.
+
+        Returns:
+            list[GraphNode]: child chain or empty list.
+                Цепочка потомков или пустой список.
         """
         inseparable_child = self.inseparable_son
         return [inseparable_child] + inseparable_child._get_inseparable_children() \
@@ -275,26 +372,47 @@ class GraphNode(JSONSerializable['GraphNode']):
             else []
 
     def _add_child_edge(self, child: GraphEdge):
-        """
-        Append new edge with child
+        """Append new edge to a child node.
 
-        :param child:
-        :return: current graph node
+        Добавляет новое ребро к дочернему узлу.
+
+        Args:
+            child (GraphEdge): edge to append.
+                Ребро для добавления.
         """
         self._children_edges.append(child)
 
     def min_start_time(self, node2swork: dict['GraphNode', ScheduledWork]) -> Time:
+        """Return earliest start time based on predecessors.
+
+        Возвращает самое раннее время начала с учетом предшественников.
+
+        Args:
+            node2swork (dict[GraphNode, ScheduledWork]): mapping from nodes to scheduled works.
+                Отображение узлов в запланированные работы.
+
+        Returns:
+            Time: earliest feasible start time.
+                Наиболее раннее возможное время начала.
+        """
         return max((node2swork[edge.start].finish_time + int(edge.lag)
                     for edge in self.edges_to if edge.start in node2swork), default=Time(0))
 
 
 def get_start_stage(work_id: str | None = None, rand: Random | None = None) -> GraphNode:
-    """
-    Creates a service vertex necessary for constructing the graph of works,
-    which is the only vertex without a parent in the graph
-    :param work_id: id for the start node
-    :param rand: number generator with a fixed seed, or None for no fixed seed
-    :return: desired node
+    """Create a service start node for the work graph.
+
+    Создает сервисный стартовый узел для графа работ.
+
+    Args:
+        work_id (str | None): identifier of the start node.
+            Идентификатор стартового узла.
+        rand (Random | None): random generator with fixed seed.
+            Генератор случайных чисел с фиксированным зерном.
+
+    Returns:
+        GraphNode: created start node.
+            Созданный стартовый узел.
     """
     work_id = work_id or uuid_str(rand)
     work = WorkUnit(work_id, 'start of project', [], group='service_works', is_service_unit=True)
@@ -303,13 +421,22 @@ def get_start_stage(work_id: str | None = None, rand: Random | None = None) -> G
 
 def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]], work_id: str | None = None,
                      rand: Random | None = None) -> GraphNode:
-    """
-    Creates a service vertex necessary for constructing the graph of works,
-    which is the only vertex without children in the graph
-    :param parents: a list of all non-service nodes that do not have children
-    :param work_id: id for the start node
-    :param rand: number generator with a fixed seed, or None for no fixed seed
-    :return: desired node
+    """Create a service finish node for the work graph.
+
+    Создает сервисный завершающий узел для графа работ.
+
+    Args:
+        parents (list[GraphNode | tuple[GraphNode, float, EdgeType]]):
+            non-service nodes without children.
+            несервисные узлы без потомков.
+        work_id (str | None): identifier of the finish node.
+            Идентификатор завершающего узла.
+        rand (Random | None): random generator with fixed seed.
+            Генератор случайных чисел с фиксированным зерном.
+
+    Returns:
+        GraphNode: created finish node.
+            Созданный завершающий узел.
     """
     work_id = work_id or uuid_str(rand)
     finish_priority = max(node.work_unit.priority for node in parents)
@@ -321,8 +448,9 @@ def get_finish_stage(parents: list[GraphNode | tuple[GraphNode, float, EdgeType]
 # TODO Make property for list of GraphEdges??
 @dataclass
 class WorkGraph(JSONSerializable['WorkGraph']):
-    """
-    Class to describe graph of works
+    """Graph of works with service nodes.
+
+    Граф работ с сервисными узлами.
     """
     # service vertexes
     start: GraphNode
@@ -338,6 +466,10 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         self.reinit()
 
     def reinit(self):
+        """Recompute internal structures of the graph.
+
+        Пересоздает внутренние структуры графа.
+        """
         ordered_nodes, adj_matrix, dict_nodes = self._to_adj_matrix()
         # To avoid field set of frozen instance errors
         object.__setattr__(self, 'nodes', ordered_nodes)
@@ -347,6 +479,20 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     @classmethod
     def from_nodes(cls, nodes: list[GraphNode], rand: Random | None = None):
+        """Create work graph from list of nodes.
+
+        Создает граф работ из списка узлов.
+
+        Args:
+            nodes (list[GraphNode]): nodes to include.
+                Узлы для включения.
+            rand (Random | None): random generator with fixed seed.
+                Генератор случайных чисел с фиксированным зерном.
+
+        Returns:
+            WorkGraph: constructed graph.
+                Построенный граф.
+        """
         start = get_start_stage(rand=rand)
         for node in nodes:
             if len(node.parents) == 0:
@@ -356,6 +502,18 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         return WorkGraph(start, finish)
 
     def to_frame(self, save_req=False) -> pd.DataFrame:
+        """Convert graph to pandas DataFrame.
+
+        Преобразует граф в DataFrame библиотеки pandas.
+
+        Args:
+            save_req (bool): include resource requirements if ``True``.
+                Включать ли требования к ресурсам при ``True``.
+
+        Returns:
+            pandas.DataFrame: table representation of the graph.
+                Табличное представление графа.
+        """
         # Define the format of the output DataFrame
         graph_df_structure = {'activity_id': [],
                               'activity_name': [],
@@ -466,8 +624,15 @@ class WorkGraph(JSONSerializable['WorkGraph']):
 
     # TODO: Check that adj matrix is really need
     def _to_adj_matrix(self) -> tuple[list[GraphNode], dok_matrix, dict[str, GraphNode]]:
-        """
-        Build adjacency matrix from current graph
+        """Build adjacency matrix from current graph.
+
+        Строит матрицу смежности из текущего графа.
+
+        Returns:
+            tuple[list[GraphNode], dok_matrix, dict[str, GraphNode]]: ordered nodes,
+                adjacency matrix and id-to-node mapping.
+            tuple[list[GraphNode], dok_matrix, dict[str, GraphNode]]: упорядоченные узлы,
+                матрица смежности и отображение id-узел.
         """
         ordered_nodes: list[GraphNode] = list(self.start.traverse_children(topologically=True))
         node2ind: dict[GraphNode, int] = {

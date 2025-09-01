@@ -1,3 +1,8 @@
+"""Random interval utilities.
+
+Утилиты для работы со случайными интервалами.
+"""
+
 import random
 from abc import abstractmethod, ABC
 from dataclasses import dataclass
@@ -17,60 +22,90 @@ MINUS_INF = float('-inf')
 
 
 class Interval(AutoJSONSerializable['BaseReq'], ABC):
-    """
-    A class for generating random numbers from a given boundary and distribution.
+    """Base class for random number generation from distributions.
+
+    Базовый класс для генерации случайных чисел по распределениям.
     """
 
     @abstractmethod
     def rand_float(self, rand: Optional[random.Random] = None) -> float:
-        """
-        Returns a random float in the interval boundary according to the distribution of the class
+        """Return random float within interval.
 
-        :param rand: object for generating random numbers
-        :return kind: the random float
+        Возвращает случайное число с плавающей точкой внутри интервала.
+
+        Args:
+            rand (random.Random | None): random generator.
+                Генератор случайных чисел.
+
+        Returns:
+            float: generated value.
+                Сгенерированное значение.
         """
         ...
 
     @abstractmethod
     def rand_int(self, rand: Optional[random.Random] = None) -> int:
-        """
-        Returns a random int in the interval boundary according to the distribution of the class
+        """Return random integer within interval.
 
-        :param rand: object for generating random numbers
-        :return kind: the random int
+        Возвращает случайное целое число внутри интервала.
+
+        Args:
+            rand (random.Random | None): random generator.
+                Генератор случайных чисел.
+
+        Returns:
+            int: generated integer.
+                Сгенерированное целое число.
         """
         ...
 
 
 @dataclass(frozen=True)
 class IntervalUniform(Interval):
-    """
-    Implementation for uniform distribution
+    """Uniform distribution interval.
 
-    :param min_val: left border for the interval
-    :param max_val: right  border for the interval
-    :param rand: object for generating random numbers with, if you want to use a randomizer with a determined seed
+    Интервал с равномерным распределением.
+
+    Attributes:
+        min_val (float): left boundary.
+            Левая граница.
+        max_val (float): right boundary.
+            Правая граница.
+        rand (Random | None): random generator with seed.
+            Генератор случайных чисел с зерном.
     """
     min_val: float
     max_val: float
     rand: Optional[Random] = Random()
 
     def rand_float(self, rand: Optional[random.Random] = None) -> float:
-        """
-        Returns a random float in the interval boundary according to the distribution of the class
+        """Return random float within boundaries.
 
-        :param rand: object for generating random numbers, if you want to use a randomizer with a determined seed
-        :return kind: the random float
+        Возвращает случайное число с плавающей точкой в пределах границ.
+
+        Args:
+            rand (random.Random | None): optional generator.
+                Дополнительный генератор.
+
+        Returns:
+            float: random float value.
+                Случайное число с плавающей точкой.
         """
         rand = rand or self.rand
         return rand.uniform(self.min_val, self.max_val)
 
     def rand_int(self, rand: Optional[random.Random] = None) -> int:
-        """
-        Returns a random int in the interval boundary according to the distribution of the class
+        """Return random integer within boundaries.
 
-        :param rand: object for generating random numbers, if you want to use a randomizer with a determined seed
-        :return kind: the random int
+        Возвращает случайное целое число в пределах границ.
+
+        Args:
+            rand (random.Random | None): optional generator.
+                Дополнительный генератор.
+
+        Returns:
+            int: random integer value.
+                Случайное целое число.
         """
         rand = rand or self.rand
         value = round(rand.uniform(self.min_val, self.max_val))
@@ -82,14 +117,21 @@ class IntervalUniform(Interval):
 
 @dataclass(frozen=True)
 class IntervalGaussian(Interval):
-    """
-    Implementation for Gaussian distribution
+    """Gaussian distribution interval.
 
-    :param mean: mean for the distribution
-    :param sigma: variance for the distribution
-    :param min_val: left border for the interval
-    :param max_val: right  border for the interval
-    :param rand: object for generating random numbers with, if you want to use a randomizer with a determined seed
+    Интервал с нормальным распределением.
+
+    Attributes:
+        mean (float): distribution mean.
+            Среднее распределения.
+        sigma (float): distribution variance.
+            Дисперсия распределения.
+        min_val (float | None): left boundary.
+            Левая граница.
+        max_val (float | None): right boundary.
+            Правая граница.
+        rand (Random | None): random generator with seed.
+            Генератор случайных чисел с зерном.
     """
 
     mean: float
@@ -99,11 +141,17 @@ class IntervalGaussian(Interval):
     rand: Optional[Random] = Random()
 
     def rand_float(self, rand: Optional[random.Random] = None) -> float:
-        """
-        Returns a random float in the interval boundary according to the distribution of the class
+        """Return random float following Gaussian distribution.
 
-        :param rand: object for generating random numbers
-        :return kind: the random float
+        Возвращает случайное число с плавающей точкой по нормальному распределению.
+
+        Args:
+            rand (random.Random | None): random generator.
+                Генератор случайных чисел.
+
+        Returns:
+            float: random float value.
+                Случайное число с плавающей точкой.
         """
         rand = rand or self.rand
         value = rand.gauss(self.mean, self.sigma)
@@ -113,11 +161,17 @@ class IntervalGaussian(Interval):
 
 
     def rand_int(self, rand: Optional[random.Random] = None) -> int:
-        """
-        Returns a random int in the interval boundary according to the distribution of the class
+        """Return random integer following Gaussian distribution.
 
-        :param rand: object for generating random numbers
-        :return kind: the random int
+        Возвращает случайное целое число по нормальному распределению.
+
+        Args:
+            rand (random.Random | None): random generator.
+                Генератор случайных чисел.
+
+        Returns:
+            int: random integer value.
+                Случайное целое число.
         """
         rand = rand or self.rand
         value = round(rand.gauss(self.mean, self.sigma))

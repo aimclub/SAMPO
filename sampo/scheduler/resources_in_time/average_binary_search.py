@@ -1,3 +1,8 @@
+"""Binary search based optimizer for scheduler resources.
+
+Бинарный поиск для оптимизации ресурсов планировщика.
+"""
+
 from copy import deepcopy
 
 from sampo.scheduler.base import Scheduler
@@ -13,12 +18,20 @@ from sampo.schemas.time import Time
 
 
 class AverageBinarySearchResourceOptimizingScheduler:
-    """
-    The scheduler optimizes resources to deadline.
-    Scheduler uses binary search over the resources to optimize them.
+    """Optimize resource multiplier using binary search.
+
+    Оптимизирует множитель ресурсов посредством двоичного поиска.
     """
 
     def __init__(self, base_scheduler: Scheduler):
+        """Initialize scheduler wrapper with resource optimizer.
+
+        Инициализирует оболочку планировщика с оптимизатором ресурсов.
+
+        Args:
+            base_scheduler: Scheduler used to build schedules.
+                Планировщик, используемый для построения расписаний.
+        """
         self._base_scheduler = base_scheduler
         self._resource_optimizer = AverageReqResourceOptimizer()
         base_scheduler.resource_optimizer = self._resource_optimizer
@@ -31,6 +44,30 @@ class AverageBinarySearchResourceOptimizingScheduler:
                             assigned_parent_time: Time = Time(0),
                             landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:
+        """Schedule a graph using binary search for resource multiplier.
+
+        Планирует граф, используя двоичный поиск множителя ресурсов.
+
+        Args:
+            wg: Work graph to schedule.
+                Граф работ для планирования.
+            contractors: Available contractors.
+                Доступные подрядчики.
+            deadline: Maximum allowed execution time.
+                Максимально допустимое время выполнения.
+            spec: Schedule specification.
+                Спецификация расписания.
+            validate: Whether to validate produced schedule.
+                Проверять ли созданное расписание.
+            assigned_parent_time: Start time of parent context.
+                Время начала родительского контекста.
+            landscape: Landscape configuration.
+                Конфигурация местности.
+
+        Returns:
+            Tuple with schedule data and used specification.
+            Кортеж с данными расписания и использованной спецификацией.
+        """
         def call_scheduler(k: float, inner_spec: ScheduleSpec) \
                 -> tuple[tuple[Schedule, Time, Timeline, list[GraphNode]], ScheduleSpec]:
             self._resource_optimizer.k = k

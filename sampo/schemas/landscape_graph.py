@@ -1,35 +1,37 @@
-"""Graph structures for a project's physical landscape.
+import uuid
+"""Landscape graph structures.
 
-Графовые структуры физического ландшафта проекта.
+Структуры графа ландшафта.
 """
 
 import uuid
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 import numpy as np
 
 from sampo.schemas.exceptions import NoAvailableResources
 
-if TYPE_CHECKING:
-    from sampo.schemas.graph import GraphNode
-
 
 @dataclass
 class LandEdge:
-    """Connection between two nodes of the transport graph.
+    """Connection between two vertices of a transport graph.
 
-    Связь между двумя узлами транспортного графа.
+    Соединение между двумя вершинами транспортного графа.
 
     Attributes:
-        id (str): Edge identifier. / Идентификатор ребра.
-        start (LandGraphNode): Start node. / Начальный узел.
-        finish (LandGraphNode): Finish node. / Конечный узел.
-        weight (float): Distance or cost. / Длина или стоимость.
-        bandwidth (int): Capacity of the edge. / Пропускная способность.
+        id (str): identifier of the edge.
+            Идентификатор ребра.
+        start (LandGraphNode): start node.
+            Начальная вершина.
+        finish (LandGraphNode): finish node.
+            Конечная вершина.
+        weight (float): length of the edge.
+            Длина ребра.
+        bandwidth (int): number of vehicles per hour.
+            Количество транспортных средств в час.
     """
-
     id: str
     start: 'LandGraphNode'
     finish: 'LandGraphNode'
@@ -38,19 +40,19 @@ class LandEdge:
 
 
 class ResourceStorageUnit:
-    """Storage for materials at a landscape node.
+    """Resource storage for a land graph node.
 
-    Хранилище материалов в узле ландшафта.
+    Хранилище ресурсов для узла ландшафтного графа.
     """
 
     def __init__(self, capacity: dict[str, int] | None = None):
-        """Initialize storage with capacity limits.
+        """Initialize storage with capacity.
 
-        Инициализирует хранилище с ограничениями по ёмкости.
+        Инициализирует хранилище с вместимостью.
 
         Args:
-            capacity (dict[str, int] | None): Maximum quantities for each
-                material. / Максимальные количества материалов.
+            capacity (dict[str, int] | None): maximum values for materials.
+                Максимальные значения для материалов.
         """
         if capacity is None:
             capacity = {}
@@ -58,6 +60,10 @@ class ResourceStorageUnit:
 
     @cached_property
     def capacity(self) -> dict[str, int]:
+        """Maximum available amount of each resource.
+
+        Максимальное доступное количество каждого ресурса.
+        """
         return self._capacity
 
 
@@ -73,19 +79,22 @@ class LandGraphNode:
                  resource_storage_unit: ResourceStorageUnit = ResourceStorageUnit(),
                  neighbour_nodes: list[tuple['LandGraphNode', float, int]] | None = None,
                  works: list['GraphNode'] | Any = None):
-        """Create a new landscape node.
+        """Initialize landscape graph node.
 
-        Создаёт новый узел ландшафта.
+        Инициализирует узел ландшафтного графа.
 
         Args:
-            id (str): Node identifier. / Идентификатор узла.
-            name (str): Node name. / Имя узла.
-            resource_storage_unit (ResourceStorageUnit): Storage unit. /
-                Хранилище ресурсов.
+            id (str): node identifier.
+                Идентификатор узла.
+            name (str): node name.
+                Название узла.
+            resource_storage_unit (ResourceStorageUnit): storage information.
+                Информация о хранилище.
             neighbour_nodes (list[tuple[LandGraphNode, float, int]] | None):
-                Initial neighbours. / Начальные соседи.
-            works (list[GraphNode] | Any | None): Works located at node. /
-                Работы, расположенные в узле.
+                neighbours with distance and bandwidth.
+                Соседи с расстоянием и пропускной способностью.
+            works (list[GraphNode] | Any | None): works assigned to the node.
+                Работы, назначенные узлу.
         """
         self.id = id
         self.name = name
@@ -102,17 +111,37 @@ class LandGraphNode:
 
     @cached_property
     def neighbours(self) -> list['LandGraphNode']:
+        """Adjacent nodes connected by roads.
+
+        Узлы-соседи, соединенные дорогами.
+        """
         if self._roads:
             return [neighbour_edge.finish for neighbour_edge in self._roads]
         return []
 
     @cached_property
     def roads(self) -> list[LandEdge]:
+        """Outgoing roads from the node.
+
+        Исходящие из узла дороги.
+
+        Raises:
+            NoAvailableResources: if no roads are connected.
+                Если нет соединенных дорог.
+        """
         if self._roads:
             return self._roads
         raise NoAvailableResources('There are no roads in land graph')
 
     def add_works(self, nodes: list['GraphNode'] | Any):
+        """Attach works to the node.
+
+        Присоединяет работы к узлу.
+
+        Args:
+            nodes (list[GraphNode] | GraphNode): works to attach.
+                Работы для присоединения.
+        """
         if isinstance(nodes, list):
             self.nodes.extend(nodes)
         else:
@@ -120,9 +149,21 @@ class LandGraphNode:
 
     @cached_property
     def works(self) -> list['GraphNode']:
+        """Works associated with the node.
+
+        Работы, связанные с узлом.
+        """
         return self.nodes
 
     def add_neighbours(self, neighbour_nodes: list[tuple['LandGraphNode', float, int]] | tuple['LandGraphNode', float, int]):
+        """Connect node with neighbours.
+
+        Соединяет узел с соседями.
+
+        Args:
+            neighbour_nodes (list | tuple): neighbours with distance and bandwidth.
+                Соседи с расстоянием и пропускной способностью.
+        """
         if isinstance(neighbour_nodes, list):
             for neighbour, length, bandwidth in neighbour_nodes:
                 road_id = str(uuid.uuid4())
@@ -134,12 +175,11 @@ class LandGraphNode:
             self._roads.append(LandEdge(road_id, self, neighbour, length, bandwidth))
             neighbour._roads.append(LandEdge(road_id, neighbour, self, length, bandwidth))
 
-
 @dataclass
 class LandGraph:
-    """Graph describing landscape connectivity.
+    """Graph representing the landscape transport network.
 
-    Граф, описывающий связность ландшафта.
+    Граф, представляющий транспортную сеть ландшафта.
     """
 
     nodes: list[LandGraphNode] = None
@@ -152,6 +192,10 @@ class LandGraph:
         self.reinit()
 
     def reinit(self):
+        """Rebuild adjacency matrix and indices.
+
+        Перестраивает матрицу смежности и индексы.
+        """
         adj_matrix, node2ind, id2ind = self._to_adj_matrix()
         object.__setattr__(self, 'adj_matrix', adj_matrix)
         object.__setattr__(self, 'node2ind', node2ind)
@@ -160,7 +204,10 @@ class LandGraph:
 
     @cached_property
     def edges(self) -> list['LandEdge']:
-        # TODO: to do
+        """Unique list of edges in the graph.
+
+        Уникальный список ребер графа.
+        """
         road_ids = set()
         roads = []
 
@@ -173,9 +220,15 @@ class LandGraph:
         return roads
 
     def _to_adj_matrix(self) -> tuple[np.array, dict[LandGraphNode, int], dict[str, int]]:
-        """Build adjacency matrix for current landscape graph.
+        """Convert graph to adjacency matrix.
 
-        Построить матрицу смежности для текущего ландшафтного графа.
+        Преобразует граф в матрицу смежности.
+
+        Returns:
+            tuple[np.array, dict[LandGraphNode, int], dict[str, int]]: adjacency matrix,
+                node-to-index and id-to-index mappings.
+            tuple[np.array, dict[LandGraphNode, int], dict[str, int]]: матрица смежности,
+                отображения узел-индекс и id-индекс.
         """
         node2ind: dict[LandGraphNode, int] = {
             v: i for i, v in enumerate(self.nodes)

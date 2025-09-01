@@ -1,3 +1,8 @@
+"""Structures for representing and manipulating block graphs.
+
+Структуры для представления и обработки графов блоков.
+"""
+
 from operator import attrgetter
 from typing import Callable
 
@@ -8,11 +13,33 @@ from sampo.utilities.collections_util import build_index
 
 
 class BlockNode:
+    """Node of a block graph with its work graph and relations.
+
+    Узел графа блоков с его графом работ и связями.
+
+    Attributes:
+        wg: Work graph contained in the node.
+            Рабочий граф, содержащийся в узле.
+        obstruction: Optional obstruction for the block.
+            Необязательное препятствие для блока.
+        blocks_from: Predecessor block nodes.
+            Узлы-предшественники.
+        blocks_to: Successor block nodes.
+            Узлы-потомки.
     """
-    `BlockNode` represents the node of `BlockGraph` and contains corresponding
-    `WorkGraph` and related dependencies between blocks in `BlockGraph`.
-    """
+
     def __init__(self, wg: WorkGraph, obstruction: Obstruction | None = None):
+        """Initialize block node.
+
+        Инициализировать узел блока.
+
+        Args:
+            wg: Work graph contained in the node.
+                Рабочий граф, содержащийся в узле.
+            obstruction: Optional obstruction for the block.
+                Необязательное препятствие для блока.
+        """
+
         self.wg = wg
         self.obstruction = obstruction
         self.blocks_from: list[BlockNode] = []
@@ -20,9 +47,19 @@ class BlockNode:
 
     @property
     def id(self) -> str:
+        """Return identifier of the node.
+
+        Вернуть идентификатор узла.
+        """
+
         return self.wg.start.id
 
     def is_service(self) -> bool:
+        """Check whether the node represents a service block.
+
+        Проверить, представляет ли узел сервисный блок.
+        """
+
         return self.wg.vertex_count == 2
 
     def __hash__(self) -> int:
@@ -30,32 +67,65 @@ class BlockNode:
 
 
 class BlockGraph:
+    """Graph composed of work blocks connected by finish-start edges.
+
+    Граф, составленный из блоков работ, связанных зависимостями типа
+    "конец-начало".
     """
-    Represents the block graph, where blocks are instances of `WorkGraph` and
-    edges are simple *FS* dependencies.
-    """
+
     def __init__(self, nodes: list[BlockNode]):
+        """Initialize block graph with given nodes.
+
+        Инициализировать граф блоков заданными узлами.
+
+        Args:
+            nodes: Nodes forming the graph.
+                Узлы, формирующие граф.
+        """
+
         self.nodes = nodes
         self.node_dict = build_index(self.nodes, attrgetter('id'))
 
     @staticmethod
     def pure(nodes: list[WorkGraph], obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None) -> 'BlockGraph':
-        """
-        Build BlockGraph from the received list of WorkGraphs without edges
+        """Build a block graph from work graphs without edges.
 
-        :param nodes: list of WorkGraphs without edges - blocks of BlockGraphs
-        :param obstruction_getter:
-        :return: BlockGraph without edges
+        Построить граф блоков из графов работ без рёбер.
+
+        Args:
+            nodes: Work graphs to convert into blocks.
+                Графы работ для преобразования в блоки.
+            obstruction_getter: Function providing an optional obstruction.
+                Функция, предоставляющая необязательное препятствие.
+
+        Returns:
+            BlockGraph: Block graph without edges.
+                Граф блоков без рёбер.
         """
         return BlockGraph([BlockNode(node, obstruction_getter(i)) for i, node in enumerate(nodes)])
 
     def __getitem__(self, item) -> BlockNode:
+        """Return block node by identifier.
+
+        Вернуть узел блока по идентификатору.
+        """
+
         return self.node_dict[item]
 
     def __len__(self) -> int:
+        """Return number of nodes in the graph.
+
+        Вернуть количество узлов в графе.
+        """
+
         return len(self.nodes)
 
     def __copy__(self) -> 'BlockGraph':
+        """Create a shallow copy of the block graph.
+
+        Создать неглубокую копию графа блоков.
+        """
+
         parent_ids = [[parent.id for parent in node.blocks_to] for node in self.nodes]
         nodes = [BlockNode(old_node.wg, old_node.obstruction) for old_node in self.nodes]
         nodes_index = build_index(nodes, attrgetter('id'))
@@ -67,8 +137,9 @@ class BlockGraph:
         return BlockGraph(nodes)
 
     def to_work_graph(self) -> WorkGraph:
-        """
-        Construct 'WorkGraph' that is equal to the `BlockGraph`.
+        """Convert block graph into an equivalent work graph.
+
+        Преобразовать граф блоков в эквивалентный граф работ.
         """
         copied_graph = self.__copy__()
         copied_nodes = copied_graph.nodes
@@ -96,10 +167,13 @@ class BlockGraph:
         return WorkGraph(global_start, global_end)
 
     def toposort(self) -> list[BlockNode]:
-        """
-        Sort current 'BlockGraph' in topologic order
+        """Sort block graph nodes in topological order.
 
-        :return: ordered list of BlockNode
+        Отсортировать узлы графа блоков в топологическом порядке.
+
+        Returns:
+            list[BlockNode]: Ordered list of block nodes.
+                Упорядоченный список узлов блоков.
         """
         visited = set()
         ans = []
@@ -120,5 +194,16 @@ class BlockGraph:
 
     @staticmethod
     def add_edge(start: BlockNode, end: BlockNode):
+        """Add directed edge from ``start`` to ``end``.
+
+        Добавить направленное ребро от ``start`` к ``end``.
+
+        Args:
+            start: Source block node.
+                Исходный узел блока.
+            end: Destination block node.
+                Конечный узел блока.
+        """
+
         start.blocks_to.append(end)
         end.blocks_from.append(start)

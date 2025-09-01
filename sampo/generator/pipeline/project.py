@@ -1,20 +1,37 @@
+"""Utilities for generating synthetic project graphs.
+
+Утилиты для генерации синтетических графов проекта.
+"""
+
 from random import Random
 from typing import Callable
 
-from sampo.generator.config.gen_counts import MIN_GRAPH_COUNTS, ADDITION_CLUSTER_PROBABILITY, GRAPH_COUNTS, \
-    MAX_BOREHOLES_PER_BLOCK, BRANCHING_PROBABILITY
-from sampo.generator.pipeline import SyntheticGraphType, StageType
-from sampo.generator.pipeline.cluster import get_cluster_works, _add_addition_work
+from sampo.generator.config.gen_counts import (
+    ADDITION_CLUSTER_PROBABILITY,
+    BRANCHING_PROBABILITY,
+    GRAPH_COUNTS,
+    MAX_BOREHOLES_PER_BLOCK,
+    MIN_GRAPH_COUNTS,
+)
+from sampo.generator.pipeline import StageType, SyntheticGraphType
+from sampo.generator.pipeline.cluster import _add_addition_work, get_cluster_works
 from sampo.schemas.graph import GraphNode, WorkGraph
 
 
 def get_small_graph(cluster_name: str | None = 'C1', rand: Random | None = None) -> WorkGraph:
-    """
-    Creates a small graph of works consisting of 30-50 vertices
+    """Create a small work graph with 30-50 vertices.
 
-    :param cluster_name: str - the first cluster name
-    :param rand: Optional[Random] - generator of numbers with a given seed or None
-    :return: work_graph: WorkGraph - work graph where count of vertex between 30 and 50
+    Создаёт небольшой граф работ, содержащий 30–50 вершин.
+
+    Args:
+        cluster_name (str | None): Name of the initial cluster.
+            Имя первого кластера.
+        rand (Random | None): Random number generator.
+            Генератор случайных чисел.
+
+    Returns:
+        WorkGraph: Work graph containing between 30 and 50 vertices.
+        WorkGraph: Граф работ, включающий от 30 до 50 вершин.
     """
 
     pipe_nodes_count = MIN_GRAPH_COUNTS['pipe_nodes'].rand_int(rand)
@@ -53,10 +70,15 @@ def _get_cluster_graph(cluster_name: str, pipe_nodes_count: int | None = None,
 
     checkpoints = [c_master]
     if add_addition_cluster or _add_addition_work(addition_cluster_probability, rand):
-        c_slave, _, count_slave = get_cluster_works(cluster_name=cluster_name,
-                                                    pipe_nodes_count=pipe_nodes_count, pipe_net_count=pipe_net_count,
-                                                    light_masts_count=light_masts_count, borehole_counts=borehole_counts,
-                                                    roads=roads, rand=rand)
+        c_slave, _, count_slave = get_cluster_works(
+            cluster_name=cluster_name,
+            pipe_nodes_count=pipe_nodes_count,
+            pipe_net_count=pipe_net_count,
+            light_masts_count=light_masts_count,
+            borehole_counts=borehole_counts,
+            roads=roads,
+            rand=rand,
+        )
         count_nodes += count_slave
         checkpoints.append(c_slave)
     return checkpoints, roads, count_nodes
@@ -70,23 +92,33 @@ def get_graph(mode: SyntheticGraphType | None = SyntheticGraphType.GENERAL,
               bottom_border: int | None = 0,
               top_border: int | None = 0,
               rand: Random | None = None) -> WorkGraph:
-    """
-    Invokes a graph of the given type if at least one positive value of cluster_counts, addition_cluster_probability,
-    bottom_border is given
+    """Generate a synthetic work graph of the specified type.
 
-    :param mode: str - 'general' or 'sequence' or 'parallel - the type of the returned graph
-    :param cluster_name_prefix: str -  cluster name prefix, if the prefix is 'C',
-        the clusters will be called 'C1', 'C2' etc.
-    :param cluster_counts: Optional[int] - Number of clusters for the graph
-    :param branching_probability: Optional[float] - The probability that the node will not be connected to the last
-        cluster, but to any other cluster for the general mode
-    :param addition_cluster_probability: Optional[float] - probability of a slave (example C3_1) cluster
-        to the main cluster
-    :param bottom_border: Optional[int] - bottom border for number of works for the graph
-    :param top_border: Optional[int] - top border for number of works for the graph
-    :param rand: Optional[Random] - generator of numbers with a given seed or None
-    :return:
-        work_graph: WorkGraph - the desired work graph
+    Генерирует синтетический граф работ указанного типа.
+
+    Args:
+        mode (SyntheticGraphType | None): Type of graph to generate.
+            Тип генерируемого графа.
+        cluster_name_prefix (str | None): Prefix used for cluster names.
+            Префикс, используемый для имен кластеров.
+        cluster_counts (int | None): Desired number of clusters in the graph.
+            Требуемое число кластеров в графе.
+        branching_probability (float | None): Probability of connecting a
+            cluster to a non-sequential predecessor.
+            Вероятность соединения кластера с неочередным предшественником.
+        addition_cluster_probability (float | None): Probability of adding a
+            slave cluster.
+            Вероятность добавления подчинённого кластера.
+        bottom_border (int | None): Minimum number of works in the graph.
+            Минимальное количество работ в графе.
+        top_border (int | None): Maximum number of works in the graph.
+            Максимальное количество работ в графе.
+        rand (Random | None): Random number generator.
+            Генератор случайных чисел.
+
+    Returns:
+        WorkGraph: Generated work graph.
+        WorkGraph: Сгенерированный граф работ.
     """
     assert cluster_counts + bottom_border + top_border > 0, 'At least one border param should be specified'
     assert cluster_counts >= 0 and branching_probability >= 0 and top_border >= 0, 'Params should not be negative'

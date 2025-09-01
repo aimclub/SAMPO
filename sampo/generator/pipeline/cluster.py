@@ -1,9 +1,14 @@
+"""Generate work clusters for synthetic project graphs.
+
+Генерация рабочих кластеров для синтетических графов проектов.
+"""
+
 from random import Random
 
 import sampo.generator.config.gen_counts as gen_c
 import sampo.generator.config.worker_req as wr
 from sampo.generator.config.worker_req import scale_reqs
-from sampo.schemas.graph import GraphNode, EdgeType
+from sampo.schemas.graph import EdgeType, GraphNode
 from sampo.schemas.interval import IntervalUniform
 from sampo.schemas.utils import uuid_str
 from sampo.schemas.works import WorkUnit
@@ -178,18 +183,33 @@ def get_cluster_works(cluster_name: str, pipe_nodes_count: int,
                       pipe_net_count: int, light_masts_count: int, borehole_counts: list[int],
                       roads: dict[str, GraphNode] | None = None,
                       rand: Random | None = None) -> tuple[GraphNode, dict[str, GraphNode], int]:
-    """
-    Creates works on the development of the field on one object, i.e. a group of boreholes
+    """Create works for developing a field cluster.
 
-    :param root_node: The parent node of the work graph for this object
-    :param cluster_name: object name
-    :param pipe_nodes_count: Number of pipeline segments from this field to other fields
-    :param pipe_net_count: Number of pipes connecting boreholes
-    :param light_masts_count: Number of floodlight masts
-    :param borehole_counts: Number of boreholes
-    :param roads: If the object is not connected to the central node, the road to which it is connected, otherwise None
-    :param rand: Number generator with a fixed seed, or None for no fixed seed
-    :return:
+    Создаёт работы для разработки кластера месторождения.
+
+    Args:
+        cluster_name (str): Name of the cluster.
+            Имя кластера.
+        pipe_nodes_count (int): Number of pipeline segments to other fields.
+            Количество участков трубопровода к другим месторождениям.
+        pipe_net_count (int): Number of pipes connecting boreholes.
+            Число труб, соединяющих скважины.
+        light_masts_count (int): Number of floodlight masts.
+            Количество осветительных мачт.
+        borehole_counts (list[int]): Number of boreholes in each group.
+            Количество скважин в каждой группе.
+        roads (dict[str, GraphNode] | None): Roads connecting to the central
+            node, if any.
+            Дороги, соединяющие с центральным узлом, если имеются.
+        rand (Random | None): Random number generator.
+            Генератор случайных чисел.
+
+    Returns:
+        tuple[GraphNode, dict[str, GraphNode], int]:
+        Root node of the cluster, generated roads, and number of created
+            nodes.
+        Корневой узел кластера, созданные дороги и количество
+            сформированных узлов.
     """
     is_slave = roads is not None
     dist_to_parent = None

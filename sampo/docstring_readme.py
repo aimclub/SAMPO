@@ -31,7 +31,10 @@ def collect_docstrings(package_path: Path) -> Dict[str, Dict[str, Dict[str, Dict
 
 
 def format_section(name: str, items: Dict[str, str]) -> List[str]:
-    """Format docstrings section. / Форматирует секцию docstring'ов."""
+    """Format docstrings section preserving original text formatting.
+
+    Форматирует секцию docstring'ов, сохраняя исходное форматирование текста.
+    """
 
     lines: List[str] = []
     if items:
@@ -40,8 +43,10 @@ def format_section(name: str, items: Dict[str, str]) -> List[str]:
         for obj, doc in sorted(items.items()):
             lines.append(f"- **{obj}**")
             if doc:
-                doc_lines = [f"  {line}" for line in doc.strip().splitlines()]
-                lines.extend(doc_lines)
+                lines.append("")
+                lines.append("    ```")
+                lines.extend([f"    {line}" for line in doc.splitlines()])
+                lines.append("    ```")
             lines.append("")
     return lines
 

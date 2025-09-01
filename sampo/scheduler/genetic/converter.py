@@ -1,3 +1,8 @@
+"""Conversion between schedules and chromosomes for GA.
+
+Преобразование между расписаниями и хромосомами для ГА.
+"""
+
 import copy
 
 import numpy as np
@@ -30,18 +35,31 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
                                    spec: ScheduleSpec,
                                    landscape: LandscapeConfiguration,
                                    order: list[GraphNode] | None = None) -> ChromosomeType:
-    """
-    Receive a result of scheduling algorithm and transform it to chromosome
+    """Transform schedule into chromosome.
 
-    :param work_id2index:
-    :param worker_name2index:
-    :param contractor2index:
-    :param contractor_borders:
-    :param schedule:
-    :param spec:
-    :param landscape:
-    :param order: if passed, specify the node order that should appear in the chromosome
-    :return:
+    Преобразует расписание в хромосому.
+
+    Args:
+        work_id2index (dict[str, int]): Mapping of work IDs to indices.
+            Отображение идентификаторов работ в индексы.
+        worker_name2index (dict[str, int]): Mapping of worker types to indices.
+            Отображение типов рабочих в индексы.
+        contractor2index (dict[str, int]): Mapping of contractors to indices.
+            Отображение подрядчиков в индексы.
+        contractor_borders (np.ndarray): Capacity limits for contractors.
+            Ограничения мощностей подрядчиков.
+        schedule (Schedule): Source schedule.
+            Исходное расписание.
+        spec (ScheduleSpec): Scheduling specification.
+            Спецификация расписания.
+        landscape (LandscapeConfiguration): Landscape configuration.
+            Конфигурация ландшафта.
+        order (list[GraphNode] | None): Prescribed node order.
+            Предопределенный порядок узлов.
+
+    Returns:
+        ChromosomeType: Generated chromosome.
+            Сформированная хромосома.
     """
 
     # order: list[GraphNode] = order if order is not None else [work for work in schedule.works
@@ -89,9 +107,42 @@ def convert_chromosome_to_schedule(chromosome: ChromosomeType,
                                    work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                                    sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
-    """
-    Build schedule from received chromosome
-    It can be used in visualization of final solving of genetic algorithm
+    """Build schedule from chromosome.
+
+    Формирует расписание из хромосомы.
+
+    Args:
+        chromosome (ChromosomeType): Source chromosome.
+            Исходная хромосома.
+        worker_pool (WorkerContractorPool): Available workers per contractor.
+            Доступные работники у подрядчиков.
+        index2node (dict[int, GraphNode]): Mapping of indices to nodes.
+            Отображение индексов в узлы.
+        index2contractor (dict[int, Contractor]): Mapping of indices to contractors.
+            Отображение индексов в подрядчиков.
+        index2zone (dict[int, str]): Mapping of indices to zones.
+            Отображение индексов в зоны.
+        worker_pool_indices (dict[int, dict[int, Worker]]): Worker lookup structure.
+            Структура поиска рабочих.
+        worker_name2index (dict[str, int]): Mapping of worker names to indices.
+            Отображение имен рабочих в индексы.
+        contractor2index (dict[str, int]): Mapping of contractor IDs to indices.
+            Отображение идентификаторов подрядчиков в индексы.
+        landscape (LandscapeConfiguration): Landscape configuration.
+            Конфигурация ландшафта.
+        timeline (Timeline | None): Existing timeline.
+            Существующая временная шкала.
+        assigned_parent_time (Time): Start time of parent schedule.
+            Время начала родительского расписания.
+        work_estimator (WorkTimeEstimator): Time estimator.
+            Оценщик времени.
+        sgs_type (ScheduleGenerationScheme): Schedule generation scheme.
+            Схема генерации расписания.
+
+    Returns:
+        tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+            Schedule data with start time, timeline and order.
+            Данные расписания со временем начала, временной шкалой и порядком.
     """
     match sgs_type:
         case ScheduleGenerationScheme.Parallel:
@@ -127,8 +178,14 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
                                         assigned_parent_time: Time = Time(0),
                                         work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
-    """
-    Implementation of Parallel Schedule Generation Scheme
+    """Convert chromosome using parallel scheme.
+
+    Преобразует хромосому, используя параллельную схему.
+
+    Returns:
+        tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+            Schedule data with start time, timeline and order.
+            Данные расписания со временем начала, временной шкалой и порядком.
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 
@@ -240,8 +297,14 @@ def serial_schedule_generation_scheme(chromosome: ChromosomeType,
                                       assigned_parent_time: Time = Time(0),
                                       work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
         -> tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
-    """
-    Implementation of Serial Schedule Generation Scheme
+    """Convert chromosome using serial scheme.
+
+    Преобразует хромосому, используя последовательную схему.
+
+    Returns:
+        tuple[dict[GraphNode, ScheduledWork], Time, Timeline, list[GraphNode]]:
+            Schedule data with start time, timeline and order.
+            Данные расписания со временем начала, временной шкалой и порядком.
     """
     node2swork: dict[GraphNode, ScheduledWork] = {}
 

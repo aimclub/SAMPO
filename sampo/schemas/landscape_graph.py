@@ -1,19 +1,35 @@
+"""Graph structures for a project's physical landscape.
+
+Графовые структуры физического ландшафта проекта.
+"""
+
 import uuid
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 
 from sampo.schemas.exceptions import NoAvailableResources
 
+if TYPE_CHECKING:
+    from sampo.schemas.graph import GraphNode
+
 
 @dataclass
 class LandEdge:
+    """Connection between two nodes of the transport graph.
+
+    Связь между двумя узлами транспортного графа.
+
+    Attributes:
+        id (str): Edge identifier. / Идентификатор ребра.
+        start (LandGraphNode): Start node. / Начальный узел.
+        finish (LandGraphNode): Finish node. / Конечный узел.
+        weight (float): Distance or cost. / Длина или стоимость.
+        bandwidth (int): Capacity of the edge. / Пропускная способность.
     """
-    A representation of the connection between two vertices of a transport graph
-    (e.x., the edge between platform and warehouse)
-    """
+
     id: str
     start: 'LandGraphNode'
     finish: 'LandGraphNode'
@@ -22,10 +38,19 @@ class LandEdge:
 
 
 class ResourceStorageUnit:
+    """Storage for materials at a landscape node.
+
+    Хранилище материалов в узле ландшафта.
+    """
+
     def __init__(self, capacity: dict[str, int] | None = None):
-        """
-        Represents the resource storage of a land graph node
-        :param capacity: list of the maximum values of each material
+        """Initialize storage with capacity limits.
+
+        Инициализирует хранилище с ограничениями по ёмкости.
+
+        Args:
+            capacity (dict[str, int] | None): Maximum quantities for each
+                material. / Максимальные количества материалов.
         """
         if capacity is None:
             capacity = {}
@@ -37,18 +62,30 @@ class ResourceStorageUnit:
 
 
 class LandGraphNode:
+    """Participant of the landscape transport network.
+
+    Участник транспортной сети ландшафта.
+    """
+
     def __init__(self,
                  id: str = str(uuid.uuid4()),
                  name: str = 'platform',
                  resource_storage_unit: ResourceStorageUnit = ResourceStorageUnit(),
                  neighbour_nodes: list[tuple['LandGraphNode', float, int]] | None = None,
                  works: list['GraphNode'] | Any = None):
-        """
-        Represents the participant of landscape transport network
+        """Create a new landscape node.
 
-        :param neighbour_nodes: parent nodes list that saves parent itself and the weight of edge
-        :param resource_storage_unit: object that saves info about the resources in the current node
-        (in other words platform)
+        Создаёт новый узел ландшафта.
+
+        Args:
+            id (str): Node identifier. / Идентификатор узла.
+            name (str): Node name. / Имя узла.
+            resource_storage_unit (ResourceStorageUnit): Storage unit. /
+                Хранилище ресурсов.
+            neighbour_nodes (list[tuple[LandGraphNode, float, int]] | None):
+                Initial neighbours. / Начальные соседи.
+            works (list[GraphNode] | Any | None): Works located at node. /
+                Работы, расположенные в узле.
         """
         self.id = id
         self.name = name
@@ -97,8 +134,14 @@ class LandGraphNode:
             self._roads.append(LandEdge(road_id, self, neighbour, length, bandwidth))
             neighbour._roads.append(LandEdge(road_id, neighbour, self, length, bandwidth))
 
+
 @dataclass
 class LandGraph:
+    """Graph describing landscape connectivity.
+
+    Граф, описывающий связность ландшафта.
+    """
+
     nodes: list[LandGraphNode] = None
     adj_matrix: np.array = None
     node2ind: dict[LandGraphNode, int] = None
@@ -130,6 +173,10 @@ class LandGraph:
         return roads
 
     def _to_adj_matrix(self) -> tuple[np.array, dict[LandGraphNode, int], dict[str, int]]:
+        """Build adjacency matrix for current landscape graph.
+
+        Построить матрицу смежности для текущего ландшафтного графа.
+        """
         node2ind: dict[LandGraphNode, int] = {
             v: i for i, v in enumerate(self.nodes)
         }

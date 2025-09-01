@@ -1,3 +1,7 @@
+"""Wrapper around native scheduler implementations.
+Обертка вокруг реализаций планировщика на нативном коде.
+"""
+
 from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType
@@ -10,7 +14,7 @@ try:
     from native import freeEvaluationInfo
     from native import runGenetic
 except ImportError:
-    print('Can not find native module; switching to default')
+    print("Can not find native module; switching to default")
     decodeEvaluationInfo = lambda *args: args
     freeEvaluationInfo = lambda *args: args
     runGenetic = lambda *args: args
@@ -26,31 +30,66 @@ from sampo.utilities.collections_util import reverse_dictionary
 
 
 class NativeWrapper:
-    def __init__(self,
-                 toolbox: Toolbox,
-                 wg: WorkGraph,
-                 contractors: list[Contractor],
-                 worker_name2index: dict[str, int],
-                 worker_pool_indices: dict[int, dict[int, Worker]],
-                 parents: dict[int, set[int]],
-                 time_estimator: WorkTimeEstimator):
+    """Interface to native genetic scheduling engine.
+    Интерфейс к нативному движку генетического планирования.
+    """
+
+    def __init__(
+        self,
+        toolbox: Toolbox,
+        wg: WorkGraph,
+        contractors: list[Contractor],
+        worker_name2index: dict[str, int],
+        worker_pool_indices: dict[int, dict[int, Worker]],
+        parents: dict[int, set[int]],
+        time_estimator: WorkTimeEstimator,
+    ):
+        """Initialize wrapper for native scheduler.
+        Инициализирует обертку для нативного планировщика.
+
+        Args:
+            toolbox: Genetic algorithm toolbox.
+                Инструментарий генетического алгоритма.
+            wg: Work graph.
+                Граф работ.
+            contractors: Contractors list.
+                Список подрядчиков.
+            worker_name2index: Mapping of worker names to indices.
+                Отображение имен работников в индексы.
+            worker_pool_indices: Worker pools by contractor.
+                Рабочие пулы по подрядчикам.
+            parents: Parent relationships.
+                Отношения родителей.
+            time_estimator: Work time estimator.
+                Оценщик времени выполнения работ.
+        """
         self.native = native
         if not native:
+
             def fit(chromosome: ChromosomeType) -> Schedule | None:
                 if toolbox.validate(chromosome):
                     sworks = toolbox.chromosome_to_schedule(chromosome)[0]
                     return Schedule.from_scheduled_works(sworks.values(), wg)
                 else:
                     return None
-            self.evaluator = lambda _, chromosomes: [fit(chromosome) for chromosome in chromosomes]
+
+            self.evaluator = lambda _, chromosomes: [
+                fit(chromosome) for chromosome in chromosomes
+            ]
             self._cache = None
             return
 
         # the outer numeration. Begins with inseparable heads, continuous with tails.
-        numeration: dict[int, GraphNode] = {i: node for i, node in
-                                            enumerate(filter(lambda node: not node.is_inseparable_son(), wg.nodes))}
+        numeration: dict[int, GraphNode] = {
+            i: node
+            for i, node in enumerate(
+                filter(lambda node: not node.is_inseparable_son(), wg.nodes)
+            )
+        }
         heads_count = len(numeration)
-        for i, node in enumerate([node for node in wg.nodes if node.is_inseparable_son()]):
+        for i, node in enumerate(
+            [node for node in wg.nodes if node.is_inseparable_son()]
+        ):
             numeration[heads_count + i] = node
         rev_numeration = reverse_dictionary(numeration)
 
@@ -58,19 +97,31 @@ class NativeWrapper:
 
         self.numeration = numeration
         # for each vertex index store list of parents' indices
-        self.parents = [[rev_numeration[p] for p in numeration[index].parents] for index in range(wg.vertex_count)]
+        self.parents = [
+            [rev_numeration[p] for p in numeration[index].parents]
+            for index in range(wg.vertex_count)
+        ]
         head_parents = [list(parents[i]) for i in range(len(parents))]
         # for each vertex index store list of whole it's inseparable chain indices
-        self.inseparables = [[rev_numeration[p] for p in numeration[index].get_inseparable_chain_with_self()]
-                             for index in range(wg.vertex_count)]
-        # contractors' workers matrix. If contractor can't supply given type of worker, 0 should be passed
+        self.inseparables = [
+            [
+                rev_numeration[p]
+                for p in numeration[index].get_inseparable_chain_with_self()
+            ]
+            for index in range(wg.vertex_count)
+        ]
+        # contractors' workers matrix: 0 if contractor lacks the worker type
         self.workers = [[0 for _ in range(len(worker_name2index))] for _ in contractors]
         for i, contractor in enumerate(contractors):
             for worker in contractor.workers.values():
                 self.workers[i][worker_name2index[worker.name]] = worker.count
 
-        min_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
-        max_req = [[] for _ in range(len(numeration))]  # np.zeros((len(numeration), len(worker_pool_indices)))
+        min_req = [
+            [] for _ in range(len(numeration))
+        ]  # np.zeros((len(numeration), len(worker_pool_indices)))
+        max_req = [
+            [] for _ in range(len(numeration))
+        ]  # np.zeros((len(numeration), len(worker_pool_indices)))
         for work_index, node in numeration.items():
             cur_min_req = [0 for _ in worker_name2index]
             cur_max_req = [0 for _ in worker_name2index]
@@ -100,32 +151,125 @@ class NativeWrapper:
 
         import ctypes.util
 
-        name = ctypes.util.find_library('C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests\\native.dll')
+        name = ctypes.util.find_library(
+            "C:\\Users\\Quarter\\PycharmProjects\\sampo\\tests\\native.dll"
+        )
         lib = ctypes.WinDLL(name)
         # lib = CDLL(r'C:\Users\Quarter\PycharmProjects\sampo\tests\native.dll')
 
         # preparing C++ cache
-        self._cache = decodeEvaluationInfo(self, self.parents, head_parents, self.inseparables, self.workers,
-                                           self.totalWorksCount, False, True, volume, min_req, max_req, id2work, id2res)
+        self._cache = decodeEvaluationInfo(
+            self,
+            self.parents,
+            head_parents,
+            self.inseparables,
+            self.workers,
+            self.totalWorksCount,
+            False,
+            True,
+            volume,
+            min_req,
+            max_req,
+            id2work,
+            id2res,
+        )
 
-    def calculate_working_time(self, chromosome_ind: int, team_target: int, work: int) -> int:
+    def calculate_working_time(
+        self, chromosome_ind: int, team_target: int, work: int
+    ) -> int:
+        """Calculate working time for a team on a work unit.
+        Рассчитывает время работы команды над задачей.
+
+        Args:
+            chromosome_ind: Chromosome index.
+                Индекс хромосомы.
+            team_target: Team position in chromosome.
+                Позиция команды в хромосоме.
+            work: Work index.
+                Индекс работы.
+
+        Returns:
+            int: Estimated working time value.
+                int: Оцененное значение времени работы.
+        """
         team = self._current_chromosomes[chromosome_ind][1][team_target]
-        workers = [self.worker_pool_indices[worker_index][team[len(self.workers[0])]]
-                   .copy().with_count(team[worker_index])
-                   for worker_index in range(len(self.workers[0]))
-                   if team[worker_index] > 0]
-        return self.time_estimator.estimate_time(self.numeration[work].work_unit, workers).value
+        workers = [
+            self.worker_pool_indices[worker_index][team[len(self.workers[0])]]
+            .copy()
+            .with_count(team[worker_index])
+            for worker_index in range(len(self.workers[0]))
+            if team[worker_index] > 0
+        ]
+        return self.time_estimator.estimate_time(
+            self.numeration[work].work_unit, workers
+        ).value
 
     def evaluate(self, chromosomes: list[ChromosomeType]):
+        """Evaluate chromosomes with native engine.
+        Оценивает хромосомы с помощью нативного движка.
+
+        Args:
+            chromosomes: List of chromosomes.
+                Список хромосом.
+
+        Returns:
+            Any: Evaluation results or schedules.
+                Any: Результаты оценки или расписания.
+        """
         self._current_chromosomes = chromosomes
         return self.evaluator(self._cache, chromosomes)
 
-    def run_genetic(self, chromosomes: list[ChromosomeType],
-                    mutate_order, mate_order, mutate_resources, mate_resources,
-                    mutate_contractors, mate_contractors, selection_size):
+    def run_genetic(
+        self,
+        chromosomes: list[ChromosomeType],
+        mutate_order,
+        mate_order,
+        mutate_resources,
+        mate_resources,
+        mutate_contractors,
+        mate_contractors,
+        selection_size,
+    ):
+        """Run genetic algorithm step.
+        Запускает шаг генетического алгоритма.
+
+        Args:
+            chromosomes: Chromosomes population.
+                Популяция хромосом.
+            mutate_order: Order mutation operator.
+                Оператор мутации порядка.
+            mate_order: Order crossover operator.
+                Оператор кроссовера порядка.
+            mutate_resources: Resource mutation operator.
+                Оператор мутации ресурсов.
+            mate_resources: Resource crossover operator.
+                Оператор кроссовера ресурсов.
+            mutate_contractors: Contractor mutation operator.
+                Оператор мутации подрядчиков.
+            mate_contractors: Contractor crossover operator.
+                Оператор кроссовера подрядчиков.
+            selection_size: Size of selection.
+                Размер селекции.
+
+        Returns:
+            Any: Result of genetic step.
+                Any: Результат шага генетического алгоритма.
+        """
         self._current_chromosomes = chromosomes
-        return runGenetic(self._cache, chromosomes, mutate_order, mutate_resources, mutate_contractors,
-                          mate_order, mate_resources, mate_contractors, selection_size)
+        return runGenetic(
+            self._cache,
+            chromosomes,
+            mutate_order,
+            mutate_resources,
+            mutate_contractors,
+            mate_order,
+            mate_resources,
+            mate_contractors,
+            selection_size,
+        )
 
     def close(self):
+        """Release native resources.
+        Освобождает нативные ресурсы.
+        """
         freeEvaluationInfo(self._cache)

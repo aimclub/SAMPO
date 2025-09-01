@@ -1,3 +1,7 @@
+"""Schedulers based on topological ordering of work graphs.
+Планировщики, основанные на топологической сортировке графов работ.
+"""
+
 from operator import itemgetter
 from typing import Optional
 
@@ -11,40 +15,76 @@ from sampo.scheduler.timeline.momentum_timeline import MomentumTimeline
 from sampo.utilities.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
 from sampo.schemas.time import Time
-from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.schemas.time_estimator import DefaultWorkEstimator, WorkTimeEstimator
 
 
 class TopologicalScheduler(GenericScheduler):
-    """
-    Scheduler, that represent 'WorkGraph' in topological order.
+    """Scheduler representing a work graph in topological order.
+    Планировщик, представляющий граф работ в топологическом порядке.
     """
 
-    def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.Topological,
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
-        super().__init__(scheduler_type=scheduler_type,
-                         resource_optimizer=AverageReqResourceOptimizer(),
-                         timeline_type=MomentumTimeline,
-                         prioritization_f=self._topological_sort,
-                         optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
-                         work_estimator=work_estimator)
+    def __init__(
+        self,
+        scheduler_type: SchedulerType = SchedulerType.Topological,
+        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+    ):
+        """Initialize topological scheduler.
+        Инициализирует топологический планировщик.
+
+        Args:
+            scheduler_type: Scheduler type.
+                Тип планировщика.
+            work_estimator: Work time estimator.
+                Оценщик времени выполнения работ.
+        """
+        super().__init__(
+            scheduler_type=scheduler_type,
+            resource_optimizer=AverageReqResourceOptimizer(),
+            timeline_type=MomentumTimeline,
+            prioritization_f=self._topological_sort,
+            optimize_resources_f=self.get_default_res_opt_function(lambda _: Time(0)),
+            work_estimator=work_estimator,
+        )
 
     def _shuffle(self, nodes: set[str]) -> list[str]:
-        """
-        Shuffle nodes that are on the same level.
+        """Shuffle nodes on the same level.
+        Перемешивает узлы на одном уровне.
 
-        :param nodes: list of nodes
-        :return: list of shuffled indices
+        Args:
+            nodes: List of node identifiers.
+                Список идентификаторов узлов.
+
+        Returns:
+            list[str]: Shuffled node identifiers.
+                list[str]: Перемешанные идентификаторы узлов.
         """
         return list(nodes)
 
     # noinspection PyMethodMayBeStatic
-    def _topological_sort(self,
-                          head_nodes: list[GraphNode],
-                          node_id2parent_ids: dict[str, set[str]],
-                          node_id2child_ids: dict[str, set[str]],
-                          work_estimator: WorkTimeEstimator) -> list[GraphNode]:
+    def _topological_sort(
+        self,
+        head_nodes: list[GraphNode],
+        node_id2parent_ids: dict[str, set[str]],
+        node_id2child_ids: dict[str, set[str]],
+        work_estimator: WorkTimeEstimator,
+    ) -> list[GraphNode]:
+        """Sort nodes topologically within priority groups.
+        Выполняет топологическую сортировку узлов с учетом приоритетов.
 
+        Args:
+            head_nodes: Head nodes of the graph.
+                Начальные узлы графа.
+            node_id2parent_ids: Mapping of node IDs to parent IDs.
+                Отображение идентификаторов узлов на идентификаторы родителей.
+            node_id2child_ids: Mapping of node IDs to child IDs.
+                Отображение идентификаторов узлов на идентификаторы потомков.
+            work_estimator: Work time estimator.
+                Оценщик времени выполнения работ.
+
+        Returns:
+            list[GraphNode]: Nodes in topological order.
+                list[GraphNode]: Узлы в топологическом порядке.
+        """
         ordered_nodes = []
 
         priority_groups = extract_priority_groups_from_nodes(head_nodes)
@@ -53,11 +93,15 @@ class TopologicalScheduler(GenericScheduler):
 
         for _, priority_group in sorted(priority_groups.items(), key=itemgetter(0)):
             priority_group_set = set(node.id for node in priority_group)
-            priority_group_dict = {k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
-                                   for k in priority_group}
-            tsorted_node_ids: list[str] = [node_id
-                                           for level in toposort(priority_group_dict)
-                                           for node_id in self._shuffle(level)]
+            priority_group_dict = {
+                k.id: node_id2parent_ids[k.id].intersection(priority_group_set)
+                for k in priority_group
+            }
+            tsorted_node_ids: list[str] = [
+                node_id
+                for level in toposort(priority_group_dict)
+                for node_id in self._shuffle(level)
+            ]
 
             ordered_nodes.extend([id2node[node] for node in tsorted_node_ids])
 
@@ -67,12 +111,16 @@ class TopologicalScheduler(GenericScheduler):
 
 
 def toposort(data):
-    """\
-    Dependencies are expressed as a dictionary whose keys are items
-    and whose values are a set of dependent items. Output is a list of
-    sets in topological order. The first set consists of items with no
-    dependences, each subsequent set consists of items that depend upon
-    items in the preceeding sets.
+    """Perform topological sort on dependency mapping.
+    Выполняет топологическую сортировку по отображению зависимостей.
+
+    Args:
+        data: Mapping of items to their dependencies.
+            Отображение элементов и их зависимостей.
+
+    Yields:
+        set[str]: Sets of items in topological order.
+            set[str]: Наборы элементов в топологическом порядке.
     """
 
     # Special case empty input.
@@ -107,6 +155,13 @@ def toposort(data):
 
 
 def validate_order(order: list[GraphNode]):
+    """Validate that order respects dependencies.
+    Проверяет, что порядок учитывает зависимости.
+
+    Args:
+        order: Ordered list of graph nodes.
+            Упорядоченный список узлов графа.
+    """
     seen = set()
 
     for node in order:
@@ -115,22 +170,38 @@ def validate_order(order: list[GraphNode]):
 
 
 class RandomizedTopologicalScheduler(TopologicalScheduler):
-    """
-    Scheduler, that represent 'WorkGraph' in topological order with random.
+    """Topological scheduler with random tie-breaking.
+    Топологический планировщик со случайным разрешением связей.
     """
 
-    def __init__(self,
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                 random_seed: Optional[int] = None):
+    def __init__(
+        self,
+        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+        random_seed: Optional[int] = None,
+    ):
+        """Initialize randomized topological scheduler.
+        Инициализирует топологический планировщик со случайностью.
+
+        Args:
+            work_estimator: Work time estimator.
+                Оценщик времени выполнения работ.
+            random_seed: Seed for random generator.
+                Зерно генератора случайных чисел.
+        """
         super().__init__(work_estimator=work_estimator)
         self._random_state = np.random.RandomState(random_seed)
 
     def _shuffle(self, nodes: set[str]) -> list[str]:
-        """
-        Shuffle nodes that are on the same level.
+        """Randomly shuffle nodes on the same level.
+        Случайно перемешивает узлы на одном уровне.
 
-        :param nodes: list of nodes
-        :return: list of shuffled indices
+        Args:
+            nodes: List of node identifiers.
+                Список идентификаторов узлов.
+
+        Returns:
+            list[str]: Shuffled node identifiers.
+                list[str]: Перемешанные идентификаторы узлов.
         """
         nds = list(nodes)
         indices = np.arange(len(nds))

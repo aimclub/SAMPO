@@ -1,3 +1,9 @@
+"""Utilities for generating synthetic block graphs for the multi-agent scheduler.
+
+Инструменты для генерации синтетических графов блоков для многоагентного
+планировщика.
+"""
+
 from enum import Enum
 from random import Random
 from typing import Callable
@@ -12,12 +18,19 @@ from sampo.schemas.works import WorkUnit
 
 
 class SyntheticBlockGraphType(Enum):
-    """
-    Describe types of synthetic block graph:
-    - Parallel - works can be performed mostly in parallel,
-    - Sequential - works can be performed mostly in sequential,
-    - Random - random structure of block graph,
-    - Queue - queue structure typical of real processes capital construction.
+    """Types of synthetic block graphs.
+
+    Типы синтетических графов блоков.
+
+    Attributes:
+        SEQUENTIAL: Works are performed mostly sequentially.
+            Работы выполняются преимущественно последовательно.
+        PARALLEL: Works can be performed mostly in parallel.
+            Работы могут выполняться преимущественно параллельно.
+        RANDOM: Random structure of a block graph.
+            Случайная структура графа блоков.
+        QUEUES: Queue structure typical of real construction processes.
+            Очередная структура, типичная для процессов капитального строительства.
     """
     SEQUENTIAL = 0
     PARALLEL = 1
@@ -29,6 +42,15 @@ EMPTY_GRAPH_VERTEX_COUNT = 2
 
 
 def generate_empty_graph() -> WorkGraph:
+    """Create a minimal work graph with start and end nodes.
+
+    Создать минимальный граф работ с начальными и конечными вершинами.
+
+    Returns:
+        WorkGraph: Generated empty graph.
+            Сгенерированный пустой граф.
+    """
+
     start = GraphNode(WorkUnit(str(uuid4()), ""), [])
     end = GraphNode(WorkUnit(str(uuid4()), ""), [start])
     return WorkGraph(start, end)
@@ -39,18 +61,31 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
                     edge_prob: float, rand: Random | None = Random(),
                     obstruction_getter: Callable[[int], Obstruction | None] = lambda _: None,
                     logger: Callable[[str], None] = print) -> BlockGraph:
-    """
-    Generate synthetic block graph according to given parameters.
+    """Generate a synthetic block graph.
 
-    :param graph_type: type of BlockGraph
-    :param n_blocks: the count of blocks
-    :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential
-    :param count_supplier: function that computes the borders of block size from it's index
-    :param edge_prob: edge existence probability
-    :param rand: a random reference
-    :param obstruction_getter: obstruction, that can be inserted in BlockGraph
-    :param logger: the log function that consumes log strings
-    :return: generated block graph
+    Сгенерировать синтетический граф блоков.
+
+    Args:
+        graph_type: Type of the resulting block graph.
+            Тип результирующего графа блоков.
+        n_blocks: Number of blocks.
+            Количество блоков.
+        type_prop: Proportions of `WorkGraph` types: General, Parallel, Sequential.
+            Пропорции типов `WorkGraph`: общий, параллельный, последовательный.
+        count_supplier: Function that returns size limits for a block index.
+            Функция, возвращающая границы размера для индекса блока.
+        edge_prob: Probability that an edge exists.
+            Вероятность существования ребра.
+        rand: Randomness source.
+            Источник случайности.
+        obstruction_getter: Function providing an optional obstruction for a block.
+            Функция, предоставляющая необязательное препятствие для блока.
+        logger: Log function consuming messages.
+            Функция логирования, принимающая сообщения.
+
+    Returns:
+        BlockGraph: Generated block graph.
+            Сгенерированный граф блоков.
     """
     ss = SimpleSynthetic(rand)
 
@@ -106,21 +141,37 @@ def generate_block_graph(graph_type: SyntheticBlockGraphType, n_blocks: int, typ
                          queues_blocks: list[int] | None = None,
                          queues_edges: list[int] | None = None,
                          logger: Callable[[str], None] = print) -> BlockGraph:
-    """
-    Generate synthetic block graph of the received type.
+    """Generate a block graph of the given type.
 
-    :param graph_type: type of Block Graph
-    :param n_blocks: number of blocks
-    :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential, Queues
-    :param count_supplier: function that computes the borders of block size from it's index
-    :param edge_prob: edge existence probability
-    :param rand: a random reference
-    :param obstruction_getter:
-    :param queues_num: number of queues in a block graph
-    :param queues_blocks: list of queues. It contains the number of blocks in each queue
-    :param queues_edges:
-    :param logger: the log function that consumes log strings
-    :return: generated block graph
+    Сгенерировать граф блоков заданного типа.
+
+    Args:
+        graph_type: Desired structure of the block graph.
+            Требуемая структура графа блоков.
+        n_blocks: Number of blocks.
+            Количество блоков.
+        type_prop: Proportions of `WorkGraph` types: General, Parallel, Sequential, Queues.
+            Пропорции типов `WorkGraph`: общий, параллельный, последовательный, очереди.
+        count_supplier: Function returning size limits for a block index.
+            Функция, возвращающая границы размера для индекса блока.
+        edge_prob: Probability that an edge exists.
+            Вероятность существования ребра.
+        rand: Randomness source.
+            Источник случайности.
+        obstruction_getter: Function providing an optional obstruction for a block.
+            Функция, предоставляющая необязательное препятствие для блока.
+        queues_num: Number of queues in the block graph.
+            Количество очередей в графе блоков.
+        queues_blocks: Number of blocks in each queue.
+            Количество блоков в каждой очереди.
+        queues_edges: Number of edges in each queue.
+            Количество рёбер в каждой очереди.
+        logger: Log function consuming messages.
+            Функция логирования, принимающая сообщения.
+
+    Returns:
+        BlockGraph: Generated block graph.
+            Сгенерированный граф блоков.
     """
     if graph_type == SyntheticBlockGraphType.QUEUES:
         return generate_queues(type_prop, count_supplier, rand, obstruction_getter, queues_num, queues_blocks,
@@ -138,18 +189,31 @@ def generate_queues(type_prop: list[int],
                     queues_blocks: list[int] | None = None,
                     queues_edges: list[int] | None = None,
                     logger: Callable[[str], None] = print) -> BlockGraph:
-    """
-    Generate synthetic block queues graph according to given parameters.
+    """Generate a block graph with queue structure.
 
-    :param type_prop: proportions of the `WorkGraph` types: General, Parallel, Sequential
-    :param count_supplier: function that computes the borders of block size from it's index
-    :param rand: a random reference
-    :param obstruction_getter:
-    :param queues_num: number of queues in a block graph
-    :param queues_blocks: list of queues. It contains the number of blocks in each queue
-    :param queues_edges:
-    :param logger: the log function that consumes log strings
-    :return: generated block graph
+    Сгенерировать граф блоков с очередной структурой.
+
+    Args:
+        type_prop: Proportions of `WorkGraph` types: General, Parallel, Sequential.
+            Пропорции типов `WorkGraph`: общий, параллельный, последовательный.
+        count_supplier: Function returning size limits for a block index.
+            Функция, возвращающая границы размера для индекса блока.
+        rand: Randomness source.
+            Источник случайности.
+        obstruction_getter: Function providing an optional obstruction for a block.
+            Функция, предоставляющая необязательное препятствие для блока.
+        queues_num: Number of queues in the block graph.
+            Количество очередей в графе блоков.
+        queues_blocks: Number of blocks in each queue.
+            Количество блоков в каждой очереди.
+        queues_edges: Number of edges in each queue.
+            Количество рёбер в каждой очереди.
+        logger: Log function consuming messages.
+            Функция логирования, принимающая сообщения.
+
+    Returns:
+        BlockGraph: Generated block graph.
+            Сгенерированный граф блоков.
     """
     ss = SimpleSynthetic(rand)
     nodes_all: list[BlockNode] = []

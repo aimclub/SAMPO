@@ -1,3 +1,8 @@
+"""Genetic scheduling orchestrator.
+
+Генетический оркестратор планирования.
+"""
+
 import random
 from typing import Optional
 
@@ -25,38 +30,69 @@ from sampo.utilities.validation import validate_schedule
 
 
 class GeneticScheduler(Scheduler):
-    """
-    Class for hybrid scheduling algorithm, that uses heuristic algorithm to generate
-    first population and genetic algorithm to search the best solving
+    """Hybrid scheduler combining heuristics and genetic search.
+
+    Гибридный планировщик, сочетающий эвристику и генетический поиск.
     """
 
     def __init__(self,
                  number_of_generation: Optional[int] = 50,
-                 mutate_order: Optional[float or None] = None,
-                 mutate_resources: Optional[float or None] = None,
-                 mutate_zones: Optional[float or None] = None,  # TODO: update info about zones mutation
-                 size_of_population: Optional[float or None] = None,
+                 mutate_order: Optional[float | None] = None,
+                 mutate_resources: Optional[float | None] = None,
+                 mutate_zones: Optional[float | None] = None,
+                 size_of_population: Optional[float | None] = None,
                  rand: Optional[random.Random] = None,
-                 seed: Optional[float or None] = None,
-                 weights: Optional[list[int] or None] = None,
+                 seed: Optional[float | None] = None,
+                 weights: Optional[list[int] | None] = None,
                  fitness_constructor: FitnessFunction = TimeFitness(),
-                 # for each fitness function we try to maximize its value,
-                 # otherwise we should specify a multiplicator (-1) as a fitness weight (tuple for multicriterial)
                  fitness_weights: tuple[int | float, ...] = (-1,),
-                 scheduler_type: SchedulerType = SchedulerType.Genetic,  # TODO: is it necessary ?
+                 scheduler_type: SchedulerType = SchedulerType.Genetic,
                  resource_optimizer: ResourceOptimizer = IdentityResourceOptimizer(),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
                  sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
-                 # if True - we enabling usage of the third part of the chromosome (with resource boundaries)
-                 # set True in the case of resource optimization (separate or as a part of a multicriterial optimization)
-                 # and False otherwise
                  optimize_resources: bool = False,
-                 # if True - Pareto-based selection will be used, otherwise it will be sequential optimization
-                 # of the given criteries from the FitnessFunction
-                 # for optimization on one criteria set False
                  is_multiobjective: bool = False,
-                 # for experiments with classic RCPSP formulation (initialize population with LFT)
                  only_lft_initialization: bool = False):
+        """Initialize genetic scheduler.
+
+        Инициализирует генетический планировщик.
+
+        Args:
+            number_of_generation (int, optional): Number of generations.
+                Количество поколений.
+            mutate_order (float | None, optional): Mutation probability for order.
+                Вероятность мутации порядка.
+            mutate_resources (float | None, optional): Mutation probability for resources.
+                Вероятность мутации ресурсов.
+            mutate_zones (float | None, optional): Mutation probability for zones.
+                Вероятность мутации зон.
+            size_of_population (float | None, optional): Population size.
+                Размер популяции.
+            rand (random.Random, optional): Random generator.
+                Генератор случайных чисел.
+            seed (float | None, optional): Seed for random generator.
+                Значение инициализации случайных чисел.
+            weights (list[int] | None, optional): Weights for initial schedules.
+                Веса для начальных расписаний.
+            fitness_constructor (FitnessFunction): Fitness function factory.
+                Фабрика функции пригодности.
+            fitness_weights (tuple[int | float, ...]): Weights for fitness values.
+                Веса для значений пригодности.
+            scheduler_type (SchedulerType): Scheduler type.
+                Тип планировщика.
+            resource_optimizer (ResourceOptimizer): Optimizer for resources.
+                Оптимизатор ресурсов.
+            work_estimator (WorkTimeEstimator): Work time estimator.
+                Оценщик времени работ.
+            sgs_type (ScheduleGenerationScheme): Schedule generation scheme.
+                Схема генерации расписания.
+            optimize_resources (bool): Whether to optimize resources.
+                Оптимизировать ли ресурсы.
+            is_multiobjective (bool): Use multiobjective optimization.
+                Использовать ли многокритериальную оптимизацию.
+            only_lft_initialization (bool): Initialize using only LFT.
+                Инициализировать только через LFT.
+        """
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -89,11 +125,19 @@ class GeneticScheduler(Scheduler):
                f']'
 
     def get_params(self, works_count: int) -> tuple[float, float, float, int]:
-        """
-        Return base parameters for model to make new population
+        """Get GA parameters derived from work count.
 
-        :param works_count:
-        :return:
+        Получает параметры ГА на основе числа работ.
+
+        Args:
+            works_count (int): Number of works in graph.
+                Количество работ в графе.
+
+        Returns:
+            tuple[float, float, float, int]: Probabilities for order, resources and
+                zones mutations plus population size.
+                Вероятности мутаций порядка, ресурсов и зон, а также размер
+                популяции.
         """
         mutate_order = self.mutate_order
         if mutate_order is None:
@@ -117,32 +161,81 @@ class GeneticScheduler(Scheduler):
                 size_of_population = works_count // 25
         return mutate_order, mutate_resources, mutate_zones, size_of_population
 
-    # Time border for genetic evaluation
-    def set_time_border(self, time_border: int):
+    def set_time_border(self, time_border: int) -> None:
+        """Define execution time border for evaluation.
+
+        Устанавливает ограничение времени выполнения для оценки.
+
+        Args:
+            time_border (int): Maximum execution time.
+                Максимальное время выполнения.
+        """
         self._time_border = time_border
 
-    # Max steps without improvement for genetic evaluation
-    def set_max_plateau_steps(self, max_plateau_steps: int):
+    def set_max_plateau_steps(self, max_plateau_steps: int) -> None:
+        """Define plateau limit for GA evolution.
+
+        Задает предел плато для эволюции ГА.
+
+        Args:
+            max_plateau_steps (int): Steps without improvement.
+                Шаги без улучшений.
+        """
         self._max_plateau_steps = max_plateau_steps
 
-    def set_deadline(self, deadline: Time):
-        """
-        Set the project deadline
+    def set_deadline(self, deadline: Time) -> None:
+        """Set the project deadline.
 
-        :param deadline:
+        Устанавливает дедлайн проекта.
+
+        Args:
+            deadline (Time): Finish time limit.
+                Ограничение по времени завершения.
         """
         self._deadline = deadline
 
-    def set_weights(self, weights: list[int]):
+    def set_weights(self, weights: list[int]) -> None:
+        """Assign weights for initial schedules.
+
+        Назначает веса для начальных расписаний.
+
+        Args:
+            weights (list[int]): Importance values.
+                Значения важности.
+        """
         self._weights = weights
 
-    def set_optimize_resources(self, optimize_resources: bool):
+    def set_optimize_resources(self, optimize_resources: bool) -> None:
+        """Toggle resource optimization.
+
+        Переключает оптимизацию ресурсов.
+
+        Args:
+            optimize_resources (bool): Enable optimization.
+                Включить оптимизацию.
+        """
         self._optimize_resources = optimize_resources
 
-    def set_is_multiobjective(self, is_multiobjective: bool):
+    def set_is_multiobjective(self, is_multiobjective: bool) -> None:
+        """Toggle multiobjective mode.
+
+        Переключает режим многокритериальности.
+
+        Args:
+            is_multiobjective (bool): Enable multiobjective search.
+                Включить многокритериальный поиск.
+        """
         self._is_multiobjective = is_multiobjective
 
-    def set_only_lft_initialization(self, only_lft_initialization: bool):
+    def set_only_lft_initialization(self, only_lft_initialization: bool) -> None:
+        """Use only LFT initialization.
+
+        Использовать только инициализацию LFT.
+
+        Args:
+            only_lft_initialization (bool): Flag for LFT-only start.
+                Флаг запуска только через LFT.
+        """
         self._only_lft_initialization = only_lft_initialization
 
     @staticmethod
@@ -150,20 +243,33 @@ class GeneticScheduler(Scheduler):
                                   contractors: list[Contractor],
                                   landscape: LandscapeConfiguration = LandscapeConfiguration(),
                                   spec: ScheduleSpec = ScheduleSpec(),
-                                  work_estimator: WorkTimeEstimator = None,
-                                  deadline: Time = None,
+                                  work_estimator: WorkTimeEstimator | None = None,
+                                  deadline: Time | None = None,
                                   weights=None):
-        """
-        Algorithm, that generate initial population
+        """Create initial population using heuristic schedulers.
 
-        :param landscape:
-        :param wg: graph of works
-        :param contractors:
-        :param spec:
-        :param work_estimator:
-        :param deadline:
-        :param weights:
-        :return:
+        Создает начальную популяцию с помощью эвристических планировщиков.
+
+        Args:
+            wg (WorkGraph): Graph of works.
+                Граф работ.
+            contractors (list[Contractor]): Available contractors.
+                Доступные подрядчики.
+            landscape (LandscapeConfiguration): Landscape configuration.
+                Конфигурация ландшафта.
+            spec (ScheduleSpec): Scheduling specification.
+                Спецификация расписания.
+            work_estimator (WorkTimeEstimator | None): Time estimator.
+                Оценщик времени.
+            deadline (Time | None): Optional project deadline.
+                Необязательный дедлайн проекта.
+            weights (list[int] | None): Importance weights.
+                Веса важности.
+
+        Returns:
+            dict[str, tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None, int]]:
+                Mapping of heuristic name to initial schedule data.
+                Сопоставление имени эвристики с данными начального расписания.
         """
 
         if weights is None:
@@ -220,6 +326,30 @@ class GeneticScheduler(Scheduler):
                     assigned_parent_time: Time = Time(0),
                     timeline: Timeline | None = None,
                     landscape: LandscapeConfiguration = LandscapeConfiguration()) -> list[ChromosomeType]:
+        """Evolve an existing population.
+
+        Развивает существующую популяцию.
+
+        Args:
+            wg (WorkGraph): Work graph.
+                Граф работ.
+            contractors (list[Contractor]): Contractors list.
+                Список подрядчиков.
+            pop (list[ChromosomeType]): Current population.
+                Текущая популяция.
+            spec (ScheduleSpec): Scheduling specification.
+                Спецификация расписания.
+            assigned_parent_time (Time): Start time of parent schedule.
+                Время начала родительского расписания.
+            timeline (Timeline | None): Existing timeline.
+                Существующая временная шкала.
+            landscape (LandscapeConfiguration): Landscape configuration.
+                Конфигурация ландшафта.
+
+        Returns:
+            list[ChromosomeType]: Updated population.
+                Обновленная популяция.
+        """
         mutate_order, mutate_resources, mutate_zones, size_of_population = self.get_params(wg.vertex_count)
         deadline = None if self._optimize_resources else self._deadline
 
@@ -259,18 +389,30 @@ class GeneticScheduler(Scheduler):
                             timeline: Timeline | None = None,
                             landscape: LandscapeConfiguration = LandscapeConfiguration()) \
             -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
-        """
-        Build schedules for received graph of workers and return the current state of schedules
-        It's needed to use this method in multy agents model
+        """Build schedules and return cached state.
 
-        :param landscape:
-        :param wg:
-        :param contractors:
-        :param spec:
-        :param validate:
-        :param assigned_parent_time:
-        :param timeline:
-        :return:
+        Строит расписания и возвращает их кэшированное состояние.
+
+        Args:
+            wg (WorkGraph): Work graph.
+                Граф работ.
+            contractors (list[Contractor]): Contractors list.
+                Список подрядчиков.
+            spec (ScheduleSpec): Scheduling specification.
+                Спецификация расписания.
+            validate (bool): Whether to validate schedules.
+                Нужно ли валидировать расписания.
+            assigned_parent_time (Time): Start time of parent schedule.
+                Время начала родительского расписания.
+            timeline (Timeline | None): Existing timeline.
+                Существующая временная шкала.
+            landscape (LandscapeConfiguration): Landscape configuration.
+                Конфигурация ландшафта.
+
+        Returns:
+            list[tuple[Schedule, Time, Timeline, list[GraphNode]]]: Generated schedules
+                with metadata.
+                Сгенерированные расписания с метаданными.
         """
         init_schedules = GeneticScheduler.generate_first_population(wg, contractors, landscape, spec,
                                                                     self.work_estimator, self._deadline, self._weights)

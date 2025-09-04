@@ -1,3 +1,8 @@
+"""Landscape resources and routing utilities.
+
+Утилиты ландшафтных ресурсов и маршрутизации.
+"""
+
 import heapq
 import math
 from abc import ABC, abstractmethod
@@ -12,25 +17,56 @@ from sampo.schemas.zones import ZoneConfiguration
 
 
 class ResourceSupply(ABC):
+    """Base entity that supplies resources.
+
+    Базовая сущность, предоставляющая ресурсы.
+    """
+
     def __init__(self, id: str, name: str):
+        """Initialize supply with identifier and name.
+
+        Инициализирует поставщика ресурсом идентификатором и именем.
+
+        Args:
+            id (str): unique identifier.
+                Уникальный идентификатор.
+            name (str): human-readable name.
+                Человекочитаемое имя.
+        """
         self.id = id
         self.name = name
 
     @abstractmethod
     def get_resources(self) -> list[tuple[str, int]]:
+        """Return provided resources.
+
+        Возвращает предоставляемые ресурсы.
+
+        Returns:
+            list[tuple[str, int]]: resource name and quantity pairs.
+                Пары названия ресурса и количества.
+        """
         ...
 
 
 class Road(ResourceSupply):
-    def __init__(self, name: str,
-                 edge: LandEdge,
-                 speed: float = 5):
-        """
-        :param name: name of road
-        :param edge: the edge in LandGraph
-        :poram bandwidth: the number of vehicles that road can pass per hour
-        :param speed: the maximum value of speed on the road
-        :param vehicles: the number of vehicles that are on the road at the current moment
+    """Road segment between two nodes.
+
+    Дорожный сегмент между двумя узлами.
+    """
+
+    def __init__(self, name: str, edge: LandEdge, speed: float = 5):
+        """Initialize road based on graph edge.
+
+        Инициализирует дорогу на основе ребра графа.
+
+        Args:
+            name (str): road name.
+                Название дороги.
+            edge (LandEdge): edge in the land graph.
+                Ребро в графе ландшафта.
+            speed (float): maximum speed on the road.
+                Максимальная скорость на дороге.
         """
         super(Road, self).__init__(edge.id, name)
         self.vehicles = edge.bandwidth
@@ -40,14 +76,36 @@ class Road(ResourceSupply):
         self.edge = edge
 
     def get_resources(self) -> list[tuple[str, int]]:
+        """Return road characteristics as resources.
+
+        Возвращает характеристики дороги как ресурсы.
+
+        Returns:
+            list[tuple[str, int]]: resource name and value pairs.
+                Пары названий и значений ресурсов.
+        """
         return [('speed', self.speed), ('length', self.edge.weight), ('vehicles', self.vehicles)]
 
 
 class Vehicle(ResourceSupply):
-    def __init__(self,
-                 id: str,
-                 name: str,
-                 capacity: list[Material]):
+    """Transport vehicle with material capacity.
+
+    Транспортное средство с грузоподъемностью.
+    """
+
+    def __init__(self, id: str, name: str, capacity: list[Material]):
+        """Initialize vehicle with capacity.
+
+        Инициализирует транспортное средство с вместимостью.
+
+        Args:
+            id (str): identifier of vehicle.
+                Идентификатор транспорта.
+            name (str): vehicle name.
+                Название транспорта.
+            capacity (list[Material]): carried materials.
+                Перевозимые материалы.
+        """
         super(Vehicle, self).__init__(id, name)
         self.capacity = capacity
         self.cost = 0.0
@@ -55,22 +113,46 @@ class Vehicle(ResourceSupply):
 
     @cached_property
     def resources(self) -> dict[str, int]:
+        """Material quantities carried by the vehicle.
+
+        Количество материалов, перевозимых транспортом.
+        """
         return {mat.name: mat.count for mat in self.capacity}
 
     def get_resources(self) -> list[tuple[str, int]]:
+        """Return vehicle capacity as resources.
+
+        Возвращает вместимость транспорта в виде ресурсов.
+
+        Returns:
+            list[tuple[str, int]]: material name and count pairs.
+                Пары названий материалов и количества.
+        """
         return [(mat.name, mat.count) for mat in self.capacity]
 
 
 class ResourceHolder(ResourceSupply):
-    def __init__(self,
-                 id: str,
-                 name: str,
+    """Storage node that owns vehicles.
+
+    Узел хранения, владеющий транспортом.
+    """
+
+    def __init__(self, id: str, name: str,
                  vehicles: list[Vehicle] = None,
                  node: LandGraphNode = None):
-        """
-        :param name:
-        :param vehicles:
-        :param node:
+        """Initialize resource holder.
+
+        Инициализирует держателя ресурсов.
+
+        Args:
+            id (str): identifier of holder.
+                Идентификатор держателя.
+            name (str): holder name.
+                Название держателя.
+            vehicles (list[Vehicle] | None): available vehicles.
+                Доступные транспортные средства.
+            node (LandGraphNode | None): associated land graph node.
+                Связанный узел ландшафтного графа.
         """
         # let ids of two objects will be similar to make simpler matching ResourceHolder to node in LandGraph
         super(ResourceHolder, self).__init__(id, name)
@@ -79,10 +161,23 @@ class ResourceHolder(ResourceSupply):
         self.node = node
 
     def get_resources(self) -> list[tuple[str, int]]:
+        """Return resources stored at the node.
+
+        Возвращает ресурсы, хранящиеся в узле.
+
+        Returns:
+            list[tuple[str, int]]: resource name and quantity pairs.
+                Пары названий ресурсов и количеств.
+        """
         return [(name, count) for name, count in self.node.resource_storage_unit.capacity.items()]
 
 
 class LandscapeConfiguration:
+    """Configuration of resource holders and routes.
+
+    Конфигурация держателей ресурсов и маршрутов.
+    """
+
     def __init__(self,
                  holders: list[ResourceHolder] = None,
                  lg: LandGraph = None,
@@ -113,9 +208,17 @@ class LandscapeConfiguration:
         self._node2ind = self.lg.node2ind
 
     def get_sorted_holders(self, node: LandGraphNode) -> SortedList[list[tuple[float, str]]]:
-        """
-        :param node: id of node in LandGraph's list of nodes
-        :return: sorted list of holders' id by the length of way
+        """Return holders sorted by distance from node.
+
+        Возвращает держателей, отсортированных по расстоянию от узла.
+
+        Args:
+            node (LandGraphNode): node of interest.
+                Исходный узел.
+
+        Returns:
+            SortedList[list[tuple[float, str]]]: pairs of distance and holder id.
+                Пары расстояния и идентификатора держателя.
         """
         holders = []
         node_ind = self._node2ind[node]
@@ -125,8 +228,19 @@ class LandscapeConfiguration:
         return SortedList(holders, key=lambda x: x[0])
 
     def get_route(self, from_node: LandGraphNode, to_node: LandGraphNode) -> list[str]:
-        """
-        Return a list of roads' id that are part of the route
+        """Return road IDs forming the shortest route.
+
+        Возвращает идентификаторы дорог, составляющих кратчайший маршрут.
+
+        Args:
+            from_node (LandGraphNode): start node.
+                Начальный узел.
+            to_node (LandGraphNode): destination node.
+                Конечный узел.
+
+        Returns:
+            list[str]: identifiers of roads along the path.
+                Идентификаторы дорог вдоль пути.
         """
         from_ind = self._node2ind[from_node]
         to_ind = self._node2ind[to_node]
@@ -164,10 +278,21 @@ class LandscapeConfiguration:
 
     def construct_route(self, from_node: LandGraphNode, to_node: LandGraphNode,
                         roads_available: list[Road]) -> list[str]:
-        """
-        Construct the route from the list of available roads whether it is possible.
-        :param roads_available: list of available roads
-        :return: list of roads' id that are included to the route whether it exists, otherwise return empty list
+        """Construct route using subset of available roads.
+
+        Строит маршрут, используя доступное множество дорог.
+
+        Args:
+            from_node (LandGraphNode): start node.
+                Начальный узел.
+            to_node (LandGraphNode): destination node.
+                Конечный узел.
+            roads_available (list[Road]): roads that may be used.
+                Доступные для использования дороги.
+
+        Returns:
+            list[str]: road IDs if route exists, otherwise empty list.
+                Идентификаторы дорог, если маршрут существует, иначе пустой список.
         """
 
         adj_matrix = self.lg.adj_matrix.copy()
@@ -199,10 +324,18 @@ class LandscapeConfiguration:
 
     @cached_property
     def holders(self) -> list[ResourceHolder]:
+        """All resource holders.
+
+        Все держатели ресурсов.
+        """
         return self._holders
 
     @cached_property
     def platforms(self) -> list[LandGraphNode]:
+        """Nodes without assigned resource holders.
+
+        Узлы без назначенных держателей ресурсов.
+        """
         if self.lg is None:
             return []
         platform_ids = set([node.id for node in self.lg.nodes]).difference(
@@ -211,9 +344,22 @@ class LandscapeConfiguration:
 
     @cached_property
     def roads(self) -> list[Road]:
+        """All roads in the landscape graph.
+
+        Все дороги в графе ландшафта.
+        """
         return [Road(f'road_{i}', edge) for i, edge in enumerate(self.lg.edges)]
 
     def get_all_resources(self) -> list[dict[str, dict[str, int]]]:
+        """Collect resources of holders and roads.
+
+        Собирает ресурсы держателей и дорог.
+
+        Returns:
+            list[dict[str, dict[str, int]]]: resource information for holders and roads.
+                Информация о ресурсах держателей и дорог.
+        """
+
         def merge_dicts(a, b):
             c = a.copy()
             c.update(b)
@@ -233,10 +379,22 @@ class LandscapeConfiguration:
         return resources
 
     def get_platforms_resources(self) -> dict[str, dict[str, int]]:
+        """Resources available at platforms.
+
+        Ресурсы, доступные на площадках.
+
+        Returns:
+            dict[str, dict[str, int]]: mapping of platform id to its resources.
+                Отображение id площадки на ее ресурсы.
+        """
         return {node.id: {name: count for name, count in node.resource_storage_unit.capacity.items()}
                 for node in self.platforms}
 
     def _build_routes(self):
+        """Precompute routing matrices.
+
+        Предварительно вычисляет матрицы маршрутов.
+        """
         count = self.lg.vertex_count
         dist_mx = self.lg.adj_matrix.copy()
         path_mx: np.array = np.full((count, count), -1)
@@ -269,11 +427,40 @@ class LandscapeConfiguration:
 
 
 class MaterialDelivery:
+    """Schedule of material deliveries for a work.
+
+    Расписание поставок материалов для работы.
+    """
+
     def __init__(self, work_id: str):
+        """Initialize delivery schedule for work.
+
+        Инициализирует расписание поставок для работы.
+
+        Args:
+            work_id (str): identifier of work.
+                Идентификатор работы.
+        """
         self.id = work_id
         self.delivery = {}
 
     def add_delivery(self, name: str, count: int, start_time: 'Time', finish_time: 'Time', from_holder: str):
+        """Record single material delivery.
+
+        Записывает одну поставку материала.
+
+        Args:
+            name (str): material name.
+                Название материала.
+            count (int): delivered amount.
+                Доставляемое количество.
+            start_time (Time): start time.
+                Время начала.
+            finish_time (Time): finish time.
+                Время окончания.
+            from_holder (str): source holder id.
+                Идентификатор держателя-источника.
+        """
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             material_delivery = []
@@ -281,6 +468,16 @@ class MaterialDelivery:
         material_delivery.append((count, start_time, finish_time, from_holder))
 
     def add_deliveries(self, name: str, deliveries: list[tuple[int, 'Time', 'Time', str]]):
+        """Record multiple material deliveries.
+
+        Записывает несколько поставок материала.
+
+        Args:
+            name (str): material name.
+                Название материала.
+            deliveries (list[tuple[int, Time, Time, str]]): list of deliveries.
+                Список поставок.
+        """
         material_delivery = self.delivery.get(name, None)
         if material_delivery is None:
             self.delivery[name] = deliveries

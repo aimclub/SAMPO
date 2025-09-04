@@ -1,55 +1,99 @@
+"""Utilities for scaling worker requirements.
+
+Утилиты для масштабирования требований к рабочим.
+"""
+
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.time import Time
 
 
-def scale_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
-    """
-    Multiplies each of the requirements of their list, scaling the maximum number of resources and volume
+def scale_reqs(
+    req_list: list[WorkerReq], scalar: float, new_name: str | None = None
+) -> list[WorkerReq]:
+    """Scale requirements by scalar.
 
-    :param req_list: list of resource requirements
-    :param scalar: scalar to which the requirements are applied
-    :param new_name: A new name for the requirements
-    :return: scaled requirements
+    Масштабирует требования по коэффициенту.
+
+    Args:
+        req_list (list[WorkerReq]): Requirements to scale.
+            Требования для масштабирования.
+        scalar (float): Scaling factor.
+            Коэффициент масштабирования.
+        new_name (str | None): Optional new name.
+            Необязательное новое имя.
+
+    Returns:
+        list[WorkerReq]: Scaled requirements.
+            Масштабированные требования.
     """
+
     return [work_req.scale_all(scalar, new_name) for work_req in req_list]
 
 
-def mul_volume_reqs(req_list: list[WorkerReq], scalar: float, new_name: str | None = None) -> list[WorkerReq]:
-    """
-    Multiplies each of the requirements of their list, scaling only the volume
+def mul_volume_reqs(
+    req_list: list[WorkerReq], scalar: float, new_name: str | None = None
+) -> list[WorkerReq]:
+    """Scale only volume of requirements.
 
-    :param req_list: list of resource requirements
-    :param scalar: scalar to which the requirements are applied
-    :param new_name: A new name for the requirements
-    :return: scaled requirements
-        """
+    Масштабирует только объём требований.
+
+    Args:
+        req_list (list[WorkerReq]): Requirements to scale.
+            Требования для масштабирования.
+        scalar (float): Scaling factor.
+            Коэффициент масштабирования.
+        new_name (str | None): Optional new name.
+            Необязательное новое имя.
+
+    Returns:
+        list[WorkerReq]: Scaled requirements.
+            Масштабированные требования.
+    """
+
     return [work_req.scale_volume(scalar, new_name) for work_req in req_list]
 
 
-def get_borehole_volume(borehole_count: int, base: (float, float)) -> float:
-    """
-    Function to calculate the scalar for objects depending on the number of boreholes
+def get_borehole_volume(borehole_count: int, base: tuple[float, float]) -> float:
+    """Compute volume multiplier based on boreholes.
 
-    :param borehole_count: number of boreholes on the site
-    :param base:
-        base[0] part of the volume independent of the number of boreholes,
-        base[1] part of the volume dependent on the number of boreholes
-    :return: returns a scalar to calculate the requirements
+    Вычисляет множитель объёма в зависимости от буровых.
+
+    Args:
+        borehole_count (int): Number of boreholes.
+            Количество буровых.
+        base (tuple[float, float]): Base volumes independent and dependent on
+            boreholes.
+            Базовые объёмы, независимые и зависящие от буровых.
+
+    Returns:
+        float: Volume multiplier.
+            Множитель объёма.
     """
+
     return base[0] + base[1] * borehole_count
 
 
-def mul_borehole_volume(req_list: list[WorkerReq], borehole_count: int, base: (float, float)) -> list[WorkerReq]:
-    """
-    Function for scaling resource requirements for works dependent on the number of boreholes
+def mul_borehole_volume(
+    req_list: list[WorkerReq], borehole_count: int, base: tuple[float, float]
+) -> list[WorkerReq]:
+    """Scale requirements by borehole count.
 
-    :param req_list: list of resource requirements
-    :param borehole_count: number of boreholes on the site
-    :param base:
-        base[0] part of the volume independent of the number of boreholes,
-        base[1] part of the volume dependent on the number of boreholes
-    :return: scaled requirements
+    Масштабирует требования по числу буровых.
+
+    Args:
+        req_list (list[WorkerReq]): Requirements to scale.
+            Требования для масштабирования.
+        borehole_count (int): Number of boreholes.
+            Количество буровых.
+        base (tuple[float, float]): Base volumes independent and dependent on
+            boreholes.
+            Базовые объёмы, независимые и зависящие от буровых.
+
+    Returns:
+        list[WorkerReq]: Scaled requirements.
+            Масштабированные требования.
     """
+
     return mul_volume_reqs(req_list, get_borehole_volume(borehole_count, base))
 
 

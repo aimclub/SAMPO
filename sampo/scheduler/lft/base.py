@@ -1,7 +1,12 @@
+"""Base classes and helpers for LFT-based scheduling.
+
+Базовые классы и вспомогательные функции для планирования, основанного на LFT.
+"""
+
 import random
 import numpy as np
 from functools import partial
-from typing import Type, Iterable
+from typing import Iterable, Type
 
 from sampo.scheduler.base import Scheduler, SchedulerType
 from sampo.scheduler.timeline import Timeline, MomentumTimeline
@@ -20,13 +25,35 @@ from sampo.utilities.validation import validate_schedule
 from sampo.schemas.exceptions import IncorrectAmountOfWorker, NoSufficientContractorError
 
 
-def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractors: list[Contractor],
-                                                 spec: ScheduleSpec, worker_pool: WorkerContractorPool) \
-        -> tuple[list[Contractor], np.ndarray]:
-    """
-    This function selects contractors that can perform the work.
-    For each selected contractor, the maximum possible amount of workers is assigned,
-    if they are not specified in the ScheduleSpec, otherwise the amount from the ScheduleSpec is used.
+def get_contractors_and_workers_amounts_for_work(
+    work_unit: WorkUnit,
+    contractors: list[Contractor],
+    spec: ScheduleSpec,
+    worker_pool: WorkerContractorPool,
+) -> tuple[list[Contractor], np.ndarray]:
+    """Select suitable contractors and assign worker amounts.
+
+    Выбрать подходящих подрядчиков и назначить количество рабочих.
+
+    Args:
+        work_unit (WorkUnit): Work to be performed.
+            Работа, которую необходимо выполнить.
+        contractors (list[Contractor]): Available contractors.
+            Доступные подрядчики.
+        spec (ScheduleSpec): Scheduling constraints.
+            Ограничения планирования.
+        worker_pool (WorkerContractorPool): Available workforce per contractor.
+            Доступная рабочая сила у подрядчиков.
+
+    Returns:
+        tuple[list[Contractor], np.ndarray]: Contractors and worker amounts.
+            Подрядчики и количество рабочих.
+
+    Raises:
+        IncorrectAmountOfWorker: Assigned worker counts are invalid.
+            Назначенное количество рабочих неверно.
+        NoSufficientContractorError: No contractor satisfies requirements.
+            Ни один подрядчик не удовлетворяет требованиям.
     """
     work_reqs = work_unit.worker_reqs
     work_spec = spec.get_work_spec(work_unit.id)
@@ -85,28 +112,69 @@ def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractor
 
 
 class LFTScheduler(Scheduler):
-    """
-    Scheduler, which assigns contractors evenly, allocates maximum resources
-    and schedules works in MIN-LFT priority rule order
+    """Schedule works using the MIN-LFT priority rule.
+
+    Планирует работы с использованием правила приоритета MIN-LFT.
     """
 
-    def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.LFT,
-                 timeline_type: Type = MomentumTimeline,
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
+    def __init__(
+        self,
+        scheduler_type: SchedulerType = SchedulerType.LFT,
+        timeline_type: Type = MomentumTimeline,
+        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+    ) -> None:
+        """Create an ``LFTScheduler`` instance.
+
+        Создать экземпляр ``LFTScheduler``.
+
+        Args:
+            scheduler_type (SchedulerType, optional): Scheduler type.
+                Тип планировщика.
+            timeline_type (Type, optional): Timeline implementation.
+                Реализация временной шкалы.
+            work_estimator (WorkTimeEstimator, optional): Duration estimator.
+                Оценщик длительности работ.
+        """
         super().__init__(scheduler_type, None, work_estimator)
         self._timeline_type = timeline_type
-        self._prioritization = partial(lft_prioritization, core_f=lft_prioritization_core)
+        self._prioritization = partial(
+            lft_prioritization, core_f=lft_prioritization_core
+        )
 
-    def schedule_with_cache(self,
-                            wg: WorkGraph,
-                            contractors: list[Contractor],
-                            spec: ScheduleSpec = ScheduleSpec(),
-                            validate: bool = False,
-                            assigned_parent_time: Time = Time(0),
-                            timeline: Timeline | None = None,
-                            landscape: LandscapeConfiguration() = LandscapeConfiguration()
-                            ) -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+    def schedule_with_cache(
+        self,
+        wg: WorkGraph,
+        contractors: list[Contractor],
+        spec: ScheduleSpec = ScheduleSpec(),
+        validate: bool = False,
+        assigned_parent_time: Time = Time(0),
+        timeline: Timeline | None = None,
+        landscape: LandscapeConfiguration() = LandscapeConfiguration(),
+    ) -> list[tuple[Schedule, Time, Timeline, list[GraphNode]]]:
+        """Schedule a graph and cache assignment results.
+
+        Запланировать граф и кэшировать результаты назначений.
+
+        Args:
+            wg (WorkGraph): Graph to schedule.
+                Граф для планирования.
+            contractors (list[Contractor]): Available contractors.
+                Доступные подрядчики.
+            spec (ScheduleSpec, optional): Scheduling constraints.
+                Ограничения планирования.
+            validate (bool, optional): Validate resulting schedule.
+                Проверять ли итоговый план.
+            assigned_parent_time (Time, optional): Start time for the root.
+                Время начала для корневой работы.
+            timeline (Timeline | None, optional): Existing timeline to update.
+                Существующая временная шкала для обновления.
+            landscape (LandscapeConfiguration, optional): Landscape configuration.
+                Конфигурация местности.
+
+        Returns:
+            list[tuple[Schedule, Time, Timeline, list[GraphNode]]]: Generated schedule data.
+                Сформированные данные расписания.
+        """
         # get contractors borders
         worker_pool = get_worker_contractor_pool(contractors)
 
@@ -115,22 +183,32 @@ class LFTScheduler(Scheduler):
 
         # first of all assign workers and contractors to head nodes
         # and estimate head nodes' durations
-        node_id2duration = self._contractor_workers_assignment(head_nodes, contractors, worker_pool, spec)
+        node_id2duration = self._contractor_workers_assignment(
+            head_nodes, contractors, worker_pool, spec
+        )
 
         # order head nodes based on estimated durations
-        ordered_nodes = self._prioritization(head_nodes, node_id2parent_ids, node_id2child_ids, node_id2duration)
+        ordered_nodes = self._prioritization(
+            head_nodes, node_id2parent_ids, node_id2child_ids, node_id2duration
+        )
 
         if not isinstance(timeline, self._timeline_type):
             timeline = self._timeline_type(worker_pool, landscape)
 
         # make schedule based on assigned workers, contractors and order
-        schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, contractors, landscape, spec,
-                                                                       self.work_estimator, assigned_parent_time,
-                                                                       timeline)
+        schedule, schedule_start_time, timeline = self.build_scheduler(
+            ordered_nodes,
+            contractors,
+            landscape,
+            spec,
+            self.work_estimator,
+            assigned_parent_time,
+            timeline,
+        )
         del self._node_id2workers
         schedule = Schedule.from_scheduled_works(
             schedule,
-            wg
+            wg,
         )
 
         if validate:
@@ -138,15 +216,40 @@ class LFTScheduler(Scheduler):
 
         return [(schedule, schedule_start_time, timeline, ordered_nodes)]
 
-    def build_scheduler(self,
-                        ordered_nodes: list[GraphNode],
-                        contractors: list[Contractor],
-                        landscape: LandscapeConfiguration = LandscapeConfiguration(),
-                        spec: ScheduleSpec = ScheduleSpec(),
-                        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                        assigned_parent_time: Time = Time(0),
-                        timeline: Timeline | None = None) \
-            -> tuple[Iterable[ScheduledWork], Time, Timeline]:
+    def build_scheduler(
+        self,
+        ordered_nodes: list[GraphNode],
+        contractors: list[Contractor],
+        landscape: LandscapeConfiguration = LandscapeConfiguration(),
+        spec: ScheduleSpec = ScheduleSpec(),
+        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+        assigned_parent_time: Time = Time(0),
+        timeline: Timeline | None = None,
+    ) -> tuple[Iterable[ScheduledWork], Time, Timeline]:
+        """Build schedule for ordered nodes.
+
+        Сформировать расписание для упорядоченных работ.
+
+        Args:
+            ordered_nodes (list[GraphNode]): Nodes ordered by priority.
+                Узлы, упорядоченные по приоритету.
+            contractors (list[Contractor]): Contractors to assign.
+                Подрядчики для назначения.
+            landscape (LandscapeConfiguration, optional): Landscape configuration.
+                Конфигурация местности.
+            spec (ScheduleSpec, optional): Scheduling constraints.
+                Ограничения планирования.
+            work_estimator (WorkTimeEstimator, optional): Work duration estimator.
+                Оценщик длительности работ.
+            assigned_parent_time (Time, optional): Start time for parent.
+                Время начала для родителя.
+            timeline (Timeline | None, optional): Existing timeline to update.
+                Существующая временная шкала для обновления.
+
+        Returns:
+            tuple[Iterable[ScheduledWork], Time, Timeline]: Scheduled works and timeline.
+                Запланированные работы и временная шкала.
+        """
         worker_pool = get_worker_contractor_pool(contractors)
         # dict for writing parameters of completed_jobs
         node2swork: dict[GraphNode, ScheduledWork] = {}
@@ -161,10 +264,15 @@ class LFTScheduler(Scheduler):
             # get assigned contractor and workers
             contractor, best_worker_team = self._node_id2workers[node.id]
             # find start time
-            start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, best_worker_team,
-                                                                                      node2swork, work_spec, None,
-                                                                                      assigned_parent_time,
-                                                                                      work_estimator)
+            start_time, finish_time, _ = timeline.find_min_start_time_with_additional(
+                node,
+                best_worker_team,
+                node2swork,
+                work_spec,
+                None,
+                assigned_parent_time,
+                work_estimator,
+            )
             # we are scheduling the work `start of the project`
             if index == 0:
                 # this work should always have start_time = 0, so we just re-assign it
@@ -176,8 +284,17 @@ class LFTScheduler(Scheduler):
                 start_time = max(start_time, finish_time)
 
             # apply work to scheduling
-            timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
-                              start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
+            timeline.schedule(
+                node,
+                node2swork,
+                best_worker_team,
+                contractor,
+                work_spec,
+                start_time,
+                work_spec.assigned_time,
+                assigned_parent_time,
+                work_estimator,
+            )
 
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
@@ -238,19 +355,39 @@ class LFTScheduler(Scheduler):
 
 
 class RandomizedLFTScheduler(LFTScheduler):
-    """
-    Scheduler, which assigns contractors evenly with stochasticity, allocates maximum resources
-    and schedules works in order sampled by MIN-LFT and MIN-LST priority rules
+    """Stochastic version of ``LFTScheduler``.
+
+    Стохастический вариант ``LFTScheduler``.
     """
 
-    def __init__(self,
-                 scheduler_type: SchedulerType = SchedulerType.LFT,
-                 timeline_type: Type = MomentumTimeline,
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
-                 rand: random.Random = random.Random()):
+    def __init__(
+        self,
+        scheduler_type: SchedulerType = SchedulerType.LFT,
+        timeline_type: Type = MomentumTimeline,
+        work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
+        rand: random.Random = random.Random(),
+    ) -> None:
+        """Create a ``RandomizedLFTScheduler`` instance.
+
+        Создать экземпляр ``RandomizedLFTScheduler``.
+
+        Args:
+            scheduler_type (SchedulerType, optional): Scheduler type.
+                Тип планировщика.
+            timeline_type (Type, optional): Timeline implementation.
+                Реализация временной шкалы.
+            work_estimator (WorkTimeEstimator, optional): Duration estimator.
+                Оценщик длительности работ.
+            rand (random.Random, optional): Random generator.
+                Генератор случайных чисел.
+        """
         super().__init__(scheduler_type, timeline_type, work_estimator)
         self._random = rand
-        self._prioritization = partial(lft_prioritization, rand=self._random, core_f=lft_randomized_prioritization_core)
+        self._prioritization = partial(
+            lft_prioritization,
+            rand=self._random,
+            core_f=lft_randomized_prioritization_core,
+        )
 
     def _get_contractor_index(self, scores: np.ndarray) -> int:
         return self._random.choices(np.arange(len(scores)), weights=scores)[0] if scores.size > 1 else 0

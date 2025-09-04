@@ -1,3 +1,8 @@
+"""Utilities for building schedules with a genetic algorithm.
+
+Утилиты для построения расписаний с помощью генетического алгоритма.
+"""
+
 import random
 import time
 
@@ -37,6 +42,14 @@ def create_toolbox(wg: WorkGraph,
                    only_lft_initialization: bool = False,
                    is_multiobjective: bool = False,
                    verbose: bool = True) -> Toolbox:
+    """Prepare toolbox for genetic scheduling.
+
+    Подготавливает набор инструментов для генетического планирования.
+
+    Returns:
+        Toolbox: Configured toolbox.
+            Настроенный набор инструментов.
+    """
     start = time.time()
 
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
@@ -113,6 +126,10 @@ def build_schedules(wg: WorkGraph,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
+    """Build schedules using a genetic algorithm.
+
+    Строит расписания с использованием генетического алгоритма.
+    """
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
                                       mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                       rand, spec, weights, pop, landscape, fitness_object,
@@ -147,20 +164,14 @@ def build_schedules_with_cache(wg: WorkGraph,
                                only_lft_initialization: bool = False,
                                is_multiobjective: bool = False) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
-    """
-    Genetic algorithm.
-    Structure of chromosome:
-    [[order of job],
-     [[numbers of workers types 1 for each job], [numbers of workers types 2], ... ],
-      [[border of workers types 1 for each contractor], [border of workers types 2], ...]
-    ]
+    """Run genetic algorithm returning schedules and chromosomes.
 
-    Different mate and mutation for order and for workers.
-    Generate order of job by prioritization from HEFTs and from Topological.
-    Generate resources from min to max.
-    Overall initial population is valid.
+    Запускает генетический алгоритм, возвращая расписания и хромосомы.
 
-    :return: schedule
+    Returns:
+        tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
+            Generated schedules and final population.
+            Сгенерированные расписания и итоговая популяция.
     """
     global_start = start = time.time()
 

@@ -1,5 +1,9 @@
+"""Tools for restoring task connections from historical records.
+
+Инструменты для восстановления связей задач по историческим данным.
+"""
+
 import datetime
-import math
 from typing import Tuple
 
 import numpy as np
@@ -13,11 +17,26 @@ def get_all_connections(graph_df: pd.DataFrame,
                         use_mapper: bool = False,
                         mapper: NameMapper | None = None) \
         -> Tuple[dict[str, list], dict[str, list]]:
+    """Generate all unique pairs of works.
+
+    Формирует все уникальные пары работ.
+
+    Args:
+        graph_df (pd.DataFrame): DataFrame with work graph.
+            DataFrame с графом работ.
+        use_mapper (bool): Whether to translate task names.
+            Преобразовывать ли имена задач.
+        mapper (NameMapper | None): Mapper for translating names.
+            Сопоставитель имён.
+
+    Returns:
+        Tuple[dict[str, list], dict[str, list]]: IDs and names of work pairs.
+            Tuple[dict[str, list], dict[str, list]]: идентификаторы и имена пар работ.
+    """
 
     task_name_column = 'granular_name'
 
     num_tasks = len(graph_df)
-    # Get the upper triangular indices to avoid duplicate pairs
     indices = np.triu_indices(num_tasks, k=1)
     works1_ids = graph_df['activity_id'].values[indices[0]]
     works1_names = graph_df[task_name_column].values[indices[0]]
@@ -33,24 +52,67 @@ def get_all_connections(graph_df: pd.DataFrame,
 
 
 def get_delta_between_dates(first: str, second: str) -> int:
-    return max((datetime.date(int(first.split('-')[0]), int(first.split('-')[1]), int(first.split('-')[2])) -
-                datetime.date(int(second.split('-')[0]), int(second.split('-')[1]), int(second.split('-')[2]))).days, 1)
+    """Calculate days between two dates in ``YYYY-MM-DD`` format.
+
+    Вычисляет количество дней между двумя датами в формате ``ГГГГ-ММ-ДД``.
+
+    Args:
+        first (str): First date.
+            Первая дата.
+        second (str): Second date.
+            Вторая дата.
+
+    Returns:
+        int: Number of days, at least 1.
+            int: количество дней, минимум 1.
+    """
+
+    return max(
+        (
+            datetime.date(int(first.split('-')[0]), int(first.split('-')[1]), int(first.split('-')[2]))
+            - datetime.date(int(second.split('-')[0]), int(second.split('-')[1]), int(second.split('-')[2]))
+        ).days,
+        1,
+    )
 
 
 def find_min_without_outliers(lst: list[float]) -> float:
+    """Find the minimal value excluding outliers.
+
+    Находит минимальное значение без учёта выбросов.
+
+    Args:
+        lst (list[float]): Input values.
+            Входные значения.
+
+    Returns:
+        float: Minimal value.
+            float: минимальное значение.
+    """
+
     return round(min([x for x in lst if x >= np.mean(lst) - 3 * np.std(lst)]), 2)
 
 
 def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
         -> Tuple[int, int, int, list, list, int, list, list, int, list, list, int, list, list]:
-    """
-    Count statistics on the occurrence of different mutual arrangement of tasks
+    """Count statistics of mutual task arrangements.
 
-    :param s1: start of first work
-    :param f1: finish of first work
-    :param s2: start of second work
-    :param f2: finish of second work
-    :return: Statistics on the occurrence of different mutual arrangement of tasks
+    Подсчитывает статистику взаимного расположения задач.
+
+    Args:
+        s1 (str): Start of first work.
+            Начало первой работы.
+        f1 (str): Finish of first work.
+            Завершение первой работы.
+        s2 (str): Start of second work.
+            Начало второй работы.
+        f2 (str): Finish of second work.
+            Завершение второй работы.
+
+    Returns:
+        Tuple[int, int, int, list, list, int, list, list, int, list, list, int, list, list]:
+            Statistics of mutual arrangements.
+            Tuple[...] : статистика взаимных расположений.
     """
 
     fs12, fs21, ss12, ss21 = 0, 0, 0, 0
@@ -99,14 +161,47 @@ def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
                     else:
                         ss21_percent_lags.append(0)
                     ss21_lags.append(get_delta_between_dates(s1, s2))
-    return fs12, fs21, ss12, ss12_lags, ss12_percent_lags, ss21, ss21_lags, ss21_percent_lags, ffs12, ffs12_lags, ffs12_percent_lags, \
-        ffs21, ffs21_lags, ffs21_percent_lags
+    return (
+        fs12,
+        fs21,
+        ss12,
+        ss12_lags,
+        ss12_percent_lags,
+        ss21,
+        ss21_lags,
+        ss21_percent_lags,
+        ffs12,
+        ffs12_lags,
+        ffs12_percent_lags,
+        ffs21,
+        ffs21_lags,
+        ffs21_percent_lags,
+    )
 
 
 def get_all_seq_statistic(history_data: pd.DataFrame,
                           graph_df: pd.DataFrame,
                           use_model_name: bool = False,
                           mapper: NameMapper | None = None):
+    """Compute connection statistics between tasks.
+
+    Вычисляет статистику связей между задачами.
+
+    Args:
+        history_data (pd.DataFrame): Historical schedule data.
+            Исторические данные расписания.
+        graph_df (pd.DataFrame): Work graph data.
+            Данные графа работ.
+        use_model_name (bool): Use model names instead of granular names.
+            Использовать ли модельные имена вместо подробных.
+        mapper (NameMapper | None): Name mapper.
+            Сопоставитель имён.
+
+    Returns:
+        dict[str, list]: Mapping from task ID to connection info.
+            dict[str, list]: отображение от ID задачи к информации о связях.
+    """
+
     df_grouped = history_data.copy()
 
     if use_model_name:
@@ -156,10 +251,23 @@ def get_all_seq_statistic(history_data: pd.DataFrame,
 
                             s2, f2 = ind2_sorted.loc[l, 'first_day'], ind2_sorted.loc[l, 'last_day']
 
-                            if not any([type(x) == float for x in [s1, s2, f1, f2]]):
-                                tasks_fs12, tasks_fs21, tasks_ss12, tasks_ss12_lags, tasks_ss12_percent_lags, tasks_ss21, tasks_ss21_lags, \
-                                    tasks_ss21_percent_lags, tasks_ffs12, tasks_ffs12_lags, tasks_ffs12_percent_lags, tasks_ffs21, tasks_ffs21_lags, tasks_ffs21_percent_lags = gather_links_types_statistics(
-                                    s1, f1, s2, f2)
+                            if not any(isinstance(x, float) for x in [s1, s2, f1, f2]):
+                                (
+                                    tasks_fs12,
+                                    tasks_fs21,
+                                    tasks_ss12,
+                                    tasks_ss12_lags,
+                                    tasks_ss12_percent_lags,
+                                    tasks_ss21,
+                                    tasks_ss21_lags,
+                                    tasks_ss21_percent_lags,
+                                    tasks_ffs12,
+                                    tasks_ffs12_lags,
+                                    tasks_ffs12_percent_lags,
+                                    tasks_ffs21,
+                                    tasks_ffs21_lags,
+                                    tasks_ffs21_percent_lags,
+                                ) = gather_links_types_statistics(s1, f1, s2, f2)
 
                                 count += 1
 
@@ -195,13 +303,13 @@ def get_all_seq_statistic(history_data: pd.DataFrame,
                     if fs > ss:
                         if ffs > 0:
                             if order_con == 1:
-                                predecessors_info_dict[w2_id].append([w1_id, 'FFS',
-                                                                      find_min_without_outliers(ffs12_percent_lags),
-                                                                      count])
+                                predecessors_info_dict[w2_id].append(
+                                    [w1_id, 'FFS', find_min_without_outliers(ffs12_percent_lags), count]
+                                )
                             else:
-                                predecessors_info_dict[w1_id].append([w2_id, 'FFS',
-                                                                      find_min_without_outliers(ffs21_percent_lags),
-                                                                      count])
+                                predecessors_info_dict[w1_id].append(
+                                    [w2_id, 'FFS', find_min_without_outliers(ffs21_percent_lags), count]
+                                )
                         else:
                             if order_con == 1:
                                 predecessors_info_dict[w2_id].append([w1_id, 'FS', 0.0, count])
@@ -209,20 +317,22 @@ def get_all_seq_statistic(history_data: pd.DataFrame,
                                 predecessors_info_dict[w1_id].append([w2_id, 'FS', 0.0, count])
                     elif ss > ffs:
                         if order_con == 1:
-                                predecessors_info_dict[w2_id].append([w1_id, 'SS',
-                                                                      find_min_without_outliers(ss12_percent_lags),
-                                                                      count])
+                            predecessors_info_dict[w2_id].append(
+                                [w1_id, 'SS', find_min_without_outliers(ss12_percent_lags), count]
+                            )
                         else:
-                            predecessors_info_dict[w1_id].append([w2_id, 'SS',
-                                                                  find_min_without_outliers(ss21_percent_lags), count])
+                            predecessors_info_dict[w1_id].append(
+                                [w2_id, 'SS', find_min_without_outliers(ss21_percent_lags), count]
+                            )
                     else:
                         if order_con == 1:
-                                predecessors_info_dict[w2_id].append([w1_id, 'FFS',
-                                                                      find_min_without_outliers(ffs12_percent_lags),
-                                                                      count])
+                            predecessors_info_dict[w2_id].append(
+                                [w1_id, 'FFS', find_min_without_outliers(ffs12_percent_lags), count]
+                            )
                         else:
-                            predecessors_info_dict[w1_id].append([w2_id, 'FFS',
-                                                                  find_min_without_outliers(ffs21_percent_lags), count])
+                            predecessors_info_dict[w1_id].append(
+                                [w2_id, 'FFS', find_min_without_outliers(ffs21_percent_lags), count]
+                            )
 
     return predecessors_info_dict
 
@@ -235,16 +345,36 @@ def set_connections_info(graph_df: pd.DataFrame,
                          all_connections: bool = False,
                          id2ind: dict[str, int] = None) \
         -> pd.DataFrame:
-    """
-    Restore tasks' connection based on history data
+    """Restore task connections using historical data.
 
-    :param: change_connections_info - whether existing connections' information should be modified based on history data
-    :param: expert_connections_info - whether existing connections should not be modified based on connection history data
-    :return: repaired DataFrame
+    Восстанавливает связи задач с помощью исторических данных.
+
+    Args:
+        graph_df (pd.DataFrame): Work graph info.
+            Информация о графе работ.
+        history_data (pd.DataFrame): Historical connection data.
+            Исторические данные о связях.
+        use_model_name (bool): Use model names in history.
+            Использовать ли модельные имена в истории.
+        mapper (NameMapper | None): Name mapper.
+            Сопоставитель имён.
+        change_connections_info (bool): Modify existing connection info.
+            Изменять ли существующую информацию о связях.
+        all_connections (bool): Replace all existing connections.
+            Заменять ли все существующие связи.
+        id2ind (dict[str, int] | None): Mapping from task ID to index.
+            Отображение идентификатора задачи в индекс.
+
+    Returns:
+        pd.DataFrame: DataFrame with restored connections.
+            pd.DataFrame: DataFrame с восстановленными связями.
     """
 
     def update_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst):
-        """Updates existing connections with new data."""
+        """Update existing connections with new data.
+
+        Обновляет существующие связи новыми данными.
+        """
         for i, pred_id in enumerate(pred_ids_lst_tmp):
             if pred_id in pred_ids_lst:
                 idx = pred_ids_lst.index(pred_id)
@@ -254,7 +384,10 @@ def set_connections_info(graph_df: pd.DataFrame,
         return pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp
 
     def append_new_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst):
-        """Appends new connections to the existing lists."""
+        """Append new connections to existing lists.
+
+        Добавляет новые связи к существующим спискам.
+        """
         for i, pred_id in enumerate(pred_ids_lst):
             if pred_id not in pred_ids_lst_tmp and pred_id != '-1' and pred_id in all_works:
                 pred_ids_lst_tmp.append(pred_id)
@@ -298,7 +431,11 @@ def set_connections_info(graph_df: pd.DataFrame,
 
         if not all_connections:
             pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
-                row['predecessor_ids'].copy(), row['connection_types'].copy(), row['lags'].copy(), [INF] * len(row['lags']))
+                row['predecessor_ids'].copy(),
+                row['connection_types'].copy(),
+                row['lags'].copy(),
+                [INF] * len(row['lags']),
+            )
             if change_connections_info:
                 pred_ids_lst_tmp, pred_types_lst_tmp, pred_lags_lst_tmp, pred_counts_lst_tmp = (
                     update_connections(pred_ids_lst_tmp, pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst))
@@ -319,7 +456,10 @@ def set_connections_info(graph_df: pd.DataFrame,
             pred_types_lst.append('FS')
             pred_lags_lst.append(1)
             pred_counts_lst.append(0)
-        for col, val in zip(['predecessor_ids', 'connection_types', 'lags', 'counts'], [pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst]):
+        for col, val in zip(
+            ['predecessor_ids', 'connection_types', 'lags', 'counts'],
+            [pred_ids_lst, pred_types_lst, pred_lags_lst, pred_counts_lst],
+        ):
             tasks_df.at[id2ind[str(task_id)], col] = val
 
     tasks_df['connection_types'] = tasks_df['connection_types'].apply(

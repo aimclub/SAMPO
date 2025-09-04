@@ -1,3 +1,8 @@
+"""Multi-agent scheduling framework with agents, managers and auctions.
+
+Многоагентный механизм планирования с агентами, менеджерами и аукционами.
+"""
+
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Callable
@@ -20,12 +25,25 @@ from sampo.schemas.time import Time
 
 
 class Agent:
-    """
-    Agent entity representation in the multi-agent model
-    Agent have 2 actions: give offer and accept offer
+    """Represents an agent capable of bidding on blocks.
+
+    Представляет агента, способного делать ставки на блоки.
     """
 
     def __init__(self, name: str, scheduler: Scheduler, contractors: list[Contractor]):
+        """Initialize agent with scheduler and contractors.
+
+        Инициализировать агента планировщиком и подрядчиками.
+
+        Args:
+            name: Agent name.
+                Имя агента.
+            scheduler: Scheduling algorithm used by the agent.
+                Алгоритм планирования, используемый агентом.
+            contractors: Available contractors for the agent.
+                Подрядчики, доступные агенту.
+        """
+
         self.name = name
         self._timeline = None
         self._scheduler = scheduler
@@ -34,14 +52,25 @@ class Agent:
         self._downtime = Time(0)
 
     def offer(self, wg: WorkGraph, parent_time: Time) -> tuple[Time, Time, Schedule, Timeline]:
-        """
-        Computes the offer from agent to manager. Handles all works from given wg.
+        """Compute an offer for a work graph.
 
-        :param wg: the given block of tasks
-        :param parent_time: max end time of parent blocks
-        :return: offered start time, end time, resulting schedule and timeline before offering
+        Вычислить предложение для графа работ.
 
-        To apply returned offer, use `Agent#confirm`.
+        Args:
+            wg: Block of tasks to schedule.
+                Блок задач для планирования.
+            parent_time: Maximum end time of parent blocks.
+                Максимальное время окончания родительских блоков.
+
+        Returns:
+            tuple[Time, Time, Schedule, Timeline]: Start time, end time,
+                resulting schedule and timeline before offering.
+                Начальное время, конечное время, полученный график и
+                временная шкала до предложения.
+
+        To apply returned offer, use :meth:`Agent.confirm`.
+
+        Чтобы применить предложение, используйте :meth:`Agent.confirm`.
         """
         schedule, start_time, timeline, _ = \
             self._scheduler.schedule_with_cache(wg, self._contractors,
@@ -49,12 +78,17 @@ class Agent:
         return start_time, schedule.execution_time, schedule, timeline
 
     def confirm(self, timeline: Timeline, start: Time, end: Time):
-        """
-        Applies the given offer.
+        """Apply the given offer.
 
-        :param timeline: timeline returned from corresponding `Agent#offer`
-        :param start: global start time of confirmed block
-        :param end: global end time of confirmed block
+        Применить указанное предложение.
+
+        Args:
+            timeline: Timeline returned by :meth:`Agent.offer`.
+                Временная шкала, возвращённая :meth:`Agent.offer`.
+            start: Global start time of the block.
+                Глобальное время начала блока.
+            end: Global end time of the block.
+                Глобальное время окончания блока.
         """
         self._timeline = timeline
         self.update_stat(start)
@@ -62,11 +96,13 @@ class Agent:
         self._last_task_executed = end
 
     def update_stat(self, start: Time):
-        """
-        Count last iteration downtime.
-        If given start time is lower, than the last executed task, then this downtime are already in self_downtime
+        """Count downtime before the given start time.
 
-        :param start: global start time of confirmed block
+        Подсчитать время простоя до указанного времени начала.
+
+        Args:
+            start: Global start time of confirmed block.
+                Глобальное время начала подтверждённого блока.
         """
         self._downtime += max(Time(0), start - self._last_task_executed)
 
@@ -78,27 +114,58 @@ class Agent:
 
     @property
     def downtime(self) -> Time:
+        """Return accumulated downtime.
+
+        Вернуть накопленное время простоя.
+        """
+
         return self._downtime
 
     @property
     def contractors(self) -> list[Contractor]:
+        """Return available contractors.
+
+        Вернуть доступных подрядчиков.
+        """
+
         return self._contractors
 
     @property
     def end_time(self) -> Time:
+        """Return end time of last executed task.
+
+        Вернуть время окончания последней выполненной задачи.
+        """
+
         return self._last_task_executed
 
     @property
     def scheduler(self) -> Scheduler:
+        """Return scheduler used by the agent.
+
+        Вернуть планировщик, используемый агентом.
+        """
+
         return self._scheduler
 
 
 @dataclass
 class ScheduledBlock:
-    """
-    An object represents a scheduled graph block(group of works).
+    """Result of scheduling a block of works.
 
-    Contains all data used in scheduling, the agent and resulting information.
+    Результат планирования блока работ.
+
+    Attributes:
+        wg: Scheduled work graph.
+            Запланированный граф работ.
+        schedule: Schedule produced for the block.
+            График, построенный для блока.
+        agent: Agent that scheduled the block.
+            Агент, который запланировал блок.
+        start_time: Global start time of the block.
+            Глобальное время начала блока.
+        end_time: Global end time of the block.
+            Глобальное время окончания блока.
     """
     wg: WorkGraph
     schedule: Schedule
@@ -108,10 +175,20 @@ class ScheduledBlock:
 
     @property
     def id(self) -> str:
+        """Return identifier of underlying work graph.
+
+        Вернуть идентификатор базового графа работ.
+        """
+
         return self.wg.start.id
 
     @property
     def duration(self) -> Time:
+        """Return block duration.
+
+        Вернуть длительность блока.
+        """
+
         return self.end_time - self.start_time
 
     def __str__(self) -> str:
@@ -122,25 +199,40 @@ class ScheduledBlock:
 
 
 class Manager:
-    """
-    Manager entity representation in the multi-agent model
-    Manager interact with agents
+    """Manager that orchestrates agents.
 
-    :param agents: list of agents that has own scheduling algorithm and set of contractors
+    Менеджер, который координирует агентов.
     """
+
     def __init__(self, agents: list[Agent]):
+        """Initialize manager with agents.
+
+        Инициализировать менеджера агентами.
+
+        Args:
+            agents: Agents each with its scheduler and contractors.
+                Агенты, каждый со своим планировщиком и подрядчиками.
+        """
+
         if len(agents) == 0:
             raise NoSufficientAgents('Manager can not work with empty list of agents')
         self._agents = agents
 
     # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, bg: BlockGraph, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
-        """
-        Runs the multi-agent system based on auction on given BlockGraph.
-        
-        :param bg: 
-        :param logger:
-        :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
+        """Run auction-based scheduling on a block graph.
+
+        Запустить аукционное планирование на графе блоков.
+
+        Args:
+            bg: Block graph to schedule.
+                Граф блоков для планирования.
+            logger: Optional logging function.
+                Необязательная функция логирования.
+
+        Returns:
+            dict[str, ScheduledBlock]: Mapping from work graph id to scheduled block.
+                Отображение от идентификатора графа работ к запланированному блоку.
         """
         id2sblock = {}
         for i, block in enumerate(bg.toposort()):
@@ -161,17 +253,43 @@ class Manager:
 
     def run_auction_with_obstructions(self, wg: WorkGraph, parent_time: Time = Time(0),
                                       obstruction: Obstruction | None = None):
+        """Run auction on a work graph after applying obstruction.
+
+        Запустить аукцион на графе работ после применения препятствия.
+
+        Args:
+            wg: Target work graph.
+                Целевой граф работ.
+            parent_time: Maximum parent time of the block.
+                Максимальное время окончания родительского блока.
+            obstruction: Optional obstruction to apply.
+                Необязательное препятствие для применения.
+
+        Returns:
+            tuple[Time, Time, Schedule, Agent]: Auction results from
+                :meth:`run_auction`.
+                Результаты аукциона из :meth:`run_auction`.
+        """
+
         if obstruction:
             obstruction.generate(wg)
         return self.run_auction(wg, parent_time)
 
     def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
-        """
-        Runs the auction on the given `WorkGraph`.
+        """Run an auction on the given work graph.
 
-        :param wg: target `WorkGraph`
-        :param parent_time: max parent time of given block
-        :return: best start time, end time and the agent that is able to support this working time
+        Запустить аукцион на заданном графе работ.
+
+        Args:
+            wg: Target work graph.
+                Целевой граф работ.
+            parent_time: Maximum parent time of the block.
+                Максимальное время окончания родительского блока.
+
+        Returns:
+            tuple[Time, Time, Schedule, Agent]: Best start time, end time, schedule
+                and winning agent.
+                Лучшее время начала, время окончания, график и победивший агент.
         """
         best_start_time = 0
         best_end_time = Time.inf()
@@ -200,9 +318,9 @@ class Manager:
 
 
 class StochasticManager(Manager):
-    """
-    Manager entity representation in the multi-agent model
-    Manager interact with agents
+    """Manager using confidence levels to adjust agent offers.
+
+    Менеджер, использующий уровни доверия для коррекции предложений агентов.
     """
 
     def __init__(self, agents: list[Agent]):
@@ -210,12 +328,20 @@ class StochasticManager(Manager):
         self._confidence = {agent.name: 1 for agent in agents}
 
     def run_auction(self, wg: WorkGraph, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
-        """
-        Runs the auction on the given `WorkGraph`.
+        """Run auction with stochastic adjustment.
 
-        :param wg: target `WorkGraph`
-        :param parent_time: max parent time of given block
-        :return: best start time, end time and the agent that is able to support this working time
+        Запустить аукцион со стохастической корректировкой.
+
+        Args:
+            wg: Target work graph.
+                Целевой граф работ.
+            parent_time: Maximum parent time of the block.
+                Максимальное время окончания родительского блока.
+
+        Returns:
+            tuple[Time, Time, Schedule, Agent]: Best start time, end time, schedule
+                and winning agent.
+                Лучшее время начала, время окончания, график и победивший агент.
         """
         best_end_time = Time.inf()
         best_agent = None
@@ -252,18 +378,23 @@ class StochasticManager(Manager):
 
 
 class NeuralManager:
-    """
-    Manager entity representation in the multi-agent model, that uses neural networks
-    Neural manager interact with agents
-    Neural manager uses neural network as the method of the most suitable agent for each work graph
+    """Manager that selects agents using neural networks.
 
-    :param agents: list of agents that has own scheduling algorithm and set of contractors
-    :param algo_trainer: work with a neural network that predicts the most suitable scheduling algorithm
-    :param contractor_trainer: work with a neural network that predicts a set of resources
-    that the most suitable contractor should have
-    :param algorithms: list of unique scheduling algorithms that agents have
-    :param blocks: list of blocks of input Block Graph in topological order
-    :param encoding_blocks: list of graph block embeddings
+    Менеджер, выбирающий агентов с помощью нейронных сетей.
+
+    Args:
+        agents: Agents each with its scheduler and contractors.
+            Агенты, каждый со своим планировщиком и подрядчиками.
+        algo_trainer: Neural network predicting the best scheduling algorithm.
+            Нейросеть, предсказывающая наилучший алгоритм планирования.
+        contractor_trainer: Neural network predicting contractor resources.
+            Нейросеть, предсказывающая ресурсы подрядчиков.
+        algorithms: List of unique schedulers used by agents.
+            Список уникальных планировщиков, используемых агентами.
+        blocks: Blocks of the input block graph in topological order.
+            Блоки входного графа блоков в топологическом порядке.
+        encoding_blocks: Embeddings of graph blocks.
+            Векторные представления блоков графа.
     """
 
     def __init__(self, agents: list[Agent],
@@ -283,11 +414,17 @@ class NeuralManager:
 
     # TODO Upgrade to supply the best parallelism
     def manage_blocks(self, logger: Callable[[str], None] = None) -> dict[str, ScheduledBlock]:
-        """
-        Runs the multi-agent system based on auction on given BlockGraph.
+        """Run auction-based scheduling using neural predictions.
 
-        :param logger:
-        :return: an index of resulting `ScheduledBlock`s built by ids of corresponding `WorkGraph`s
+        Запустить аукционное планирование с использованием нейронных предсказаний.
+
+        Args:
+            logger: Optional logging function.
+                Необязательная функция логирования.
+
+        Returns:
+            dict[str, ScheduledBlock]: Mapping from work graph id to scheduled block.
+                Отображение от идентификатора графа работ к запланированному блоку.
         """
         id2sblock = {}
         for i, block in enumerate(self.blocks):
@@ -310,18 +447,47 @@ class NeuralManager:
                                       index: int,
                                       parent_time: Time = Time(0),
                                       obstruction: Obstruction | None = None):
+        """Run auction with neural guidance after applying obstruction.
+
+        Запустить аукцион с нейронным выбором после применения препятствия.
+
+        Args:
+            wg: Target work graph.
+                Целевой граф работ.
+            index: Index of block in the block list.
+                Индекс блока в списке блоков.
+            parent_time: Maximum parent time of the block.
+                Максимальное время окончания родительского блока.
+            obstruction: Optional obstruction to apply.
+                Необязательное препятствие для применения.
+
+        Returns:
+            tuple[Time, Time, Schedule, Agent]: Auction results from
+                :meth:`run_auction`.
+                Результаты аукциона из :meth:`run_auction`.
+        """
+
         if obstruction:
             obstruction.generate(wg)
         return self.run_auction(wg, index, parent_time)
 
     def run_auction(self, wg: WorkGraph, index: int, parent_time: Time = Time(0)) -> tuple[Time, Time, Schedule, Agent]:
-        """
-        Runs the auction on the given `WorkGraph`.
+        """Run auction selecting agent via neural networks.
 
-        :param index: index of agent from the list of agents
-        :param wg: target `WorkGraph`
-        :param parent_time: max parent time of given block
-        :return: best start time, end time and the agent that is able to support this working time
+        Запустить аукцион, выбирая агента с помощью нейронных сетей.
+
+        Args:
+            index: Index of the block among the list of blocks.
+                Индекс блока среди списка блоков.
+            wg: Target work graph.
+                Целевой граф работ.
+            parent_time: Maximum parent time of the block.
+                Максимальное время окончания родительского блока.
+
+        Returns:
+            tuple[Time, Time, Schedule, Agent]: Best start time, end time, schedule
+                and winning agent.
+                Лучшее время начала, время окончания, график и победивший агент.
         """
 
         wg_encoding = [self.encoding_blocks[index]]

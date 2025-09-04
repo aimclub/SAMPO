@@ -1,16 +1,39 @@
-from typing import Callable
+"""Prioritization helpers for LFT-based scheduling.
+
+Вспомогательные функции приоритезации для LFT-планирования.
+"""
+
 from itertools import chain
+from typing import Callable
 
 import numpy as np
 import random
 
-from sampo.utilities.priority import extract_priority_groups_from_nodes
 from sampo.schemas.graph import GraphNode
+from sampo.utilities.priority import extract_priority_groups_from_nodes
 
 
-def map_lft_lst(head_nodes: list[GraphNode],
-                node_id2child_ids: dict[str, set[str]],
-                node_id2duration: dict[str, int]) -> tuple[dict[str, int], dict[str, int]]:
+def map_lft_lst(
+    head_nodes: list[GraphNode],
+    node_id2child_ids: dict[str, set[str]],
+    node_id2duration: dict[str, int],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Map nodes to LFT and LST values.
+
+    Сопоставить узлы значениям LFT и LST.
+
+    Args:
+        head_nodes (list[GraphNode]): Nodes in topological order.
+            Узлы в топологическом порядке.
+        node_id2child_ids (dict[str, set[str]]): Mapping of node IDs to child IDs.
+            Отображение идентификаторов узлов на идентификаторы их детей.
+        node_id2duration (dict[str, int]): Estimated durations.
+            Оценённые длительности.
+
+    Returns:
+        tuple[dict[str, int], dict[str, int]]: Dictionaries of LFT and LST values.
+            Словари значений LFT и LST.
+    """
     project_max_duration = sum(node_id2duration.values())
     node_id2lft = {head_nodes[-1].id: project_max_duration}
     node_id2lst = {head_nodes[-1].id: project_max_duration - node_id2duration[head_nodes[-1].id]}
@@ -23,20 +46,45 @@ def map_lft_lst(head_nodes: list[GraphNode],
     return node_id2lft, node_id2lst
 
 
-def lft_prioritization(head_nodes: list[GraphNode],
-                       node_id2parent_ids: dict[str, set[str]],
-                       node_id2child_ids: dict[str, set[str]],
-                       node_id2duration: dict[str, int],
-                       core_f: Callable[[list[GraphNode],
-                                         dict[str, set[str]],
-                                         dict[str, set[str]],
-                                         dict[str, int],
-                                         list[list[GraphNode]],
-                                         random.Random], list[GraphNode]],
-                       rand: random.Random() = random.Random()) -> list[GraphNode]:
-    """
-    Return ordered critical nodes.
-    Finish time is depended on these ordered nodes.
+def lft_prioritization(
+    head_nodes: list[GraphNode],
+    node_id2parent_ids: dict[str, set[str]],
+    node_id2child_ids: dict[str, set[str]],
+    node_id2duration: dict[str, int],
+    core_f: Callable[
+        [
+            list[GraphNode],
+            dict[str, set[str]],
+            dict[str, set[str]],
+            dict[str, int],
+            list[list[GraphNode]],
+            random.Random,
+        ],
+        list[GraphNode],
+    ],
+    rand: random.Random() = random.Random(),
+) -> list[GraphNode]:
+    """Order critical nodes by a core prioritization function.
+
+    Упорядочить критические узлы с помощью базовой функции приоритезации.
+
+    Args:
+        head_nodes (list[GraphNode]): Nodes to order.
+            Узлы для упорядочивания.
+        node_id2parent_ids (dict[str, set[str]]): Mapping of parent IDs.
+            Отображение идентификаторов родителей.
+        node_id2child_ids (dict[str, set[str]]): Mapping of child IDs.
+            Отображение идентификаторов детей.
+        node_id2duration (dict[str, int]): Durations for each node.
+            Длительности для каждого узла.
+        core_f (Callable): Core prioritization function.
+            Базовая функция приоритезации.
+        rand (random.Random, optional): Random generator.
+            Генератор случайных чисел.
+
+    Returns:
+        list[GraphNode]: Ordered nodes.
+            Упорядоченные узлы.
     """
 
     # form groups
@@ -48,31 +96,75 @@ def lft_prioritization(head_nodes: list[GraphNode],
     return result
 
 
-def lft_prioritization_core(head_nodes: list[GraphNode],
-                            node_id2parent_ids: dict[str, set[str]],
-                            node_id2child_ids: dict[str, set[str]],
-                            node_id2duration: dict[str, int],
-                            groups: list[list[GraphNode]],
-                            rand: random.Random = random.Random()) -> list[GraphNode]:
-    """
-    Return nodes ordered by MIN-LFT priority rule.
+def lft_prioritization_core(
+    head_nodes: list[GraphNode],
+    node_id2parent_ids: dict[str, set[str]],
+    node_id2child_ids: dict[str, set[str]],
+    node_id2duration: dict[str, int],
+    groups: list[list[GraphNode]],
+    rand: random.Random = random.Random(),
+) -> list[GraphNode]:
+    """Order nodes by the MIN-LFT priority rule.
+
+    Упорядочить узлы по правилу приоритета MIN-LFT.
+
+    Args:
+        head_nodes (list[GraphNode]): Nodes to order.
+            Узлы для упорядочивания.
+        node_id2parent_ids (dict[str, set[str]]): Mapping of parent IDs.
+            Отображение идентификаторов родителей.
+        node_id2child_ids (dict[str, set[str]]): Mapping of child IDs.
+            Отображение идентификаторов детей.
+        node_id2duration (dict[str, int]): Durations for each node.
+            Длительности для каждого узла.
+        groups (list[list[GraphNode]]): Priority groups.
+            Группы приоритетов.
+        rand (random.Random, optional): Random generator.
+            Генератор случайных чисел.
+
+    Returns:
+        list[GraphNode]: Ordered nodes.
+            Упорядоченные узлы.
     """
     node_id2lft, _ = map_lft_lst(head_nodes, node_id2child_ids, node_id2duration)
 
-    ordered_groups_it = (sorted(group, key=lambda node: node_id2lft[node.id]) for group in groups)
+    ordered_groups_it = (
+        sorted(group, key=lambda node: node_id2lft[node.id]) for group in groups
+    )
     ordered_nodes = list(chain.from_iterable(ordered_groups_it))
 
     return ordered_nodes
 
 
-def lft_randomized_prioritization_core(head_nodes: list[GraphNode],
-                                       node_id2parent_ids: dict[str, set[str]],
-                                       node_id2child_ids: dict[str, set[str]],
-                                       node_id2duration: dict[str, int],
-                                       groups: list[list[GraphNode]],
-                                       rand: random.Random = random.Random()) -> list[GraphNode]:
-    """
-    Return ordered nodes sampled by MIN-LFT and MIN-LST priority rules.
+def lft_randomized_prioritization_core(
+    head_nodes: list[GraphNode],
+    node_id2parent_ids: dict[str, set[str]],
+    node_id2child_ids: dict[str, set[str]],
+    node_id2duration: dict[str, int],
+    groups: list[list[GraphNode]],
+    rand: random.Random = random.Random(),
+) -> list[GraphNode]:
+    """Sample nodes using MIN-LFT and MIN-LST rules.
+
+    Отобрать узлы с использованием правил MIN-LFT и MIN-LST.
+
+    Args:
+        head_nodes (list[GraphNode]): Nodes to order.
+            Узлы для упорядочивания.
+        node_id2parent_ids (dict[str, set[str]]): Mapping of parent IDs.
+            Отображение идентификаторов родителей.
+        node_id2child_ids (dict[str, set[str]]): Mapping of child IDs.
+            Отображение идентификаторов детей.
+        node_id2duration (dict[str, int]): Durations for each node.
+            Длительности для каждого узла.
+        groups (list[list[GraphNode]]): Priority groups.
+            Группы приоритетов.
+        rand (random.Random, optional): Random generator.
+            Генератор случайных чисел.
+
+    Returns:
+        list[GraphNode]: Ordered nodes.
+            Упорядоченные узлы.
     """
     node_id2group_priority = {node.id: i for i, group in enumerate(groups) for node in group}
 

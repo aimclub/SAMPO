@@ -1,5 +1,10 @@
 import random
 
+"""Helper utilities for genetic scheduler.
+
+Вспомогательные утилиты для генетического планировщика.
+"""
+
 import numpy as np
 from deap.base import Toolbox
 
@@ -15,6 +20,11 @@ def init_chromosomes_f(wg: WorkGraph,
                        contractors: list[Contractor],
                        init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                        landscape: LandscapeConfiguration = LandscapeConfiguration()):
+    """Convert initial schedules to chromosomes.
+
+    Преобразует начальные расписания в хромосомы.
+    """
+
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
@@ -33,7 +43,10 @@ def init_chromosomes_f(wg: WorkGraph,
 def prepare_optimized_data_structures(wg: WorkGraph,
                                       contractors: list[Contractor],
                                       landscape: LandscapeConfiguration):
-    # preparing access-optimized data structures
+    """Prepare data structures for fast access.
+
+    Подготавливает структуры данных для быстрого доступа.
+    """
     index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
 
     index2contractor_obj = {ind: contractor for ind, contractor in enumerate(contractors)}
@@ -90,6 +103,11 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                                             sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                                             only_lft_initialization: bool = False,
                                             is_multiobjective: bool = False) -> Toolbox:
+    """Create toolbox reusing cached chromosomes.
+
+    Создает набор инструментов, используя закэшированные хромосомы.
+    """
+
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
         resources_border = prepare_optimized_data_structures(wg, contractors, landscape)

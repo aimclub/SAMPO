@@ -1,3 +1,8 @@
+"""Parsing utilities for building graphs and contractors from CSV files.
+
+Инструменты разбора CSV-файлов для построения графов и подрядчиков.
+"""
+
 import math
 from itertools import chain
 from uuid import uuid4
@@ -17,6 +22,10 @@ from sampo.utilities.name_mapper import NameMapper
 
 
 class CSVParser:
+    """Parser for reading work graphs and contractor data from CSV.
+
+    Парсер для чтения графов работ и данных подрядчиков из CSV.
+    """
 
     @staticmethod
     def read_graph_info(project_info: str | pd.DataFrame,
@@ -26,54 +35,55 @@ class CSVParser:
                         name_mapper: NameMapper | None = None,
                         all_connections: bool = False,
                         change_connections_info: bool = False) -> pd.DataFrame:
-        """
-        Read the input data about work graph and preprocess it.
+        """Read and preprocess work graph and history data.
 
-        Schema of WorkGraph .csv file:
-            mandatory fields:
-                activity_id: str - Id of the current task,
-                activity_name: str - Name of the current task,
-                measurement: str - Measure of the size of the current task (e.g., km, pcs, lit),
-                volume: float - Volume of the current task
-            optional fields:
-                granular_name: str - Task name as in the document,
-                predecessor_ids: list[str] - Ids of predecessors of the current task,
-                connection_types: list[str] - Types of links between the current task and its predecessors,
-                lags: float - Time lags,
-                min_req: dict[str, float] - A dictionary containing the minimum amount of each resource
-                                            that is required to perform the current task
-                max_req: dict[str, float] - A dictionary containing the maximum amount of each resource
-                                            that is required to perform the current task
-                description: str - A task description
-                required_statuses: dict[str, int] - A dictionary containing the zone statuses required
-                                                    to perform the current task
+        Читает и предварительно обрабатывает граф работ и данные истории.
 
-        !NOTE! that length of predecessor_ids, connection_types and lags in each cell should be equal
-        for the correct predecessor resolution
+        The function parses two CSV sources: a work graph description and an
+        optional history file used to restore missing connections.
 
-        Schema of history .csv file (optional data):
-            mandatory fields:
-                granular_name: str - Task name as in the document,
-                first_day: str - Date of commencement of the work,
-                last_day: str - Date of completion
-                upper_works: list[str] - Names of predecessors of the current task
+        Функция разбирает два CSV-источника: описание графа работ и необязательный
+        файл истории, применяемый для восстановления отсутствующих связей.
 
-        ATTENTION!
-            1) If you send WorkGraph .csv file without data about connections between tasks, you need to provide .csv
-            history file - the SAMPO will be able to reconstruct the connections between tasks based on historical data.
-            2) If you send WorkGraph .csv file with column 'predecessor_ids', 'lags' etc. and there is no info in these
-            columns, so framework repair the info from history data
-            3) If you don't put 'granular_name' and don't receive name_mapper to WorkGraph .csv file, thus you need to
-            be sure that activity_name is correct and correlate to 'granular_name' in history .csv file
+        WorkGraph CSV columns:
+            Required:
+                activity_id, activity_name, measurement, volume
+            Optional:
+                granular_name, predecessor_ids, connection_types, lags,
+                min_req, max_req, description, required_statuses
 
-        :param name_mapper: name mapper that translates 'activity_name' to the name, as from a document
-        :param project_info: path to the works' info file
-        :param history_data: path to the history data of connection file
-        :param all_connections: whether it is necessary to change connections
-        :param change_connections_info: whether it is necessary to change connections' information based on history data?
-        :param sep_wg: separating character. It's mandatory if you send the WorkGraph .csv
-        :param sep_history: separating character. It's mandatory if you send the HistoryData .csv file path
-        :return: preprocessed info about works
+        История CSV (необязательна) должна содержать столбцы:
+            granular_name, first_day, last_day, upper_works
+
+        Notes / Примечания:
+            * Lengths of ``predecessor_ids``, ``connection_types`` and ``lags``
+              must match.
+            * If the work graph lacks connections, historical data is required.
+              Если в графе нет связей, необходимо предоставить историю.
+            * When ``granular_name`` is absent and ``name_mapper`` is not given,
+              ``activity_name`` must match the historical name.
+              Если нет ``granular_name`` и ``name_mapper``,
+              ``activity_name`` должно совпадать с историческим.
+
+        Args:
+            project_info (str | pd.DataFrame): Path or dataframe with work graph data.
+                Путь или DataFrame с данными графа работ.
+            history_data (str | pd.DataFrame): Path or dataframe with history data.
+                Путь или DataFrame с историческими данными.
+            sep_wg (str): Separator for work graph CSV.
+                Разделитель в CSV графа работ.
+            sep_history (str): Separator for history CSV.
+                Разделитель в CSV истории.
+            name_mapper (NameMapper | None): Mapper from ``activity_name`` to ``granular_name``.
+                Сопоставитель ``activity_name`` и ``granular_name``.
+            all_connections (bool): Replace existing connections entirely.
+                Полностью заменять существующие связи.
+            change_connections_info (bool): Modify connection info using history.
+                Изменять информацию о связях на основе истории.
+
+        Returns:
+            pd.DataFrame: Preprocessed work information.
+                pd.DataFrame: предварительно обработанные данные о работах.
         """
         graph_df = pd.read_csv(project_info, sep=sep_wg, header=0) if isinstance(project_info,
                                                                                  str) else project_info.copy()
@@ -96,27 +106,21 @@ class CSVParser:
     def work_graph(works_info: pd.DataFrame,
                    name_mapper: NameMapper | None = None,
                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> WorkGraph:
-        """
-        Gets a info about WorkGraph and Contractors from file .csv.
+        """Build a work graph from preprocessed information.
 
-        Schema of Contractors .csv file (optional data):
-            mandatory fields:
-                contractor_id: str - Id of the current contractor,
-                name: str - Contractor name as in the document
-            optional fields:
-                {names of resources}: float - each resource is a separate column
+        Строит граф работ из предварительно обработанных данных.
 
-        ATTENTION!
-            1) If you do not provide work resource estimator, framework uses built-in estimator
+        Args:
+            works_info (pd.DataFrame): DataFrame with prepared work graph info.
+                DataFrame с подготовленной информацией о графе работ.
+            name_mapper (NameMapper | None): Mapper of activity names.
+                Сопоставитель названий работ.
+            work_resource_estimator (WorkTimeEstimator): Estimator of required resources.
+                Оценщик необходимых ресурсов.
 
-
-        :param works_info: dataFrame that contains preprocessed info about work graph structure
-        :param contractor_types:
-        :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
-        for a generation
-        :param contractor_info: path to contractor info .csv file or list of Contractors
-        :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
-        :return: WorkGraph and list of Contractors
+        Returns:
+            WorkGraph: Constructed work graph.
+                WorkGraph: построенный граф работ.
         """
 
         works_info['activity_name_original'] = works_info.activity_name
@@ -145,27 +149,27 @@ class CSVParser:
                                    name_mapper: NameMapper | None = None,
                                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
             -> tuple[WorkGraph, list[Contractor]]:
-        """
-        Gets a info about WorkGraph and Contractors from file .csv.
+        """Build a work graph and obtain contractors.
 
-        Schema of Contractors .csv file (optional data):
-            mandatory fields:
-                contractor_id: str - Id of the current contractor,
-                name: str - Contractor name as in the document
-            optional fields:
-                {names of resources}: float - each resource is a separate column
+        Строит граф работ и получает список подрядчиков.
 
-        ATTENTION!
-            1) If you do not provide work resource estimator, framework uses built-in estimator
+        Args:
+            works_info (pd.DataFrame): Preprocessed work graph info.
+                Предварительно обработанные данные графа работ.
+            contractor_info (str | list[Contractor] |
+                tuple[ContractorGenerationMethod, int]): Path to contractor CSV,
+                predefined contractors, or generation parameters.
+                Путь к CSV, список подрядчиков или параметры генерации.
+            contractor_types (list[int] | None): Types of contractors to generate.
+                Типы подрядчиков для генерации.
+            name_mapper (NameMapper | None): Mapper of activity names.
+                Сопоставитель названий работ.
+            work_resource_estimator (WorkTimeEstimator): Estimator of required resources.
+                Оценщик необходимых ресурсов.
 
-
-        :param works_info: dataFrame that contains preprocessed info about work graph structure
-        :param contractor_types:
-        :param contractors_number: if we do not receive contractors, we need to know how many contractors the user wants,
-        for a generation
-        :param contractor_info: path to contractor info .csv file or list of Contractors
-        :param work_resource_estimator: work estimator that finds necessary resources, based on the history data
-        :return: WorkGraph and list of Contractors
+        Returns:
+            tuple[WorkGraph, list[Contractor]]: Built work graph and contractors list.
+                tuple[WorkGraph, list[Contractor]]: построенный граф и список подрядчиков.
         """
 
         if contractor_types is None:

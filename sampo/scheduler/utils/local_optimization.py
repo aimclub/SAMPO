@@ -1,3 +1,8 @@
+"""Local optimization helpers for scheduling.
+
+Инструменты локальной оптимизации для планирования.
+"""
+
 from abc import ABC, abstractmethod
 from operator import attrgetter
 from typing import Iterable
@@ -19,20 +24,44 @@ PRIORITY_SHUFFLE_RADIUS = 0.5
 
 
 class OrderLocalOptimizer(ABC):
+    """Base interface for node order optimizers.
+
+    Базовый интерфейс оптимизаторов порядка узлов.
+    """
 
     @abstractmethod
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
+        """Reorder nodes within given area.
+
+        Изменяет порядок узлов в указанной области.
+
+        Args:
+            node_order: Sequence of nodes.
+                Последовательность узлов.
+            area: Range to optimize.
+                Диапазон для оптимизации.
+
+        Returns:
+            Optimized node order.
+            Оптимизированный порядок узлов.
+        """
         ...
 
 
 class ScheduleLocalOptimizer(ABC):
-    """
-    Base class for building local optimization methods applicable to the schedule.
+    """Base class for schedule-level local optimization.
+
+    Базовый класс для локальной оптимизации расписаний.
     """
 
     def __init__(self, timeline_type: type[Timeline]):
-        """
-        :param timeline_type: timeline used for schedule recalculation
+        """Store timeline type for recalculation.
+
+        Сохраняет тип временной шкалы для перерасчёта.
+
+        Args:
+            timeline_type: Timeline class used for rescheduling.
+                Класс временной шкалы, используемый для пересчёта.
         """
         self._timeline_type = timeline_type
 
@@ -42,19 +71,33 @@ class ScheduleLocalOptimizer(ABC):
                  spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
-        """
-        Optimizes works `scheduled_works`, referenced by `node_order` and `area` parameters.
+        """Optimize subset of scheduled works.
 
-        Result writes to `scheduled_works` in-place.
-        :param node_order:
-        :param contractors:
-        :param landscape_config:
-        :param spec:
-        :param worker_pool:
-        :param work_estimator:
-        :param assigned_parent_time:
-        :param scheduled_works:
-        :param area:
+        Оптимизирует подмножество запланированных работ.
+
+        Args:
+            scheduled_works: Mapping of nodes to schedules.
+                Отображение узлов к расписаниям.
+            node_order: Order of nodes.
+                Порядок узлов.
+            contractors: Available contractors.
+                Доступные подрядчики.
+            landscape_config: Landscape configuration.
+                Конфигурация местности.
+            spec: Schedule specification.
+                Спецификация расписания.
+            worker_pool: Pool of workers by contractor.
+                Пул работников по подрядчикам.
+            work_estimator: Work time estimator.
+                Оценщик времени работы.
+            assigned_parent_time: Start time of parent context.
+                Время начала родительского контекста.
+            area: Range to optimize.
+                Диапазон для оптимизации.
+
+        Returns:
+            Updated mapping of scheduled works.
+            Обновлённое отображение запланированных работ.
         """
         ...
 
@@ -64,15 +107,25 @@ def get_swap_candidates(node: GraphNode,
                         candidates: Iterable[GraphNode],
                         node2ind: dict[GraphNode, int],
                         processed: set[GraphNode]) -> list[GraphNode]:
-    """
-    Abstract function to find nodes that can be swapped
-    with given node without breaking topological order
+    """Find nodes swappable with target without breaking order.
 
-    :param node: target node
-    :param node_index: index of target node in global sequence
-    :param candidates: list of candidates to swapping
-    :param node2ind: a dict from node to its index
-    :param processed: a set of nodes that should not be swapped yet
+    Находит узлы, которые можно обменять с целевым, не нарушая порядок.
+
+    Args:
+        node: Target node.
+            Целевой узел.
+        node_index: Index of target node in sequence.
+            Индекс целевого узла в последовательности.
+        candidates: Iterable of nodes to try.
+            Перечень кандидатов для обмена.
+        node2ind: Mapping from node to its index.
+            Отображение узла в индекс.
+        processed: Set of nodes to skip.
+            Множество узлов, которые нужно пропустить.
+
+    Returns:
+        List of acceptable swap candidates.
+        Список подходящих кандидатов для обмена.
     """
     cur_children: set[GraphNode] = node.children_set
 
@@ -93,13 +146,25 @@ def get_swap_candidates(node: GraphNode,
 
 
 class SwapOrderLocalOptimizer(OrderLocalOptimizer):
-    """
-    This performs just small shuffle that not breaks topological order.
+    """Shuffle nodes without violating topological order.
+
+    Переставляет узлы, не нарушая топологического порядка.
     """
 
     def optimize(self, node_order: list[GraphNode], area: range) -> list[GraphNode]:
-        """
-        Change order of nodes (not breaks topological order) by swapping several nodes.
+        """Swap nodes to slightly change order.
+
+        Меняет местами узлы для небольшого изменения порядка.
+
+        Args:
+            node_order: Sequence of nodes.
+                Последовательность узлов.
+            area: Range to process.
+                Диапазон для обработки.
+
+        Returns:
+            Modified node order.
+            Изменённый порядок узлов.
         """
         if node_order is None:
             return
@@ -144,12 +209,20 @@ class SwapOrderLocalOptimizer(OrderLocalOptimizer):
 
 
 class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
-    """
-    This method finds near placed works and turns it to run in parallel.
-    It will take effect only if it's launched after scheduling.
+    """Make nearby works execute in parallel.
+
+    Заставляет близкие работы выполняться параллельно.
     """
 
     def __init__(self, timeline_type: type[Timeline]):
+        """Initialize optimizer.
+
+        Инициализирует оптимизатор.
+
+        Args:
+            timeline_type: Timeline class for scheduling.
+                Класс временной шкалы для планирования.
+        """
         super().__init__(timeline_type)
 
     def recalc_schedule(self,
@@ -161,19 +234,31 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                         worker_pool: WorkerContractorPool,
                         assigned_parent_time: Time,
                         work_estimator: WorkTimeEstimator) -> dict[GraphNode, ScheduledWork]:
-        """
-        Recalculates duration and start-finish times in the whole given `seq`.
-        This will be useful to call after `parallelize_local_sequence` method
-        or other methods that can change the appointed set of workers.
+        """Recalculate durations and times for sequence.
 
-        :param node_order: scheduled works to process
-        :param contractors:
-        :param landscape_config:
-        :param spec:
-        :param node2swork:
-        :param worker_pool:
-        :param assigned_parent_time:
-        :param work_estimator: an optional WorkTimeEstimator object to estimate time of work
+        Пересчитывает длительности и времена для последовательности.
+
+        Args:
+            node_order: Scheduled works to process.
+                Запланированные работы для обработки.
+            contractors: Available contractors.
+                Доступные подрядчики.
+            landscape_config: Landscape configuration.
+                Конфигурация местности.
+            spec: Schedule specification.
+                Спецификация расписания.
+            node2swork: Mapping of nodes to scheduled works.
+                Отображение узлов к запланированным работам.
+            worker_pool: Pool of workers.
+                Пул работников.
+            assigned_parent_time: Start time of parent.
+                Время начала родителя.
+            work_estimator: Work time estimator.
+                Оценщик времени работы.
+
+        Returns:
+            Mapping of nodes to recalculated works.
+            Отображение узлов к пересчитанным работам.
         """
 
         timeline = self._timeline_type(worker_pool, landscape_config)
@@ -199,23 +284,37 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                  spec: ScheduleSpec, worker_pool: WorkerContractorPool,
                  work_estimator: WorkTimeEstimator, assigned_parent_time: Time,
                  area: range) -> dict[GraphNode, ScheduledWork]:
-        """
-        Finds near placed works and turns it to run in parallel.
+        """Turn nearby works into parallel execution.
 
-        :param scheduled_works:
-        :param node_order:
-        :param contractors:
-        :param landscape_config:
-        :param spec:
-        :param worker_pool:
-        :param work_estimator:
-        :param assigned_parent_time:
-        :param area:
-        :return:
+        Преобразует близкие работы в параллельное выполнение.
+
+        Args:
+            scheduled_works: Mapping of nodes to scheduled works.
+                Отображение узлов к запланированным работам.
+            node_order: Order of nodes.
+                Порядок узлов.
+            contractors: Available contractors.
+                Доступные подрядчики.
+            landscape_config: Landscape configuration.
+                Конфигурация местности.
+            spec: Schedule specification.
+                Спецификация расписания.
+            worker_pool: Pool of workers.
+                Пул работников.
+            work_estimator: Time estimator.
+                Оценщик времени.
+            assigned_parent_time: Start time of parent context.
+                Время начала родительского контекста.
+            area: Range of indices to process.
+                Диапазон индексов для обработки.
+
+        Returns:
+            Mapping of nodes to updated schedules.
+            Отображение узлов к обновлённым расписаниям.
         """
         start_index = area.start
         end_index = area.stop
-        
+
         # preprocessing
         node2ind: dict[GraphNode, int] = {node: start_index + ind for ind, node in
                                           enumerate(node_order[start_index:end_index])}
@@ -297,5 +396,21 @@ def optimize_local_sequence(seq: list[GraphNode],
                             start_ind: int,
                             end_ind: int,
                             work_estimator: WorkTimeEstimator):
-    # TODO Try to find sets of works with nearly same resources and turn in to run in parallel or vice-versa
+    """Experimental local sequence optimizer.
+
+    Экспериментальный оптимизатор локальной последовательности.
+
+    Args:
+        seq: Sequence of nodes.
+            Последовательность узлов.
+        start_ind: Start index.
+            Начальный индекс.
+        end_ind: End index.
+            Конечный индекс.
+        work_estimator: Work time estimator.
+            Оценщик времени работы.
+
+    TODO: Try to find sets of works with similar resources and parallelize.
+    TODO: Попробовать находить работы с похожими ресурсами для параллелизации.
+    """
     pass

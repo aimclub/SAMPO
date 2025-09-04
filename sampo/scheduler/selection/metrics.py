@@ -1,3 +1,8 @@
+"""Metrics and helper functions for graph-based scheduling.
+
+Метрики и вспомогательные функции для графового планирования.
+"""
+
 from collections import defaultdict
 from math import ceil
 
@@ -9,24 +14,61 @@ from sampo.schemas.graph import WorkGraph
 
 
 def one_hot_encode(v, max_v):
+    """Convert index into one-hot vector.
+
+    Преобразует индекс в one-hot вектор.
+
+    Args:
+        v: Index to encode.
+            Индекс для кодирования.
+        max_v: Length of result vector.
+            Длина результирующего вектора.
+
+    Returns:
+        One-hot encoded list.
+        Список в формате one-hot.
+    """
     res = [float(0) for _ in range(max_v)]
     res[v] = float(1)
     return res
 
 
 def one_hot_decode(v: torch.Tensor):
+    """Decode one-hot tensor back to index.
+
+    Декодирует one-hot тензор обратно в индекс.
+
+    Args:
+        v: Tensor to decode.
+            Тензор для декодирования.
+
+    Returns:
+        Decoded index.
+        Декодированный индекс.
+    """
     for i in range(len(v)):
         if v[i] == 1:
             return i
 
 
 def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
-    """
-    The resource constrainedness of a resource type k is defined as  the average number of units requested by all
-    activities divided by the capacity of the resource type
+    """Calculate constrainedness for each resource type.
 
-    :param wg: Work graph
-    :return: List of RC coefficients for each resource type
+    Вычисляет степень ограниченности для каждого типа ресурса.
+
+    The constrainedness equals the average requested units divided by the
+    capacity of the resource.
+
+    Ограниченность равна среднему количеству запрошенных единиц, делённому
+    на вместимость ресурса.
+
+    Args:
+        wg: Work graph to analyze.
+            Граф работ для анализа.
+
+    Returns:
+        List of constrainedness coefficients.
+        Список коэффициентов ограниченности.
     """
     resource_dict = defaultdict(lambda: [0, 0])
 
@@ -39,6 +81,18 @@ def metric_resource_constrainedness(wg: WorkGraph) -> list[float]:
 
 
 def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
+    """Estimate degree of parallel execution per graph level.
+
+    Оценивает степень параллельного выполнения по уровням графа.
+
+    Args:
+        wg: Work graph to analyze.
+            Граф работ для анализа.
+
+    Returns:
+        Averaged parallelism degrees for batches.
+        Усреднённые степени параллельности по батчам.
+    """
     batches = 8
     parallelism_degree = []
     current_node = wg.start
@@ -76,6 +130,18 @@ def metric_graph_parallelism_degree(wg: WorkGraph) -> list[float]:
 
 
 def metric_longest_path(wg: WorkGraph) -> float:
+    """Compute length of the longest path in graph.
+
+    Вычисляет длину самого длинного пути в графе.
+
+    Args:
+        wg: Work graph to analyze.
+            Граф работ для анализа.
+
+    Returns:
+        Length of the longest path.
+        Длина самого длинного пути.
+    """
     scheduler = TopologicalScheduler()
     stack = scheduler.prioritization(wg, None)
 
@@ -92,27 +158,99 @@ def metric_longest_path(wg: WorkGraph) -> float:
 
 
 def metric_vertex_count(wg: WorkGraph) -> float:
+    """Return number of vertices in graph.
+
+    Возвращает число вершин в графе.
+
+    Args:
+        wg: Work graph.
+            Граф работ.
+
+    Returns:
+        Vertex count.
+        Количество вершин.
+    """
     return wg.vertex_count
 
 
 def metric_average_work_per_activity(wg: WorkGraph) -> float:
+    """Average work volume per node.
+
+    Средний объём работы на узел.
+
+    Args:
+        wg: Work graph.
+            Граф работ.
+
+    Returns:
+        Average work volume.
+        Средний объём работы.
+    """
     return sum(node.work_unit.volume for node in wg.nodes) / wg.vertex_count
 
 
 def metric_relative_max_children(wg: WorkGraph) -> float:
+    """Relative maximum number of children for a node.
+
+    Относительное максимальное число потомков для узла.
+
+    Args:
+        wg: Work graph.
+            Граф работ.
+
+    Returns:
+        Ratio of maximum children to total vertices.
+        Отношение максимального числа потомков к числу вершин.
+    """
     return max((len(node.children) for node in wg.nodes if node.children)) / wg.vertex_count
 
 
 def metric_average_resource_usage(wg: WorkGraph) -> float:
+    """Average number of requested workers per node.
+
+    Среднее число требуемых работников на узел.
+
+    Args:
+        wg: Work graph.
+            Граф работ.
+
+    Returns:
+        Average resource usage.
+        Среднее использование ресурсов.
+    """
     return sum(sum((req.min_count + req.max_count) / 2 for req in node.work_unit.worker_reqs)
                for node in wg.nodes) / wg.vertex_count
 
 
 def metric_relative_max_parents(wg: WorkGraph) -> float:
+    """Relative maximum number of parents for a node.
+
+    Относительное максимальное число родителей для узла.
+
+    Args:
+        wg: Work graph.
+            Граф работ.
+
+    Returns:
+        Ratio of maximum parents to total vertices.
+        Отношение максимального числа родителей к числу вершин.
+    """
     return max((len(node.parents) for node in wg.nodes if node.parents)) / wg.vertex_count
 
 
 def encode_graph(wg: WorkGraph) -> list[float]:
+    """Encode graph structure into feature vector.
+
+    Кодирует структуру графа в вектор признаков.
+
+    Args:
+        wg: Work graph to encode.
+            Граф работ для кодирования.
+
+    Returns:
+        List of graph features.
+        Список признаков графа.
+    """
     return [
         metric_vertex_count(wg),
         metric_average_work_per_activity(wg),
@@ -121,3 +259,4 @@ def encode_graph(wg: WorkGraph) -> list[float]:
         metric_longest_path(wg),
         *metric_graph_parallelism_degree(wg)
     ]
+

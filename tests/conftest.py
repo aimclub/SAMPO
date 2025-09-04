@@ -109,9 +109,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
                     node.work_unit.material_reqs = [MaterialReq(name, random.randint(52, 345), name) for name in
                                                     work_materials]
 
-    wg = graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
-
-    return wg
+    return graph_restructuring(wg, use_lag_edge_optimization=lag_optimization)
 
 
 # TODO Make parametrization with different(specialized) contractors

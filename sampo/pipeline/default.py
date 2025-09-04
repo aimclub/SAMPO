@@ -1,6 +1,6 @@
 import pandas as pd
 
-from sampo.generator.environment import ContractorGenerationMethod
+from sampo.generator.environment import ContractorGenerationMethod, get_contractor_by_wg
 from sampo.pipeline.base import InputPipeline, SchedulePipeline
 from sampo.pipeline.delegating import DelegatingScheduler
 from sampo.pipeline.lag_optimization import LagOptimizationStrategy
@@ -55,11 +55,11 @@ class DefaultInputPipeline(InputPipeline):
 
     def __init__(self):
         self._wg: WorkGraph | pd.DataFrame | str | None = None
-        self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int] | None \
-            = ContractorGenerationMethod.AVG, 1
+        self._contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, int] | None \
+            = ContractorGenerationMethod.AVG, 1, 1
         self._work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
         self._node_orders: list[list[GraphNode]] | None = None
-        self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.NONE
+        self._lag_optimize: LagOptimizationStrategy = LagOptimizationStrategy.FALSE
         self._spec: ScheduleSpec | None = ScheduleSpec()
         self._assigned_parent_time: Time | None = Time(0)
         self._local_optimize_stack: ApplyQueue = ApplyQueue()
@@ -98,7 +98,7 @@ class DefaultInputPipeline(InputPipeline):
         self.sep_wg = sep
         return self
 
-    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int]) \
+    def contractors(self, contractors: list[Contractor] | pd.DataFrame | str | tuple[ContractorGenerationMethod, int, float]) \
             -> 'InputPipeline':
         """
         Mandatory argument.
@@ -206,6 +206,15 @@ class DefaultInputPipeline(InputPipeline):
 
         check_and_correct_priorities(self._wg)
 
+        if not isinstance(self._contractors, list):
+            generation_method, contractors_number, scaler = self._contractors
+            self._contractors = [get_contractor_by_wg(self._wg,
+                                                      method=generation_method,
+                                                      contractor_id=str(i),
+                                                      contractor_name='Contractor' + ' ' + str(i + 1),
+                                                      scaler=scaler)
+                           for i in range(contractors_number)]
+
         if not contractors_can_perform_work_graph(self._contractors, self._wg):
             raise NoSufficientContractorError('Contractors are not able to perform the graph of works')
 
@@ -236,17 +245,6 @@ class DefaultInputPipeline(InputPipeline):
             print('Trying to apply local optimizations to non-generic scheduler, ignoring it')
 
         match self._lag_optimize:
-            case LagOptimizationStrategy.NONE:
-                wg = self._wg
-                schedules = scheduler.schedule_with_cache(wg, self._contractors,
-                                                          self._spec,
-                                                          landscape=self._landscape_config,
-                                                          assigned_parent_time=self._assigned_parent_time,
-                                                          validate=validate)
-                node_orders = [node_order for _, _, _, node_order in schedules]
-                schedules = [schedule for schedule, _, _, _ in schedules]
-                self._node_orders = node_orders
-
             case LagOptimizationStrategy.AUTO:
                 # Searching the best
                 wg1 = graph_restructuring(self._wg, False)
@@ -278,8 +276,18 @@ class DefaultInputPipeline(InputPipeline):
                     wg = wg2
                     schedules = schedules2
 
-            case _:
+            case LagOptimizationStrategy.TRUE, LagOptimizationStrategy.FALSE:
                 wg = graph_restructuring(self._wg, self._lag_optimize.value)
+                schedules = scheduler.schedule_with_cache(wg, self._contractors,
+                                                          self._spec,
+                                                          landscape=self._landscape_config,
+                                                          assigned_parent_time=self._assigned_parent_time,
+                                                          validate=validate)
+                node_orders = [node_order for _, _, _, node_order in schedules]
+                schedules = [schedule for schedule, _, _, _ in schedules]
+                self._node_orders = node_orders
+            case _:
+                wg = self._wg
                 schedules = scheduler.schedule_with_cache(wg, self._contractors,
                                                           self._spec,
                                                           landscape=self._landscape_config,

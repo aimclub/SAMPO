@@ -1,7 +1,9 @@
 from matplotlib.figure import Figure
 
 from sampo.pipeline import PipelineError
-from sampo.schemas import Schedule, WorkGraph, ScheduledProject
+from sampo.scheduler.utils.critical_path import critical_path_graph, critical_path_schedule, \
+    critical_path_schedule_lag_optimized
+from sampo.schemas import Schedule, WorkGraph, ScheduledProject, WorkTimeEstimator, GraphNode
 from sampo.utilities.visualization.base import VisualizationMode, visualize
 from sampo.utilities.visualization.resources import resource_employment_fig, EmploymentFigType
 from sampo.utilities.visualization.schedule import schedule_gant_chart_fig
@@ -9,7 +11,8 @@ from sampo.utilities.visualization.work_graph import work_graph_fig
 
 
 class ScheduleVisualization:
-    def __init__(self, schedule: Schedule, start_date: str):
+    def __init__(self, critical_path: list[GraphNode], schedule: Schedule, start_date: str):
+        self._critical_path = critical_path
         self._schedule = schedule.merged_stages_datetime_df(start_date)
         self._shape = 10, 10
         self._color_type = 'contractor'
@@ -22,7 +25,8 @@ class ScheduleVisualization:
         self._color_type = color_type
 
     def gant_chart(self, visualization_mode: VisualizationMode = VisualizationMode.ReturnFig) -> Figure | None:
-        return schedule_gant_chart_fig(self._schedule, visualization=visualization_mode, color_type=self._color_type)
+        return schedule_gant_chart_fig(self._schedule, visualization=visualization_mode, color_type=self._color_type,
+                                       critical_path=self._critical_path)
 
     def date_labeled_resource_chart(self, visualization_mode: VisualizationMode = VisualizationMode.ReturnFig) \
             -> Figure | None:
@@ -38,8 +42,9 @@ class ScheduleVisualization:
 
 
 class WorkGraphVisualization:
-    def __init__(self, wg: WorkGraph):
-        self._wg = wg
+    def __init__(self, wg: WorkGraph, raw_wg: WorkGraph):
+        self.wg = wg
+        self.raw_wg = raw_wg
         self._shape = 10, 10
 
     def fig(self, shape: tuple[int, int]) -> 'WorkGraphVisualization':
@@ -47,7 +52,7 @@ class WorkGraphVisualization:
         return self
 
     def work_graph_chart(self, visualization_mode: VisualizationMode = VisualizationMode.ReturnFig) -> Figure | None:
-        return visualize(work_graph_fig(self._wg, self._shape), visualization_mode)
+        return visualize(work_graph_fig(self.wg, self._shape), visualization_mode)
 
 
 class Visualization:
@@ -59,15 +64,18 @@ class Visualization:
     @staticmethod
     def from_project(project: ScheduledProject, start_date: str) -> 'Visualization':
         vis = Visualization()
-        vis.wg(project.wg)
-        vis.schedule(project.schedule, start_date)
+        vis.wg(project.wg, project.raw_wg)
+        vis.schedule(project.schedule, project.raw_schedule, start_date)
         return vis
 
-    def wg(self, wg: WorkGraph):
-        self.wg_vis = WorkGraphVisualization(wg)
+    def wg(self, wg: WorkGraph, raw_wg: WorkGraph):
+        self.wg_vis = WorkGraphVisualization(wg, raw_wg)
 
-    def schedule(self, schedule: Schedule, start_date: str):
-        self.schedule_vis = ScheduleVisualization(schedule, start_date)
+    def schedule(self, schedule: Schedule, raw_schedule: Schedule, start_date: str):
+        critical_path_value = critical_path_schedule_lag_optimized(self.wg_vis.raw_wg.nodes,
+                                                                   raw_schedule.to_schedule_work_dict,
+                                                                   self.wg_vis.wg.nodes)
+        self.schedule_vis = ScheduleVisualization(critical_path_value, schedule, start_date)
 
     def shape(self, fig_shape: tuple[int, int]) -> 'Visualization':
         self.wg_vis.fig(fig_shape)

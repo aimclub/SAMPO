@@ -309,6 +309,6 @@ class GeneticScheduler(Scheduler):
 
         if validate:
             for schedule, *_ in schedules:
-                validate_schedule(schedule, wg, contractors)
+                validate_schedule(schedule, wg, contractors, spec)
 
         return schedules

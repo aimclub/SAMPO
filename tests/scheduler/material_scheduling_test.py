@@ -91,7 +91,7 @@ def test_momentum_scheduling_with_materials(setup_default_schedules):
     schedule = scheduler.schedule(setup_wg, setup_contractors, validate=False, spec=spec, landscape=landscape)[0]
 
     try:
-        validate_schedule(schedule, setup_wg, setup_contractors)
+        validate_schedule(schedule, setup_wg, setup_contractors, spec)
 
     except AssertionError as e:
         raise AssertionError(f'Scheduler {scheduler} failed validation', e)
@@ -99,10 +99,10 @@ def test_momentum_scheduling_with_materials(setup_default_schedules):
 
 def test_scheduler_with_materials_validity_right(setup_schedule):
     schedule = setup_schedule[0]
-    setup_wg, setup_contractors, landscape, _, _ = setup_schedule[2]
+    setup_wg, setup_contractors, landscape, spec, _ = setup_schedule[2]
 
     try:
-        validate_schedule(schedule, setup_wg, setup_contractors)
+        validate_schedule(schedule, setup_wg, setup_contractors, spec)
     except AssertionError as e:
         raise AssertionError(f'Scheduler {setup_schedule[1]} failed validation', e)
 

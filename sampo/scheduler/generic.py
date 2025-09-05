@@ -126,7 +126,7 @@ class GenericScheduler(Scheduler):
         )
 
         if validate:
-            validate_schedule(schedule, wg, contractors)
+            validate_schedule(schedule, wg, contractors, spec)
 
         return [(schedule, schedule_start_time, timeline, ordered_nodes)]
 

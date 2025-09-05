@@ -1,4 +1,5 @@
 import random
+from operator import attrgetter
 
 import numpy as np
 from deap.base import Toolbox
@@ -72,7 +73,7 @@ def prepare_optimized_data_structures(wg: WorkGraph,
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
 
-        contractors_spec = spec.get_work_spec(node.id).contractors or contractors
+        contractors_spec = spec.get_work_spec(node.id).contractors or map(attrgetter('id'), contractors)
         for contractor in contractors_spec:
             contractors_available[work_index, contractor2index[contractor]] = 1
 

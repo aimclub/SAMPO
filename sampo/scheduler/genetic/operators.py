@@ -669,10 +669,21 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
         mask = np.array([rand.random() < mutpb for _ in range(num_works)])
         if mask.any():
             # generate new contractors in the number of received True values of mask
-            new_contractors = np.array([rand.randint(0, num_contractors - 1) for _ in range(mask.sum())])
+
+            # [rand.randint(0, num_contractors - 1) for _ in range(mask.sum())]
+            new_contractors_list = []
+
+            # TODO Rewrite to numpy functions if heavy
+            for task, task_selected in enumerate(mask):
+                if not task_selected:
+                    continue
+                contractors_to_select = np.where(contractors_available[task] == 1)
+                new_contractors_list.append(rand.choices(contractors_to_select[0], k=1)[0])
+
+            new_contractors = np.array(new_contractors_list)
+
             # obtain a new mask of correspondence
             # between the borders of the received contractors and the assigned resources
-            # TODO handle contractors_available
 
             contractor_mask = (res[mask, :-1] <= ind[2][new_contractors]).all(axis=1)
             # update contractors by received mask

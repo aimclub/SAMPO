@@ -30,7 +30,7 @@ def get_params(works_count: int) -> tuple[float, float, float, int]:
 
 @fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
-    (wg, contractors, landscape), setup_default_schedules = setup_default_schedules
+    (wg, contractors, landscape, _, _), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(contractors)
 
     mutate_order, mutate_resources, mutate_zones, size_of_population = get_params(wg.vertex_count)

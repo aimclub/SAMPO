@@ -62,8 +62,8 @@ class DefaultComputationalBackend(ComputationalBackend):
             from sampo.scheduler.genetic.utils import init_chromosomes_f, create_toolbox_using_cached_chromosomes
 
             if self._init_schedules:
-                init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._init_schedules,
-                                                      self._landscape)
+                init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._spec,
+                                                      self._init_schedules, self._landscape)
             else:
                 init_chromosomes = []
 

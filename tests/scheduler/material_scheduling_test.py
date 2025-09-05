@@ -13,7 +13,7 @@ from tests.conftest import setup_default_schedules
 
 
 def test_empty_node_find_start_time(setup_default_schedules):
-    wg, _, landscape = setup_default_schedules[0]
+    wg, _, landscape, _, _ = setup_default_schedules[0]
     if wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
@@ -83,12 +83,12 @@ def test_empty_node_find_start_time(setup_default_schedules):
 
 
 def test_momentum_scheduling_with_materials(setup_default_schedules):
-    setup_wg, setup_contractors, landscape = setup_default_schedules[0]
+    setup_wg, setup_contractors, landscape, spec, _ = setup_default_schedules[0]
     if setup_wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
     scheduler = HEFTBetweenScheduler()
-    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=True, landscape=landscape)[0]
+    schedule = scheduler.schedule(setup_wg, setup_contractors, validate=False, spec=spec, landscape=landscape)[0]
 
     try:
         validate_schedule(schedule, setup_wg, setup_contractors)
@@ -99,7 +99,7 @@ def test_momentum_scheduling_with_materials(setup_default_schedules):
 
 def test_scheduler_with_materials_validity_right(setup_schedule):
     schedule = setup_schedule[0]
-    setup_wg, setup_contractors, landscape = setup_schedule[2]
+    setup_wg, setup_contractors, landscape, _, _ = setup_schedule[2]
 
     try:
         validate_schedule(schedule, setup_wg, setup_contractors)

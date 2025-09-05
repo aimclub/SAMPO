@@ -14,7 +14,7 @@ def setup_timeline(setup_scheduler_parameters):
 
 
 def test_supply_resources(setup_scheduler_parameters, setup_rand):
-    wg, contractors, landscape = setup_scheduler_parameters
+    wg, contractors, landscape, _, _ = setup_scheduler_parameters
     if not landscape.platforms:
         pytest.skip('Non landscape test')
     timeline = HybridSupplyTimeline(landscape)

@@ -9,7 +9,7 @@ from sampo.schemas.time import Time
 
 
 def test_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
     scheduler = AverageBinarySearchResourceOptimizingScheduler(HEFTScheduler())
 
@@ -30,7 +30,7 @@ def test_deadline_planning(setup_scheduler_parameters):
 
 
 def test_genetic_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape, spec, rand = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
     scheduler = GeneticScheduler(number_of_generation=5,
@@ -49,7 +49,7 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
 
 
 def test_true_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
     scheduler = AverageBinarySearchResourceOptimizingScheduler(HEFTScheduler())
 
@@ -73,7 +73,7 @@ def test_true_deadline_planning(setup_scheduler_parameters):
 
 
 def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
     scheduler = HEFTScheduler()
     schedule, _, _, _ = scheduler.schedule_with_cache(setup_wg, setup_contractors, landscape=setup_landscape)[0]

@@ -58,6 +58,7 @@ class ComputationalBackend(ABC):
                            weights: list[int] | None = None,
                            init_schedules: dict[
                                str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           spec: ScheduleSpec = ScheduleSpec(),
                            assigned_parent_time: Time = Time(0),
                            fitness_weights: tuple[int | float, ...] = None,
                            sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,

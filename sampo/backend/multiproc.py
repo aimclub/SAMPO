@@ -131,17 +131,18 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                            weights: list[int] | None = None,
                            init_schedules: dict[
                                str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]] = None,
+                           spec: ScheduleSpec = ScheduleSpec(),
                            assigned_parent_time: Time = Time(0),
                            fitness_weights: tuple[int | float, ...] = None,
                            sgs_type: ScheduleGenerationScheme = ScheduleGenerationScheme.Parallel,
                            only_lft_initialization: bool = False,
                            is_multiobjective: bool = False):
         super().cache_genetic_info(population_size, mutate_order, mutate_resources, mutate_zones, deadline,
-                                   weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
+                                   weights, init_schedules, spec, assigned_parent_time, fitness_weights, sgs_type,
                                    only_lft_initialization, is_multiobjective)
         if init_schedules:
-            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules,
-                                                  self._landscape)
+            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, spec,
+                                                        init_schedules, self._landscape)
         else:
             self._init_chromosomes = []
         self._pool = None

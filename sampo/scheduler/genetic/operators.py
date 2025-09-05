@@ -201,7 +201,8 @@ def init_toolbox(wg: WorkGraph,
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
-                     statuses_available=statuses_available, priorities=priorities)
+                     contractors_available=contractors_available, statuses_available=statuses_available,
+                     priorities=priorities)
     # crossover for order
     toolbox.register('mate_order', mate_scheduling_order, rand=rand, toolbox=toolbox, priorities=priorities)
     # mutation for order
@@ -667,12 +668,12 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
     if num_contractors > 1:
         mask = np.array([rand.random() < mutpb for _ in range(num_works)])
         if mask.any():
-            # TODO handle contractors_available
-
             # generate new contractors in the number of received True values of mask
             new_contractors = np.array([rand.randint(0, num_contractors - 1) for _ in range(mask.sum())])
             # obtain a new mask of correspondence
             # between the borders of the received contractors and the assigned resources
+            # TODO handle contractors_available
+
             contractor_mask = (res[mask, :-1] <= ind[2][new_contractors]).all(axis=1)
             # update contractors by received mask
             new_contractors = new_contractors[contractor_mask]
@@ -736,9 +737,9 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
-def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set[int]],
-           children: dict[int, set[int]], statuses_available: int, priorities: np.ndarray,
-           order_mutpb: float, res_mutpb: float, zone_mutpb: float,
+def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,
+           parents: dict[int, set[int]], children: dict[int, set[int]], statuses_available: int,
+           priorities: np.ndarray, order_mutpb: float, res_mutpb: float, zone_mutpb: float,
            rand: random.Random) -> Individual:
     """
     Combined mutation function of mutation for order, mutation for resources and mutation for zones.
@@ -756,7 +757,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set
     :return: mutated individual
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
+    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 

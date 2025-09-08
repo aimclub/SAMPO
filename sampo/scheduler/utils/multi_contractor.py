@@ -62,12 +62,9 @@ def run_contractor_search(contractors: list[Contractor],
     # heuristic: if contractors' finish times are equal, we prefer smaller one
     best_contractor_size = float('inf')
 
-    final_contractor_list = contractors
-    if work_spec.contractors:
-        final_contractor_list = [contractor for contractor in final_contractor_list
-                                 if contractor.id in work_spec.contractors]
+    contractors = work_spec.filter_contractors(contractors)
 
-    for contractor in final_contractor_list:
+    for contractor in contractors:
         start_time, finish_time, worker_team = runner(contractor)
         contractor_size = sum(w.count for w in contractor.workers.values())
 
@@ -79,7 +76,7 @@ def run_contractor_search(contractors: list[Contractor],
 
     if best_contractor is None:
         raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
-                                          f'{final_contractor_list}')
+                                          f'{contractors}')
 
     best_start_time, best_finish_time, best_worker_team = runner(best_contractor)
 

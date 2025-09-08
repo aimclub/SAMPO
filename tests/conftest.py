@@ -149,9 +149,10 @@ def create_spec(wg: WorkGraph,
 
     if generate_contractor_spec:
         for node in wg.nodes:
-            selected_contractor_indices = rand.choices(list(range(len(contractors))),
-                                                       k=rand.randint(1, len(contractors)))
-            spec.assign_contractors(node.id, {contractors[i].id for i in selected_contractor_indices})
+            if not node.is_inseparable_son():
+                selected_contractor_indices = rand.choices(list(range(len(contractors))),
+                                                           k=rand.randint(1, len(contractors)))
+                spec.assign_contractors(node.id, {contractors[i].id for i in selected_contractor_indices})
 
     return spec
 

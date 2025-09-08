@@ -171,14 +171,15 @@ class GeneticScheduler(Scheduler):
 
         schedule, _, _, node_order = LFTScheduler(work_estimator=work_estimator).schedule_with_cache(wg, contractors,
                                                                                                      spec,
-                                                                                                     landscape=landscape)[0]
+                                                                                                     landscape=landscape,
+                                                                                                     validate=True)[0]
         init_lft_schedule = (schedule, node_order, spec)
 
         def init_k_schedule(scheduler_class, k) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
             try:
                 schedule, _, _, node_order = (scheduler_class(work_estimator=work_estimator,
                                                               resource_optimizer=AverageReqResourceOptimizer(k))
-                                              .schedule_with_cache(wg, contractors, spec, landscape=landscape))[0]
+                                              .schedule_with_cache(wg, contractors, spec, landscape=landscape, validate=True))[0]
                 return schedule, node_order, spec
             except NoSufficientContractorError:
                 return None, None, None
@@ -187,7 +188,7 @@ class GeneticScheduler(Scheduler):
             def init_schedule(scheduler_class) -> tuple[Schedule | None, list[GraphNode] | None, ScheduleSpec | None]:
                 try:
                     schedule, _, _, node_order = (scheduler_class(work_estimator=work_estimator)
-                                                  .schedule_with_cache(wg, contractors, spec, landscape=landscape))[0]
+                                                  .schedule_with_cache(wg, contractors, spec, landscape=landscape, validate=True))[0]
                     return schedule, node_order, spec
                 except NoSufficientContractorError:
                     return None, None, None
@@ -197,7 +198,7 @@ class GeneticScheduler(Scheduler):
                 try:
                     (schedule, _, _, node_order), modified_spec = AverageBinarySearchResourceOptimizingScheduler(
                         scheduler_class(work_estimator=work_estimator)
-                    ).schedule_with_cache(wg, contractors, deadline, spec, landscape=landscape)
+                    ).schedule_with_cache(wg, contractors, deadline, spec, landscape=landscape, validate=True)
                     return schedule, node_order, modified_spec
                 except NoSufficientContractorError:
                     return None, None, None

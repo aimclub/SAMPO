@@ -2,6 +2,7 @@ from collections import defaultdict
 from copy import copy
 from dataclasses import dataclass, field
 
+from sampo.schemas import Contractor
 from sampo.schemas.resources import Worker
 from sampo.schemas.time import Time
 from sampo.schemas.types import WorkerName
@@ -20,10 +21,16 @@ class WorkSpec:
     :param is_independent: should this work be resource-independent, e.g. executing with no parallel users of
     its types of resources
     """
-    contractors: set[str] | None = None
+    contractors: set[str] = field(default_factory=set)
     assigned_workers: dict[WorkerName, int] = field(default_factory=dict)
     assigned_time: Time | None = None
     is_independent: bool = False
+
+    def is_contractor_enabled(self, contractor_id: str) -> bool:
+        return len(self.contractors) == 0 or contractor_id in self.contractors
+
+    def filter_contractors(self, contractors: list[Contractor]) -> list[Contractor]:
+        return [contractor for contractor in contractors if self.is_contractor_enabled(contractor.id)]
 
 
 @dataclass

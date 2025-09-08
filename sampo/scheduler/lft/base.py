@@ -22,7 +22,7 @@ from sampo.schemas.exceptions import IncorrectAmountOfWorker, NoSufficientContra
 
 def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractors: list[Contractor],
                                                  spec: ScheduleSpec, worker_pool: WorkerContractorPool) \
-        -> tuple[list[Contractor], np.ndarray]:
+        -> tuple[list[Contractor], np.ndarray, np.ndarray]:
     """
     This function selects contractors that can perform the work.
     For each selected contractor, the maximum possible amount of workers is assigned,
@@ -57,6 +57,8 @@ def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractor
     contractors_mask = (contractors_amounts >= min_req_amounts).all(axis=1)
     # update bool mask of contractors to satisfy amounts of workers assigned in schedule spec
     contractors_mask &= (contractors_amounts[:, in_spec_mask] >= work_spec_amounts[in_spec_mask]).all(axis=1)
+    # handle spec
+    contractors_mask &= np.array([work_spec.is_contractor_enabled(contractor.id) for contractor in contractors])
     # check that there is at least one contractor that satisfies all the constraints
     if not contractors_mask.any():
         raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
@@ -81,7 +83,7 @@ def get_contractors_and_workers_amounts_for_work(work_unit: WorkUnit, contractor
         # assign to all accepted contractors assigned in schedule spec amounts of workers
         workers_amounts[:, in_spec_mask] = work_spec_amounts[in_spec_mask]
 
-    return accepted_contractors, workers_amounts
+    return accepted_contractors, workers_amounts, contractors_mask
 
 
 class LFTScheduler(Scheduler):
@@ -127,6 +129,7 @@ class LFTScheduler(Scheduler):
         schedule, schedule_start_time, timeline = self.build_scheduler(ordered_nodes, contractors, landscape, spec,
                                                                        self.work_estimator, assigned_parent_time,
                                                                        timeline)
+
         del self._node_id2workers
         schedule = Schedule.from_scheduled_works(
             schedule,
@@ -156,10 +159,11 @@ class LFTScheduler(Scheduler):
 
         for index, node in enumerate(ordered_nodes):
             work_unit = node.work_unit
-            work_spec = spec.get_work_spec(work_unit.id)
+            work_spec = spec[node.id]
 
             # get assigned contractor and workers
             contractor, best_worker_team = self._node_id2workers[node.id]
+
             # find start time
             start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, best_worker_team,
                                                                                       node2swork, work_spec, None,
@@ -182,6 +186,12 @@ class LFTScheduler(Scheduler):
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones
 
+        # for swork in node2swork.values():
+        #     work_spec = spec[swork.id]
+        #     assert work_spec.is_contractor_enabled(swork.contractor_id)
+        #     for worker in swork.workers:
+        #         assert work_spec.is_contractor_enabled(worker.contractor_id)
+
         return node2swork.values(), assigned_parent_time, timeline
 
     def _contractor_workers_assignment(self, head_nodes: list[GraphNode], contractors: list[Contractor],
@@ -196,10 +206,8 @@ class LFTScheduler(Scheduler):
         for node in head_nodes:
             work_unit = node.work_unit
             # get contractors that can perform this work and workers amounts for them
-            accepted_contractors, workers_amounts = get_contractors_and_workers_amounts_for_work(work_unit,
-                                                                                                 contractors,
-                                                                                                 spec,
-                                                                                                 worker_pool)
+            accepted_contractors, workers_amounts, accepted_contractors_mask = \
+                get_contractors_and_workers_amounts_for_work(work_unit, contractors, spec, worker_pool)
 
             # estimate chain durations for each accepted contractor
             durations = np.array([get_chain_duration(node, amounts, self.work_estimator)
@@ -208,7 +216,7 @@ class LFTScheduler(Scheduler):
             # assign a score for each contractor equal to the sum of the ratios of
             # the duration of this work for this contractor to all durations
             # and the number of assignments of this contractor to the total amount of contractors assignments
-            scores = durations / durations.sum() + contractors_assignments_count / contractors_assignments_count.sum()
+            scores = durations / durations.sum() + contractors_assignments_count[accepted_contractors_mask] / contractors_assignments_count.sum()
             # since the maximum possible score value is 2 subtract the resulting scores from 2,
             # so that the higher the score, the more suitable the contractor is for the assignment
             scores = 2 - scores
@@ -222,6 +230,9 @@ class LFTScheduler(Scheduler):
 
             # increase the counter for the assigned contractor
             contractors_assignments_count[contractor_index] += 1
+
+            if not spec[work_unit.id].is_contractor_enabled(assigned_contractor.id):
+                raise
 
             # get workers of the assigned contractor and assign them to the node in mapper
             workers = [worker_pool[req.kind][assigned_contractor.id].copy().with_count(amount)

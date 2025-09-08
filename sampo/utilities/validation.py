@@ -65,7 +65,7 @@ def _check_all_tasks_corresponds_to_spec(schedule: Schedule, wg: WorkGraph, spec
     for node in wg.nodes:
         work_spec = spec[node.id]
         if work_spec.contractors:
-            assert scheduled_works[node.id].contractor_id in work_spec.contractors
+            assert work_spec.is_contractor_enabled(scheduled_works[node.id].contractor_id)
 
     # TODO Check other spec entries
 

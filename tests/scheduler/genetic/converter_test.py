@@ -19,6 +19,14 @@ def test_convert_schedule_to_chromosome(setup_toolbox):
                                                                      landscape=setup_landscape_many_holders)[0]
 
     chromosome = tb.schedule_to_chromosome(schedule=schedule, order=node_order)
+
+    schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
+    schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
+
+    assert not schedule.execution_time.is_inf()
+
+    validate_schedule(schedule, setup_wg, setup_contractors, spec)
+
     assert tb.validate(chromosome)
 
 

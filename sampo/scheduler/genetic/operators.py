@@ -212,7 +212,7 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('mate_resources', mate_resources, rand=rand, toolbox=toolbox)
     # mutation for resources
     toolbox.register('mutate_resources', mutate_resources, resources_border=resources_border,
-                     mutpb=mut_res_pb, rand=rand)
+                     contractors_available=contractors_available, mutpb=mut_res_pb, rand=rand)
     # mutation for resource borders
     toolbox.register('mutate_resource_borders', mutate_resource_borders, contractor_borders=contractor_borders,
                      mutpb=mut_res_pb, rand=rand)
@@ -420,7 +420,7 @@ def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]], i
 
 def is_chromosome_contractors_correct(ind: Individual, work_indices: Iterable[int],
                                       contractor_borders: np.ndarray,
-                                      index2node: dict[str, GraphNode],
+                                      index2node: dict[int, GraphNode],
                                       index2contractor: dict[int, Contractor]) -> bool:
     """
     Checks that assigned contractors can supply assigned workers.
@@ -434,9 +434,10 @@ def is_chromosome_contractors_correct(ind: Individual, work_indices: Iterable[in
     # check contractor align with the spec
     spec: ScheduleSpec = ind[3]
     contractors = resources[:, -1]
-    for i in range(len(contractors)):
-        work_spec = spec[index2node[order[i]].id]
-        if work_spec.contractors and index2contractor[contractors[i]].id not in work_spec.contractors:
+    for i in range(len(order)):
+        work_index = order[i]
+        work_spec = spec[index2node[work_index].id]
+        if not work_spec.is_contractor_enabled(index2contractor[contractors[work_index]].id):
             return False
 
     # sort resource part of chromosome by contractor ids

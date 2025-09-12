@@ -56,5 +56,5 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                            spec=spec,
                            work_estimator=work_estimator,
                            landscape=landscape,
-                           verbose=False), resources_border,
-            wg, contractors, spec, rand, setup_default_schedules, landscape)
+                           verbose=False),
+            resources_border, wg, contractors, spec, rand, setup_default_schedules, landscape)

@@ -25,7 +25,7 @@
 
 ```python
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator import SyntheticGraphType
 
 r_seed = 231  # фиксируем зерно для воспроизводимости
 ss = SimpleSynthetic(r_seed)
@@ -74,7 +74,7 @@ from sampo.schemas.graph import WorkGraph
 simple_wg.dump(".", "wg")
 
 # Загружаем граф (устаревший метод, используйте loadf)
-loaded_simple_wg = WorkGraph.load(".", "wg")
+loaded_simple_wg = WorkGraph.loadf(".", "wg")
 
 # Проверяем идентичность
 assert simple_wg.vertex_count == loaded_simple_wg.vertex_count
@@ -151,7 +151,7 @@ contractors[0].dump(".", "contractor")
 
 # Загружаем подрядчика (устаревший метод)
 from sampo.schemas.contractor import Contractor
-loaded_contractor = Contractor.load(".", "contractor")
+loaded_contractor = Contractor.loadf(".", "contractor")
 ```
 
 [к оглавлению](#оглавление)

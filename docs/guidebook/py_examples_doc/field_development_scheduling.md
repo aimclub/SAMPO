@@ -38,7 +38,7 @@ warnings.filterwarnings("ignore")
 Чтение структуры задач из подготовленного JSON (`./field_development_tasks_structure.json`).&#x20;
 
 ```python
-field_development_wg = WorkGraph.load("./", "field_development_tasks_structure")
+field_development_wg = WorkGraph.loadf("./", "field_development_tasks_structure")
 ```
 
 ## 3. Подрядчики: файл или автогенерация
@@ -49,7 +49,7 @@ field_development_wg = WorkGraph.load("./", "field_development_tasks_structure")
 use_contractors_from_file = False
 
 if use_contractors_from_file:
-    contractors = Contractor.load("./", "field_development_contractors_info")
+    contractors = [Contractor.loadf("./", "field_development_contractors_info")]
 else:
     contractors = [get_contractor_by_wg(field_development_wg, scaler=3)]
 ```

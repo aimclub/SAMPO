@@ -43,7 +43,7 @@
 
 #### 1.2.1 WorkGraph → DataFrame
 
-* Из `ScheduleProject` извлекается `WorkGraph`.
+* Из `ScheduledProject` извлекается `WorkGraph`.
 * Преобразование графа в `pandas.DataFrame` для анализа и восстановления лагов.
 
 #### 1.2.2 Автоподбор подрядчиков по WorkGraph
@@ -59,7 +59,7 @@
 ### 1.x Интеграция в STAIRS
 
 * Источники: CSV, БД (`postgresql_url`), сериализованный проект.
-* После `.finish()` доступен `ScheduleProject`; из него получают `Schedule` и `wg.to_frame(save_req=True)` для СППР.
+* После `.finish()` доступен `ScheduledProject`; из него получают `Schedule` и `wg.to_frame(save_req=True)` для СППР.
 
 ## 2. Инициализация алгоритмов планирования
 
@@ -113,7 +113,7 @@
 #### 3.1.6 Построение расписания
 
 * Запуск выбранного планировщика (`HEFT*`, `Topological*`, `GeneticScheduler`).
-* На выходе `ScheduleProject` и `Schedule`; поддерживается визуализация (`schedule_gant_chart_fig`, `VisualizationMode`).
+* На выходе `ScheduledProject` и `Schedule`; поддерживается визуализация (`schedule_gant_chart_fig`, `VisualizationMode`).
 
 ### 3.2 Полное планирование и экспорт
 

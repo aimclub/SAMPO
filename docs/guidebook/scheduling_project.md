@@ -1,4 +1,4 @@
-# Проект планирования в SAMPO (SchedulingProject)
+# Проект планирования в SAMPO (ScheduledProject)
 
 ## Оглавление
 
@@ -22,7 +22,7 @@
 
 ```python
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator import SyntheticGraphType
 
 r_seed = 231
 ss = SimpleSynthetic(r_seed)

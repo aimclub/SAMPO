@@ -179,7 +179,7 @@ def set_productivity_mode(
 from typing import Type
 
 def get_recreate_info(self) -> tuple[Type, tuple]:
-    return FieldDevWorkEstimator, tuple(self._url)  # ('t','e','s','t') для "test"
+    return FieldDevWorkEstimator, (self._url,) # "test"
 ```
 
 ---

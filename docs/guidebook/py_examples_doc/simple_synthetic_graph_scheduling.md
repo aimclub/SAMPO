@@ -59,8 +59,8 @@ res_kind_count = len(set(req.kind for req in chain(*[n.work_unit.worker_reqs for
 print(works_count, work_names_count, res_kind_count)
 
 assert (works_count     <= synth_works_top_border * 1.1)
-assert (work_names_count <= synth_works_top_border)
-assert (res_kind_count   <= synth_works_top_border)
+assert (work_names_count <= synth_unique_works)
+assert (res_kind_count   <= synth_resources)
 ```
 
 ## 4. Подрядчик по графу

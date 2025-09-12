@@ -1,5 +1,7 @@
 # Локальная оптимизация в SAMPO
 
+Документ описывает использование локальных оптимизаторов для улучшения расписаний в **SAMPO**.
+
 ## Оглавление
 
 * [1. Подготовка данных](#1-подготовка-данных)
@@ -12,16 +14,19 @@
   * [2.2 Оптимизация расписания (Schedule)](#22-оптимизация-расписания-schedule)
   * [2.3 Комбинированное применение](#23-комбинированное-применение)
 
+---
+
 ## 1. Подготовка данных
 
 ### 1.1 Генерация графа и ресурсов
 
-* Используем синтетический генератор и подрядчика из графа.
-* Фиксируем `r_seed` для воспроизводимости.
+Используем синтетический генератор для построения графа и формируем подрядчика на основе его потребностей.
+Чтобы избежать ошибок при локальной оптимизации, рекомендуется зафиксировать `id` подрядчика и использовать один и тот же объект на всех шагах.
 
 ```python
+from uuid import uuid5, NAMESPACE_DNS
 from sampo.generator.base import SimpleSynthetic
-from sampo.generator.types import SyntheticGraphType
+from sampo.generator.pipeline import SyntheticGraphType
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg
 
 r_seed = 231
@@ -34,13 +39,22 @@ simple_wg = ss.work_graph(
     top_border=200,
 )
 
-contractors = [get_contractor_by_wg(simple_wg)]
+# Генерация подрядчика и фиксация стабильного id
+contractor = get_contractor_by_wg(simple_wg)
+contractor.id = str(uuid5(NAMESPACE_DNS, "contractor-by-wg"))
+contractors = [contractor]
 ```
+
+[к оглавлению](#оглавление)
+
+---
 
 ### 1.2 Планировщик
 
-* Базовый планировщик: `HEFTScheduler`.
-* Конвейер: `SchedulingPipeline`.
+Для построения расписания используется планировщик и конвейер:
+
+* базовый планировщик: `HEFTScheduler`;
+* конвейер: `SchedulingPipeline`.
 
 ```python
 from sampo.scheduler.heft.base import HEFTScheduler
@@ -49,17 +63,23 @@ from sampo.pipeline import SchedulingPipeline
 scheduler = HEFTScheduler()
 ```
 
+[к оглавлению](#оглавление)
+
+---
+
 ## 2. Локальная оптимизация
 
-В SAMPO два вида локальной оптимизации:
+В SAMPO доступны два типа локальной оптимизации:
 
-* **Order** — перестановка порядка планирования работ для улучшения результата.
-* **Schedule** — перерасчёт частей расписания для уменьшения времени выполнения.
+* **Order** — перестановка порядка планирования работ;
+* **Schedule** — перерасчёт частей расписания с использованием альтернативных таймлайнов.
+
+---
 
 ### 2.1 Оптимизация порядка (Scheduling order)
 
-* Класс: `SwapOrderLocalOptimizer`.
-* Применение к поддиапазону вершин графа через `.optimize_local(...)` до вызова `.schedule(...)`.
+Класс: `SwapOrderLocalOptimizer`.
+Применяется к диапазону вершин графа до вызова `.schedule(...)`.
 
 ```python
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer
@@ -76,11 +96,16 @@ project = SchedulingPipeline.create() \
 project.schedule.execution_time
 ```
 
+[к оглавлению](#оглавление)
+
+---
+
 ### 2.2 Оптимизация расписания (Schedule)
 
-* Класс: `ParallelizeScheduleLocalOptimizer`.
-* Требует выбор таймлайна, например `JustInTimeTimeline`.
-* Обычно применяется после базового расписания.
+Класс: `ParallelizeScheduleLocalOptimizer`.
+Требует выбора таймлайна, например `JustInTimeTimeline`.
+Обычно применяется после построения базового расписания.
+Важно: необходимо использовать один и тот же объект подрядчика с фиксированным `id`.
 
 ```python
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
@@ -98,28 +123,43 @@ project = SchedulingPipeline.create() \
 project.schedule.execution_time
 ```
 
+[к оглавлению](#оглавление)
+
+---
+
 ### 2.3 Комбинированное применение
 
-* Можно стекать несколько локальных оптимизаторов.
-* Пример: сначала оптимизация порядка на разных диапазонах, затем расписания.
+Можно комбинировать несколько оптимизаторов.
+Пример: сначала оптимизация порядка на двух частях графа, затем оптимизация расписания на этих же диапазонах.
+Следите, чтобы подрядчик был один и тот же, без пересоздания.
 
 ```python
-from sampo.pipeline import SchedulingPipeline
 from sampo.scheduler.utils.local_optimization import SwapOrderLocalOptimizer, ParallelizeScheduleLocalOptimizer
 from sampo.scheduler.timeline.just_in_time_timeline import JustInTimeTimeline
 
 order_optimizer = SwapOrderLocalOptimizer()
 schedule_optimizer = ParallelizeScheduleLocalOptimizer(JustInTimeTimeline)
 
+half = simple_wg.vertex_count // 2
+
 project = SchedulingPipeline.create() \
     .wg(simple_wg) \
     .contractors(contractors) \
-    .optimize_local(order_optimizer, range(0, simple_wg.vertex_count // 2)) \
-    .optimize_local(order_optimizer, range(simple_wg.vertex_count // 2, simple_wg.vertex_count)) \
+    .optimize_local(order_optimizer, range(0, half)) \
+    .optimize_local(order_optimizer, range(half, simple_wg.vertex_count)) \
     .schedule(scheduler) \
-    .optimize_local(schedule_optimizer, range(0, simple_wg.vertex_count // 2)) \
-    .optimize_local(schedule_optimizer, range(simple_wg.vertex_count // 2, simple_wg.vertex_count)) \
+    .optimize_local(schedule_optimizer, range(0, half)) \
+    .optimize_local(schedule_optimizer, range(half, simple_wg.vertex_count)) \
     .finish()[0]
 
 project.schedule.execution_time
 ```
+
+[к оглавлению](#оглавление)
+
+---
+
+## Примечания
+
+* Если при оптимизации появляется ошибка `KeyError` по `contractor_id`, причина обычно в том, что подрядчик пересоздан или его `id` изменился.
+* Для стабильной работы используйте один и тот же объект подрядчика и фиксируйте его `id`.

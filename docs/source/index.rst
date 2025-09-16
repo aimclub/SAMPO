@@ -7,13 +7,14 @@ Welcome to SAMPO's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    Install
    Usage
    Features
    autoapi/index
+   guidebook/index
 
 
 Supported by

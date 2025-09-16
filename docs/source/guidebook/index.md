@@ -1,10 +1,12 @@
-# Гайдбук
+# Руководство
 
 ```{toctree}
 :maxdepth: 2
 :numbered:
-caption: Содержание гайдбука
+caption: Руководство SAMPO
 intro
-setup
-workflow
-tips
+quickstart
+advanced
+developers
+```
+

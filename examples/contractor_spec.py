@@ -32,6 +32,7 @@ project = SchedulingPipeline.create() \
     .wg(wg) \
     .contractors(contractors) \
     .lag_optimize(LagOptimizationStrategy.TRUE) \
+    .spec(spec) \
     .schedule(scheduler, validate=True) \
     .visualization('2022-01-01')[0] \
     .shape((14, 14)) \

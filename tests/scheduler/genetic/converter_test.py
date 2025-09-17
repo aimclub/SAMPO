@@ -51,7 +51,7 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
     contractors = []
     for i in range(len(chromosome[2])):
         contractors.append(Contractor(id=setup_contractors[i].id,
-                                      name=setup_contractors[i].model_name,
+                                      name=setup_contractors[i].name,
                                       workers={
                                           name: Worker(str(uuid4()), name, count, contractor_id=setup_contractors[i].id)
                                           for name, count in zip(workers, chromosome[2][i])},

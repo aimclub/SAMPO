@@ -31,8 +31,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         """
         :param model_name: dict with information that describes type of work for resource model.
                            In minimal it should contain 'granular_name' and 'measurement' entries.
-                           `str` type is deprecated and is equal to
-                           {'granular_name': your_str_value, 'measurement': 'unit'}
+                           `str` model_type is equal to {'granular_name': your_str_value, 'measurement': 'unit'}
         :param worker_reqs: list of required professions (i.e. workers)
         :param equipment_reqs: list of required equipment
         :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
@@ -151,10 +150,9 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.material_reqs = new_work_unit.material_reqs
         self.zone_reqs = new_work_unit.zone_reqs
         self.id = new_work_unit.id
-        self.name = new_work_unit.model_name
+        self.model_name = new_work_unit.model_name
         self.is_service_unit = new_work_unit.is_service_unit
         self.volume = new_work_unit.volume
-        self.volume_type = new_work_unit.volume_type
         self.group = new_work_unit.group
         self.display_name = new_work_unit.display_name
         self.priority = new_work_unit.priority

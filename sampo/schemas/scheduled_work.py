@@ -42,7 +42,6 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.display_name = work_unit.display_name
         self.is_service_unit = work_unit.is_service_unit
         self.volume = work_unit.volume
-        self.volume_type = work_unit.volume_type
         self.priority = work_unit.priority
         self.start_end_time = start_end_time
         self.workers = workers if workers is not None else []

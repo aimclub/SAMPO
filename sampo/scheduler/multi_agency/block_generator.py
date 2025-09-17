@@ -93,7 +93,7 @@ def generate_blocks(graph_type: SyntheticBlockGraphType, n_blocks: int, type_pro
             bg.add_edge(global_start, node)
             bg.add_edge(node, global_end)
 
-    logger(f'{graph_type.name} ' + ' '.join([str(mode.name) for i, mode in enumerate(modes)
+    logger(f'{graph_type.name} ' + ' '.join([str(mode.model_name) for i, mode in enumerate(modes)
                                              if nodes[i].vertex_count != EMPTY_GRAPH_VERTEX_COUNT]))
     return bg
 

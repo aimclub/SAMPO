@@ -209,7 +209,7 @@ class MomentumTimeline(Timeline):
         start = parent_time
         scheduled_wreqs: list[WorkerReq] = []
 
-        type2count: dict[str, int] = build_index(passed_workers, lambda w: w.name, lambda w: w.count)
+        type2count: dict[str, int] = build_index(passed_workers, lambda w: w.model_name, lambda w: w.count)
 
         i = 0
         while len(queue) > 0:

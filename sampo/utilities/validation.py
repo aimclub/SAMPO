@@ -161,10 +161,10 @@ def check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule: 
         # grab event to the current equivalency class
         if event_type == 'start':
             for w in work.workers:
-                cpool[w.name] = cpool.get(w.name, 0) - w.count
+                cpool[w.model_name] = cpool.get(w.model_name, 0) - w.count
         elif event_type == 'end':
             for w in work.workers:
-                cpool[w.name] = cpool.get(w.name, 0) + w.count
+                cpool[w.model_name] = cpool.get(w.model_name, 0) + w.count
         else:
             raise ValueError(f'Incorrect event type: {event_type}. Only "start" and "end" are supported.')
 
@@ -175,5 +175,5 @@ def _check_all_workers_correspond_to_worker_reqs(wg: WorkGraph, schedule: Schedu
     for swork in schedule.works:
         worker2req = build_index(wg[swork.id].work_unit.worker_reqs, attrgetter('kind'))
         for worker in swork.workers:
-            req = worker2req[worker.name]
+            req = worker2req[worker.model_name]
             assert req.min_count <= worker.count <= req.max_count

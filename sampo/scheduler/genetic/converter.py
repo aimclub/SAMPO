@@ -68,7 +68,7 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
         if schedule[node_id].workers:
             for resource in schedule[node_id].workers:
                 res_count = resource.count
-                res_index = worker_name2index[resource.name]
+                res_index = worker_name2index[resource.model_name]
                 res_contractor = resource.contractor_id
 
                 resource_chromosome[index, res_index] = res_count

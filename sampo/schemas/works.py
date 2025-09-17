@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from sampo.schemas.identifiable import Identifiable
 from sampo.schemas.requirements import WorkerReq, EquipmentReq, MaterialReq, ConstructionObjectReq, ZoneReq
@@ -14,7 +15,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
     """
     def __init__(self,
                  id: str,
-                 name: str,
+                 model_name: dict[str, Any] | str,
                  worker_reqs: list[WorkerReq] = None,
                  equipment_reqs: list[EquipmentReq] = None,
                  material_reqs: list[MaterialReq] = None,
@@ -25,10 +26,13 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
                  priority: int = 1,
                  is_service_unit: bool = False,
                  volume: float = 0,
-                 volume_type: str = 'unit',
                  display_name: str = "",
                  workground_size: int = 100):
         """
+        :param model_name: dict with information that describes type of work for resource model.
+                           In minimal it should contain 'granular_name' and 'measurement' entries.
+                           `str` type is deprecated and is equal to
+                           {'granular_name': your_str_value, 'measurement': 'unit'}
         :param worker_reqs: list of required professions (i.e. workers)
         :param equipment_reqs: list of required equipment
         :param material_reqs: list of required materials (e.g. logs, stones, gravel etc.)
@@ -38,10 +42,17 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         :param group: union block of works
         :param is_service_unit: service units are additional vertexes
         :param volume: scope of work
-        :param volume_type: unit of scope of work
         :param display_name: name of work
         """
-        super(WorkUnit, self).__init__(id, name)
+        if isinstance(model_name, str):
+            model_name = {'granular_name': model_name}
+        if 'measurement' not in model_name:
+            model_name['measurement'] = 'unit'
+
+        self.model_name = model_name
+
+        super(WorkUnit, self).__init__(id, 'dummy')
+
         if material_reqs is None:
             material_reqs = []
         if object_reqs is None:
@@ -61,8 +72,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.group = group
         self.is_service_unit = is_service_unit
         self.volume = float(volume)
-        self.volume_type = volume_type
-        self.display_name = display_name if display_name else name
+        self.display_name = display_name if display_name else model_name['granular_name']
         self.priority = priority
 
     def __del__(self):
@@ -141,7 +151,7 @@ class WorkUnit(AutoJSONSerializable['WorkUnit'], Identifiable):
         self.material_reqs = new_work_unit.material_reqs
         self.zone_reqs = new_work_unit.zone_reqs
         self.id = new_work_unit.id
-        self.name = new_work_unit.name
+        self.name = new_work_unit.model_name
         self.is_service_unit = new_work_unit.is_service_unit
         self.volume = new_work_unit.volume
         self.volume_type = new_work_unit.volume_type

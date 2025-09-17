@@ -38,7 +38,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  materials: MaterialDelivery | None = None,
                  c_object: ConstructionObject | None = None):
         self.id = work_unit.id
-        self.name = work_unit.name
+        self.model_name = work_unit.model_name
         self.display_name = work_unit.display_name
         self.is_service_unit = work_unit.is_service_unit
         self.volume = work_unit.volume
@@ -123,7 +123,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
     def to_dict(self) -> dict[str, Any]:
         return {
             'task_id': self.id,
-            'task_name': self.name,
+            'task_name': self.model_name,
             'start': self.start_time.value,
             'finish': self.finish_time.value,
             'contractor_id': self.contractor,

@@ -1,7 +1,8 @@
 from copy import deepcopy
 from datetime import datetime
 from functools import lru_cache
-from typing import Iterable, Union
+from operator import itemgetter
+from typing import Iterable, Union, Any
 
 from pandas import DataFrame
 
@@ -21,7 +22,7 @@ class Schedule(JSONSerializable['Schedule']):
     Represents work schedule. Is a wrapper around DataFrame with specific structure.
     """
 
-    _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'task_name_mapped', 'contractor', 'cost',
+    _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'granular_name', 'contractor', 'cost',
                                 'volume', 'measurement', 'start',
                                 'finish', 'duration', 'workers']
     _scheduled_work_column: str = 'scheduled_work_object'
@@ -118,7 +119,7 @@ class Schedule(JSONSerializable['Schedule']):
         def f(row):
             swork: ScheduledWork = deepcopy(row[self._scheduled_work_column])
             row[self._scheduled_work_column] = swork
-            swork.name = row['task_name_mapped']
+            swork.model_name = row['task_name_mapped']
             swork.display_name = row['task_name']
             swork.volume = float(row['volume'])
             swork.start_end_time = Time(int(row['start'])), Time(int(row['finish']))
@@ -141,7 +142,7 @@ class Schedule(JSONSerializable['Schedule']):
         """
         ordered_task_ids = order_nodes_by_start_time(works, wg) if wg else None
 
-        def sed(time1, time2, swork) -> tuple:
+        def sed(time1, time2) -> tuple:
             """
             Sorts times and calculates difference.
             :param time1: time 1.
@@ -151,19 +152,25 @@ class Schedule(JSONSerializable['Schedule']):
             start, end = tuple(sorted((time1, time2)))
             return start, end, end - start
 
-        data_frame = [(i,                                                 # idx
-                       w.id,                                              # task_id
-                       w.display_name,                                    # task_name
-                       w.name,                                            # task_name_mapped
-                       w.contractor,                                      # contractor info
-                       w.cost,                                            # work cost
-                       w.volume,                                          # work volume
-                       w.volume_type,                                     # work volume type
-                       *sed(*(t.value for t in w.start_end_time), w),     # start, end, duration
-                       repr(dict((i.name, i.count) for i in w.workers)),  # workers
-                       w  # full ScheduledWork info
+        model_name_columns = list(sorted(next(works).model_name.keys()))
+
+        def make_model_name_columns(swork: ScheduledWork) -> list[Any]:
+            return list(map(itemgetter(1), sorted(swork.model_name.items(), key=itemgetter(0))))
+
+        data_frame = [(i,                                                   # idx
+                       w.id,                                                # task_id
+                       w.display_name,                                      # task_name
+                       w.contractor,                                        # contractor info
+                       w.cost,                                              # work cost
+                       w.volume,                                            # work volume
+                       w.volume_type,                                       # work volume type
+                       *sed(*(t.value for t in w.start_end_time)),          # start, end, duration
+                       repr(dict((i.name, i.count) for i in w.workers)),    # workers
+                       *make_model_name_columns(w),                         # model_name columns
+                       w                                                    # full ScheduledWork info
                        ) for i, w in enumerate(works)]
-        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
+
+        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns + model_name_columns)
 
         data_frame = data_frame.set_index('idx', drop=False)
 

@@ -20,8 +20,8 @@ def get_total_resources_usage(schedule: Schedule, resources_names: Iterable[str]
         start = points.bisect_left(swork.start_time)
         finish = points.bisect_left(swork.finish_time)
         for worker in swork.workers:
-            if is_none or worker.name in resources_names:
-                usage[worker.name][start: finish] += worker.count
+            if is_none or worker.model_name in resources_names:
+                usage[worker.model_name][start: finish] += worker.count
 
     return usage
 
@@ -47,7 +47,7 @@ def resources_sum(schedule: Schedule, resources_names: Iterable[str] | None = No
     resources_names = set(resources_names) if not is_none else {}
 
     res_sum = sum([sum([worker.count * work.duration.value for worker in work.workers
-                        if worker.name in resources_names or is_none], start=0)
+                        if worker.model_name in resources_names or is_none], start=0)
                    for work in schedule.works])
 
     return res_sum
@@ -61,7 +61,7 @@ def resources_costs_sum(schedule: Schedule, resources_names: Iterable[str] | Non
     resources_names = set(resources_names) if not is_none else {}
 
     cost = sum([sum([worker.get_cost() * work.duration.value for worker in work.workers
-                     if worker.name in resources_names or is_none], start=0.0)
+                     if worker.model_name in resources_names or is_none], start=0.0)
                 for work in schedule.works])
 
     return cost

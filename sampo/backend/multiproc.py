@@ -140,8 +140,8 @@ class MultiprocessingComputationalBackend(DefaultComputationalBackend):
                                    weights, init_schedules, assigned_parent_time, fitness_weights, sgs_type,
                                    only_lft_initialization, is_multiobjective)
         if init_schedules:
-            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, init_schedules,
-                                                  self._landscape)
+            self._init_chromosomes = init_chromosomes_f(self._wg, self._contractors, self._spec,
+                                                        init_schedules, self._landscape)
         else:
             self._init_chromosomes = []
         self._pool = None

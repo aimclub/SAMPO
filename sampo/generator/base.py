@@ -20,6 +20,9 @@ class SimpleSynthetic:
         else:
             self._rand = Random(rand)
 
+    def get_rand(self):
+        return self._rand
+
     def small_work_graph(self, cluster_name: str | None = 'C1') -> WorkGraph:
         """
         Creates a small graph of works consisting of 30-50 vertices;

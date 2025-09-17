@@ -26,7 +26,7 @@ class BreakType(Enum):
 
 
 def test_check_order_validity_right(setup_default_schedules):
-    (setup_wg, _, _), setup_default_schedules = setup_default_schedules
+    (setup_wg, _, _, _, _), setup_default_schedules = setup_default_schedules
 
     for scheduler, (schedule, _, _, _) in setup_default_schedules.items():
         try:
@@ -37,7 +37,7 @@ def test_check_order_validity_right(setup_default_schedules):
 
 
 def test_check_order_validity_wrong(setup_default_schedules):
-    (setup_wg, _, _), setup_default_schedules = setup_default_schedules
+    (setup_wg, _, _, _, _), setup_default_schedules = setup_default_schedules
 
     for (schedule, _, _, _) in setup_default_schedules.values():
         for break_type in BreakType:
@@ -54,7 +54,7 @@ def test_check_order_validity_wrong(setup_default_schedules):
 
 
 def test_check_resources_validity_right(setup_default_schedules):
-    (setup_wg, setup_contractors, _), setup_default_schedules = setup_default_schedules
+    (setup_wg, setup_contractors, _, _, _), setup_default_schedules = setup_default_schedules
 
     for scheduler, (schedule, _, _, _) in setup_default_schedules.items():
         try:
@@ -65,7 +65,7 @@ def test_check_resources_validity_right(setup_default_schedules):
 
 
 def test_check_resources_validity_wrong(setup_default_schedules):
-    (setup_wg, setup_contractors, _), setup_default_schedules = setup_default_schedules
+    (setup_wg, setup_contractors, _, _, _), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
 
     for (schedule, _, _, _) in setup_default_schedules.values():

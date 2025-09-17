@@ -13,6 +13,6 @@ def setup_schedulers_and_parameters(request, setup_scheduler_parameters) -> tupl
     else:
         scheduler = scheduler()
 
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
-    return setup_wg, setup_contractors, setup_landscape, scheduler
+    return setup_wg, setup_contractors, setup_landscape, spec, rand, scheduler

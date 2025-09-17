@@ -7,6 +7,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.resources import Worker
+from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.time import Time
 
 
@@ -42,6 +43,7 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
 
 
 def run_contractor_search(contractors: list[Contractor],
+                          work_spec: WorkSpec,
                           runner: Callable[[Contractor], tuple[Time, Time, list[Worker]]]) \
         -> tuple[Time, Time, Contractor, list[Worker]]:
     """
@@ -59,6 +61,8 @@ def run_contractor_search(contractors: list[Contractor],
     best_contractor = None
     # heuristic: if contractors' finish times are equal, we prefer smaller one
     best_contractor_size = float('inf')
+
+    contractors = work_spec.filter_contractors(contractors)
 
     for contractor in contractors:
         start_time, finish_time, worker_team = runner(contractor)

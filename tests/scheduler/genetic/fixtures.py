@@ -30,11 +30,10 @@ def get_params(works_count: int) -> tuple[float, float, float, int]:
 
 @fixture
 def setup_toolbox(setup_default_schedules) -> tuple:
-    (wg, contractors, landscape), setup_default_schedules = setup_default_schedules
+    (wg, contractors, landscape, spec, rand), setup_default_schedules = setup_default_schedules
     setup_worker_pool = get_worker_contractor_pool(contractors)
 
     mutate_order, mutate_resources, mutate_zones, size_of_population = get_params(wg.vertex_count)
-    rand = Random(123)
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
     nodes, *_ = get_head_nodes_with_connections_mappings(wg)
@@ -54,7 +53,8 @@ def setup_toolbox(setup_default_schedules) -> tuple:
                            mutate_zones,
                            setup_default_schedules,
                            rand,
+                           spec=spec,
                            work_estimator=work_estimator,
                            landscape=landscape,
-                           verbose=False), resources_border,
-            wg, contractors, setup_default_schedules, landscape)
+                           verbose=False),
+            resources_border, wg, contractors, spec, rand, setup_default_schedules, landscape)

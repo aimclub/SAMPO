@@ -15,14 +15,14 @@ from sampo.utilities.collections_util import build_index
 
 @fixture(scope='function')
 def setup_timeline(setup_scheduler_parameters):
-    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape, spec, rand = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
     return JustInTimeTimeline(setup_worker_pool, landscape=landscape), \
-        setup_wg, setup_contractors, setup_worker_pool
+        setup_wg, setup_contractors, setup_worker_pool, spec, rand
 
 
 def test_init_resource_structure(setup_timeline):
-    setup_timeline, _, _, _ = setup_timeline
+    setup_timeline, _, _, _, _, _ = setup_timeline
 
     assert len(setup_timeline._timeline) != 0
     for setup_timeline in setup_timeline._timeline.values():
@@ -52,7 +52,7 @@ def test_init_resource_structure(setup_timeline):
 
 
 def test_schedule(setup_timeline):
-    setup_timeline, setup_wg, setup_contractors, setup_worker_pool = setup_timeline
+    setup_timeline, setup_wg, setup_contractors, setup_worker_pool, _, _ = setup_timeline
 
     nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(setup_wg)
     ordered_nodes = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())

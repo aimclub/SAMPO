@@ -19,6 +19,7 @@ from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.utilities.collections_util import reverse_dictionary
 from sampo.utilities.linked_list import LinkedList
 
 
@@ -63,16 +64,25 @@ def convert_schedule_to_chromosome(work_id2index: dict[str, int],
     for node in order:
         node_id = node.id
         index = work_id2index[node_id]
-        for resource in schedule[node_id].workers:
-            res_count = resource.count
-            res_index = worker_name2index[resource.name]
-            res_contractor = resource.contractor_id
-            resource_chromosome[index, res_index] = res_count
-            resource_chromosome[index, -1] = contractor2index[res_contractor]
+
+        if schedule[node_id].workers:
+            for resource in schedule[node_id].workers:
+                res_count = resource.count
+                res_index = worker_name2index[resource.name]
+                res_contractor = resource.contractor_id
+
+                resource_chromosome[index, res_index] = res_count
+                resource_chromosome[index, -1] = contractor2index[res_contractor]
+        else:
+            contractor_list = spec[node_id].contractors
+            if not contractor_list:
+                contractor_list = contractor2index.keys()
+            random_contractor = list(contractor_list)[0]
+            resource_chromosome[index, -1] = contractor2index[random_contractor]
 
     resource_border_chromosome = np.copy(contractor_borders)
 
-    return order_chromosome, resource_chromosome, resource_border_chromosome, spec, zone_changes_chromosome
+    return order_chromosome, resource_chromosome, resource_border_chromosome, copy.deepcopy(spec), zone_changes_chromosome
 
 
 def convert_chromosome_to_schedule(chromosome: ChromosomeType,

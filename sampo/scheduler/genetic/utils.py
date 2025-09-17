@@ -1,4 +1,5 @@
 import random
+from operator import attrgetter
 
 import numpy as np
 from deap.base import Toolbox
@@ -13,11 +14,12 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 
 def init_chromosomes_f(wg: WorkGraph,
                        contractors: list[Contractor],
+                       spec: ScheduleSpec,
                        init_schedules: dict[str, tuple[Schedule, list[GraphNode] | None, ScheduleSpec, float]],
                        landscape: LandscapeConfiguration = LandscapeConfiguration()):
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
-        resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
+        resources_border, contractors_available = prepare_optimized_data_structures(wg, contractors, landscape, spec)
 
     init_chromosomes: dict[str, tuple[ChromosomeType, float, ScheduleSpec]] = \
         {name: (convert_schedule_to_chromosome(work_id2index, worker_name2index,
@@ -32,7 +34,8 @@ def init_chromosomes_f(wg: WorkGraph,
 
 def prepare_optimized_data_structures(wg: WorkGraph,
                                       contractors: list[Contractor],
-                                      landscape: LandscapeConfiguration):
+                                      landscape: LandscapeConfiguration,
+                                      spec: ScheduleSpec):
     # preparing access-optimized data structures
     index2zone = {ind: zone for ind, zone in enumerate(landscape.zone_config.start_statuses)}
 
@@ -63,15 +66,20 @@ def prepare_optimized_data_structures(wg: WorkGraph,
     priorities = np.array([index2node[i].work_unit.priority for i in range(len(index2node))])
 
     resources_border = np.zeros((2, len(worker_pool), len(index2node)))
+    contractors_available = np.zeros((len(index2node), len(contractor2index)))
     for work_index, node in index2node.items():
         for req in node.work_unit.worker_reqs:
             worker_index = worker_name2index[req.kind]
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
 
+        contractors_spec = spec.get_work_spec(node.id).contractors or map(attrgetter('id'), contractors)
+        for contractor in contractors_spec:
+            contractors_available[work_index, contractor2index[contractor]] = 1
+
     return (worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj,
             worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents,
-            children, resources_border)
+            children, resources_border, contractors_available)
 
 
 def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
@@ -92,7 +100,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                                             is_multiobjective: bool = False) -> Toolbox:
     worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj, \
         worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents, children, \
-        resources_border = prepare_optimized_data_structures(wg, contractors, landscape)
+        resources_border, contractors_available = prepare_optimized_data_structures(wg, contractors, landscape, spec)
 
     return init_toolbox(wg,
                         contractors,
@@ -119,6 +127,7 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         parents,
                         children,
                         resources_border,
+                        contractors_available,
                         assigned_parent_time,
                         fitness_weights,
                         work_estimator,

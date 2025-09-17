@@ -31,7 +31,7 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
                  work_unit: WorkUnit,
                  start_end_time: tuple[Time, Time],
                  workers: list[Worker],
-                 contractor: Contractor | str,
+                 contractor: Contractor,
                  equipments: list[Equipment] | None = None,
                  zones_pre: list[ZoneTransition] | None = None,
                  zones_post: list[ZoneTransition] | None = None,
@@ -52,11 +52,10 @@ class ScheduledWork(AutoJSONSerializable['ScheduledWork']):
         self.materials = materials if materials is not None else MaterialDelivery('')
         self.object = c_object if c_object is not None else []
 
+        self.contractor_id = ''
         if contractor is not None:
-            if isinstance(contractor, str):
-                self.contractor = contractor
-            else:
-                self.contractor = contractor.name if contractor.name else contractor.id
+            self.contractor = contractor.name if contractor.name else contractor.id
+            self.contractor_id = contractor.id
         else:
             self.contractor = ""
 

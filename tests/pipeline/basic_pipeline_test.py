@@ -10,12 +10,13 @@ from sampo.schemas.exceptions import NoSufficientContractorError
 
 
 def test_plain_scheduling(setup_scheduler_parameters):
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
     project = SchedulingPipeline.create() \
         .wg(setup_wg) \
         .contractors(setup_contractors) \
         .landscape(setup_landscape) \
+        .spec(spec) \
         .schedule(HEFTScheduler()) \
         .finish()[0]
 
@@ -23,12 +24,13 @@ def test_plain_scheduling(setup_scheduler_parameters):
 
 
 def test_local_optimize_scheduling(setup_scheduler_parameters):
-    setup_wg, setup_contractors, setup_landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, setup_landscape, spec, rand = setup_scheduler_parameters
 
     project = SchedulingPipeline.create() \
         .wg(setup_wg) \
         .contractors(setup_contractors) \
         .landscape(setup_landscape) \
+        .spec(spec) \
         .optimize_local(SwapOrderLocalOptimizer(), range(0, setup_wg.vertex_count // 2)) \
         .schedule(HEFTScheduler()) \
         .optimize_local(ParallelizeScheduleLocalOptimizer(JustInTimeTimeline), range(0, setup_wg.vertex_count // 2)) \

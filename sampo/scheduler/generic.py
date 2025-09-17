@@ -99,7 +99,7 @@ class GenericScheduler(Scheduler):
                                                                              assigned_parent_time, work_estimator)
                 return c_st, c_ft, workers
 
-            return run_contractor_search(contractors, run_with_contractor)
+            return run_contractor_search(contractors, spec, run_with_contractor)
 
         return optimize_resources_def
 
@@ -126,7 +126,7 @@ class GenericScheduler(Scheduler):
         )
 
         if validate:
-            validate_schedule(schedule, wg, contractors)
+            validate_schedule(schedule, wg, contractors, spec)
 
         return [(schedule, schedule_start_time, timeline, ordered_nodes)]
 

@@ -12,9 +12,10 @@ from tests.scheduler.genetic.fixtures import setup_toolbox
 
 
 def test_convert_schedule_to_chromosome(setup_toolbox):
-    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, spec, rand, _, setup_landscape_many_holders = setup_toolbox
 
-    schedule, _, _, node_order = HEFTScheduler().schedule_with_cache(setup_wg, setup_contractors, validate=True,
+    schedule, _, _, node_order = HEFTScheduler().schedule_with_cache(setup_wg, setup_contractors,
+                                                                     spec=spec,
                                                                      landscape=setup_landscape_many_holders)[0]
 
     chromosome = tb.schedule_to_chromosome(schedule=schedule, order=node_order)
@@ -22,7 +23,7 @@ def test_convert_schedule_to_chromosome(setup_toolbox):
 
 
 def test_convert_chromosome_to_schedule(setup_toolbox):
-    tb, _, setup_wg, setup_contractors, _, _ = setup_toolbox
+    tb, _, setup_wg, setup_contractors, spec, rand, _, _ = setup_toolbox
 
     chromosome = tb.generate_chromosome()
     schedule, _, _, _ = tb.chromosome_to_schedule(chromosome)
@@ -30,11 +31,11 @@ def test_convert_chromosome_to_schedule(setup_toolbox):
 
     assert not schedule.execution_time.is_inf()
 
-    validate_schedule(schedule, setup_wg, setup_contractors)
+    validate_schedule(schedule, setup_wg, setup_contractors, spec)
 
 
 def test_converter_with_borders_contractor_accounting(setup_toolbox):
-    tb, _, setup_wg, setup_contractors, _, setup_landscape_many_holders = setup_toolbox
+    tb, _, setup_wg, setup_contractors, spec, rand, _, setup_landscape_many_holders = setup_toolbox
 
     chromosome = tb.generate_chromosome(landscape=setup_landscape_many_holders)
 
@@ -58,4 +59,4 @@ def test_converter_with_borders_contractor_accounting(setup_toolbox):
 
     schedule = Schedule.from_scheduled_works(schedule.values(), setup_wg)
 
-    validate_schedule(schedule, setup_wg, contractors)
+    validate_schedule(schedule, setup_wg, contractors, spec)

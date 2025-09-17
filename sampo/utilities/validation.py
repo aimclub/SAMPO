@@ -4,11 +4,15 @@ from operator import attrgetter, itemgetter
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 from sampo.schemas.schedule import ScheduledWork, Schedule
+from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.utilities.collections_util import build_index
 
 
-def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contractor]) -> None:
+def validate_schedule(schedule: Schedule,
+                      wg: WorkGraph,
+                      contractors: list[Contractor],
+                      spec: ScheduleSpec = ScheduleSpec()) -> None:
     """
     Checks if the schedule is correct and can be executed.
     If there is an error, this function raises AssertException with an appropriate message
@@ -17,6 +21,7 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contr
     :param contractors:
     :param wg:
     :param schedule: to apply verification
+    :param spec:
     """
     # checking preconditions
     # check_all_workers_have_same_qualification(schedule.workGraph, schedule.resourcePools)
@@ -27,6 +32,7 @@ def validate_schedule(schedule: Schedule, wg: WorkGraph, contractors: list[Contr
     # checking the schedule itself
     _check_all_tasks_scheduled(schedule, wg)
     _check_parent_dependencies(schedule, wg)
+    _check_all_tasks_corresponds_to_spec(schedule, wg, spec)
     _check_all_tasks_have_valid_duration(schedule)
     _check_all_workers_correspond_to_worker_reqs(wg, schedule)
     _check_all_allocated_workers_do_not_exceed_capacity_of_contractors(schedule, contractors)
@@ -50,6 +56,18 @@ def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
         for pnode in node.parents:
             pstart, pend = scheduled_works[pnode.work_unit.id].start_end_time
             assert pstart <= pend <= start <= end
+
+
+def _check_all_tasks_corresponds_to_spec(schedule: Schedule, wg: WorkGraph, spec: ScheduleSpec) -> None:
+    scheduled_works: dict[str, ScheduledWork] = {work.id: work for work in schedule.works}
+
+    # contractors
+    for node in wg.nodes:
+        work_spec = spec[node.id]
+        if work_spec.contractors:
+            assert work_spec.is_contractor_enabled(scheduled_works[node.id].contractor_id)
+
+    # TODO Check other spec entries
 
 
 def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:

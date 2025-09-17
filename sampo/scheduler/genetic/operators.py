@@ -20,7 +20,7 @@ from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
 from sampo.schemas.resources import Worker
 from sampo.schemas.schedule import Schedule
-from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.utilities.resource_usage import resources_peaks_sum, resources_costs_sum, resources_sum
@@ -165,6 +165,7 @@ def init_toolbox(wg: WorkGraph,
                  parents: dict[int, set[int]],
                  children: dict[int, set[int]],
                  resources_border: np.ndarray,
+                 contractors_available: np.ndarray,
                  assigned_parent_time: Time = Time(0),
                  fitness_weights: tuple[int | float, ...] = (-1,),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator(),
@@ -200,7 +201,8 @@ def init_toolbox(wg: WorkGraph,
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
-                     statuses_available=statuses_available, priorities=priorities)
+                     contractors_available=contractors_available, statuses_available=statuses_available,
+                     priorities=priorities)
     # crossover for order
     toolbox.register('mate_order', mate_scheduling_order, rand=rand, toolbox=toolbox, priorities=priorities)
     # mutation for order
@@ -210,7 +212,7 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('mate_resources', mate_resources, rand=rand, toolbox=toolbox)
     # mutation for resources
     toolbox.register('mutate_resources', mutate_resources, resources_border=resources_border,
-                     mutpb=mut_res_pb, rand=rand)
+                     contractors_available=contractors_available, mutpb=mut_res_pb, rand=rand)
     # mutation for resource borders
     toolbox.register('mutate_resource_borders', mutate_resource_borders, contractor_borders=contractor_borders,
                      mutpb=mut_res_pb, rand=rand)
@@ -219,7 +221,7 @@ def init_toolbox(wg: WorkGraph,
                      statuses_available=landscape.zone_config.statuses.statuses_available())
 
     toolbox.register('validate', is_chromosome_correct, node_indices=node_indices, parents=parents,
-                     contractor_borders=contractor_borders, index2node=index2node)
+                     contractor_borders=contractor_borders, index2node=index2node, index2contractor=index2contractor_obj)
     toolbox.register('schedule_to_chromosome', convert_schedule_to_chromosome,
                      work_id2index=work_id2index, worker_name2index=worker_name2index,
                      contractor2index=contractor2index, contractor_borders=contractor_borders, spec=spec,
@@ -324,9 +326,6 @@ def generate_chromosomes(n: int,
             case _:
                 ind = init_chromosomes[generated_type][0]
 
-        if not toolbox.validate(ind):
-            SAMPO.logger.warn('HELP')
-
         ind = toolbox.Individual(ind)
         chromosomes.append(ind)
 
@@ -390,12 +389,13 @@ def select_new_population(population: list[Individual], k: int) -> list[Individu
 
 
 def is_chromosome_correct(ind: Individual, node_indices: list[int], parents: dict[int, set[int]],
-                          contractor_borders: np.ndarray, index2node: dict[int, GraphNode]) -> bool:
+                          contractor_borders: np.ndarray, index2node: dict[int, GraphNode],
+                          index2contractor: dict[int, Contractor]) -> bool:
     """
     Check correctness of works order and contractors borders.
     """
     return is_chromosome_order_correct(ind, parents, index2node) and \
-        is_chromosome_contractors_correct(ind, node_indices, contractor_borders)
+        is_chromosome_contractors_correct(ind, node_indices, contractor_borders, index2node, index2contractor)
 
 
 def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]], index2node: dict[int, GraphNode]) -> bool:
@@ -419,13 +419,27 @@ def is_chromosome_order_correct(ind: Individual, parents: dict[int, set[int]], i
 
 
 def is_chromosome_contractors_correct(ind: Individual, work_indices: Iterable[int],
-                                      contractor_borders: np.ndarray) -> bool:
+                                      contractor_borders: np.ndarray,
+                                      index2node: dict[int, GraphNode],
+                                      index2contractor: dict[int, Contractor]) -> bool:
     """
     Checks that assigned contractors can supply assigned workers.
     """
     if not work_indices:
         return True
+
+    order = ind[0]
     resources = ind[1][work_indices]
+
+    # check contractor align with the spec
+    spec: ScheduleSpec = ind[3]
+    contractors = resources[:, -1]
+    for i in range(len(order)):
+        work_index = order[i]
+        work_spec = spec[index2node[work_index].id]
+        if not work_spec.is_contractor_enabled(index2contractor[contractors[work_index]].id):
+            return False
+
     # sort resource part of chromosome by contractor ids
     resources = resources[resources[:, -1].argsort()]
     # get unique contractors and indexes where they start
@@ -579,8 +593,8 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
     """
     order = ind[0]
 
-    priority_groups_count = len(set(priorities))
-    mutpb_for_priority_group = mutpb #/ priority_groups_count
+    # priority_groups_count = len(set(priorities))
+    mutpb_for_priority_group = mutpb  # / priority_groups_count
 
     # priorities of tasks with same order-index should be the same (if chromosome is valid)
     cur_priority = priorities[order[0]]
@@ -634,15 +648,17 @@ def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
 
 
 def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
-                     resources_border: np.ndarray) -> Individual:
+                     resources_border: np.ndarray,
+                     contractors_available: np.ndarray) -> Individual:
     """
     Mutation function for resources.
     It changes selected numbers of workers in random work in a certain interval for this work.
 
     :param ind: the individual to be mutated
-    :param resources_border: low and up borders of resources amounts
     :param mutpb: probability of gene mutation
     :param rand: the rand object used for randomized operations
+    :param resources_border: low and up borders of resources amounts
+    :param contractors_available: mask of contractors available to do tasks
 
     :return: mutated individual
     """
@@ -654,9 +670,22 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
         mask = np.array([rand.random() < mutpb for _ in range(num_works)])
         if mask.any():
             # generate new contractors in the number of received True values of mask
-            new_contractors = np.array([rand.randint(0, num_contractors - 1) for _ in range(mask.sum())])
+
+            # [rand.randint(0, num_contractors - 1) for _ in range(mask.sum())]
+            new_contractors_list = []
+
+            # TODO Rewrite to numpy functions if heavy
+            for task, task_selected in enumerate(mask):
+                if not task_selected:
+                    continue
+                contractors_to_select = np.where(contractors_available[task] == 1)
+                new_contractors_list.append(rand.choices(contractors_to_select[0], k=1)[0])
+
+            new_contractors = np.array(new_contractors_list)
+
             # obtain a new mask of correspondence
             # between the borders of the received contractors and the assigned resources
+
             contractor_mask = (res[mask, :-1] <= ind[2][new_contractors]).all(axis=1)
             # update contractors by received mask
             new_contractors = new_contractors[contractor_mask]
@@ -720,9 +749,9 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
-def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set[int]],
-           children: dict[int, set[int]], statuses_available: int, priorities: np.ndarray,
-           order_mutpb: float, res_mutpb: float, zone_mutpb: float,
+def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,
+           parents: dict[int, set[int]], children: dict[int, set[int]], statuses_available: int,
+           priorities: np.ndarray, order_mutpb: float, res_mutpb: float, zone_mutpb: float,
            rand: random.Random) -> Individual:
     """
     Combined mutation function of mutation for order, mutation for resources and mutation for zones.
@@ -740,7 +769,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, parents: dict[int, set
     :return: mutated individual
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border)
+    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 

@@ -13,15 +13,15 @@ from sampo.schemas.works import WorkUnit
 
 @fixture
 def setup_timeline_context(setup_scheduler_parameters):
-    setup_wg, setup_contractors, landscape = setup_scheduler_parameters
+    setup_wg, setup_contractors, landscape, spec, rand = setup_scheduler_parameters
     setup_worker_pool = get_worker_contractor_pool(setup_contractors)
     worker_kinds = set([w_kind for contractor in setup_contractors for w_kind in contractor.workers.keys()])
     return MomentumTimeline(setup_worker_pool, landscape=landscape), \
-        setup_wg, setup_contractors, setup_worker_pool, worker_kinds
+        setup_wg, setup_contractors, spec, rand, setup_worker_pool, worker_kinds
 
 
 def test_init_resource_structure(setup_timeline_context):
-    timeline, wg, contractors, worker_pool, worker_kinds = setup_timeline_context
+    timeline, wg, contractors, _, _, worker_pool, worker_kinds = setup_timeline_context
     assert len(timeline._timeline) != 0
 
     for contractor_timeline in timeline._timeline.values():
@@ -37,7 +37,7 @@ def test_init_resource_structure(setup_timeline_context):
 
 
 def test_insert_works_with_one_worker_kind(setup_timeline_context):
-    timeline, wg, contractors, worker_pool, worker_kinds = setup_timeline_context
+    timeline, wg, contractors, _, _, worker_pool, worker_kinds = setup_timeline_context
 
     worker_kind = worker_kinds.pop()
     worker_kinds.add(worker_kind)  # make worker_kinds stay unchanged

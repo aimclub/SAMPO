@@ -10,11 +10,8 @@ Welcome to SAMPO's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   Install
-   Usage
-   Features
-   autoapi/index
    guidebook/index
+   autoapi/sampo/index
 
 
 Supported by

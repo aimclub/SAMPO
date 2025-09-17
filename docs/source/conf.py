@@ -40,7 +40,7 @@ extensions = [
               ]
 
 # todo_include_todos = True
-source_suffix = '.rst'
+source_suffix = {'.rst': 'restructuredtext', '.md': 'markdown'}
 master_doc = 'index'
 add_function_parentheses = True
 

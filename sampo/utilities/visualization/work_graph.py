@@ -99,10 +99,10 @@ def collect_jobs(start: GraphNode, max_deep: Optional[int] = None) -> tuple[list
         max_volume = max(max_volume, volume)
         id_to_job[unit.id] = len(jobs)
         jobs.append(
-            dict(job_id=len(jobs), work_id=str(unit.id), task=unit.name, start=X_PERIOD * deep,
+            dict(job_id=len(jobs), work_id=str(unit.id), task=unit.model_name, start=X_PERIOD * deep,
                  children=node.children, parents=node.parents,
                  group=unit.group, color=color_from_str(unit.group), volume=volume,
-                 cluster=extract_cluster_name(unit.name)))
+                 cluster=extract_cluster_name(unit.model_name)))
         colors[unit.group] = color_from_str(unit.group)
         for child in node.children:
             work_id = child.id

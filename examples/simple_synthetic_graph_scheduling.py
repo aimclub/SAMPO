@@ -31,7 +31,7 @@ wg = srand.advanced_work_graph(works_count_top_border=synth_works_top_border,
 
 # Get information about created WorkGraph's attributes
 works_count = len(wg.nodes)
-work_names_count = len(set(n.work_unit.name for n in wg.nodes))
+work_names_count = len(set(n.work_unit.model_name for n in wg.nodes))
 res_kind_count = len(set(req.kind for req in chain(*[n.work_unit.worker_reqs for n in wg.nodes])))
 print(works_count, work_names_count, res_kind_count)
 

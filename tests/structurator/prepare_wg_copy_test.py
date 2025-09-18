@@ -8,6 +8,6 @@ def test_prepare_wg_copy(setup_wg):
 
     is_copied_wg_equals_setup_wg = True
     for node in setup_wg.nodes:
-        if not (node.work_unit.name == copied_nodes[old_to_new_ids[node.id]].work_unit.name):
+        if not (node.work_unit.model_name == copied_nodes[old_to_new_ids[node.id]].work_unit.model_name):
             is_copied_wg_equals_setup_wg = False
     assert is_copied_wg_equals_setup_wg

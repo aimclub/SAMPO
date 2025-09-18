@@ -1,8 +1,8 @@
-activity_id;activity_name;granular_name;measurement;volume;predecessor_ids;connection_types;lags
-1;Работа1;Работа1;-1;0.0;;;
-2;Работа2;Работа2;шт;1496.0;1;FFS;0.01
-3;Работа3;Работа3;шт;1496.0;2;FFS;0.01
-4;Работа4;Работа4;шт;1496.0;2;FFS;0.01
-5;Работа5;Работа5;шт;1500.0;2;FFS;0.01
-6;Работа6;Работа6;шт;1496.0;2,3,4,5;FFS,FFS,FFS,FFS;0.01,0.01,0.01,0.01
-7;Работа7;Работа7;м3;82.8;3;FFS;0.17
+activity_id;activity_name;model_name;volume;predecessor_ids;connection_types;lags
+1;Работа1;{"granular_name": "Работа1", "measurement": "шт"};0;;;
+2;Работа2;{"granular_name": "Работа2", "measurement": "шт"};1496.0;1;FFS;0.01
+3;Работа3;{"granular_name": "Работа3", "measurement": "шт"};1496.0;2;FFS;0.01
+4;Работа4;{"granular_name": "Работа4", "measurement": "шт"};1496.0;2;FFS;0.01
+5;Работа5;{"granular_name": "Работа5", "measurement": "шт"};1500.0;2;FFS;0.01
+6;Работа6;{"granular_name": "Работа6", "measurement": "шт"};1496.0;2,3,4,5;FFS,FFS,FFS,FFS;0.01,0.01,0.01,0.01
+7;Работа7;{"granular_name": "Работа7", "measurement": "м3"};82.8;3;FFS;0.17

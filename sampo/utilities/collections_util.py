@@ -35,3 +35,9 @@ def build_index(items: Iterable[T], key_getter: Callable[[T], K], value_getter: 
 
 def reverse_dictionary(dictionary: dict[K, V]) -> dict[V, K]:
     return {value: key for key, value in dictionary.items()}
+
+
+def first(the_iterable, condition=lambda x: True):
+    for i in the_iterable:
+        if condition(i):
+            return i

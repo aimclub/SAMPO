@@ -167,8 +167,16 @@ def preprocess_graph_df(frame: pd.DataFrame,
         if col not in frame.columns:
             frame[col] = temp_lst
 
-    if 'granular_name' not in frame.columns:
-        frame['granular_name'] = [name_mapper[activity_name] for activity_name in frame['activity_name']]
+    if 'model_name' not in frame.columns:
+        frame['model_name'] = ''
+
+    def map_activity(row):
+        model_name_dict = eval(row['model_name'])
+        if 'granular_name' not in model_name_dict:
+            model_name_dict['granular_name'] = name_mapper[row['activity_name']]
+        return str(model_name_dict)
+
+    frame['model_name'] = frame[['activity_name', 'model_name']].apply(map_activity, axis=1)
 
     frame['activity_id'] = frame['activity_id'].astype(str)
     frame['volume'] = [float(x.replace(',', '.')) if isinstance(x, str) else float(x) for x in frame['volume']]
@@ -256,8 +264,8 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
         group = row['group'] if 'group' in frame.columns else 'main project'
         priority = row['priority'] if 'priority' in frame.columns else 1
 
-        work_unit = WorkUnit(row['activity_id'], row['granular_name'], reqs, group=group,
-                             description=description, volume=row['volume'], volume_type=row['measurement'],
+        work_unit = WorkUnit(row['activity_id'], row['model_name'], reqs, group=group,
+                             description=description, volume=row['volume'],
                              is_service_unit=is_service_unit, display_name=row['activity_name_original'],
                              zone_reqs=zone_reqs, priority=priority)
         parents = [(id_to_node[p_id], lag, conn_type) for p_id, conn_type, lag in row.edges]

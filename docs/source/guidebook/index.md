@@ -6,6 +6,7 @@
 caption: Руководство SAMPO
 intro
 quickstart
+checklist
 advanced
 developers
 ```

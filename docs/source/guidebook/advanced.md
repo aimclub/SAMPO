@@ -8,8 +8,8 @@
 ## Базовые сущности
 
 * **WorkGraph** — ориентированный ациклический граф работ проекта (DAG) с двумя служебными вершинами `start`/`finish` (
-  может содержать служебные узлы, но не по умолчанию).
-  Вершины — `GraphNode`, внутри — `WorkUnit`, рёбра — зависимости (поддерживаются типы связей и лаги).
+  всегда содержит служебные узлы; при сборке из узлов они добавляются автоматически). Вершины — `GraphNode`, внутри —
+  `WorkUnit`, рёбра — зависимости (поддерживаются типы связей и лаги).
 
   > WorkGraph фиксирует все задачи и зависимости проекта.
 
@@ -21,6 +21,9 @@
     * **IFS (Inseparable Finish–Start)**: неразрывная FS — B сразу после A без разрывов; узлы образуют слитную цепочку.
     * **FFS (LagFinishStart)**: поточная связь; потомок стартует после выполнения предком части объёма, равной лагу.
 
+  > Примечание: в проверках «жестких зависимостей» обычно учитываются FS/IFS/FFS; SS/FF могут обрабатываться отдельно в
+  планировщиках.
+
 * **Лаг** — сдвиг ограничения:
 
     * Для FS/SS/FF — числовой сдвиг во времени (обычно `0`). Знак: `>0` — задержка, `<0` — «лид».
@@ -31,7 +34,8 @@
 
   > Контейнер `WorkUnit` и его связей.
 
-* **WorkUnit** — описание работы: объём, единицы, приоритет, требования к ресурсам (`WorkerReq`), сервисные флаги.
+* **WorkUnit** — описание работы: `id`, `name`, `volume`, `measurement` (единицы), `priority`, требования к ресурсам (
+  `WorkerReq`), сервисные флаги.
 
   > «Что за задача и что ей нужно».
 
@@ -54,8 +58,9 @@
   > Оборудование, используемое в проекте.
 
 * **Scheduler** — алгоритм планирования. Принимает `WorkGraph` и `list[Contractor]` (опц. `spec`, `landscape`,
-  `work_estimator`). Базовые реализация/методы возвращают Schedule и доп.структуры (например, schedule_with_cache ->
-  список кортежей (Schedule, Time, Timeline, ...)). В практическом использовании берут результат/первый план
+  `work_estimator`). Базовые реализации/методы могут возвращать `Schedule` и доп. структуры (например,
+  `schedule_with_cache` → список кортежей `(Schedule, Time, Timeline, ...)`). В практическом использовании берут
+  результат/первый план.
 
   > Планировщик строит расписание.
 
@@ -156,7 +161,7 @@ wg = WorkGraph.from_nodes([n_a, n_b, n_c])
 * Типы: `FinishStart (FS)`, `StartStart (SS)`, `FinishFinish (FF)`, `InseparableFinishStart (IFS)`,
   `LagFinishStart (FFS)`.
 * Лаг — второй элемент кортежа в `parents`.
-* Обязательные поля `WorkUnit`: `id`, `name`.
+* Обязательные поля `WorkUnit`: `id`, `name`. Для экспорта также задавайте `volume`, `measurement`, `priority`.
 
 ---
 
@@ -352,17 +357,19 @@ print("Project makespan:", makespan)
 2. `name_mapper(mapper|path)` — (опц.) нормализация имён работ и ресурсов.
 3. `wg(x, all_connections=False, change_connections_info=False, sep=',')` — задать `WorkGraph` (объект/таблица/файл).
 4. `contractors(x)` — задать/сгенерировать подрядчиков.
-5. `history(data, sep=';')` — (опц.) связи из истории, если в графе их нет.
+5. `history(data, sep=',')` — (опц.) связи из истории, если в графе их нет.
 6. `work_estimator(est)` — (опц.) модель длительностей.
 7. `spec(spec)` — (опц.) ограничения/фиксации ресурсов и этапов.
 8. `landscape(cfg)` — (опц.) пространственные/зональные ограничения.
 9. `time_shift(offset: Time)` — (опц.) сдвиг начала.
-10. `lag_optimize(strategy)` — стратегия оптимизации лагов.
+10. `lag_optimize(strategy)` — стратегия оптимизации лагов (поддерживаются `TRUE`, `FALSE`, `AUTO`/`NONE`).
 11. `node_order(orders: list[list[GraphNode]])` — (опц.) зафиксировать порядок узлов.
 12. `optimize_local(optimizer: OrderLocalOptimizer, area: range)` — (опц.) локальная оптимизация порядка до `schedule`.
 13. `schedule(scheduler, validate=False)` — построить расписание.
 14. `optimize_local(optimizer: ScheduleLocalOptimizer, area: range)` — (опц.) локальная оптимизация после `schedule`.
-15. `visualization(start_date)` — (опц.) визуализация → `.shape(...)`, `.color_type(...)`, `.show_gant_chart()`.
+15. `visualization(start_date)` — (опц.) визуализация:
+    * `.shape(w, h)`, `.color_type('contractor' | ... )`
+    * `.show_gant_chart()`, `.show_resource_charts()`, `.show_work_graph()`
 16. `finish()` — `list[ScheduledProject]` (обычно `[0]`).
 
 > `ScheduledProject` содержит итоговый `project.schedule` с `execution_time` и деталями по работам.
@@ -373,16 +380,13 @@ print("Project makespan:", makespan)
 
 * **WorkTimeEstimator** считает длительность задачи и передаётся через `work_estimator`.
 * **Режимы производительности** работников:
-
     * `Static` — детерминированный (среднее), для воспроизводимых запусков.
     * `Stochastic` — случайный (выборка из распределений), для анализа рисков.
 * Интуитивная формула: `duration ≈ volume / (sum(productivity × count) × communication_coeff)`.
-
     * `productivity` — из распределений у `Worker` (например, `IntervalGaussian`).
     * `communication_coeff` снижает эффективность при росте команды к `max_count` (`WorkerReq`).
 * Воспроизводимость: используйте `Static` или задайте `sigma=0` у распределений.
 * Практика:
-
     * Реалистично задавайте `min_count/max_count` в `WorkerReq`.
     * В `Stochastic` усредняйте по нескольким прогонам.
 

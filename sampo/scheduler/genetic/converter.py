@@ -197,12 +197,15 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
             # apply worker spec
             Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
 
+            finish_time = start_time + exec_time
+
             st = start_time
             if idx == 0:  # we are scheduling the work `start of the project`
                 st = assigned_parent_time  # this work should always have st = 0, so we just re-assign it
 
             if idx == len(works_order) - 1:  # we are scheduling the work `end of the project`
-                finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                zone_finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                finish_time = max(finish_time, zone_finish_time)
                 st = max(start_time, finish_time)
 
             # finish using time spec

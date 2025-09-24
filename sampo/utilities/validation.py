@@ -2,9 +2,9 @@ from copy import deepcopy
 from operator import attrgetter, itemgetter
 
 from sampo.schemas.contractor import Contractor
-from sampo.schemas.graph import WorkGraph
+from sampo.schemas.graph import WorkGraph, GraphNode
 from sampo.schemas.schedule import ScheduledWork, Schedule
-from sampo.schemas.schedule_spec import ScheduleSpec
+from sampo.schemas.schedule_spec import ScheduleSpec, WorkSpec
 from sampo.schemas.time import Time
 from sampo.utilities.collections_util import build_index
 
@@ -58,6 +58,14 @@ def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
             assert pstart <= pend <= start <= end
 
 
+def _check_swork_workers(swork: ScheduledWork, work_spec: WorkSpec):
+    assert len(work_spec.assigned_workers) == len(swork.workers)
+
+    for actual_worker in swork.workers:
+        assert actual_worker.name in work_spec.assigned_workers
+        assert actual_worker.count == work_spec.assigned_workers[actual_worker.name]
+
+
 def _check_all_tasks_corresponds_to_spec(schedule: Schedule, wg: WorkGraph, spec: ScheduleSpec) -> None:
     scheduled_works: dict[str, ScheduledWork] = {work.id: work for work in schedule.works}
 
@@ -67,7 +75,31 @@ def _check_all_tasks_corresponds_to_spec(schedule: Schedule, wg: WorkGraph, spec
         if work_spec.contractors:
             assert work_spec.is_contractor_enabled(scheduled_works[node.id].contractor_id)
 
-    # TODO Check other spec entries
+    # workers
+    for node in wg.nodes:
+        work_spec = spec[node.id]
+        if work_spec.assigned_workers:
+            for chain_node in node.get_inseparable_chain_with_self():
+                _check_swork_workers(scheduled_works[chain_node.id], work_spec)
+
+    # time
+    for node in wg.nodes:
+        work_spec = spec[node.id]
+        if work_spec.assigned_time:
+            accumulated_time = Time(0)
+            for chain_node in node.get_inseparable_chain_with_self():
+                accumulated_time += scheduled_works[chain_node.id].duration
+            assert accumulated_time == work_spec.assigned_time, f'{accumulated_time}; {work_spec.assigned_time}'
+
+        # # time
+        # for node in wg.nodes:
+        #     work_spec = spec[node.id]
+        #     if work_spec.assigned_time:
+        #         chain = node.get_inseparable_chain_with_self()
+        #         start_time = scheduled_works[chain[0].id].start_time
+        #         end_time = scheduled_works[chain[-1].id].finish_time
+        #
+        #         assert end_time - start_time == work_spec.assigned_time, f'{start_time}, {end_time}; {work_spec.assigned_time}'
 
 
 def _check_all_tasks_have_valid_duration(schedule: Schedule) -> None:

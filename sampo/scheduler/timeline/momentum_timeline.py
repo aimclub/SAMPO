@@ -1,4 +1,5 @@
 from collections import deque
+from operator import itemgetter
 from typing import Optional, Union
 
 from sortedcontainers import SortedList
@@ -110,22 +111,24 @@ class MomentumTimeline(Timeline):
 
         # 2. calculating execution time of the task
 
-        # spec_times = {}
-        # if spec.assigned_time:
-        #     spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
+        spec_times = {}
+        if spec.assigned_time:
+            spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
+
+            assert sum(map(itemgetter(1), spec_times.values())) == spec.assigned_time
 
         # 2. calculating execution time of the task
 
         exec_time: Time = Time(0)
         exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for chain_node in inseparable_chain:
-            node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                work_estimator.estimate_time(chain_node.work_unit, worker_team)
-            # if spec.assigned_time:
-            #     node_exec_time = spec_times[chain_node][1]
-            # else:
-            #     node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-            #         work_estimator.estimate_time(chain_node.work_unit, worker_team)
+            # node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
+            #     work_estimator.estimate_time(chain_node.work_unit, worker_team)
+            if spec.assigned_time:
+                node_exec_time = spec_times[chain_node][1]
+            else:
+                node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
+                    work_estimator.estimate_time(chain_node.work_unit, worker_team)
 
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
@@ -174,7 +177,7 @@ class MomentumTimeline(Timeline):
 
             st = cur_start_time
 
-        self._validate(st + exec_time, exec_time, worker_team)
+        assert self._validate(st + exec_time, exec_time, worker_team)
 
         assert max_parent_time <= st
 
@@ -377,10 +380,9 @@ class MomentumTimeline(Timeline):
         task_index = self._task_index
         self._task_index += 1
 
+        assert self._validate(finish_time, exec_time, worker_team)
+
         # experimental logics lightening. debugging showed its efficiency.
-
-        self._validate(finish_time, exec_time, worker_team)
-
         start = finish_time - exec_time
         end = finish_time
         for w in worker_team:
@@ -416,15 +418,22 @@ class MomentumTimeline(Timeline):
                  contractor: Contractor,
                  spec: WorkSpec,
                  assigned_start_time: Optional[Time] = None,
-                 assigned_time: Optional[Time] = None,
+                 exec_times: Optional[dict[GraphNode, Time]] = None,
                  assigned_parent_time: Time = Time(0),
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
         start_time, _, exec_times = \
             self.find_min_start_time_with_additional(node, workers, node2swork, spec, assigned_start_time,
                                                      assigned_parent_time, work_estimator)
+
+        if spec.assigned_time:
+            assert sum(map(itemgetter(1), exec_times.values())) == spec.assigned_time
+
         if assigned_time is not None:
             exec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, assigned_time)
+
+        if spec.assigned_time:
+            assert sum(map(itemgetter(1), exec_times.values())) == spec.assigned_time
 
         max_parent_time: Time = node.min_start_time(node2swork)
 
@@ -462,7 +471,9 @@ class MomentumTimeline(Timeline):
                                                                                  start_work,
                                                                                  chain_node.work_unit.need_materials())
             start_work = max(start_work, mat_del_time)
-            self._validate(start_work + node_time, node_time, worker_team)
+
+            assert self._validate(start_work + node_time, node_time, worker_team)
+
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
                 start_end_time=(start_work, start_work + node_time),
@@ -485,9 +496,9 @@ class MomentumTimeline(Timeline):
     def _validate(self,
                   finish_time: Time,
                   exec_time: Time,
-                  worker_team: list[Worker]):
+                  worker_team: list[Worker]) -> bool:
         if exec_time == 0:
-            return
+            return True
 
         start = finish_time - exec_time
         end = finish_time
@@ -498,6 +509,10 @@ class MomentumTimeline(Timeline):
             available_workers_count = state[start_idx - 1].available_workers_count
             # updating all events in between the start and the end of our current task
             for event in state[start_idx: end_idx]:
-                assert event.available_workers_count >= w.count
+                if not (event.available_workers_count >= w.count):
+                    return False
 
-            assert available_workers_count >= w.count
+            if not (available_workers_count >= w.count):
+                return False
+
+        return True

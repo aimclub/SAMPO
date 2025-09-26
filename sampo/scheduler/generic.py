@@ -182,8 +182,10 @@ class GenericScheduler(Scheduler):
                 start_time = max(start_time, finish_time)
 
             # apply work to scheduling
+            # FIXME these (finish_time - start_time) contain lags!
+            #  make Timeline#schedule receive `exec_times` instead of fixed time
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
-                              start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
+                              start_time, finish_time - start_time, assigned_parent_time, work_estimator)
 
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones

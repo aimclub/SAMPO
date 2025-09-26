@@ -52,7 +52,7 @@ def setup_inherited_resources(request, setup_schedule):
     }
 
 
-def perform_generalized_serializable_test(resource: S, name: str = None, verbose: bool = True) -> S:
+def perform_generalized_serializable_test(resource: S, name: str = None, verbose: bool = False) -> S:
     serialized = resource._serialize()
     new_resource = type(resource)._deserialize(serialized)
     if verbose:

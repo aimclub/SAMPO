@@ -110,20 +110,22 @@ class MomentumTimeline(Timeline):
 
         # 2. calculating execution time of the task
 
-        spec_times = {}
-        if spec.assigned_time:
-            spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
+        # spec_times = {}
+        # if spec.assigned_time:
+        #     spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
 
         # 2. calculating execution time of the task
 
         exec_time: Time = Time(0)
         exec_times: dict[GraphNode, tuple[Time, Time]] = {}  # node: (lag, exec_time)
         for chain_node in inseparable_chain:
-            if spec.assigned_time:
-                node_exec_time = spec_times[chain_node][1]
-            else:
-                node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                    work_estimator.estimate_time(chain_node.work_unit, worker_team)
+            node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
+                work_estimator.estimate_time(chain_node.work_unit, worker_team)
+            # if spec.assigned_time:
+            #     node_exec_time = spec_times[chain_node][1]
+            # else:
+            #     node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
+            #         work_estimator.estimate_time(chain_node.work_unit, worker_team)
 
             lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
             lag = lag_req if lag_req > 0 else 0
@@ -173,6 +175,9 @@ class MomentumTimeline(Timeline):
             st = cur_start_time
 
         self._validate(st + exec_time, exec_time, worker_team)
+
+        assert max_parent_time <= st
+
         return st, st + exec_time, exec_times
 
     def _find_min_start_time(self,
@@ -421,6 +426,10 @@ class MomentumTimeline(Timeline):
         if assigned_time is not None:
             exec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, assigned_time)
 
+        max_parent_time: Time = node.min_start_time(node2swork)
+
+        assert start_time >= max_parent_time
+
         # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
         self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,
                                          workers, contractor, start_time, exec_times)
@@ -463,6 +472,10 @@ class MomentumTimeline(Timeline):
             )
             curr_time = start_work + node_time
             node2swork[chain_node] = swork
+
+        max_parent_time: Time = node.min_start_time(node2swork)
+
+        assert start_time >= max_parent_time
 
         self.update_timeline(curr_time, curr_time - start_time, node, worker_team, spec)
         zones = [zone_req.to_zone() for zone_req in node.work_unit.zone_reqs]

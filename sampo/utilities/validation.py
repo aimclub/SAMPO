@@ -55,6 +55,11 @@ def _check_parent_dependencies(schedule: Schedule, wg: WorkGraph) -> None:
         start, end = scheduled_works[node.work_unit.id].start_end_time
         for pnode in node.parents:
             pstart, pend = scheduled_works[pnode.work_unit.id].start_end_time
+
+            assert pnode in node.parents_set
+
+            if not (pstart <= pend <= start <= end):
+                print('cringe')
             assert pstart <= pend <= start <= end
 
 

@@ -1,12 +1,12 @@
 # Алгоритмы планирования
 
-## Выбор алгоритма
+## Как выбрать алгоритм
 
 ### Эвристические планировщики (HEFT, HEFTBetween, Topological)
 
-* Быстрые стартовые решения.
-* HEFT/HEFTBetween ранжируют узлы по приоритетам и оценкам длительностей.
-* Topological строит порядок по зависимостям без сложной оптимизации.
+- Быстро дают рабочий план.
+- HEFT/HEFTBetween рассчитывают порядок задач и примерное время выполнения, чтобы закончить быстрее.
+- Topological просто выстраивает задачи по зависимостям, без сложной оптимизации.
 
 Импорты:
 
@@ -20,16 +20,16 @@ from sampo.scheduler.topological import TopologicalScheduler
 
 ### Генетический планировщик
 
-* Перебирает множество альтернатив и часто улучшает мейкспан. Требует больше времени.
-* Ключевые параметры:
-
-    * `number_of_generation` — число итераций (↑ поколений → выше шанс улучшить, но дольше расчёт).
-    * `size_of_population` — размер популяции (↑ особей → выше диверсификация, но дороже по времени/памяти).
-    * `mutate_order` — вероятность мутации порядка работ при сохранении зависимостей (↑ → шире поиск, медленнее
-      сходимость).
-    * `mutate_resources` — вероятность мутации распределения ресурсов/подрядчиков (↑ → больше параллельности; при
-      дефиците растёт риск конфликтов).
-    * Дополнительно: `work_estimator`, `seed`.
+- Пробует много разных вариантов и часто находит план с меньшим временем завершения проекта. Работает дольше простых.
+- Главные настройки:
+    - `number_of_generation` — сколько раз улучшать решения (больше — выше шанс улучшить, но дольше).
+    - `size_of_population` — сколько вариантов держать одновременно (больше — больше идей, но медленнее и больше
+      памяти).
+    - `mutate_order` — как часто менять порядок задач (сохраняя зависимости). Больше — шире поиск, но может сходиться
+      медленнее.
+    - `mutate_resources` — как часто менять распределение ресурсов/подрядчиков. Больше — выше шанс параллелить, но при
+      дефиците ресурсов может чаще «конфликтовать».
+    - Дополнительно: `work_estimator`, `seed` (для воспроизводимости).
 
 Пример:
 
@@ -48,8 +48,8 @@ scheduler = GeneticScheduler(
 
 ## Многоагентное планирование
 
-Делит граф на блоки, применяет разные стратегии и объединяет результат. Полезно для крупных проектов и гибридных
-стратегий (`sampo.scheduler.multi_agency`).
+Разбивает проект на части (блоки), планирует их разными способами и собирает общий план. Полезно на больших проектах и
+при комбинировании стратегий (`sampo.scheduler.multi_agency`).
 
 ### «Аукцион» без разбиения на блоки
 
@@ -66,22 +66,22 @@ from sampo.schemas.resources import Worker
 ss = SimpleSynthetic(231)
 wg = ss.work_graph(bottom_border=30, top_border=40)
 
-# 2) Универсальный подрядчик по требуемым видам работников
+# 2) Подрядчик с нужными типами работников
 kinds = {req.kind for node in wg.nodes for req in node.work_unit.worker_reqs}
 cid = str(uuid4())
 workers = {k: Worker(str(uuid4()), k, 50, contractor_id=cid) for k in kinds}
 contractors = [Contractor(id=cid, name="Universal", workers=workers, equipments={})]
 
-# 3) Два агента
+# 3) Два агента с разными подходами
 agents = [
     Agent("HEFT", HEFTScheduler(), contractors),
     Agent("Topological", TopologicalScheduler(), contractors),
 ]
 manager = StochasticManager(agents)
 
-# 4) Аукцион
+# 4) «Аукцион»: агенты предлагают свои планы, выбираем лучший по времени завершения
 start, end, schedule, winner = manager.run_auction(wg)
-print("Победил агент:", winner.name, "Мейкспан:", end - start)
+print("Победил агент:", winner.name, "Время завершения:", end - start)
 ```
 
 ### С разбиением на блоки
@@ -94,7 +94,7 @@ from sampo.scheduler.topological import TopologicalScheduler
 from sampo.scheduler.multi_agency.multi_agency import Agent, StochasticManager
 from sampo.scheduler.multi_agency.block_generator import generate_blocks, SyntheticBlockGraphType
 
-# 1) Граф блоков (BlockGraph)
+# 1) Строим «граф блоков» (каждый блок — это свой маленький WorkGraph)
 seed = 231
 rand = Random(seed)
 bg = generate_blocks(
@@ -111,30 +111,29 @@ ss = SimpleSynthetic(rand)
 contractor_a = ss.contractor(40)
 contractor_b = ss.contractor(40)
 
-# 3) Агенты
+# 3) Агенты с разными алгоритмами
 agents = [
     Agent("HEFT", HEFTScheduler(), [contractor_a]),
     Agent("Topo", TopologicalScheduler(), [contractor_b]),
 ]
 manager = StochasticManager(agents)
 
-# 4) Планирование по блокам в топологическом порядке
+# 4) Планируем блоки по порядку, учитывая зависимости между ними
 scheduled_blocks = manager.manage_blocks(bg)
 
-# 5) Итоги
+# 5) Итоги: кто какой блок взял и когда он выполнялся
 print("Scheduled blocks:")
 for block_id, sblock in scheduled_blocks.items():
     print(
         f"Block {block_id}: agent={sblock.agent.name}, start={sblock.start_time}, end={sblock.end_time}, duration={sblock.duration}")
 
-makespan = max(sb.end_time for sb in scheduled_blocks.values())
-print("Project makespan:", makespan)
+project_finish = max(sb.end_time for sb in scheduled_blocks.values())
+print("Время завершения проекта:", project_finish)
 ```
 
 Коротко:
 
-* **Блок** — самостоятельный подграф (`WorkGraph`) как единица планирования.
-* **BlockGraph** — DAG блоков; `A → B` означает старт `B` после завершения `A`.
-* Менеджер считает `parent_time = max(окончаний родителей)`; агенты делают офферы; побеждает минимальный `end_time`.
-
----
+- Блок — самостоятельная часть проекта (свой небольшой граф работ).
+- Граф блоков — связки между блоками: «A → B» значит, что блок B можно начинать после завершения A.
+- Менеджер ждёт, пока закончатся все предыдущие блоки, собирает предложения от агентов и выбирает то, где блок
+  завершится раньше.

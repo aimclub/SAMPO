@@ -194,8 +194,8 @@ def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synth
     materials = [material for node in wg.nodes for material in node.work_unit.need_materials()]
     if len(materials) > 0:
         generate_landscape = True
-    resource_req: Dict[str, int] = {}
-    resource_req_count: Dict[str, int] = {}
+    resource_req: dict[str, int] = {}
+    resource_req_count: dict[str, int] = {}
 
     for node in wg.nodes:
         for req in node.work_unit.worker_reqs:
@@ -276,7 +276,7 @@ def setup_schedule(setup_scheduler, setup_scheduler_parameters):
         return scheduler.schedule(setup_wg,
                                   setup_contractors,
                                   spec=spec,
-                                  validate=False,
+                                  validate=True,
                                   landscape=landscape)[0], scheduler.scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

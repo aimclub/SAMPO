@@ -21,17 +21,16 @@ class Timeline(ABC):
     def schedule(self,
                  node: GraphNode,
                  node2swork: dict[GraphNode, ScheduledWork],
-                 passed_agents: list[Worker],
+                 workers: list[Worker],
                  contractor: Contractor,
                  spec: WorkSpec,
-                 assigned_start_time: Time | None = None,
-                 assigned_time: Time | None = None,
+                 assigned_start_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
-                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Time:
+                 exec_times: Optional[dict[GraphNode, Time]] = None,
+                 work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         """
-        Schedules the given `GraphNode` using passed agents, spec and times.
+        Schedules the given `GraphNode` using passed workers, spec and times.
         If start time not passed, it should be computed as minimum work start time.
-        :return: scheduled finish time of given work
         """
         ...
 
@@ -41,6 +40,7 @@ class Timeline(ABC):
                             node2swork: dict[GraphNode, ScheduledWork],
                             spec: WorkSpec,
                             parent_time: Time = Time(0),
+                            exec_times: dict[GraphNode, Time] = None,
                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> Time:
         """
         Computes start time, max parent time, contractor and exec times for given node.
@@ -50,11 +50,12 @@ class Timeline(ABC):
         :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
         :param spec: specification for given `GraphNode`
         :param parent_time: the minimum start time
+        :param exec_times:
         :param work_estimator: function that calculates execution time of the GraphNode
         :return: minimum time
         """
         return self.find_min_start_time_with_additional(node, worker_team, node2swork, spec, None,
-                                                        parent_time, work_estimator)[0]
+                                                        parent_time, exec_times, work_estimator)[0]
 
     @abstractmethod
     def find_min_start_time_with_additional(self,
@@ -64,8 +65,9 @@ class Timeline(ABC):
                                             spec: WorkSpec,
                                             assigned_start_time: Optional[Time] = None,
                                             assigned_parent_time: Time = Time(0),
+                                            exec_times: dict[GraphNode, Time] = None,
                                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
-            -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
+            -> tuple[Time, Time, dict[GraphNode, Time]]:
         ...
 
     @abstractmethod

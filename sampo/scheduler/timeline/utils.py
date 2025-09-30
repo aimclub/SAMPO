@@ -3,7 +3,7 @@ from sampo.schemas.time import Time
 
 
 def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNode],
-                                                assigned_time: Time) -> dict[GraphNode, tuple[Time, Time]]:
+                                                assigned_time: Time) -> dict[GraphNode, Time]:
     """
     Distributes a given total execution time among work nodes in an inseparable chain.
 
@@ -28,12 +28,12 @@ def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNod
     if total_volume <= 0:
         node_time = assigned_time // len(inseparable_chain)
         # Distribute time equally among all but the last node
-        exec_times = {n: (Time(0), node_time) for n in inseparable_chain[:-1]}
+        exec_times = {n: node_time for n in inseparable_chain[:-1]}
         # Assign remaining time to the last node
-        exec_times[inseparable_chain[-1]] = Time(0), assigned_time - node_time * len(exec_times)
+        exec_times[inseparable_chain[-1]] = assigned_time - node_time * len(exec_times)
         return exec_times
 
-    exec_times: dict[GraphNode, tuple[Time, Time]] = {}
+    exec_times: dict[GraphNode, Time] = {}
     remaining_time = assigned_time  # Initialize remaining time to distribute
 
     # Iterate through all nodes except the last one.
@@ -47,7 +47,7 @@ def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNod
         # Calculate execution time for the current node and convert to integer.
         # This takes a portion of the *remaining* time.
         exec_time = int(remaining_time.value * volume_proportion)
-        exec_times[n] = (Time(0), Time(exec_time))
+        exec_times[n] = Time(exec_time)
 
         # Deduct the current node's volume and allocated time from the totals
         total_volume -= n.work_unit.volume
@@ -55,5 +55,5 @@ def get_exec_times_from_assigned_time_for_chain(inseparable_chain: list[GraphNod
 
     # The last node receives all remaining time to account for any rounding errors
     # during the distribution to previous nodes.
-    exec_times[inseparable_chain[-1]] = (Time(0), remaining_time)
+    exec_times[inseparable_chain[-1]] = remaining_time
     return exec_times

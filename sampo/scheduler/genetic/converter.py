@@ -8,6 +8,8 @@ from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
+from sampo.scheduler.timeline.just_in_time_timeline import _find_min_time_slot_size
+from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.schemas import ZoneReq
@@ -174,11 +176,19 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
                                          .copy().with_count(worker_count)
                                          for worker_index, worker_count in enumerate(cur_resources)
                                          if worker_count > 0]
+        # apply worker spec
+        Scheduler.optimize_resources_using_spec(cur_node.work_unit, cur_worker_team, cur_work_spec)
+
+        cur_inseparable_chain = cur_node.get_inseparable_chain_with_self()
         if cur_work_spec.assigned_time is not None:
-            cur_exec_time = cur_work_spec.assigned_time
+            cur_exec_times = get_exec_times_from_assigned_time_for_chain(cur_inseparable_chain,
+                                                                         cur_work_spec.assigned_time)
         else:
-            cur_exec_time = calculate_working_time_cascade(cur_node, cur_worker_team, work_estimator)
-        return cur_node, cur_worker_team, cur_contractor, cur_exec_time, cur_work_spec
+            cur_exec_times = {}
+            for dep_node in cur_inseparable_chain:
+                cur_exec_times[dep_node] = work_estimator.estimate_time(dep_node.work_unit, cur_worker_team)
+
+        return cur_node, cur_worker_team, cur_contractor, cur_exec_times, cur_work_spec
 
     # account the remaining works
     enumerated_works_remaining = LinkedList(iterable=enumerate(
@@ -191,12 +201,11 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
     prev_start_time = start_time - 1
 
     def work_scheduled(args) -> bool:
-        idx, (work_idx, node, worker_team, contractor, exec_time, work_spec) = args
+        idx, (work_idx, node, worker_team, contractor, exec_times, work_spec) = args
+
+        exec_time = _find_min_time_slot_size(node.get_inseparable_chain_with_self(), node2swork, exec_times, start_time)
 
         if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
-            # apply worker spec
-            Scheduler.optimize_resources_using_spec(node.work_unit, worker_team, work_spec)
-
             finish_time = start_time + exec_time
 
             st = start_time
@@ -208,9 +217,11 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
                 finish_time = max(finish_time, zone_finish_time)
                 st = max(start_time, finish_time)
 
+            assert timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, st, exec_time)
+
             # finish using time spec
             timeline.schedule(node, node2swork, worker_team, contractor, work_spec,
-                              st, exec_time, assigned_parent_time, work_estimator)
+                              st, assigned_parent_time, exec_times, work_estimator)
 
             if idx == len(works_order) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones

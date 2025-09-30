@@ -35,6 +35,37 @@ def test_supply_resources(setup_scheduler_parameters, setup_rand):
         delivery, delivery_time = timeline.deliver_resources(node,
                                                              deadline,
                                                              materials)
+        # FIXME WTF? should be delivery_time <= deadline...
         assert delivery_time >= deadline
+
+    assert not delivery_time.is_inf()
+
+
+def test_timeline_consistency(setup_scheduler_parameters, setup_rand):
+    wg, contractors, landscape, _, _ = setup_scheduler_parameters
+    if not landscape.platforms:
+        pytest.skip('Non-landscape test')
+    timeline = HybridSupplyTimeline(landscape)
+
+    nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(wg)
+    ordered_nodes = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
+    for node in ordered_nodes:
+        if node.work_unit.is_service_unit:
+            continue
+        node.platform = landscape.platforms[setup_rand.randint(0, len(landscape.platforms) - 1)]
+
+    delivery_time = Time(0)
+    for node in ordered_nodes:
+        if node.work_unit.is_service_unit:
+            continue
+        materials = node.work_unit.need_materials()
+        deadline = delivery_time
+
+        min_material_time = timeline.find_min_material_time(node, deadline, materials)
+
+        delivery, delivery_time = timeline.deliver_resources(node,
+                                                             min_material_time,
+                                                             materials)
+        assert delivery_time == min_material_time
 
     assert not delivery_time.is_inf()

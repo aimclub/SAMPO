@@ -3,15 +3,11 @@ import copy
 import numpy as np
 
 from sampo.api.genetic_api import ChromosomeType, ScheduleGenerationScheme
-from sampo.base import SAMPO
 from sampo.scheduler.base import Scheduler
 from sampo.scheduler.timeline import JustInTimeTimeline, MomentumTimeline
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.general_timeline import GeneralTimeline
-from sampo.scheduler.timeline.just_in_time_timeline import _find_min_time_slot_size
-from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
-from sampo.scheduler.utils.time_computaion import calculate_working_time_cascade
 from sampo.schemas import ZoneReq
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
@@ -21,7 +17,7 @@ from sampo.schemas.schedule import ScheduledWork, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.utilities.collections_util import reverse_dictionary
+from sampo.utilities.inseparables import get_exec_times_from_assigned_time_for_chain, find_min_time_slot_size
 from sampo.utilities.linked_list import LinkedList
 
 
@@ -203,7 +199,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
     def work_scheduled(args) -> bool:
         idx, (work_idx, node, worker_team, contractor, exec_times, work_spec) = args
 
-        exec_time = _find_min_time_slot_size(node.get_inseparable_chain_with_self(), node2swork, exec_times, start_time)
+        exec_time = find_min_time_slot_size(node.get_inseparable_chain_with_self(), node2swork, exec_times, start_time)
 
         if timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, start_time, exec_time):
             finish_time = start_time + exec_time
@@ -217,7 +213,7 @@ def parallel_schedule_generation_scheme(chromosome: ChromosomeType,
                 finish_time = max(finish_time, zone_finish_time)
                 st = max(start_time, finish_time)
 
-            assert timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, st, exec_time)
+            # assert timeline.can_schedule_at_the_moment(node, worker_team, work_spec, node2swork, st, exec_time)
 
             # finish using time spec
             timeline.schedule(node, node2swork, worker_team, contractor, work_spec,

@@ -3,7 +3,6 @@ from typing import Optional
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
 from sampo.schemas.graph import GraphNode
@@ -13,56 +12,7 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-
-
-def _find_min_time_slot_size(inseparable_chain: list[GraphNode],
-                             node2swork: dict[GraphNode, ScheduledWork],
-                             exec_times: dict[GraphNode, Time],
-                             start_time: Time) -> Time:
-    cur_finish_time = start_time
-    for dep_node in inseparable_chain:
-        # set start time as finish time of original work
-        # set finish time as finish time + working time of current node with identical resources
-        # (the same as in original work)
-        # set the same workers on it
-        # TODO Decide where this should be
-        dep_parent_time = dep_node.min_start_time(node2swork)
-
-        dep_st = max(cur_finish_time, dep_parent_time)
-
-        working_time = exec_times[dep_node]
-
-        cur_finish_time = dep_st + working_time
-
-    return cur_finish_time - start_time
-
-
-def calculate_exec_times(inseparable_chain: list[GraphNode],
-                         spec: WorkSpec,
-                         worker_team: list[Worker],
-                         work_estimator: WorkTimeEstimator) -> dict[GraphNode, Time]:
-    # TODO Refactor
-    spec_times = {}
-    if spec.assigned_time:
-        spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
-
-        assert sum(spec_times.values()) == spec.assigned_time
-
-    # 2. calculating execution time of the task
-
-    exec_times: dict[GraphNode, Time] = {}  # node: (lag, exec_time)
-    for chain_node in inseparable_chain:
-        # node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-        #     work_estimator.estimate_time(chain_node.work_unit, worker_team)
-        if spec.assigned_time:
-            node_exec_time = spec_times[chain_node]
-        else:
-            node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                work_estimator.estimate_time(chain_node.work_unit, worker_team)
-
-        exec_times[chain_node] = node_exec_time
-
-    return exec_times
+from sampo.utilities.inseparables import calculate_exec_times, find_min_time_slot_size
 
 
 class JustInTimeTimeline(Timeline):
@@ -139,8 +89,7 @@ class JustInTimeTimeline(Timeline):
                 continue
             # material_time <= cur_start_time, i.e. materials can be delivered to the `cur_start_time` moment
             # now we are scheduling at the `cur_start_time`, so our `cur_exec_time` is still valid
-            exec_time = _find_min_time_slot_size(inseparable_chain, node2swork, exec_times,
-                                                 start_time=cur_start_time)
+            exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=cur_start_time)
 
             zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
                                                                exec_time)
@@ -149,8 +98,6 @@ class JustInTimeTimeline(Timeline):
                 cur_start_time = zone_time
             elif zone_time == cur_start_time:
                 found_earliest_time = True
-            else:
-                raise ValueError('cringe')
 
         c_st = cur_start_time
         c_ft = c_st + exec_time

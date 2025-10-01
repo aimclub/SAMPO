@@ -1,5 +1,4 @@
 from collections import deque
-from operator import itemgetter
 from typing import Optional, Union
 
 from sortedcontainers import SortedList
@@ -7,7 +6,6 @@ from sortedcontainers import SortedList
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode
@@ -20,41 +18,7 @@ from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 from sampo.schemas.types import ScheduleEvent, EventType
 from sampo.utilities.collections_util import build_index
-
-
-# TODO Use this in schedule
-# def _find_min_time_slot_size():
-#     exec_time: Time = Time(0)
-#     for chain_node in inseparable_chain:
-#         node_exec_time = exec_times[chain_node]
-#
-#         lag_req = nodes_max_parent_times[chain_node] - max_parent_time - exec_time
-#         lag = max(lag_req, 0)
-#
-#         exec_time += lag + node_exec_time
-#     return exec_time
-
-
-def _find_min_time_slot_size(inseparable_chain: list[GraphNode],
-                             node2swork: dict[GraphNode, ScheduledWork],
-                             exec_times: dict[GraphNode, Time],
-                             start_time: Time) -> Time:
-    cur_finish_time = start_time
-    for dep_node in inseparable_chain:
-        # set start time as finish time of original work
-        # set finish time as finish time + working time of current node with identical resources
-        # (the same as in original work)
-        # set the same workers on it
-        # TODO Decide where this should be
-        dep_parent_time = dep_node.min_start_time(node2swork)
-
-        dep_st = max(cur_finish_time, dep_parent_time)
-
-        working_time = exec_times[dep_node]
-
-        cur_finish_time = dep_st + working_time
-
-    return cur_finish_time - start_time
+from sampo.utilities.inseparables import calculate_exec_times, find_min_time_slot_size
 
 
 class MomentumTimeline(Timeline):
@@ -142,37 +106,14 @@ class MomentumTimeline(Timeline):
 
         max_parent_time: Time = max(apply_time_spec(node.min_start_time(node2swork)), assigned_parent_time)
 
-        nodes_max_parent_times = {ins_node: max(apply_time_spec(ins_node.min_start_time(node2swork)),
-                                                assigned_parent_time)
-                                  for ins_node in inseparable_chain}
-
         # 2. calculating execution time of the task
 
         if not exec_times:
-            # TODO Extract to function
-            spec_times = {}
-            if spec.assigned_time:
-                spec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, spec.assigned_time)
-
-                assert sum(spec_times.values()) == spec.assigned_time
-
-            # 2. calculating execution time of the task
-
-            exec_times: dict[GraphNode, Time] = {}  # node: (lag, exec_time)
-            for chain_node in inseparable_chain:
-                # node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                #     work_estimator.estimate_time(chain_node.work_unit, worker_team)
-                if spec.assigned_time:
-                    node_exec_time = spec_times[chain_node]
-                else:
-                    node_exec_time: Time = Time(0) if len(chain_node.work_unit.worker_reqs) == 0 else \
-                        work_estimator.estimate_time(chain_node.work_unit, worker_team)
-
-                exec_times[chain_node] = node_exec_time
+            exec_times = calculate_exec_times(inseparable_chain, spec, worker_team, work_estimator)
 
         # if spec.assigned_time:
         #     assert spec.assigned_time == exec_time
-        exec_time = _find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=max_parent_time)
+        exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=max_parent_time)
 
         if len(worker_team) == 0:
             max_material_time = self._material_timeline.find_min_material_time(node, max_parent_time,
@@ -193,17 +134,17 @@ class MomentumTimeline(Timeline):
             while not found_earliest_time:
                 cur_start_time = self._find_min_start_time(self._timeline[contractor_id], inseparable_chain, spec,
                                                            node2swork, cur_start_time, exec_times, worker_team)
-                # TODO Make `self._find_min_start_time` return it
-                exec_time = _find_min_time_slot_size(inseparable_chain, node2swork, exec_times,
-                                                     start_time=cur_start_time)
+                # TODO Make `self._find_min_start_time` return it?
+                exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times,
+                                                    start_time=cur_start_time)
 
-                assert self._validate(node, cur_start_time + exec_time, exec_time, worker_team)
+                # assert self._validate(cur_start_time + exec_time, exec_time, worker_team)
 
                 material_time = self._material_timeline.find_min_material_time(node,
                                                                                cur_start_time,
                                                                                node.work_unit.need_materials())
 
-                assert self._validate(node, cur_start_time + exec_time, exec_time, worker_team)
+                # assert self._validate(cur_start_time + exec_time, exec_time, worker_team)
 
                 if material_time > cur_start_time:
                     cur_start_time = material_time
@@ -212,7 +153,7 @@ class MomentumTimeline(Timeline):
                 zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
                                                                    exec_time)
 
-                assert self._validate(node, cur_start_time + exec_time, exec_time, worker_team)
+                # assert self._validate(cur_start_time + exec_time, exec_time, worker_team)
 
                 if zone_time > cur_start_time:
                     cur_start_time = zone_time
@@ -221,7 +162,7 @@ class MomentumTimeline(Timeline):
 
             st = cur_start_time
 
-        assert self._validate(node, st + exec_time, exec_time, worker_team)
+        # assert self._validate(st + exec_time, exec_time, worker_team)
 
         assert max_parent_time <= st
 
@@ -278,7 +219,7 @@ class MomentumTimeline(Timeline):
 
         type2count: dict[str, int] = build_index(passed_workers, lambda w: w.name, lambda w: w.count)
 
-        exec_time = _find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=start)
+        exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=start)
 
         i = 0
         while len(queue) > 0:
@@ -300,11 +241,12 @@ class MomentumTimeline(Timeline):
                 # In this case we need to add back all previously scheduled wreq-s into the queue
                 # to be scheduled again with the new start time (e.g. found start).
                 # This process should reach its termination at least at the very end of this contractor's schedule.
+
+                # recalculate `exec_time` with new `start_time`
+                exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=found_start)
+
                 queue.extend(scheduled_wreqs)
                 scheduled_wreqs.clear()
-
-            # recalculate `exec_time` with new `start_time`
-            exec_time = _find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=found_start)
 
             scheduled_wreqs.append(wreq)
             start = found_start
@@ -483,8 +425,6 @@ class MomentumTimeline(Timeline):
 
         assert start_time >= max_parent_time
 
-        # resolved?
-        # TODO Decide how to deal with exec_times(maybe we should remove using pre-computed exec_times)
         self._schedule_with_inseparables(node, node2swork, inseparable_chain, spec,
                                          workers, contractor, start_time, exec_times)
 
@@ -516,27 +456,19 @@ class MomentumTimeline(Timeline):
             lag_req = nodes_max_parent_times[chain_node] - curr_time
             node_lag = max(lag_req, 0)
 
-            # lag_req = nodes_start_times[chain_node] - curr_time
-            # node_lag = lag_req if lag_req > 0 else 0
-
             start_work = curr_time + node_lag
 
-            assert self._validate(chain_node, start_work + node_time, node_time, worker_team), f'{i}'
+            # assert self._validate(start_work + node_time, node_time, worker_team), f'{i}'
 
-            assert self._material_timeline.can_schedule_at_the_moment(chain_node,
-                                                                      start_work,
-                                                                      chain_node.work_unit.need_materials()), f'{i}'
+            # assert self._material_timeline.can_schedule_at_the_moment(chain_node,
+            #                                                           start_work,
+            #                                                           chain_node.work_unit.need_materials()), f'{i}'
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(chain_node,
                                                                                  start_work,
                                                                                  chain_node.work_unit.need_materials())
 
-            if mat_del_time != start_work:
-                print()
-
             assert mat_del_time == start_work
-
-            start_work = max(start_work, mat_del_time)
 
             swork = ScheduledWork(
                 work_unit=chain_node.work_unit,
@@ -558,7 +490,6 @@ class MomentumTimeline(Timeline):
                                                                         curr_time - start_time)
 
     def _validate(self,
-                  node: GraphNode,
                   finish_time: Time,
                   exec_time: Time,
                   worker_team: list[Worker]) -> bool:
@@ -579,15 +510,5 @@ class MomentumTimeline(Timeline):
 
             if not (available_workers_count >= w.count):
                 return False
-
-        # if not self._material_timeline.can_schedule_at_the_moment(node,
-        #                                                           start,
-        #                                                           node.work_unit.need_materials()):
-        #     return False
-        #
-        # if not self.zone_timeline.can_schedule_at_the_moment(node.work_unit.zone_reqs,
-        #                                                      start,
-        #                                                      exec_time):
-        #     return False
 
         return True

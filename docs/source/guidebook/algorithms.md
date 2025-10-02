@@ -63,6 +63,8 @@ from sampo.scheduler.topological import TopologicalScheduler
 from sampo.scheduler.multi_agency.multi_agency import Agent, StochasticManager
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
+from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod
+
 
 # 1) Небольшой граф работ
 ss = SimpleSynthetic(231)
@@ -72,8 +74,11 @@ wg = ss.work_graph(bottom_border=30, top_border=40)
 kinds = {req.kind for node in wg.nodes for req in node.work_unit.worker_reqs}
 cid = str(uuid4())
 workers = {k: Worker(str(uuid4()), k, 50, contractor_id=cid) for k in kinds}
-contractors = [Contractor(id=cid, name="Universal", workers=workers, equipments={})]
-
+contractors = [get_contractor_by_wg(
+    wg,
+    scaler=1.0,  # при необходимости увеличьте, например 1.2 или 1.5
+    method=ContractorGenerationMethod.AVG,
+)]
 # 3) Два агента с разными подходами
 agents = [
     Agent("HEFT", HEFTScheduler(), contractors),
@@ -132,10 +137,3 @@ for block_id, sblock in scheduled_blocks.items():
 project_finish = max(sb.end_time for sb in scheduled_blocks.values())
 print("Время завершения проекта:", project_finish)
 ```
-
-Коротко:
-
-- Блок — самостоятельная часть проекта (свой небольшой граф работ).
-- Граф блоков — связки между блоками: «A → B» значит, что блок B можно начинать после завершения A.
-- Менеджер ждёт, пока закончатся все предыдущие блоки, собирает предложения от агентов и выбирает то, где блок
-  завершится раньше.

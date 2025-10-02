@@ -11,7 +11,6 @@ Welcome to SAMPO's documentation!
    :caption: Contents:
 
    guidebook/index
-   guidebook/advanced/index
    autoapi/sampo/index
 
 

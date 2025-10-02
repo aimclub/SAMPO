@@ -1,10 +1,14 @@
-# Начальное руководство
+# Руководство
 
 ```{toctree}
 :maxdepth: 2
 :numbered:
-caption: Начальное руководство SAMPO
+caption: Руководство SAMPO
 intro
 quickstart
+work_graph
+connections
+contractors
+algorithms
 ```
 

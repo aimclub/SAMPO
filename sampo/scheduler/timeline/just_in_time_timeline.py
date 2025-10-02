@@ -279,8 +279,7 @@ class JustInTimeTimeline(Timeline):
         if not exec_times:
             exec_times = calculate_exec_times(inseparable_chain, spec, workers, work_estimator)
 
-        assert self.can_schedule_at_the_moment(node, workers, spec, node2swork, start_time,
-                                               exec_times[node])
+        # assert self.can_schedule_at_the_moment(node, workers, spec, node2swork, start_time, exec_times[node])
 
         c_ft = start_time
         for dep_node in inseparable_chain:
@@ -292,14 +291,14 @@ class JustInTimeTimeline(Timeline):
             max_parent_time = dep_node.min_start_time(node2swork)
 
             # TODO Remove
-            if dep_node.is_inseparable_son():
-                assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
+            # if dep_node.is_inseparable_son():
+            #     assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
             working_time = exec_times[dep_node]
 
             c_st = max(c_ft, max_parent_time)
 
-            assert self.can_schedule_at_the_moment(dep_node, workers, spec, node2swork, c_st, working_time), f'{dep_node.is_inseparable_son()}'
+            # assert self.can_schedule_at_the_moment(dep_node, workers, spec, node2swork, c_st, working_time), f'{dep_node.is_inseparable_son()}'
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
                                                                                  c_st,

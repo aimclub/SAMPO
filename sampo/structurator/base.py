@@ -184,9 +184,12 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
         # update id attribute with current stage node id
         wu_attrs['id'] = stage_node_id
         # update name attribute with current index of stage
-        wu_attrs['name'] = f'{wu.name}{STAGE_SEP}{stage_i}'
+        wu_attrs['model_name']['granular_name'] = f'{wu.model_name["granular_name"]}{STAGE_SEP}{stage_i}'
         # update volume attribute with passed proportion
         wu_attrs['volume'] = wu.volume * volume_proportion
+        # remove because it's unused field from Identifiable
+        if 'name' in wu_attrs:
+            del wu_attrs['name']
         # make new work unit for new stage node with updated attributes
         new_wu = WorkUnit(**wu_attrs)
 

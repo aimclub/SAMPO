@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from operator import attrgetter
 from random import Random
-from typing import Optional, Type
+from typing import Optional, Type, Any
 
 import numpy.random
 import math
@@ -36,10 +36,14 @@ class WorkTimeEstimator(ABC):
         ...
 
     @abstractmethod
-    def find_work_resources(self, work_name: str, work_volume: float,
-                            resource_name: list[str] | None = None,
-                            measurement: str | None = None) \
-            -> list[WorkerReq]:
+    def get_model_name_keys(self) -> list[str]:
+        ...
+
+    @abstractmethod
+    def find_work_resources(self,
+                            model_name: dict[str, Any],
+                            work_volume: float,
+                            resource_name: list[str] | None = None) -> list[WorkerReq]:
         ...
 
     @abstractmethod
@@ -62,9 +66,10 @@ class DefaultWorkEstimator(WorkTimeEstimator):
         self._productivity = {worker: {'__ALL__': IntervalGaussian(1, 0.2, 1, 0)}
                               for worker in ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']}
 
-    def find_work_resources(self, work_name: str, work_volume: float, measurement: str | None = None,
-                            resource_name: list[str] | None = None) \
-            -> list[WorkerReq]:
+    def find_work_resources(self,
+                            model_name: dict[str, Any],
+                            work_volume: float,
+                            resource_name: list[str] | None = None) -> list[WorkerReq]:
         if resource_name is None:
             resource_name = ['driver', 'fitter', 'manager', 'handyman', 'electrician', 'engineer']
         dist = numpy.random.poisson(work_volume * 3, len(resource_name))
@@ -73,6 +78,9 @@ class DefaultWorkEstimator(WorkTimeEstimator):
                           min_count=int(dist[i]),
                           max_count=int(dist[i] * 2))
                 for i, name in enumerate(resource_name)]
+
+    def get_model_name_keys(self) -> list[str]:
+        return ['granular_name', 'measurement']
 
     def set_estimation_mode(self, use_idle: bool = True, mode: WorkEstimationMode = WorkEstimationMode.Realistic):
         self._use_idle = use_idle

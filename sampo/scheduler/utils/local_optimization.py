@@ -247,16 +247,16 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                 satisfy = True
 
                 for candidate_worker in candidate_schedule.workers:
-                    my_worker = my_workers.get(candidate_worker.name, None)
+                    my_worker = my_workers.get(candidate_worker.model_name, None)
                     if my_worker is None:  # these two works are not compete for this worker
                         continue
 
-                    need_me = my_workers[candidate_worker.name].count
+                    need_me = my_workers[candidate_worker.model_name].count
                     need_candidate = candidate_worker.count
 
                     total = need_me + need_candidate
-                    my_req = my_schedule_reqs[candidate_worker.name]
-                    candidate_req = candidate_schedule_reqs[candidate_worker.name]
+                    my_req = my_schedule_reqs[candidate_worker.model_name]
+                    candidate_req = candidate_schedule_reqs[candidate_worker.model_name]
                     needed_min = my_req.min_count + candidate_req.min_count
 
                     if needed_min > total:  # these two works can't run in parallel
@@ -273,17 +273,17 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                     my_worker_count += add_me
                     candidate_worker_count += add_candidate
 
-                    new_my_workers[candidate_worker.name] = my_worker_count
-                    new_candidate_workers[candidate_worker.name] = candidate_worker_count
+                    new_my_workers[candidate_worker.model_name] = my_worker_count
+                    new_candidate_workers[candidate_worker.model_name] = candidate_worker_count
 
                 if satisfy:  # replacement found, apply changes and leave candidates bruteforce
                     print(f'Found! {candidate.work_unit.name} {node.work_unit.name}')
                     for worker in my_schedule.workers:
-                        worker_count = new_my_workers.get(worker.name, None)
+                        worker_count = new_my_workers.get(worker.model_name, None)
                         if worker_count is not None:
                             worker.count = worker_count
                     for worker in candidate_schedule.workers:
-                        worker_count = new_candidate_workers.get(worker.name, None)
+                        worker_count = new_candidate_workers.get(worker.model_name, None)
                         if worker_count is not None:
                             worker.count = worker_count
                     # candidate_schedule.start_time = my_schedule.start_time

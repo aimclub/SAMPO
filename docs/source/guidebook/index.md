@@ -6,6 +6,9 @@
 caption: Руководство SAMPO
 intro
 quickstart
-advanced
+work_graph
+connections
+contractors
+algorithms
 ```
 

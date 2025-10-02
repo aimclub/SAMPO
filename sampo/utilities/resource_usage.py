@@ -47,7 +47,7 @@ def resources_sum(schedule: Schedule, resources_names: Iterable[str] | None = No
     resources_names = set(resources_names) if not is_none else {}
 
     res_sum = sum([sum([worker.count * work.duration.value for worker in work.workers
-                        if worker.name in resources_names or is_none], start=0)
+                        if worker.model_name in resources_names or is_none], start=0)
                    for work in schedule.works])
 
     return res_sum

@@ -45,10 +45,12 @@ def test_insert_works_with_one_worker_kind(setup_timeline_context):
     nodes = []
 
     for i in range(10):
-        work_unit = WorkUnit(id=str(i), name=f'Work {str(i)}', worker_reqs=[WorkerReq(kind=worker_kind,
-                                                                                      volume=Time(50),
-                                                                                      min_count=10,
-                                                                                      max_count=50)])
+        work_unit = WorkUnit(id=str(i),
+                             model_name=f'Work {str(i)}',
+                             worker_reqs=[WorkerReq(kind=worker_kind,
+                                                    volume=Time(50),
+                                                    min_count=10,
+                                                    max_count=50)])
         nodes.append(GraphNode(work_unit=work_unit, parent_works=[]))
 
     node2swork = {}

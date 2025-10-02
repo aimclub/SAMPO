@@ -196,7 +196,7 @@ def get_schedule_df(schedule: ScheduleWorkDict, fig_type: EmploymentFigType, pro
         resource_schedule: dict[str, list[tuple[int, str, int]]] = {}
         for i, (work, item) in enumerate(sorted(list(schedule.items()), key=lambda x: x[1].start_time)):
             resources: list[Worker] = item.workers
-            w_name = item.name
+            w_name = item.model_name
             for worker in resources:
                 if worker.count > 0:
                     if worker.name not in resource_schedule:

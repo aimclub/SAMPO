@@ -1,62 +1,61 @@
-# Связи между работами
+# Connections between tasks
 
-## Термины
+## Terms
 
-- Связь — стрелка между задачами, которая говорит, когда можно начинать следующую.
-- Пауза (lag) — сколько времени нужно подождать после одной задачи, прежде чем начинать следующую.
-- Неразрывная цепочка (IFS) — несколько задач подряд без перерыва, их делает одна и та же бригада.
+- Connections — an arrow between tasks that indicates when the next one can start.
+- Lag — how long you need to wait after one task before starting the next.
+- Uninterrupted chain (IFS) — several tasks in a row without a break, performed by the same crew.
 
-> Зачем это нужно (IFS): чтобы не начать следующую задачу слишком рано и соблюдать технологические паузы (сушка,
-> остывание и т.п.).
-
----
-
-## Типы связей
-
-| Тип | Как читать                | Что значит коротко                                    |
-|-----|---------------------------|-------------------------------------------------------|
-| FS  | Конец → Старт             | B можно начать после окончания A (+ пауза, если есть) |
-| FFS | Конец → Старт (с паузой)  | То же, но с обязательной паузой                       |
-| IFS | Неразрывно: Конец → Старт | B идёт сразу за A без перерыва той же бригадой        |
-| SS  | Старт ↔ Старт             | A и B могут стартовать вместе                         |
-| FF  | Конец ↔ Конец             | B должен закончиться не раньше A                      |
+> Why this is needed (IFS): to avoid starting the next task too early and to observe technological pauses (drying, cooling, etc.).
 
 ---
 
-## Когда какой тип ставить
+## Connections types
 
-- Обычная последовательность действий: FS.
-- Нужно выдержать технологическую паузу: FFS (или FS с паузой).
-- Нужна непрерывная работа одной бригады без перерыва: IFS.
-- Общий одновременный запуск: SS.
-- Хотим “сойтись” к одному времени окончания: FF.
+| Type | How to read               | Short meaning                                           |
+|------|---------------------------|---------------------------------------------------------|
+| FS   | Finish → Start            | B can start after A finishes (+ lag, if any)           |
+| FFS  | Finish → Start (with lag) | Same, but with a mandatory lag                         |
+| IFS  | Uninterrupted: Finish → Start | B goes right after A without a break by the same crew |
+| SS   | Start ↔ Start             | A and B can start together                             |
+| FF   | Finish ↔ Finish           | B must finish no earlier than A                        |
 
 ---
 
-## Мини‑примеры
+## When to use which type
 
-1) FS + пауза  
-   A: «Залить бетон» (конец День 2) → пауза 3 дня → B: «Кладка стен» (не раньше Дня 5).
+- Ordinary sequence of actions: FS.
+- Need to observe a technological pause: FFS (or FS with a lag).
+- Need uninterrupted work by the same crew without a break: IFS.
+- Common simultaneous start: SS.
+- Want to “converge” to a single finish time: FF.
+
+---
+
+## Mini examples
+
+1) FS + lag  
+   A: “Pour concrete” (finish Day 2) → lag 3 days → B: “Bricklaying” (no earlier than Day 5).
 
 2) IFS  
-   A: «Сверление» ⇒ B: «Анкерение» ⇒ C: «Монтаж стойки» (одна бригада, без перерыва).
+   A: “Drilling” ⇒ B: “Anchoring” ⇒ C: “Stand installation” (one crew, without a break).
 
 3) SS  
-   A: «Пуск серверов» ≡ B: «Старт мониторинга» (одновременно).
+   A: “Server launch” ≡ B: “Start of monitoring” (simultaneously).
 
 4) FF  
-   A: «Основная настройка» || B: «Документация» (закончить к одному сроку).
+   A: “Primary configuration” || B: “Documentation” (finish by the same deadline).
 
 5) FFS  
-   A: «Нанести грунт» → пауза 4 часа → B: «Покраска».
+   A: “Apply primer” → lag 4 hours → B: “Painting”.
 
-Условные значки: → (FS/FFS), ⇒ (IFS), ≡ (SS), || (FF).
+Legend: → (FS/FFS), ⇒ (IFS), ≡ (SS), || (FF).
 
 ---
 
-## Пример файла с зависимостями (CSV)
+## Example file with dependencies (CSV)
 
-Пусть это файл `predecessors.csv`:
+Let this be the file predecessors.csv:
 
 ```
 child_id,parent_id,type,lag
@@ -66,8 +65,8 @@ D,C,IFS,0
 E,A,SS,0
 ```
 
-Что здесь:
+What’s here:
 
-- B после A + 3 (пауза 3).
-- C и D вместе с B образуют неразрывную цепочку (IFS).
-- E стартует вместе с A (SS, не задерживает).
+- B after A + 3 (lag 3).
+- C and D together with B form an uninterrupted chain (IFS).
+- E starts together with A (SS, does not delay).

@@ -1,18 +1,18 @@
 # WorkGraph
 
-## Термины
+## Terms
 
-- **WorkGraph** — «карта проекта» в виде ациклического графа. Две служебные точки — начало и конец — добавляются
-  автоматически.
-- **GraphNode** — узел графа: содержит задачу (`WorkUnit`) и ссылки на связи с родителями/детьми (у связи есть тип и
-  пауза).
-- **WorkUnit** — описание самой работы: объём и требования к ресурсам (какие люди/сколько).
+- WorkGraph — the “project map” in the form of a directed acyclic graph. Two service points — start and finish — are
+  added automatically.
+- GraphNode — a graph node: contains a task (WorkUnit) and references to links with parents/children (a link has a type
+  and a lag).
+- WorkUnit — a description of the work itself: volume and resource requirements (which people/how many).
 
 ---
 
-## Как собрать WorkGraph
+## How to build a WorkGraph
 
-### А) Сгенерировать автоматически (быстрый старт)
+### A) Generate automatically (quick start)
 
 ```python
 from sampo.generator.base import SimpleSynthetic
@@ -20,20 +20,20 @@ from sampo.generator.pipeline import SyntheticGraphType
 
 ss = SimpleSynthetic()
 wg = ss.work_graph(
-    mode=SyntheticGraphType.GENERAL,  # тип структуры: General / Parallel / Sequential
-    cluster_counts=10,  # число кластеров (групп работ)
-    bottom_border=100,  # нижняя граница количества работ
-    top_border=200  # верхняя граница количества работ
+    mode=SyntheticGraphType.GENERAL,  # structure type: General / Parallel / Sequential
+    cluster_counts=10,  # number of clusters (groups of tasks)
+    bottom_border=100,  # lower bound for the number of tasks
+    top_border=200  # upper bound for the number of tasks
 )
 ```
 
-* `mode` — форма графа (общий, параллельный, последовательный).
-* `cluster_counts` — сколько групп работ в графе.
-* `bottom_border` / `top_border` — диапазон количества задач.
+* mode — the graph shape (general, parallel, sequential).
+* cluster_counts — how many groups of tasks are in the graph.
+* bottom_border / top_border — the range of the number of tasks.
 
 ---
 
-### Б) Загрузить из CSV
+### B) Load from CSV
 
 ```python
 from sampo.pipeline import SchedulingPipeline
@@ -48,61 +48,61 @@ project = (
     .finish()[0]
 )
 
-wg = project.wg  # готовый WorkGraph
+wg = project.wg  # ready WorkGraph
 schedule = project.schedule
 ```
 
-* `all_connections=True` — попытаться «достроить» связи, если во входных данных чего‑то не хватает.
-* `sep=';'` — разделитель колонок в CSV.
-* `LagOptimizationStrategy` — как обращаться с технологическими паузами (можно доверить выбор «AUTO»).
+* all_connections=True — attempt to “complete” links if something is missing in the input data.
+* sep=';' — column delimiter in the CSV.
+* LagOptimizationStrategy — how to handle technological lags (you can leave the choice to “AUTO”).
 
-> Если используете автогенерацию подрядчика через `get_contractor_by_wg`, **ресурсные колонки можно не
-добавлять**. Достаточно обязательных полей и зависимостей.
+> If you use auto-generation of a contractor via get_contractor_by_wg, you can omit the resource columns. The required
+> fields and dependencies are sufficient.
 
 ---
 
-## Структура CSV
+## CSV structure
 
-### Обязательные колонки
+### Required columns
 
-| Поле            | Описание                                                             |
-|-----------------|----------------------------------------------------------------------|
-| `activity_id`   | Уникальный идентификатор задачи                                      |
-| `activity_name` | Человекочитаемое название задачи                                     |
-| `granular_name` | Короткий код/метка задачи                                            |
-| `volume`        | Объём работы (число)                                                 |
-| `measurement`   | Единица измерения (например `unit`, `m3`, `pcs`)                     |
-| `priority`      | Целое число для приоритизации (если не нужно — ставьте `0` для всех) |
+| Field         | Description                                               |
+|---------------|-----------------------------------------------------------|
+| activity_id   | Unique task identifier                                    |
+| activity_name | Human-readable task name                                  |
+| granular_name | Short task code/label                                     |
+| volume        | Work volume (number)                                      |
+| measurement   | Unit of measure (for example, unit, m3, pcs)              |
+| priority      | Integer for prioritization (if not needed, set 0 for all) |
 
-### Зависимости
+### Dependencies
 
-Три синхронных списка (длины совпадают):
+Three synchronized lists (lengths match):
 
-* `predecessor_ids` — ID предшественников через запятую
-* `connection_types` — типы связей (FS, SS, FF и т.п.)
-* `lags` — паузы (числа)
+* predecessor_ids — predecessor IDs separated by commas
+* connection_types — types of links (FS, SS, FF, etc.)
+* lags — lags (numbers)
 
-> Пустая ячейка = просто **три разделителя подряд без пробелов** (`;;;`).
+> An empty cell = simply three delimiters in a row without spaces (;;;).
 >
-> Пример:
-> `predecessor_ids="A,B"`, `connection_types="FS,SS"`, `lags="0,3"`
+> Example:
+> predecessor_ids="A,B", connection_types="FS,SS", lags="0,3"
 
-### Ресурсы (опционально)
+### Resources (optional)
 
-| Поле         | Формат                                        |
-|--------------|-----------------------------------------------|
-| `min_req`    | JSON-словарь минимально требуемых ресурсов    |
-| `max_req`    | JSON-словарь максимально допустимых ресурсов  |
-| `req_volume` | JSON-словарь норм/объёмов для расчёта времени |
+| Field      | Format                                                |
+|------------|-------------------------------------------------------|
+| min_req    | JSON dictionary of minimally required resources       |
+| max_req    | JSON dictionary of maximum allowed resources          |
+| req_volume | JSON dictionary of norms/volumes for time calculation |
 
-* Используйте **валидный JSON** с двойными кавычками:
-  `{"welder": 2, "driver": 1}`
-* Если этих колонок нет, планировщик использует автогенерацию ресурсов (например, через `get_contractor_by_wg`).
-* Ключи должны совпадать с `Worker.name`.
+* Use valid JSON with double quotes:
+  {"welder": 2, "driver": 1}
+* If these columns are not present, the scheduler uses resource auto-generation (for example, via get_contractor_by_wg).
+* Keys must match Worker.name.
 
 ---
 
-### Минимальный CSV (без ресурсов)
+### Minimal CSV (without resources)
 
 ```
 activity_id;activity_name;granular_name;volume;measurement;priority;predecessor_ids;connection_types;lags
@@ -111,7 +111,7 @@ B;Task B;B;1.0;unit;0;A;FS;0
 C;Task C;C;1.0;unit;0;B;FS;0
 ```
 
-### CSV с ресурсами (пример)
+### CSV with resources (example)
 
 ```
 activity_id;activity_name;granular_name;volume;measurement;priority;predecessor_ids;connection_types;lags;min_req;max_req;req_volume
@@ -121,7 +121,7 @@ B;Foundation;B;1.0;unit;0;A;FS;0;"{""fitter"":2,""engineer"":1}";"{""fitter"":4,
 
 ---
 
-### Автогенерация подрядчика для CSV-графа
+### Auto-generating a contractor for a CSV graph
 
 ```python
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod
@@ -144,7 +144,7 @@ print(f"Makespan: {best_schedule.execution_time}")
 
 ---
 
-### В) Собрать программно из узлов
+### C) Build programmatically from nodes
 
 ```python
 from sampo.schemas.works import WorkUnit
@@ -152,7 +152,7 @@ from sampo.schemas.graph import GraphNode, WorkGraph, EdgeType
 from sampo.schemas.requirements import WorkerReq
 from sampo.schemas.time import Time
 
-# Пример цепочки: A -> B -> C (FS, паузы 0)
+# Example chain: A -> B -> C (FS, zero lags)
 wu_a = WorkUnit(
     id='A', name='Task A',
     worker_reqs=[WorkerReq(kind='driver', volume=Time(10), min_count=2, max_count=4)],
@@ -168,5 +168,5 @@ n_c = GraphNode(wu_c, [(n_b, 0, EdgeType.FinishStart)])  # FS
 wg = WorkGraph.from_nodes([n_a, n_b, n_c])
 ```
 
-* Обязательные поля `WorkUnit`: `id`, `name`.
-* Для экспорта полезно также указывать `volume`, `measurement`, `priority`.
+* Required WorkUnit fields: id, name.
+* For export, it is also useful to specify volume, measurement, priority.

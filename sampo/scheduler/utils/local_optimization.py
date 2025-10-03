@@ -187,8 +187,8 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
             # st = timeline.find_min_start_time(node, node_schedule.workers, node2swork_new)
             # ft = st + node_schedule.get_actual_duration(work_estimator)
             timeline.schedule(node, node2swork_new, node_schedule.workers,
-                              id2contractor[node_schedule.contractor], work_spec, None, work_spec.assigned_time,
-                              assigned_parent_time, work_estimator)
+                              id2contractor[node_schedule.contractor], work_spec, None,
+                              assigned_parent_time, None, work_estimator)
             # node_schedule.start_end_time = (st, ft)
             node2swork_new[node] = node_schedule
 
@@ -289,7 +289,7 @@ class ParallelizeScheduleLocalOptimizer(ScheduleLocalOptimizer):
                     # candidate_schedule.start_time = my_schedule.start_time
                     break
 
-        return self.recalc_schedule(reversed(node_order), contractors, landscape_config, spec, scheduled_works,
+        return self.recalc_schedule(node_order, contractors, landscape_config, spec, scheduled_works,
                                     worker_pool, assigned_parent_time, work_estimator)
 
 

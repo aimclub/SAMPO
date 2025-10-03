@@ -56,7 +56,7 @@ def test_schedule(setup_timeline):
 
     nodes, node_id2parent_ids, node_id2child_ids = get_head_nodes_with_connections_mappings(setup_wg)
     ordered_nodes = prioritization(nodes, node_id2parent_ids, node_id2child_ids, DefaultWorkEstimator())
-    node = ordered_nodes[-1]
+    node = ordered_nodes[0]
 
     reqs = build_index(node.work_unit.worker_reqs, attrgetter('kind'))
     worker_team = [list(cont2worker.values())[0].copy() for name, cont2worker in setup_worker_pool.items() if name in reqs]
@@ -64,7 +64,7 @@ def test_schedule(setup_timeline):
     contractor_index = build_index(setup_contractors, attrgetter('id'))
     contractor = contractor_index[worker_team[0].contractor_id] if worker_team else None
 
-    node2swork: Dict[GraphNode, ScheduledWork] = {}
+    node2swork: dict[GraphNode, ScheduledWork] = {}
     setup_timeline.schedule(node, node2swork, worker_team, contractor, WorkSpec())
 
     assert len(node2swork) == 1

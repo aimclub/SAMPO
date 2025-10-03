@@ -11,6 +11,7 @@ from sampo.scheduler import Scheduler
 from sampo.scheduler.genetic.base import GeneticScheduler
 from sampo.scheduler.heft import HEFTScheduler, HEFTBetweenScheduler
 from sampo.scheduler.topological import TopologicalScheduler
+from sampo.schemas import Time
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.graph import WorkGraph, EdgeType
@@ -145,46 +146,60 @@ def generate_wg_core(request, setup_sampler, setup_simple_synthetic) -> tuple[Wo
 
 def create_spec(wg: WorkGraph,
                 contractors: list[Contractor],
-                rand: Random,
-                generate_contractor_spec: bool) -> ScheduleSpec:
+                rand: Random) -> ScheduleSpec:
     spec = ScheduleSpec()
 
-    if generate_contractor_spec:
-        for node in wg.nodes:
-            if not node.is_inseparable_son():
-                selected_contractor_indices = rand.choices(list(range(len(contractors))),
-                                                           k=rand.randint(1, len(contractors)))
-                spec.assign_contractors(node.id, {contractors[i].id for i in selected_contractor_indices})
+    # contractors
+    for node in wg.nodes:
+        if not node.is_inseparable_son():
+            selected_contractor_indices = rand.choices(list(range(len(contractors))),
+                                                       k=rand.randint(1, len(contractors)))
+            spec.assign_contractors(node.id, {contractors[i].id for i in selected_contractor_indices})
+
+    # workers
+    contractor_min_capabilities = {worker: min(contractor.workers[worker].count
+                                               for contractor in contractors)
+                                   for worker in contractors[0].workers}
+    for node in wg.nodes:
+        if not node.is_inseparable_son():
+            worker_dict = {wr.kind: rand.randint(wr.min_count,
+                                                 min(wr.max_count, contractor_min_capabilities[wr.kind]))
+                           for wr in node.work_unit.worker_reqs}
+            spec.assign_workers_dict(node.id, worker_dict)
+
+    # time
+    for node in wg.nodes:
+        if not node.is_inseparable_son() and not node.work_unit.is_service_unit:
+            spec.set_exec_time(node.id, Time(rand.randint(1, 10)))
 
     return spec
 
 
 # TODO Make parametrization with different(specialized) contractors
-@fixture(params=[(i, 5 * j, generate_contractors_spec)
-                 for j in range(2)
-                 for i in range(2, 3)
-                 for generate_contractors_spec in [True, False]],
-         ids=[f'Contractors: count={i}, min_size={5 * j}, generate_contractor_spec={generate_contractors_spec}'
-              for j in range(2)
-              for i in range(2, 3)
-              for generate_contractors_spec in [True, False]],
+@fixture(params=[(i, 5 * j, generate_spec)
+                 for j in [1, 2, 4]
+                 for i in [2]
+                 for generate_spec in [True, False]],
+         ids=[f'Contractors: count={i}, min_size={5 * j}, generate_spec={generate_spec}'
+              for j in [1, 2, 4]
+              for i in [2]
+              for generate_spec in [True, False]],
          scope='module')
 def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synthetic) \
         -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any, ScheduleSpec, Random]:
-    num_contractors, contractor_min_resources, generate_contractors_spec = request.param
+    num_contractors, contractor_size, generate_spec = request.param
     wg, rand = setup_wg_with_random
 
     generate_landscape = False
     materials = [material for node in wg.nodes for material in node.work_unit.need_materials()]
     if len(materials) > 0:
         generate_landscape = True
-    resource_req: Dict[str, int] = {}
-    resource_req_count: Dict[str, int] = {}
+    resource_req: dict[str, int] = {}
+    resource_req_count: dict[str, int] = {}
 
     for node in wg.nodes:
         for req in node.work_unit.worker_reqs:
-            resource_req[req.kind] = max(contractor_min_resources,
-                                         resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2)
+            resource_req[req.kind] = resource_req.get(req.kind, 0) + (req.min_count + req.max_count) // 2
             resource_req_count[req.kind] = resource_req_count.get(req.kind, 0) + 1
 
     for req in resource_req.keys():
@@ -201,14 +216,14 @@ def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synth
         contractors.append(Contractor(id=contractor_id,
                                       name='OOO Berezka',
                                       workers={
-                                          name: Worker(str(uuid4()), name, count * 100, contractor_id=contractor_id)
+                                          name: Worker(str(uuid4()), name, count, contractor_id=contractor_id)
                                           for name, count in resource_req.items()},
                                       equipments={}))
 
     landscape = setup_simple_synthetic.synthetic_landscape(wg) \
         if generate_landscape else LandscapeConfiguration()
 
-    spec = create_spec(wg, contractors, rand, generate_contractors_spec)
+    spec = create_spec(wg, contractors, rand) if generate_spec else ScheduleSpec()
 
     return wg, contractors, landscape, spec, rand
 
@@ -261,7 +276,7 @@ def setup_schedule(setup_scheduler, setup_scheduler_parameters):
         return scheduler.schedule(setup_wg,
                                   setup_contractors,
                                   spec=spec,
-                                  validate=False,
+                                  validate=True,
                                   landscape=landscape)[0], scheduler.scheduler_type, setup_scheduler_parameters
     except NoSufficientContractorError:
         pytest.skip('Given contractor configuration can\'t support given work graph')

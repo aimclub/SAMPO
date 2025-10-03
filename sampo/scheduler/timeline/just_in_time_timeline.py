@@ -3,7 +3,6 @@ from typing import Optional
 from sampo.scheduler.timeline.base import Timeline
 from sampo.scheduler.timeline.hybrid_supply_timeline import HybridSupplyTimeline
 from sampo.scheduler.timeline.zone_timeline import ZoneTimeline
-from sampo.scheduler.timeline.utils import get_exec_times_from_assigned_time_for_chain
 from sampo.scheduler.utils import WorkerContractorPool
 from sampo.schemas import Contractor
 from sampo.schemas.graph import GraphNode
@@ -13,6 +12,7 @@ from sampo.schemas.schedule_spec import WorkSpec
 from sampo.schemas.scheduled_work import ScheduledWork
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.utilities.inseparables import calculate_exec_times, find_min_time_slot_size
 
 
 class JustInTimeTimeline(Timeline):
@@ -32,28 +32,41 @@ class JustInTimeTimeline(Timeline):
         self._material_timeline = HybridSupplyTimeline(landscape)
         self.zone_timeline = ZoneTimeline(landscape.zone_config)
 
-    def find_min_start_time_with_additional(self, node: GraphNode,
+    def find_min_start_time_with_additional(self,
+                                            node: GraphNode,
                                             worker_team: list[Worker],
                                             node2swork: dict[GraphNode, ScheduledWork],
                                             spec: WorkSpec,
                                             assigned_start_time: Time | None = None,
                                             assigned_parent_time: Time = Time(0),
+                                            exec_times: dict[GraphNode, Time] = None,
                                             work_estimator: WorkTimeEstimator = DefaultWorkEstimator()) \
-            -> tuple[Time, Time, dict[GraphNode, tuple[Time, Time]]]:
+            -> tuple[Time, Time, dict[GraphNode, Time]]:
         """
         Define the nearest possible start time for the current job. It is equal the max value from:
         1. end time of all parent tasks,
         2. time previous job off all needed workers to complete the current task.
 
-        :param assigned_parent_time: minimum start time
-        :param assigned_start_time:
         :param node: the GraphNode whose minimum time we are trying to find
         :param worker_team: the worker team under testing
         :param node2swork: dictionary, that match GraphNode to ScheduleWork respectively
         :param spec: given work specification
+        :param assigned_start_time:
+        :param assigned_parent_time: minimum start time
+        :param exec_times:
         :param work_estimator: function that calculates execution time of the GraphNode
         :return: start time, end time, None(exec_times not needed in this timeline)
         """
+        # define the max worker time when all needed workers are off from previous tasks
+        cur_start_time = node.min_start_time(node2swork)
+
+        inseparable_chain = node.get_inseparable_chain_with_self()
+
+        # 2. calculating execution time of the task
+
+        if not exec_times:
+            exec_times = calculate_exec_times(inseparable_chain, spec, worker_team, work_estimator)
+
         # if current job is the first
         if not node2swork:
             max_material_time = self._material_timeline.find_min_material_time(node,
@@ -62,29 +75,7 @@ class JustInTimeTimeline(Timeline):
 
             max_zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, max_material_time, Time(0))
 
-            return max_zone_time, max_zone_time, None
-        # define the max end time of all parent tasks
-        max_parent_time = max(node.min_start_time(node2swork), assigned_parent_time)
-        # define the max agents time when all needed workers are off from previous tasks
-        max_agent_time = Time(0)
-        cur_start_time = max_agent_time
-
-        inseparable_chain = node.get_inseparable_chain_with_self()
-
-        new_finish_time = cur_start_time
-        for dep_node in inseparable_chain:
-            # set start time as finish time of original work
-            # set finish time as finish time + working time of current node with identical resources
-            # (the same as in original work)
-            # set the same workers on it
-            # TODO Decide where this should be
-            dep_parent_time = dep_node.min_start_time(node2swork)
-
-            dep_st = max(new_finish_time, dep_parent_time)
-            working_time = work_estimator.estimate_time(dep_node.work_unit, worker_team)
-            new_finish_time = dep_st + working_time
-
-        exec_time = new_finish_time - cur_start_time
+            return max_zone_time, max_zone_time, exec_times
 
         found_earliest_time = False
         while not found_earliest_time:
@@ -96,26 +87,32 @@ class JustInTimeTimeline(Timeline):
             if material_time > cur_start_time:
                 cur_start_time = material_time
                 continue
+            # material_time <= cur_start_time, i.e. materials can be delivered to the `cur_start_time` moment
+            # now we are scheduling at the `cur_start_time`, so our `cur_exec_time` is still valid
+            exec_time = find_min_time_slot_size(inseparable_chain, node2swork, exec_times, start_time=cur_start_time)
 
             zone_time = self.zone_timeline.find_min_start_time(node.work_unit.zone_reqs, cur_start_time,
                                                                exec_time)
+
             if zone_time > cur_start_time:
                 cur_start_time = zone_time
-            else:
+            elif zone_time == cur_start_time:
                 found_earliest_time = True
 
         c_st = cur_start_time
-
         c_ft = c_st + exec_time
-        return c_st, c_ft, None
 
-    def _find_min_start_time(self, worker_team: list[Worker], _max_agent_time: Time, spec: WorkSpec):
-        max_agent_time = _max_agent_time
+        assert self.can_schedule_at_the_moment(node, worker_team, spec, node2swork, c_st, exec_time)
+
+        return c_st, c_ft, exec_times
+
+    def _find_min_start_time(self, worker_team: list[Worker], min_start_time: Time, spec: WorkSpec):
+        max_worker_time = min_start_time
         if spec.is_independent:
             # grab from the end
             for worker in worker_team:
                 offer_stack = self._timeline[worker.get_agent_id()]
-                max_agent_time = max(max_agent_time, offer_stack[0][0])
+                max_worker_time = max(max_worker_time, offer_stack[0][0])
         else:
             # grab from whole sequence
             # for each resource type
@@ -126,14 +123,14 @@ class JustInTimeTimeline(Timeline):
                 ind = len(offer_stack) - 1
                 while needed_count > 0:
                     offer_time, offer_count = offer_stack[ind]
-                    max_agent_time = max(max_agent_time, offer_time)
+                    max_worker_time = max(max_worker_time, offer_time)
 
                     if needed_count < offer_count:
                         offer_count = needed_count
                     needed_count -= offer_count
                     ind -= 1
 
-        return max_agent_time
+        return max_worker_time
 
     def can_schedule_at_the_moment(self,
                                    node: GraphNode,
@@ -237,8 +234,8 @@ class JustInTimeTimeline(Timeline):
                  contractor: Contractor,
                  spec: WorkSpec,
                  assigned_start_time: Optional[Time] = None,
-                 assigned_time: Optional[Time] = None,
                  assigned_parent_time: Time = Time(0),
+                 exec_times: dict[GraphNode, Time] = None,
                  work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         inseparable_chain = node.get_inseparable_chain_with_self()
 
@@ -247,15 +244,11 @@ class JustInTimeTimeline(Timeline):
                                           node2swork,
                                           spec,
                                           assigned_parent_time,
+                                          exec_times,
                                           work_estimator)
 
-        if assigned_time is not None:
-            exec_times = get_exec_times_from_assigned_time_for_chain(inseparable_chain, assigned_time)
-            return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
-                                                    inseparable_chain, start_time, exec_times, work_estimator)
-        else:
-            return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
-                                                    inseparable_chain, start_time, {}, work_estimator)
+        return self._schedule_with_inseparables(node, node2swork, workers, contractor, spec,
+                                                inseparable_chain, start_time, exec_times, work_estimator)
 
     def _schedule_with_inseparables(self,
                                     node: GraphNode,
@@ -265,7 +258,7 @@ class JustInTimeTimeline(Timeline):
                                     spec: WorkSpec,
                                     inseparable_chain: list[GraphNode],
                                     start_time: Time,
-                                    exec_times: dict[GraphNode, tuple[Time, Time]],
+                                    exec_times: dict[GraphNode, Time] | None = None,
                                     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()):
         """
         Makes ScheduledWork object from `GraphNode` and worker list, assigned `start_end_time`
@@ -283,6 +276,11 @@ class JustInTimeTimeline(Timeline):
         :return:
         """
 
+        if not exec_times:
+            exec_times = calculate_exec_times(inseparable_chain, spec, workers, work_estimator)
+
+        # assert self.can_schedule_at_the_moment(node, workers, spec, node2swork, start_time, exec_times[node])
+
         c_ft = start_time
         for dep_node in inseparable_chain:
             # set start time as finish time of original work
@@ -292,14 +290,15 @@ class JustInTimeTimeline(Timeline):
             # TODO Decide where this should be
             max_parent_time = dep_node.min_start_time(node2swork)
 
-            if dep_node.is_inseparable_son():
-                assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
+            # TODO Remove
+            # if dep_node.is_inseparable_son():
+            #     assert max_parent_time >= node2swork[dep_node.inseparable_parent].finish_time
 
-            if dep_node in exec_times:
-                lag, working_time = exec_times[dep_node]
-            else:
-                lag, working_time = 0, work_estimator.estimate_time(dep_node.work_unit, workers)
-            c_st = max(c_ft + lag, max_parent_time)
+            working_time = exec_times[dep_node]
+
+            c_st = max(c_ft, max_parent_time)
+
+            # assert self.can_schedule_at_the_moment(dep_node, workers, spec, node2swork, c_st, working_time), f'{dep_node.is_inseparable_son()}'
 
             deliveries, mat_del_time = self._material_timeline.deliver_resources(dep_node,
                                                                                  c_st,

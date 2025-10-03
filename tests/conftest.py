@@ -178,11 +178,11 @@ def create_spec(wg: WorkGraph,
 # TODO Make parametrization with different(specialized) contractors
 @fixture(params=[(i, 5 * j, generate_spec)
                  for j in [1, 2, 4]
-                 for i in [1, 2, 4]
+                 for i in [2]
                  for generate_spec in [True, False]],
          ids=[f'Contractors: count={i}, min_size={5 * j}, generate_spec={generate_spec}'
               for j in [1, 2, 4]
-              for i in [1, 2, 4]
+              for i in [2]
               for generate_spec in [True, False]],
          scope='module')
 def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synthetic) \

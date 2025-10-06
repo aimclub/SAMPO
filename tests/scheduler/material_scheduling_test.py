@@ -12,8 +12,8 @@ from sampo.utilities.validation import validate_schedule
 from tests.conftest import setup_default_schedules
 
 
-def test_empty_node_find_start_time(setup_default_schedules):
-    wg, _, landscape, _, _ = setup_default_schedules[0]
+def test_empty_node_find_start_time(setup_scheduler_parameters):
+    wg, _, landscape, _, _ = setup_scheduler_parameters
     if wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 
@@ -82,8 +82,8 @@ def test_empty_node_find_start_time(setup_default_schedules):
 #         raise AssertionError(f'Scheduler {scheduler} failed validation', e)
 
 
-def test_momentum_scheduling_with_materials(setup_default_schedules):
-    setup_wg, setup_contractors, landscape, spec, _ = setup_default_schedules[0]
+def test_momentum_scheduling_with_materials(setup_scheduler_parameters):
+    setup_wg, setup_contractors, landscape, spec, _ = setup_scheduler_parameters
     if setup_wg.vertex_count > 14:
         pytest.skip('Non-material graph')
 

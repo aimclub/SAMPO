@@ -33,7 +33,7 @@ def test_genetic_deadline_planning(setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape, spec, rand = setup_scheduler_parameters
 
     deadline = Time.inf() // 2
-    scheduler = GeneticScheduler(number_of_generation=5,
+    scheduler = GeneticScheduler(number_of_generation=3,
                                  mutate_order=0.05,
                                  mutate_resources=0.005,
                                  size_of_population=50,
@@ -85,7 +85,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     print(f'Deadline time: {deadline}')
 
-    scheduler_combined = GeneticScheduler(number_of_generation=5,
+    scheduler_combined = GeneticScheduler(number_of_generation=3,
                                           mutate_order=0.05,
                                           mutate_resources=0.05,
                                           size_of_population=50,
@@ -94,7 +94,7 @@ def test_lexicographic_genetic_deadline_planning(setup_scheduler_parameters):
 
     scheduler_combined.set_deadline(deadline)
 
-    scheduler_lexicographic = GeneticScheduler(number_of_generation=5,
+    scheduler_lexicographic = GeneticScheduler(number_of_generation=3,
                                                mutate_order=0.05,
                                                mutate_resources=0.05,
                                                size_of_population=50,

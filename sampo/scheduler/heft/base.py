@@ -48,4 +48,4 @@ class HEFTBetweenScheduler(HEFTScheduler):
     @staticmethod
     def get_finish_time(node, worker_team, node2swork, spec, assigned_parent_time, timeline, work_estimator) -> Time:
         return timeline.find_min_start_time_with_additional(node, worker_team, node2swork, spec, None,
-                                                            assigned_parent_time, work_estimator)[1]
+                                                            assigned_parent_time, None, work_estimator)[1]

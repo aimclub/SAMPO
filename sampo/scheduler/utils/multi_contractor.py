@@ -3,6 +3,7 @@ from typing import Callable
 import numpy as np
 
 from sampo.scheduler.utils import WorkerContractorPool
+from sampo.schemas import GraphNode
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.exceptions import NoSufficientContractorError
 from sampo.schemas.requirements import WorkerReq
@@ -44,12 +45,13 @@ def get_worker_borders(agents: WorkerContractorPool, contractor: Contractor, wor
 
 def run_contractor_search(contractors: list[Contractor],
                           work_spec: WorkSpec,
-                          runner: Callable[[Contractor], tuple[Time, Time, list[Worker]]]) \
-        -> tuple[Time, Time, Contractor, list[Worker]]:
+                          runner: Callable[[Contractor], tuple[Time, Time, dict[GraphNode, Time], list[Worker]]]) \
+        -> tuple[Time, Time, dict[GraphNode, Time], Contractor, list[Worker]]:
     """
     Performs the best contractor search.
     
     :param contractors: contractors' list
+    :param work_spec: work spec
     :param runner: a runner function, should be inner of the calling code.
         Calculates Tuple[start time, finish time, worker team] from given contractor object.
     :return: start time, finish time, the best contractor, worker team with the best contractor
@@ -59,18 +61,20 @@ def run_contractor_search(contractors: list[Contractor],
     # optimization metric
     best_finish_time = Time.inf()
     best_contractor = None
+    best_exec_times = None
     # heuristic: if contractors' finish times are equal, we prefer smaller one
     best_contractor_size = float('inf')
 
     contractors = work_spec.filter_contractors(contractors)
 
     for contractor in contractors:
-        start_time, finish_time, worker_team = runner(contractor)
+        start_time, finish_time, exec_times, worker_team = runner(contractor)
         contractor_size = sum(w.count for w in contractor.workers.values())
 
         if not finish_time.is_inf() and (finish_time < best_finish_time or
                                          (finish_time == best_finish_time and contractor_size < best_contractor_size)):
             best_finish_time = finish_time
+            best_exec_times = exec_times
             best_contractor = contractor
             best_contractor_size = contractor_size
 
@@ -78,6 +82,7 @@ def run_contractor_search(contractors: list[Contractor],
         raise NoSufficientContractorError(f'There is no contractor that can satisfy given search; contractors: '
                                           f'{contractors}')
 
-    best_start_time, best_finish_time, best_worker_team = runner(best_contractor)
+    # TODO Consider removing this line; we shouldn't re-run it if cycle that we made upper is right
+    best_start_time, best_finish_time, best_exec_times, best_worker_team = runner(best_contractor)
 
-    return best_start_time, best_finish_time, best_contractor, best_worker_team
+    return best_start_time, best_finish_time, best_exec_times, best_contractor, best_worker_team

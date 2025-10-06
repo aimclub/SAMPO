@@ -158,17 +158,18 @@ class LFTScheduler(Scheduler):
             timeline = self._timeline_type(worker_pool, landscape)
 
         for index, node in enumerate(ordered_nodes):
-            work_unit = node.work_unit
             work_spec = spec[node.id]
 
             # get assigned contractor and workers
             contractor, best_worker_team = self._node_id2workers[node.id]
 
             # find start time
-            start_time, finish_time, _ = timeline.find_min_start_time_with_additional(node, best_worker_team,
-                                                                                      node2swork, work_spec, None,
-                                                                                      assigned_parent_time,
-                                                                                      work_estimator)
+            start_time, finish_time, exec_times = timeline.find_min_start_time_with_additional(node, best_worker_team,
+                                                                                               node2swork, work_spec,
+                                                                                               None,
+                                                                                               assigned_parent_time,
+                                                                                               None,
+                                                                                               work_estimator)
             # we are scheduling the work `start of the project`
             if index == 0:
                 # this work should always have start_time = 0, so we just re-assign it
@@ -176,12 +177,13 @@ class LFTScheduler(Scheduler):
                 finish_time += start_time
 
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
-                finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                zone_finish_time, finalizing_zones = timeline.zone_timeline.finish_statuses()
+                finish_time = max(finish_time, zone_finish_time)
                 start_time = max(start_time, finish_time)
 
             # apply work to scheduling
             timeline.schedule(node, node2swork, best_worker_team, contractor, work_spec,
-                              start_time, work_spec.assigned_time, assigned_parent_time, work_estimator)
+                              start_time, assigned_parent_time, exec_times, work_estimator)
 
             if index == len(ordered_nodes) - 1:  # we are scheduling the work `end of the project`
                 node2swork[node].zones_pre = finalizing_zones

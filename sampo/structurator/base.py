@@ -192,6 +192,9 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
             del wu_attrs['name']
         # make new work unit for new stage node with updated attributes
         new_wu = WorkUnit(**wu_attrs)
+
+        # TODO Make sampo work with material reqs in whole inseparable chain?
+        new_wu.material_reqs = []
         # make new graph node for new stage with created work unit and with passed edge to previous stage node
         return GraphNode(new_wu, edge_with_prev_stage_node)
 
@@ -221,7 +224,7 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
 
     # define mapper of requirements attribute names and classes
     reqs2classes = {'worker_reqs': WorkerReq, 'equipment_reqs': EquipmentReq,
-                    'object_reqs': ConstructionObjectReq, 'material_reqs': MaterialReq}
+                    'object_reqs': ConstructionObjectReq}
     # make mapper of work unit requirement names and copied class object attributes
     reqs2attrs = {reqs: [dict(req.__dict__) for req in getattr(wu, reqs)] for reqs in reqs2classes}
     # make mapper of work unit requirement names and accumulated amounts
@@ -256,6 +259,9 @@ def split_node_into_stages(origin_node: GraphNode, restructuring_edges: list[tup
     stage_node_id = make_new_node_id(wu.id, stage_i)
     # make first stage node and add it to id2new_nodes
     id2new_nodes[stage_node_id] = make_new_stage_node(accum, [], wu_attrs, reqs2attrs)
+
+    # TODO Make sampo work with material reqs in whole inseparable chain?
+    id2new_nodes[stage_node_id].work_unit.material_reqs = wu.material_reqs
 
     # initialize a list that stores the edges along which a stage node has already been created.
     # used only if the use_lag_edge_optimization is True,

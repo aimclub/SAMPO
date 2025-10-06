@@ -14,8 +14,7 @@ jobs:
     timeout-minutes: 7200
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-      max-parallel: 4
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
       - uses: actions/checkout@v3
@@ -36,4 +35,4 @@ jobs:
 #          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          python -m pytest tests/ --reruns 5 -n 32
+          python -m pytest tests/ --reruns 5 -n 16

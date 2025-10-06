@@ -577,6 +577,63 @@ def mutate_scheduling_order_core(order: np.ndarray, mutpb: float, rand: random.R
                 indexes_of_works_to_mutate[indexes_of_works_to_mutate >= new_i] += 1
 
 
+def mutate_scheduling_order_slice(order: np.ndarray, mutpb: float, rand: random.Random,
+                                  parents: dict[int, set[int]], children: dict[int, set[int]],
+                                  use_shuffle=False):
+
+    # example (use_shuffle=False):
+    # 1 {2 3 4 5} 6 7 8 9 -> 1 {5 4 3 2} 6 7 8 9
+    # example (use_shuffle=True):
+    # 1 {2 3 4 5} 6 7 8 9 -> 1 {4 2 5 3} 6 7 8 9
+    
+    # number of possible mutations = number of works except start and finish works
+    num_possible_mutations = len(order) - 2
+    # get size of slice as sample from binomial distribution
+    slice_size = sum(rand.random() < mutpb for _ in range(num_possible_mutations))
+    # if no mutations, do nothing
+    if slice_size == 0:
+        return
+
+    # choose a slice of order
+    slice_start = rand.randint(1, num_possible_mutations-slice_size)
+    slice_end = slice_start + slice_size
+
+    # mix order within the slice
+    new_slice = list(order[slice_start:slice_end])
+    if use_shuffle:
+        rand.shuffle(new_slice)
+    else:
+        new_slice = list(reversed(new_slice))
+    order[slice_start:slice_end] = new_slice
+    
+    # fix potential problems with order of activities
+    order[:] = fix_order(order, parents, children)
+
+
+def mutate_scheduling_order_swap(order: np.ndarray, mutpb: float, rand: random.Random,
+                                  parents: dict[int, set[int]], children: dict[int, set[int]]):
+
+    # mutate by swapping two activities next to each other
+    # 1 2 {3 4} 5 6 {7 8} 9 -> 1 2 {4 3} 5 6 {8 7} 9
+    
+    # number of possible mutations = number of works except start and finish works
+    num_possible_mutations = len(order) - 2
+    num_mutations = sum(rand.random() < mutpb for _ in range(num_possible_mutations))
+    # if no mutations, do nothing
+    if num_mutations == 0:
+        return
+
+    for _ in range(num_mutations):
+        point_left = rand.randint(1, num_possible_mutations-1)
+        point_right = point_left + 1
+
+        # skip if changing violates constraints
+        if (point_right in children[point_left]) or (point_left in parents[point_right]):
+            continue
+
+        order[point_a], order[point_b] = order[point_b], order[point_a]
+
+
 def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, priorities: np.ndarray,
                             parents: dict[int, set[int]], children: dict[int, set[int]]) -> Individual:
     """
@@ -896,3 +953,30 @@ def mutate_for_zones(ind: Individual, mutpb: float, rand: random.Random, statuse
         zones[mask] = new_zones
 
     return ind
+
+
+def fix_order(order: np.ndarray, parents: dict[int, set[int]], children: dict[int, set[int]]):
+    """Fix order of activities that might violate precedence constraints"""
+    # easier to get .index from a list
+    order = list(order)
+    n_parents = {i: len(parents.get(i, [])) for i in order}
+    # how many parents have been completed so far
+    n_completed_parents = {node_id: 0 for node_id in order}
+    # at the start, only jobs without parents can be started - it should be the dummy start
+    # note: what_can_start is a set, not a dict
+    what_can_start = {node_id for node_id, k_parents in n_parents.items() if (k_parents == 0)}
+
+    valid_activity_list = []
+    for _ in range(len(order)):
+        # add the 
+        next_to_add = min(what_can_start, key=lambda x: order.index(x))
+        # added activity cannot be started again
+        what_can_start.remove(next_to_add)
+        valid_activity_list.append(next_to_add)
+        # update what_can_start after this activity was completed
+        for child in children[next_to_add]:
+            n_completed_parents[child] += 1
+            if n_completed_parents[child] == n_parents[child]:
+                what_can_start.add(child)
+
+    return np.array(valid_activity_list)

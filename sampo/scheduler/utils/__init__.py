@@ -97,7 +97,7 @@ def get_head_nodes_with_connections_mappings_nodes(nodes: list[GraphNode]) -> tu
     node_id2parent_ids = {node.id: set(
         node2inseparable_parent[parent].id  # Get the head node ID for the actual parent
         for inseparable in node.get_inseparable_chain_with_self()  # Iterate through all parts of head node's chain
-        for parent in inseparable.parents_set  # Get direct parents of each part
+        for parent in inseparable.parents  # Get direct parents of each part
     ) - {node.id}  # Remove self-references
                           for node in nodes}
 

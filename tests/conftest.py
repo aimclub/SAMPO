@@ -24,17 +24,17 @@ from sampo.structurator.base import graph_restructuring
 from sampo.utilities.sampler import Sampler
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_sampler(request) -> Sampler:
     return Sampler(1e-1)
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_rand() -> Random:
     return Random(231)
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
     return SimpleSynthetic(setup_rand)
 
@@ -53,7 +53,7 @@ def setup_simple_synthetic(setup_rand) -> SimpleSynthetic:
               for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']
               if generate_materials and graph_type == 'manual'
               or not generate_materials],
-         scope='module')
+         scope='session')
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
     # TODO Rewrite tests with random propagation. Now here is backcompat
@@ -74,7 +74,7 @@ def setup_wg(request, setup_sampler, setup_simple_synthetic) -> WorkGraph:
               for graph_type in ['manual', 'small plain synthetic', 'big plain synthetic']
               if generate_materials and graph_type == 'manual'
               or not generate_materials],
-         scope='module')
+         scope='session')
 # 'small advanced synthetic', 'big advanced synthetic']])
 def setup_wg_with_random(request, setup_sampler, setup_simple_synthetic) -> tuple[WorkGraph, Random]:
     return generate_wg_core(request, setup_sampler, setup_simple_synthetic)
@@ -184,7 +184,7 @@ def create_spec(wg: WorkGraph,
               for j in [1, 2, 4]
               for i in [2]
               for generate_spec in [True, False]],
-         scope='module')
+         scope='session')
 def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synthetic) \
         -> tuple[WorkGraph, list[Contractor], LandscapeConfiguration | Any, ScheduleSpec, Random]:
     num_contractors, contractor_size, generate_spec = request.param
@@ -228,7 +228,7 @@ def setup_scheduler_parameters(request, setup_wg_with_random, setup_simple_synth
     return wg, contractors, landscape, spec, rand
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_empty_contractors(setup_wg) -> list[Contractor]:
     resource_req: set[str] = set()
 
@@ -249,7 +249,7 @@ def setup_empty_contractors(setup_wg) -> list[Contractor]:
     return contractors
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_default_schedules(setup_scheduler_parameters):
     work_estimator: WorkTimeEstimator = DefaultWorkEstimator()
 
@@ -263,12 +263,12 @@ def setup_default_schedules(setup_scheduler_parameters):
 
 @fixture(params=[HEFTScheduler(), HEFTBetweenScheduler(), TopologicalScheduler(), GeneticScheduler(3)],
          ids=['HEFTScheduler', 'HEFTBetweenScheduler', 'TopologicalScheduler', 'GeneticScheduler'],
-         scope='module')
+         scope='session')
 def setup_scheduler(request) -> Scheduler:
     return request.param
 
 
-@fixture(scope='module')
+@fixture(scope='session')
 def setup_schedule(setup_scheduler, setup_scheduler_parameters):
     setup_wg, setup_contractors, landscape, spec, rand = setup_scheduler_parameters
     scheduler = setup_scheduler

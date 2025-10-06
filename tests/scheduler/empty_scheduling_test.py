@@ -5,7 +5,7 @@ from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import WorkGraph
 
 
-@fixture
+@fixture(scope='module')
 def setup_empty_req_work_graph(setup_simple_synthetic) -> WorkGraph:
     wg = setup_simple_synthetic.work_graph(top_border=100)
 
@@ -14,7 +14,7 @@ def setup_empty_req_work_graph(setup_simple_synthetic) -> WorkGraph:
     return wg
 
 
-@fixture
+@fixture(scope='module')
 def setup_empty_contractors(setup_empty_req_work_graph) -> list[Contractor]:
     return [get_contractor_by_wg(setup_empty_req_work_graph, method=ContractorGenerationMethod.MIN)]
 

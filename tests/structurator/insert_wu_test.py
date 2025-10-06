@@ -7,7 +7,7 @@ from sampo.schemas.works import WorkUnit
 from sampo.structurator.insert_wu import insert_work_unit
 
 
-@fixture()
+@fixture
 def setup_wu() -> WorkUnit:
     return WorkUnit(str(uuid4()), 'test_wu')
 

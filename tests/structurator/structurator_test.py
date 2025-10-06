@@ -11,8 +11,8 @@ import numpy as np
 @fixture(params=[graph_type for graph_type in ['manual', 'manual with negative lag',
                                                'manual with negative volume', 'manual with lag > volume']],
          ids=[f'Graph: {graph_type}' for graph_type in ['manual', 'manual with negative lag',
-                                                        'manual with negative volume', 'manual with lag > volume']]
-         )
+                                                        'manual with negative volume', 'manual with lag > volume']],
+         scope='module')
 def setup_wg_for_restructuring(request, setup_sampler, setup_simple_synthetic) -> tuple[WorkGraph, int]:
     sr = setup_sampler
 

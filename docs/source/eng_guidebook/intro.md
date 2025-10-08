@@ -18,7 +18,7 @@ process schedules optimized for the required performance indicators.
 SAMPO is built on **metaheuristic, genetic, and neural-network-based scheduling algorithms** that analyze historical
 production data and solve the **multi-criteria project scheduling optimization** problem while leveraging accumulated
 experience.  
-A key feature of the framework is its ability to efficiently handle **long-term project schedules** under
+A key feature of the framework is its ability to efficiently over **long-term** time horizons under
 uncertainty and with incomplete historical data.
 
 Thanks to its **modular architecture**, SAMPO supports the integration of **domain-specific algorithms and models**.  
@@ -27,7 +27,7 @@ mining and manufacturing, construction, transportation, and energy.
 
 ## Openness and Documentation
 
-Licensed under **BSD 3-Clause**, with comprehensive documentation and examples available in **Jupyter Notebooks**.
+Licensed under **BSD 3-Clause**, with detailed documentation and examples available in **Jupyter Notebooks**.
 
 > **BSD 3-Clause** is a permissive open-source license that permits the use, modification, and distribution of the code
 > (including in commercial projects) as long as copyright notices and disclaimers of liability are retained.

@@ -28,7 +28,7 @@ class BaseReq(AutoJSONSerializable['BaseReq'], ABC):
         ...
 
 
-@dataclass(frozen=True)
+@dataclass
 class WorkerReq(BaseReq):
     """
     Requirements related to renewable human resources
@@ -39,11 +39,24 @@ class WorkerReq(BaseReq):
     :param max_count: maximum allowable number of employees performing the work
     :param name: the name of this requirement
     """
-    kind: str
-    volume: Time
-    min_count: Optional[int] = 1
-    max_count: Optional[int] = DEFAULT_MAX_COUNT
-    name: Optional[str] = ''
+
+    def __init__(self,
+                 kind: str,
+                 volume: Time,
+                 min_count: Optional[int] = 1,
+                 max_count: Optional[int] = DEFAULT_MAX_COUNT,
+                 name: Optional[str] = ''):
+        self.kind = kind
+        self.volume = volume
+        self.min_count = min_count
+        self.max_count = max_count
+        self.name = name
+
+        assert min_count <= max_count
+
+    def name(self):
+        return self.name
+
 
     def scale_all(self, scalar: float, new_name: Optional[str] = '') -> 'WorkerReq':
         """

@@ -814,6 +814,10 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
                                       np.arange(current_amount + 1, u_border + 1)))
             # set weights to potential amounts based on their distance from the current one
             weights = 1 / np.abs(choices - current_amount)
+
+            assert l_border <= u_border, f'{l_border} {u_border} {current_amount}'
+            assert len(weights) > 0
+
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]
 
 

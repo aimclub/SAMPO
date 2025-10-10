@@ -69,6 +69,8 @@ def prepare_optimized_data_structures(wg: WorkGraph,
             resources_border[0, worker_index, work_index] = req.min_count
             resources_border[1, worker_index, work_index] = req.max_count
 
+            assert req.min_count <= req.max_count
+
     return (worker_pool, index2node, index2zone, work_id2index, worker_name2index, index2contractor_obj,
             worker_pool_indices, contractor2index, contractor_borders, node_indices, priorities, parents,
             children, resources_border)

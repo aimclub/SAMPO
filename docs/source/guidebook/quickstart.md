@@ -1,41 +1,41 @@
-# Быстрый старт
+# Quick Start
 
-Покажем установку, подготовку простого примера, запуск планировщика и просмотр результата.
+We will show installation, preparation of a simple example, running the scheduler, and viewing the result.
 
-## Установка
+## Installation
 
-SAMPO доступен в виде пакета Python (требуется Python 3.10.x):
+SAMPO is available as a Python package (Python 3.10.x required):
 
 ```bash
 pip install sampo
 ```
 
-## Первый план за несколько шагов
+## First plan in a few steps
 
-Сделаем простейший проект и распишем его:
+We will create the simplest project and lay it out:
 
-1) Граф работ — создадим WorkGraph. Для быстрого старта сгенерируем синтетический.
-2) Ресурсы — опишем список Contractor с рабочими.
-3) Алгоритм — выберем планировщик (эвристика/генетика).
-4) Запуск — получим Schedule и посмотрим результат.
+1) Work graph — create a WorkGraph. For a quick start, we will generate a synthetic one.
+2) Resources — describe a list of Contractors with workers.
+3) Algorithm — choose a scheduler (heuristic/genetic).
+4) Run — get a Schedule and look at the result.
 
 ---
 
-### 1) Генерация WorkGraph (быстрый способ — генератор)
+### 1) Generating a WorkGraph (quick way — generator)
 
 ```python
 from sampo.generator.base import SimpleSynthetic
 from sampo.generator.pipeline import SyntheticGraphType
 from sampo.schemas.graph import WorkGraph
 
-# Инициализация синтетического генератора
+# Initialize the synthetic generator
 synthetic = SimpleSynthetic()
 
-# Сгенерируем небольшой граф: ~2 кластера по 5–8 задач
+# Generate a small graph: ~2 clusters with 5–8 tasks each
 work_graph: WorkGraph = synthetic.work_graph(
-    mode=SyntheticGraphType.GENERAL,  # тип структуры: GENERAL / PARALLEL / SEQUENTIAL
-    cluster_counts=2,  # 2 кластера
-    bottom_border=5,  # в кластере 5–8 задач
+    mode=SyntheticGraphType.GENERAL,  # structure type: GENERAL / PARALLEL / SEQUENTIAL
+    cluster_counts=2,  # 2 clusters
+    bottom_border=5,  # 5–8 tasks per cluster
     top_border=8
 )
 print(f"Generated a WorkGraph with {len(work_graph.nodes)} tasks.")
@@ -43,18 +43,18 @@ print(f"Generated a WorkGraph with {len(work_graph.nodes)} tasks.")
 
 ---
 
-### 2) Ресурсы (Contractor’ы)
+### 2) Resources (Contractors)
 
-Важно: синтетический граф использует типовые профессии `driver`, `fitter`, `manager`, `handyman`, `electrician`,
+Important: the synthetic graph uses typical professions `driver`, `fitter`, `manager`, `handyman`, `electrician`,
 `engineer`.  
-Подрядчик должен содержать работников для каждого требуемого вида, а словарь `workers` индексируется по имени вида
-ресурса (`req.kind`).
+The contractor must include workers for each required type, and the `workers` dictionary is keyed by the resource kind
+name (`req.kind`).
 
 ```python
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
 
-# Зададим по нескольку работников каждого нужного типа
+# Specify several workers of each required type
 workers = [
     Worker(id="w_driver", name="driver", count=20),
     Worker(id="w_fitter", name="fitter", count=20),
@@ -64,26 +64,26 @@ workers = [
     Worker(id="w_engineer", name="engineer", count=10),
 ]
 
-# Один подрядчик с полным пулом работников
+# One contractor with a complete pool of workers
 contractors = [
     Contractor(
         id="c1",
         name="General Contractor",
-        # Ключи — имена видов ресурсов (совпадают с WorkerReq.kind)
+        # Keys are resource kind names (match WorkerReq.kind)
         workers={w.name: w for w in workers}
     )
 ]
 ```
 
-Альтернатива: автогенерация подрядчика «по графу», чтобы ресурсы точно покрывали требования:
+Alternative: auto-generate a contractor “based on the graph” so that resources exactly cover the requirements:
 
 ```python
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod
 
 contractors = [get_contractor_by_wg(
     work_graph,
-    scaler=1.0,  # множитель мощностей (>= 1.0)
-    method=ContractorGenerationMethod.AVG,  # усреднение между min/max потребностями
+    scaler=1.0,  # capacity multiplier (>= 1.0)
+    method=ContractorGenerationMethod.AVG,  # averaging between min/max needs
     contractor_id="c1",
     contractor_name="General Contractor"
 )]
@@ -91,30 +91,30 @@ contractors = [get_contractor_by_wg(
 
 ---
 
-### 3) Выбор планировщика
+### 3) Choosing a scheduler
 
 ```python
 from sampo.scheduler.heft import HEFTScheduler
 
-# также доступны:
+# also available:
 # from sampo.scheduler.topological import TopologicalScheduler
 # from sampo.scheduler.genetic import GeneticScheduler
 
-scheduler = HEFTScheduler()  # быстрая эвристика для старта
+scheduler = HEFTScheduler()  # fast heuristic to get started
 ```
 
 ---
 
-### 4) Запуск планирования
+### 4) Running the scheduling
 
-Метод `schedule(...)` возвращает список объектов `Schedule`. Берём первое (лучшее) решение:
+The schedule(...) method returns a list of Schedule objects. Take the first (best) solution:
 
 ```python
 best_schedule = scheduler.schedule(work_graph, contractors)[0]
 print(f"Projected project duration (makespan): {best_schedule.execution_time}")
 ```
 
-Если нужна дополнительная информация (время, таймлайн, порядок узлов), используйте расширенный метод:
+If you need additional information (finish time, timeline, node order), use the extended method:
 
 ```python
 best_schedule, finish_time, timeline, node_order = scheduler.schedule_with_cache(work_graph, contractors)[0]
@@ -123,9 +123,9 @@ print(f"Makespan: {best_schedule.execution_time}")
 
 ---
 
-### Просмотр расписания (диаграмма Ганта)
+### Viewing the schedule (Gantt chart)
 
-Надёжный способ — получить агрегированное представление и визуализировать его:
+A reliable way is to obtain an aggregated representation and visualize it:
 
 ```python
 from sampo.utilities.visualization import schedule_gant_chart_fig, VisualizationMode
@@ -135,20 +135,20 @@ merged = best_schedule.merged_stages_datetime_df(offset='2025-01-01')
 fig = schedule_gant_chart_fig(
     merged,
     visualization=VisualizationMode.ReturnFig,
-    color_type='contractor'  # можно сменить раскраску при необходимости
+    color_type='contractor'  # you can change the coloring if needed
 )
 fig.show()
 ```
 
-- Если хотите увидеть только свои задачи без «внутренних» технических, возьмите таблицу best_schedule.pure_schedule_df.
-- Для диаграммы Ганта обычно используют календарное представление best_schedule.merged_stages_datetime_df целиком.
+- If you want to see only your tasks without “internal” technical ones, use the table best_schedule.pure_schedule_df.
+- For a Gantt chart, it is common to use the full calendar representation best_schedule.merged_stages_datetime_df.
 
 ---
 
-### 5) (Опционально) Конвейер SchedulingPipeline
+### 5) (Optional) SchedulingPipeline
 
-Эквивалент тех же шагов во «флюентном» стиле. `finish()` возвращает список `ScheduledProject`, из которого берём `[0]` и
-читаем `project.schedule`.
+An equivalent of the same steps in a “fluent” style. finish() returns a list of ScheduledProject; take [0] and read
+project.schedule.
 
 ```python
 from sampo.pipeline import SchedulingPipeline

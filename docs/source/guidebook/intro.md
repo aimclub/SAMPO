@@ -1,34 +1,34 @@
-# Введение
+# Introduction
 
-## Для кого руководство?
+## Who is this guide for?
 
-Руководство организовано так, чтобы помочь пользователям с разным уровнем подготовки:
+The guide is organized to help users with different levels of expertise:
 
-* Ознакомительный уровень — что такое SAMPO, чем он поможет и как быстро начать работу.
-* Продвинутый уровень — как настраивать SAMPO под свои задачи.
+* Introductory level — what SAMPO is, how it can help, and how to get started quickly.
+* Advanced level — how to configure SAMPO for your tasks.
 
-## Что такое SAMPO?
+## What is SAMPO?
 
-SAMPO — фреймворк для автоматизированной оптимизации планирования бизнес-процессов. Он позволяет эффективно использовать
-наработанный корпоративный опыт на ретроспективных данных для автоматизированного построения план-графиков выполнения
-бизнес-процессов, оптимальных по требуемым целевым показателям.
+SAMPO is a framework for automated optimization of business process scheduling. It makes it possible to effectively
+leverage accumulated corporate expertise based on retrospective data to automatically build schedules for executing
+business processes that are optimal with respect to the required target metrics.
 
-## Ключевые возможности и преимущества
+## Key features and benefits
 
-В основе SAMPO лежат мета-эвристические, генетические и нейросетевые алгоритмы, которые позволяют анализировать
-ретроспективные производственные данные и решать задачу мультикритериальной оптимизации планирования с учетом
-накопленного опыта. Особенностью фреймворка является способность эффективно решать задачу планирования на больших
-временных горизонтах, в условиях неопределенности и неполноты ретроспективных данных.
+SAMPO is based on metaheuristic, genetic, and neural network algorithms that make it possible to analyze retrospective
+production data and solve the problem of multi-criteria optimization of planning, taking accumulated experience into
+account. A distinguishing feature of the framework is its ability to efficiently solve the scheduling problem over long
+time horizons, under uncertainty and with incomplete retrospective data.
 
-За счет своей модульной структуры SAMPO допускает интеграцию алгоритмов и моделей, учитывающих специфику определенной
-предметной области, поэтому фреймворк может быть применим для решения промышленных задач из различных отраслей:
-добывающей и обрабатывающей промышленности, строительства, транспорта и энергетики.
+By virtue of its modular structure, SAMPO supports the integration of algorithms and models that take into account the
+specifics of a particular domain, so the framework can be applied to industrial problems across various sectors: mining
+and manufacturing, construction, transportation, and energy.
 
-## Открытость и документация
+## Openness and documentation
 
-Лицензия **BSD 3-Clause**, подробная документация, примеры в **Jupyter Notebook**.
+License: **BSD 3-Clause**, detailed documentation, examples in **Jupyter Notebook**.
 
-> BSD 3-Clause — свободная лицензия, разрешающая использовать, изменять и распространять код (в том числе в
-коммерческих проектах) при сохранении уведомления об авторских правах и отказа от ответственности.
+> BSD 3-Clause is a permissive license that allows using, modifying, and distributing the code (including in commercial
+> projects) provided that copyright notices and disclaimers are retained.
 
 ---

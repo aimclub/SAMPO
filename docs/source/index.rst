@@ -10,7 +10,7 @@ Welcome to SAMPO's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   guidebook/index
+   eng_guidebook/index
    autoapi/sampo/index
 
 

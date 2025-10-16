@@ -1,18 +1,16 @@
 # Contractor
 
-## Terms
+## Термины
 
-- Worker requirement (WorkerReq) — who and how many are needed for a task: profession (kind), minimum/maximum people (
-  min_count…max_count), and volume/rate (volume).
-- Worker — human resources: specialization (name), count (count), productivity (productivity), owner (contractor_id),
-  and optionally cost (cost_one_unit).
-- Equipment — also a resource, just not people: type and quantity. Tasks use it the same way as people.
-- Contractor — a resource supplier. Essentially, a dictionary of available “people” and “equipment” for the scheduler.
+- Требование к людям (WorkerReq) — кого и сколько нужно для задачи: профессия (`kind`), минимум/максимум людей (
+  `min_count…max_count`), и объём/норма (`volume`).
+- Работник (Worker) — кадровые ресурсы: специализация (`name`), количество (`count`), производительность (
+  `productivity`), владелец (`contractor_id`), при необходимости — стоимость (`cost_one_unit`).
+- Техника (Equipment) — тоже ресурс, только не люди: тип и количество. Задачи используют её так же, как и людей.
+- Подрядчик (Contractor) — поставщик ресурсов. По сути — словарь доступных «людей» и «техники» для планировщика.
 
 ---
-
-## Available professions:
-
+## Варианты профессий:
 - 'driver'
 - 'fitter'
 - 'handyman'
@@ -20,26 +18,26 @@
 - 'manager'
 - 'engineer'
 
-## How to define a contractor
+## Как задать подрядчика
 
-### Option 1. Manually
+### Вариант 1. Вручную
 
 ```python
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.resources import Worker
 from sampo.schemas.interval import IntervalGaussian
 
-# Example: contractor with two professions (drivers and fitters)
+# Пример: подрядчик с двумя профессиями (водители и слесари)
 contractor = Contractor(
     workers={
-        # the dictionary key 'driver' matches Worker.name='driver'
+        # ключ словаря 'driver' совпадает с Worker.name='driver'
         'driver': Worker(
             id='w1',
-            name='driver',  # profession (must match WorkerReq.kind)
-            count=8,  # how many such people are available
-            productivity=IntervalGaussian(1.0, 0.1, 0.5, 1.5)  # “average rate” with spread
-            # cost_one_unit=...,    # when calculating cost — specify unit price (optional)
-            # contractor_id='c1',   # usually matches Contractor.id (if set manually)
+            name='driver',  # профессия (должна совпадать с WorkerReq.kind)
+            count=8,  # сколько таких людей доступно
+            productivity=IntervalGaussian(1.0, 0.1, 0.5, 1.5)  # «средняя скорость» с разбросом
+            # cost_one_unit=... при расчёте стоимости — укажите цену за единицу (опционально)
+            # contractor_id='c1' как правило, совпадает с Contractor.id (если задаёте вручную)
         ),
         'fitter': Worker(
             id='w2',
@@ -53,16 +51,16 @@ contractor = Contractor(
 )
 ```
 
-Tips:
+Подсказки:
 
-- The keys of the workers dictionary must match Worker.name.
-- WorkerReq.kind in tasks must match Worker.name, otherwise a crew cannot be assigned.
-- contractor_id for workers usually matches Contractor.id.
-- IntervalGaussian(μ, σ, low, high) — “average productivity μ”, with spread ±σ and bounds low…high.
+- Ключи словаря `workers` должны совпадать с `Worker.name`.
+- `WorkerReq.kind` из задач должен совпадать с `Worker.name`, иначе бригада не подберётся.
+- `contractor_id` у работников обычно совпадает с `Contractor.id`.
+- `IntervalGaussian(μ, σ, low, high)` — «средняя производительность μ», с разбросом ±σ и ограничениями `low…high`.
 
 ---
 
-### Option 2. Quick generator of a resource “pack”
+### Вариант 2. Быстрый генератор «пакета» ресурсов
 
 ```python
 from sampo.generator.base import SimpleSynthetic
@@ -73,31 +71,31 @@ contractor = ss.contractor(pack_worker_count=10)
 
 ---
 
-### Option 3. Contractor “based on the graph” (from task requirements)
+### Вариант 3. Подрядчик «по графу» (из требований задач)
 
 ```python
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod
 
-# wg — your WorkGraph with tasks and their WorkerReq
+# wg — ваш WorkGraph с задачами и их WorkerReq
 contractor = get_contractor_by_wg(
     wg,
-    scaler=1.0,  # you can scale resources (1.5 = +50%)
-    method=ContractorGenerationMethod.AVG  # aggregate requirements “on average”
+    scaler=1.0,  # можно умножить ресурсы (1.5 = +50%)
+    method=ContractorGenerationMethod.AVG  # агрегировать требования «в среднем»
 )
 ```
 
-How it works:
+Как это работает:
 
-- Looks at all WorkerReq in the project.
-- Sums/averages needs by profession.
-- Assembles a contractor with a suitable number and types of people.
-- scaler lets you quickly “give more/less” resources without rewriting everything manually.
+- Смотрит на все `WorkerReq` в проекте.
+- Складывает/усредняет потребности по профессиям.
+- Собирает подрядчика с подходящим количеством людей/типов.
+- `scaler` позволяет быстро «дать больше/меньше» ресурсов, не переписывая всё вручную.
 
 ---
 
-## A couple more mini-examples
+## Ещё пара мини‑примеров
 
-Two separate contractors:
+Два подрядчика раздельно:
 
 ```python
 from sampo.schemas.contractor import Contractor
@@ -116,10 +114,10 @@ contractor_b = Contractor(
 contractors = [contractor_a, contractor_b]
 ```
 
-Quickly “scale up” resources for an existing one:
+Быстро «нарастить» ресурсы у существующего:
 
 ```python
-# There were 6 drivers, it will become 10
+# Было 6 водителей, станет 10
 contractor.workers['driver'].count = 10
 ```
 

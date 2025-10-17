@@ -30,7 +30,7 @@ sphinx>=4.5.0
 blurb
 sphinx-lint==0.6.7
 sphinxext-opengraph==0.7.5
-sphinx-autoapi==2.1.1
+sphinx-autoapi==3.1.0
 furo>=2023.5.20
 
 # The theme used by the documentation is stored separately, so we need

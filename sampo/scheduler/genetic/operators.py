@@ -588,24 +588,26 @@ def mutate_scheduling_order_slice(order: np.ndarray, mutpb: float, rand: random.
     
     # number of possible mutations = number of works except start and finish works
     num_possible_mutations = len(order) - 2
-    # get size of slice as sample from binomial distribution
-    slice_size = sum(rand.random() < mutpb for _ in range(num_possible_mutations))
-    # if no mutations, do nothing
-    if slice_size == 0:
-        return
+    # get number of mutations as sample from binomial distribution
+    n_mutations_remains = sum(rand.random() < mutpb for _ in range(num_possible_mutations))
 
-    # choose a slice of order
-    slice_start = rand.randint(1, num_possible_mutations-slice_size)
-    slice_end = slice_start + slice_size
+    while n_mutations_remains > 0:
+        # choose a slice of order
+        slice_size = rand.choices([2, 3, 4, 5, 6], weights=[0.10, 0.20, 0.40, 0.20, 0.10])
+        n_mutations_remains -= slice_size
+        
+        # set start end end of slice
+        slice_start = rand.randint(1, num_possible_mutations-slice_size)
+        slice_end = slice_start + slice_size
+        
+        # mix order within the slice
+        new_slice = list(order[slice_start:slice_end])
+        if use_shuffle:
+            rand.shuffle(new_slice)
+        else:
+            new_slice = list(reversed(new_slice))
+        order[slice_start:slice_end] = new_slice
 
-    # mix order within the slice
-    new_slice = list(order[slice_start:slice_end])
-    if use_shuffle:
-        rand.shuffle(new_slice)
-    else:
-        new_slice = list(reversed(new_slice))
-    order[slice_start:slice_end] = new_slice
-    
     # fix potential problems with order of activities
     order[:] = fix_order(order, parents, children)
 

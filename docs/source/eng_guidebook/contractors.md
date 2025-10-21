@@ -23,7 +23,7 @@
 
 ## How to Define a Contractor
 
-### Option 1. Manually
+### Manually
 
 ```python
 from sampo.schemas.contractor import Contractor
@@ -62,7 +62,7 @@ contractor = Contractor(
 * `IntervalGaussian(μ, σ, low, high)` — defines **average productivity (μ)** with standard deviation (σ) and range
   limits `low…high`.
 
-### Option 2. Quick resource package generator
+### Quick resource package generator
 
 ```python
 from sampo.generator.base import SimpleSynthetic
@@ -74,7 +74,7 @@ contractor = ss.contractor(pack_worker_count=10)
 
 ---
 
-### Option 3. Contractor “from Graph” (based on task requirements)
+### Contractor “from Graph” (based on task requirements)
 
 ```python
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod

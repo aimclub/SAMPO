@@ -123,7 +123,7 @@ B;Foundation;B;1.0;unit;0;A;FS;0;"{""fitter"":2,""engineer"":1}";"{""fitter"":4,
 
 ---
 
-### ### Auto-generate a `Contractor` for a CSV-based `WorkGraph`
+### Auto-generate a `Contractor` for a CSV-based `WorkGraph`
 
 ```python
 from sampo.generator.environment.contractor_by_wg import get_contractor_by_wg, ContractorGenerationMethod

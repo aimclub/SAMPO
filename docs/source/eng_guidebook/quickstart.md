@@ -22,7 +22,7 @@ Let's create a simple project and define it step by step:
 
 ---
 
-### 1) Create a WorkGraph (quick method — synthetic generator)
+### Create a WorkGraph (quick method — synthetic generator)
 
 ```python
 from sampo.generator.base import SimpleSynthetic
@@ -44,7 +44,7 @@ print(f"Generated a WorkGraph with {len(work_graph.nodes)} tasks.")
 
 ---
 
-### 2) Resources (Contractors)
+### Resources (Contractors)
 
 **Important:** the synthetic graph uses the following standard job types:  
 `driver`, `fitter`, `manager`, `handyman`, `electrician`, `engineer`.
@@ -93,7 +93,7 @@ contractors = [get_contractor_by_wg(
 
 ---
 
-### 3) Choose a Scheduler
+### Choose a Scheduler
 
 ```python
 from sampo.scheduler.heft import HEFTScheduler
@@ -107,7 +107,7 @@ scheduler = HEFTScheduler()  # fast heuristic for a quick start
 
 ---
 
-### 4) Run the Scheduling
+### Run the Scheduling
 
 The `schedule(...)` method returns a list of `Schedule` objects.  
 Take the first one (the best solution):
@@ -148,7 +148,7 @@ fig.show()
 
 ---
 
-### 5) (Optional) SchedulingPipeline
+### (Optional) SchedulingPipeline
 
 The same steps can be performed in a **fluent style** using the `SchedulingPipeline`.  
 The `finish()` method returns a list of `ScheduledProject`; take `[0]` and read its `project.schedule`.

@@ -1,5 +1,5 @@
 .. SAMPO documentation master file, created by
-   sphinx-quickstart on Sun Jul  2 18:31:48 2023.
+   sphinx-quickstart on Sun Jul  2 18:31:48 2025.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -7,13 +7,11 @@ Welcome to SAMPO's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
-   Install
-   Usage
-   Features
-   autoapi/index
+   eng_guidebook/index
+   autoapi/sampo/index
 
 
 Supported by

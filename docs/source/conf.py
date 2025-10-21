@@ -34,11 +34,13 @@ version = ''
 # extensions = ['sphinx.ext.duration', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.doctest',
 #               'sphinx.ext.todo', 'sphinx.ext.coverage', 'sphinx.ext.ifconfig']
 
-extensions = ['autoapi.extension'
+extensions = [
+        'autoapi.extension',
+        'myst_parser'
               ]
 
 # todo_include_todos = True
-source_suffix = '.rst'
+source_suffix = {'.rst': 'restructuredtext', '.md': 'markdown'}
 master_doc = 'index'
 add_function_parentheses = True
 

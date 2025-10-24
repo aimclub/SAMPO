@@ -500,6 +500,8 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
 
             mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i])
 
+    mate_parts(order1[cur_priority_group_start:], order2[cur_priority_group_start:])
+
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
@@ -607,6 +609,10 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
 
             cur_priority = priorities[order[i]]
             cur_priority_group_start = i
+
+    mutate_scheduling_order_core(order[cur_priority_group_start:],
+                                 mutpb_for_priority_group,
+                                 rand, parents, children)
 
     return ind
 

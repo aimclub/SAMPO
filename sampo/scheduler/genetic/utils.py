@@ -10,7 +10,7 @@ from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.scheduler.utils import get_worker_contractor_pool, get_head_nodes_with_connections_mappings
 from sampo.schemas import WorkGraph, Contractor, Schedule, GraphNode, LandscapeConfiguration, WorkTimeEstimator, Time
 from sampo.schemas.schedule_spec import ScheduleSpec
-
+from sampo.base import SAMPO
 
 def init_chromosomes_f(wg: WorkGraph,
                        contractors: list[Contractor],
@@ -134,3 +134,59 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         sgs_type,
                         only_lft_initialization,
                         is_multiobjective)
+
+
+class FitnessStats:
+    """
+    Class to track fitness and other stats for genetic algorithm
+    [experimental]
+    """
+
+    def __init__(self):
+        self.fitness_history = []
+
+    def remember_fitness_values(self, population):
+        fitness_values = [i.fitness.values for i in population]
+        self.fitness_history.append(fitness_values)
+
+    def get_uniqueness_scores(self):
+        """
+        Calculate uniqueness of fitness values in population
+        How many genomes with the same fitness are in the population
+        range: (0, 1], more = more fitness values are unique
+        """
+        uniqueness_scores = [
+            len(set(fitness_values)) / len(fitness_values)
+            for fitness_values in self.fitness_history
+        ]
+        # round values for readability
+        uniqueness_scores = [round(score, 4) for score in uniqueness_scores]
+        return uniqueness_scores
+
+    def get_generation_shifts(self):
+        """
+        Calculate shift of fitness values in new generation
+        How much population changes after update
+        range: [0, 1], more = more changes in population
+        """
+        n_generations = len(self.fitness_history)
+        generation_shifts = []
+        for i in range(n_generations-1):
+            old_fitness = set(self.fitness_history[i])
+            new_fitness = set(self.fitness_history[i+1])
+
+            shift_score = len( new_fitness.difference(old_fitness) ) / len(new_fitness)
+            shift_score = round(shift_score, 4)
+            generation_shifts.append(shift_score)
+
+        # round values for readability
+        generation_shifts = [round(score, 4) for score in generation_shifts]
+        return generation_shifts
+
+    def log_fitness_info(self):
+        uniqueness_scores = self.get_uniqueness_scores()
+        generation_shifts = self.get_generation_shifts()
+
+        SAMPO.logger.info(f"Fitness uniqueness history: {uniqueness_scores}")
+        SAMPO.logger.info(f"Generations shifts history: {generation_shifts}")
+

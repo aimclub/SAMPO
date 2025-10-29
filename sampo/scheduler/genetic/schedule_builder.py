@@ -18,6 +18,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
+from sampo.scheduler.genetic.utils import FitnessStats, filter_to_get_unique_fitness
 
 def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
@@ -193,6 +194,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     evaluation_start = time.time()
 
+    fitness_stats = FitnessStats()
     hof = tools.ParetoFront(similar=compare_individuals)
 
     # map to each individual fitness function
@@ -203,7 +205,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
 
-    hof.update(pop)
+    hof.update(pop); fitness_stats.remember_fitness_values(pop)
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -235,7 +237,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         # renewing population
         pop += offspring
         pop = toolbox.select(pop)
-        hof.update(pop)
+        hof.update(pop); fitness_stats.remember_fitness_values(pop)
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -282,7 +284,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         evaluation_time += time.time() - evaluation_start
 
-        hof.update(pop)
+        hof.update(pop); fitness_stats.remember_fitness_values(pop)
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -326,7 +328,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 # renewing population
                 pop += offspring
                 pop = toolbox.select(pop)
-                hof.update(pop)
+                hof.update(pop); fitness_stats.remember_fitness_values(pop)
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -338,6 +340,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
+    fitness_stats.log_fitness_info()
 
     best_chromosomes = [chromosome for chromosome in hof]
 

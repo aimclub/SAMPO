@@ -6,10 +6,12 @@ from deap.base import Toolbox
 
 from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
+
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, FitnessStats
 from sampo.scheduler.timeline.base import Timeline
+
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -18,7 +20,6 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
-from sampo.scheduler.genetic.utils import FitnessStats, filter_to_get_unique_fitness
 
 def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],

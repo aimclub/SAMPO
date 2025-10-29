@@ -1,5 +1,6 @@
 import os
 import sys
+from operator import attrgetter
 
 import pandas as pd
 
@@ -22,3 +23,14 @@ def test_work_graph_csv_parser():
         raise WorkGraphBuildingException(f'There is no way to build work graph, {e}')
 
     os.remove(os.path.join(sys.path[0], 'tests/parser/repaired.csv'))
+
+
+def test_work_graph_frame_serialization(setup_wg):
+    frame = setup_wg.to_frame()
+
+    rebuilt_wg = CSVParser.work_graph(frame)
+
+    origin_ids = set([node.id for node in setup_wg.nodes if not node.work_unit.is_service_unit])
+    rebuilt_ids = set([node.id for node in rebuilt_wg.nodes if not node.work_unit.is_service_unit])
+
+    assert origin_ids == rebuilt_ids

@@ -362,9 +362,8 @@ class WorkGraph(JSONSerializable['WorkGraph']):
         # Define the format of the output DataFrame
         graph_df_structure = {'activity_id': [],
                               'activity_name': [],
-                              'granular_name': [],
+                              'model_name': [],
                               'volume': [],
-                              'measurement': [],
                               'priority': [],
                               'predecessor_ids': [],
                               'connection_types': [],
@@ -385,9 +384,9 @@ class WorkGraph(JSONSerializable['WorkGraph']):
                 # Get information about tasks from graph nodes (work units)
                 graph_df_structure['activity_id'].append(node_info_dict['work_unit']['id'])
                 graph_df_structure['activity_name'].append(node_info_dict['work_unit']['display_name'])
-                graph_df_structure['granular_name'].append(node_info_dict['work_unit']['name'])
+                # model_name must be string!
+                graph_df_structure['model_name'].append(str(node_info_dict['work_unit']['model_name']))
                 graph_df_structure['volume'].append(node_info_dict['work_unit']['volume'])
-                graph_df_structure['measurement'].append(node_info_dict['work_unit']['volume_type'])
                 graph_df_structure['priority'].append(node_info_dict['work_unit']['priority'])
 
                 if save_req:

@@ -134,3 +134,12 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         sgs_type,
                         only_lft_initialization,
                         is_multiobjective)
+
+
+def filter_to_get_unique_fitness(pop):
+    unique_pop, unique_fitness = [], []
+    for i in pop:
+        if i.fitness.values not in unique_fitness:
+            unique_pop.append(i)
+            unique_fitness.append(i.fitness.values)
+    return unique_pop

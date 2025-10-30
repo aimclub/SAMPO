@@ -8,7 +8,7 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, filter_to_get_unique_fitness
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -388,10 +388,8 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
 
     # apply mutations
     for mutant in offspring:
-        # main mutations
-        toolbox.mutate(mutant)
-        # resource borders mutation
-        if optimize_resources:
+        toolbox.mutate(mutant)  # main mutations
+        if optimize_resources:  # resource borders mutation
             toolbox.mutate_resource_borders(mutant)
 
     return offspring

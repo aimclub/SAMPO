@@ -146,7 +146,8 @@ def build_schedules_with_cache(wg: WorkGraph,
                                optimize_resources: bool = False,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
-                               is_multiobjective: bool = False) \
+                               is_multiobjective: bool = False,
+                               do_only_mutations_step: bool = False) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
@@ -236,6 +237,26 @@ def build_schedules_with_cache(wg: WorkGraph,
         pop += offspring
         pop = toolbox.select(pop)
         hof.update(pop)
+
+        # <only-mutations step>
+        if do_only_mutations_step and generation > (new_generation_number // 2):  # focus on local search after some global search was completed 
+            for_immune_clones = toolbox.select(pop, k=len(pop)//5)  # focus on better solutions
+            for immunization_step in range(5):
+                offspring_immune = make_offspring(toolbox, for_immune_clones, optimize_resources, use_crossover=False)
+                
+                evaluation_start = time.time()
+                offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring_immune)
+                evaluation_time += time.time() - evaluation_start
+                for ind, fit in zip(offspring_immune, offspring_fitness):
+                    ind.fitness.values = fit
+                
+                pop += offspring_immune
+            
+            pop = filter_to_get_unique_fitness(pop)  # prevent creating clones and reducing population diversity
+            pop = toolbox.select(pop)
+            hof.update(pop)
+            # fitness_stats.update_history(pop, note=f"Only-Mutation Update #{immunization_step}")
+        # </only-mutations step>
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -355,19 +376,22 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
             or first.fitness == second.fitness)
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, use_crossover=True) \
         -> list[Individual]:
-    offspring = []
 
-    for ind1, ind2 in zip(population[::2], population[1::2]):
-        # mate
-        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+    if use_crossover:
+        offspring = []
+        for ind1, ind2 in zip(population[::2], population[1::2]):
+            offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+    else:  # use only mutations, so skip crossover
+        offspring = [toolbox.copy_individual(i) for i in population]
 
+    # apply mutations
     for mutant in offspring:
-        if optimize_resources:
-            # resource borders mutation
-            toolbox.mutate_resource_borders(mutant)
-        # other mutation
+        # main mutations
         toolbox.mutate(mutant)
+        # resource borders mutation
+        if optimize_resources:
+            toolbox.mutate_resource_borders(mutant)
 
     return offspring

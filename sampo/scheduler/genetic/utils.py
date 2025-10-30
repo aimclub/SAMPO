@@ -143,11 +143,15 @@ class FitnessStats:
     """
 
     def __init__(self):
+        # [generation1, generation2, ...]
         self.fitness_history = []
+        # comments about how this generation was created, optional
+        self.notes = []
 
-    def remember_fitness_values(self, population):
+    def update_history(self, population, note=""):
         fitness_values = [i.fitness.values for i in population]
         self.fitness_history.append(fitness_values)
+        self.notes.append(note)
 
     def get_uniqueness_scores(self):
         """
@@ -163,20 +167,20 @@ class FitnessStats:
         uniqueness_scores = [round(score, 4) for score in uniqueness_scores]
         return uniqueness_scores
 
+
     def get_generation_shifts(self):
         """
         Calculate shift of fitness values in new generation
         How much population changes after update
         range: [0, 1], more = more changes in population
         """
+        generation_shifts = [0]  # to match the len of list and number of generations
         n_generations = len(self.fitness_history)
-        generation_shifts = []
-        for i in range(n_generations-1):
-            old_fitness = set(self.fitness_history[i])
-            new_fitness = set(self.fitness_history[i+1])
+        for i in range(1, n_generations):
+            old_fitness = set(self.fitness_history[i-1])
+            new_fitness = set(self.fitness_history[i])
 
             shift_score = len( new_fitness.difference(old_fitness) ) / len(new_fitness)
-            shift_score = round(shift_score, 4)
             generation_shifts.append(shift_score)
 
         # round values for readability
@@ -184,9 +188,11 @@ class FitnessStats:
         return generation_shifts
 
     def log_fitness_info(self):
-        uniqueness_scores = self.get_uniqueness_scores()
-        generation_shifts = self.get_generation_shifts()
+        try:
+            uniqueness_scores = self.get_uniqueness_scores()
+            generation_shifts = self.get_generation_shifts()
+            SAMPO.logger.info(f'"fitness_uniqueness": {uniqueness_scores}, "generations_shifts": {generation_shifts}, "notes": {self.notes}')
 
-        SAMPO.logger.info(f"Fitness uniqueness history: {uniqueness_scores}")
-        SAMPO.logger.info(f"Generations shifts history: {generation_shifts}")
+        except Exception as ex:  # just in case
+            SAMPO.logger.info(f"Error occured when trying to log fitness info: {str(ex)}")
 

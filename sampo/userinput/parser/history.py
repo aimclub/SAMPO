@@ -14,7 +14,7 @@ def get_all_connections(graph_df: pd.DataFrame,
                         mapper: NameMapper | None = None) \
         -> Tuple[dict[str, list], dict[str, list]]:
 
-    task_name_column = 'granular_name'
+    task_name_column = 'model_name'
 
     num_tasks = len(graph_df)
     # Get the upper triangular indices to avoid duplicate pairs
@@ -103,18 +103,25 @@ def gather_links_types_statistics(s1: str, f1: str, s2: str, f2: str) \
         ffs21, ffs21_lags, ffs21_percent_lags
 
 
+def add_granular_name_if_absent(row) -> str:
+    model_name = row['model_name']
+    if 'granular_name' not in model_name:
+        model_name['granular_name'] = row['work_name']
+    return model_name
+
+
 def get_all_seq_statistic(history_data: pd.DataFrame,
                           graph_df: pd.DataFrame,
                           use_model_name: bool = False,
                           mapper: NameMapper | None = None):
-    df_grouped = history_data.copy()
+    if 'model_name' not in history_data.columns:
+        history_data['model_name'] = [{} for _ in range(len(history_data))]
 
-    if use_model_name:
-        column_name = 'model_name'
-    else:
-        if 'granular_name' not in history_data.columns:
-            history_data['granular_name'] = [activity_name for activity_name in history_data['work_name']]
-        column_name = 'granular_name'
+    history_data['model_name'] = history_data.apply(add_granular_name_if_absent, axis=1)
+    # [{'granular_name': activity_name} for activity_name in history_data['work_name']]
+    column_name = 'model_name'
+
+    df_grouped = history_data.copy()
 
     df_grouped = df_grouped.groupby('upper_works')[column_name].apply(list).reset_index(name="Works")
     works1, works2 = get_all_connections(graph_df, use_model_name, mapper)

@@ -173,7 +173,9 @@ def preprocess_graph_df(frame: pd.DataFrame,
     def map_activity(row):
         model_name_dict = eval(row['model_name'])
         if 'granular_name' not in model_name_dict:
-            model_name_dict['granular_name'] = name_mapper[row['activity_name']]
+            model_name_dict['granular_name'] = row['activity_name']
+        if name_mapper:
+            model_name_dict = name_mapper[model_name_dict]
         return str(model_name_dict)
 
     frame['model_name'] = frame[['activity_name', 'model_name']].apply(map_activity, axis=1)

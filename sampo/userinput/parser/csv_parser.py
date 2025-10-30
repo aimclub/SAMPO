@@ -94,7 +94,6 @@ class CSVParser:
 
     @staticmethod
     def work_graph(works_info: pd.DataFrame,
-                   name_mapper: NameMapper | None = None,
                    work_resource_estimator: WorkTimeEstimator = DefaultWorkEstimator()) -> WorkGraph:
         """
         Gets a info about WorkGraph and Contractors from file .csv.
@@ -120,8 +119,6 @@ class CSVParser:
         """
 
         works_info['activity_name_original'] = works_info.activity_name
-        if name_mapper:
-            works_info.activity_name = works_info.activity_name.apply(lambda name: name_mapper[name])
 
         resources = [dict((worker_req.kind, int(worker_req.volume))
                           for worker_req in work_resource_estimator.find_work_resources(model_name=w[0],
@@ -191,7 +188,7 @@ class CSVParser:
                                equipments=dict())
                 )
 
-        work_graph = CSVParser.work_graph(works_info, name_mapper, work_resource_estimator)
+        work_graph = CSVParser.work_graph(works_info, work_resource_estimator)
 
         # if we have no info about contractors or the user send an empty .csv file
         if len(contractors) == 0:

@@ -8,7 +8,7 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, filter_to_get_unique_fitness
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -18,6 +18,7 @@ from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
 
+from sampo.scheduler.genetic.utils import FitnessStats, filter_to_get_unique_fitness
 
 def create_toolbox(wg: WorkGraph,
                    contractors: list[Contractor],
@@ -146,8 +147,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                                optimize_resources: bool = False,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
-                               is_multiobjective: bool = False,
-                               do_only_mutations_step: bool = False) \
+                               is_multiobjective: bool = False) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
@@ -194,6 +194,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     evaluation_start = time.time()
 
+    fitness_stats = FitnessStats()
     hof = tools.ParetoFront(similar=compare_individuals)
 
     # map to each individual fitness function
@@ -204,7 +205,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
 
-    hof.update(pop)
+    hof.update(pop); fitness_stats.update_history(pop, note="First Generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -222,41 +223,49 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         rand.shuffle(pop)
 
-        offspring = make_offspring(toolbox, pop, optimize_resources)
-
+        offspring = make_offspring(toolbox, pop, optimize_resources, rand)
         evaluation_start = time.time()
-
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
-
+        evaluation_time += time.time() - evaluation_start
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = fit
-
-        evaluation_time += time.time() - evaluation_start
 
         # renewing population
         pop += offspring
         pop = toolbox.select(pop)
-        hof.update(pop)
+        hof.update(pop); fitness_stats.update_history(pop, note="Genetic Update")
 
-        # <only-mutations step>
-        if do_only_mutations_step and generation > (new_generation_number // 2):  # focus on local search after some global search was completed 
-            for_immune_clones = toolbox.select(pop, k=len(pop)//5)  # focus on better solutions
+        # <elite crossover step>
+        if generation > (new_generation_number // 5):
+            offspring = make_offspring(toolbox, pop, optimize_resources, rand, use_elite=True)
+            evaluation_start = time.time()
+            offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
+            evaluation_time += time.time() - evaluation_start
+            for ind, fit in zip(offspring, offspring_fitness):
+                ind.fitness.values = fit
+
+            pop += offspring
+            pop = toolbox.select(pop)
+            hof.update(pop); fitness_stats.update_history(pop, note="Genetic Elite Update")
+        # </elite crossover step>
+
+        # <immunization step>
+        if generation > (new_generation_number // 2):  # apply after first part of evolution
+            n_immune = len(pop) // 5
+            for_immune_clones = toolbox.select(pop, k=n_immune)
             for immunization_step in range(5):
-                offspring_immune = make_offspring(toolbox, for_immune_clones, optimize_resources, use_crossover=False)
-                
+                offspring_immune = make_offspring(toolbox, for_immune_clones, optimize_resources, rand, use_crossover=False)
                 evaluation_start = time.time()
                 offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring_immune)
                 evaluation_time += time.time() - evaluation_start
                 for ind, fit in zip(offspring_immune, offspring_fitness):
                     ind.fitness.values = fit
-                
                 pop += offspring_immune
-            
-            pop = filter_to_get_unique_fitness(pop)  # prevent creating clones and reducing population diversity
+            pop = filter_to_get_unique_fitness(pop)
             pop = toolbox.select(pop)
-            hof.update(pop)
-            # fitness_stats.update_history(pop, note=f"Only-Mutation Update #{immunization_step}")
-        # </only-mutations step>
+            hof.update(pop); fitness_stats.update_history(pop, note=f"Immune Update #{immunization_step}")
+        # </immunization step>
+
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -303,7 +312,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         evaluation_time += time.time() - evaluation_start
 
-        hof.update(pop)
+        hof.update(pop); fitness_stats.update_history(pop, note="First Deadline Population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -326,7 +335,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
                 rand.shuffle(pop)
 
-                offspring = make_offspring(toolbox, pop, optimize_resources)
+                offspring = make_offspring(toolbox, pop, optimize_resources, rand)
 
                 evaluation_start = time.time()
 
@@ -347,7 +356,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 # renewing population
                 pop += offspring
                 pop = toolbox.select(pop)
-                hof.update(pop)
+                hof.update(pop); fitness_stats.update_history(pop, note="Genetic Deadline Update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -359,6 +368,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
+    fitness_stats.log_fitness_info()
 
     best_chromosomes = [chromosome for chromosome in hof]
 
@@ -376,20 +386,36 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
             or first.fitness == second.fitness)
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, use_crossover=True) \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, use_elite=False, use_crossover=True) \
         -> list[Individual]:
 
-    if use_crossover:
+    if use_crossover and not use_elite:
         offspring = []
         for ind1, ind2 in zip(population[::2], population[1::2]):
             offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
-    else:  # use only mutations, so skip crossover
+
+    elif use_crossover and use_elite:
+        elite_population = [
+            toolbox.copy_individual(i)
+            for i in rand.choices(
+                toolbox.select(population, k=len(population)//5),
+                k=len(population)
+            )
+        ]
+        offspring = []
+        for ind1, ind2 in zip(population, elite_population):
+            offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+
+    elif not use_crossover:  # use only mutations, so skip crossover
         offspring = [toolbox.copy_individual(i) for i in population]
+
 
     # apply mutations
     for mutant in offspring:
-        toolbox.mutate(mutant)  # main mutations
-        if optimize_resources:  # resource borders mutation
+        # main mutations
+        toolbox.mutate(mutant)
+        # resource borders mutation
+        if optimize_resources:
             toolbox.mutate_resource_borders(mutant)
 
     return offspring

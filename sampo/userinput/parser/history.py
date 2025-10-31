@@ -117,7 +117,8 @@ def get_all_seq_statistic(history_data: pd.DataFrame,
     if 'model_name' not in history_data.columns:
         history_data['model_name'] = [{} for _ in range(len(history_data))]
 
-    history_data['model_name'] = history_data.apply(add_granular_name_if_absent, axis=1)
+    if len(history_data) > 0:
+        history_data['model_name'] = history_data.apply(add_granular_name_if_absent, axis=1)
     # [{'granular_name': activity_name} for activity_name in history_data['work_name']]
     column_name = 'model_name'
 

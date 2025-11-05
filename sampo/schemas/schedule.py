@@ -53,7 +53,7 @@ class Schedule(JSONSerializable['Schedule']):
         return self._schedule[~self._schedule.apply(
             lambda row: row[self._scheduled_work_column].is_service_unit,
             axis=1
-        )][self._data_columns + _get_granular_name_columns(self._schedule[self._scheduled_work_column])]
+        )][self._data_columns]
 
     @property
     def works(self) -> Iterable[ScheduledWork]:

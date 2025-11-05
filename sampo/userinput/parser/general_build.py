@@ -266,7 +266,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
         group = row['group'] if 'group' in frame.columns else 'main project'
         priority = row['priority'] if 'priority' in frame.columns else 1
 
-        work_unit = WorkUnit(row['activity_id'], row['model_name'], reqs, group=group,
+        work_unit = WorkUnit(row['activity_id'], eval(row['model_name']), reqs, group=group,
                              description=description, volume=row['volume'],
                              is_service_unit=is_service_unit, display_name=row['activity_name_original'],
                              zone_reqs=zone_reqs, priority=priority)

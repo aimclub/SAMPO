@@ -29,7 +29,7 @@ class Schedule(JSONSerializable['Schedule']):
 
     _data_columns: list[str] = ['idx', 'task_id', 'task_name', 'contractor', 'cost',
                                 'volume', 'start',
-                                'finish', 'duration', 'workers']
+                                'finish', 'duration', 'workers', 'model_name']
     _scheduled_work_column: str = 'scheduled_work_object'
 
     _columns: list[str] = _data_columns + [_scheduled_work_column]
@@ -124,7 +124,7 @@ class Schedule(JSONSerializable['Schedule']):
         def f(row):
             swork: ScheduledWork = deepcopy(row[self._scheduled_work_column])
             row[self._scheduled_work_column] = swork
-            swork.model_name['granular_name'] = row['granular_name']
+            swork.model_name = row['model_name']
             swork.display_name = row['task_name']
             swork.volume = float(row['volume'])
             swork.start_end_time = Time(int(row['start'])), Time(int(row['finish']))
@@ -157,11 +157,6 @@ class Schedule(JSONSerializable['Schedule']):
             start, end = tuple(sorted((time1, time2)))
             return start, end, end - start
 
-        model_name_columns = _get_granular_name_columns(works)
-
-        def make_model_name_columns(swork: ScheduledWork) -> list[Any]:
-            return list(map(itemgetter(1), sorted(swork.model_name.items(), key=itemgetter(0))))
-
         data_frame = [(i,                                                   # idx
                        w.id,                                                # task_id
                        w.display_name,                                      # task_name
@@ -170,11 +165,11 @@ class Schedule(JSONSerializable['Schedule']):
                        w.volume,                                            # work volume
                        *sed(*(t.value for t in w.start_end_time)),          # start, end, duration
                        repr(dict((i.name, i.count) for i in w.workers)),    # workers
+                       w.model_name,                                        # model_name columns
                        w,                                                   # full ScheduledWork info
-                       *make_model_name_columns(w),                         # model_name columns
                        ) for i, w in enumerate(works)]
 
-        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns + model_name_columns)
+        data_frame = DataFrame.from_records(data_frame, columns=Schedule._columns)
 
         data_frame = data_frame.set_index('idx', drop=False)
 
@@ -184,7 +179,7 @@ class Schedule(JSONSerializable['Schedule']):
             data_frame = data_frame.sort_values(['task_id'])
             data_frame.task_id = data_frame.task_id.astype(str)
 
-        data_frame = data_frame.reindex(columns=Schedule._columns + model_name_columns)
+        data_frame = data_frame.reindex(columns=Schedule._columns)
         data_frame = data_frame.reset_index(drop=True)
 
         return Schedule(data_frame)

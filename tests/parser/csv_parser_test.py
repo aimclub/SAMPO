@@ -4,6 +4,8 @@ from operator import attrgetter
 
 import pandas as pd
 
+from sampo.pipeline import SchedulingPipeline
+from sampo.scheduler import HEFTScheduler
 from sampo.userinput.parser.csv_parser import CSVParser
 from sampo.userinput.parser.exception import WorkGraphBuildingException
 
@@ -32,6 +34,8 @@ def test_work_graph_frame_serialization(setup_wg):
     frame = setup_wg.to_frame()
 
     rebuilt_wg = CSVParser.work_graph(frame)
+
+    project = SchedulingPipeline.create().wg(rebuilt_wg).schedule(HEFTScheduler()).finish()[0]
 
     origin_ids = set([node.id for node in setup_wg.nodes if not node.work_unit.is_service_unit])
     rebuilt_ids = set([node.id for node in rebuilt_wg.nodes if not node.work_unit.is_service_unit])

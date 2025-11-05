@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sampo"
-version = "0.1.2.0.5"
+version = "0.1.2.0.6"
 description = "Open-source framework for adaptive manufacturing processes scheduling"
 authors = ["iAirLab <iairlab@yandex.ru>"]
 license = "BSD-3-Clause"

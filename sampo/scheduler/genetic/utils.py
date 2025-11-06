@@ -134,3 +134,13 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         sgs_type,
                         only_lft_initialization,
                         is_multiobjective)
+
+
+def select_new_population_with_different_fitness(population, offsprings):
+    already_seen_fitness = [i.fitness.values for i in population]
+    new_fitness_offsprings = []
+    for i in offsprings:
+        if i.fitness.values not in already_seen_fitness:
+            new_fitness_offsprings.append(i)
+            already_seen_fitness.append(i.fitness.values)
+    return new_fitness_offsprings

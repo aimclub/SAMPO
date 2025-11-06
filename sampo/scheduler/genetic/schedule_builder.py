@@ -1,5 +1,6 @@
 import random
 import time
+import itertools
 
 from deap import tools
 from deap.base import Toolbox
@@ -8,8 +9,9 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, FitnessStats, select_new_population_with_different_fitness
 from sampo.scheduler.timeline.base import Timeline
+
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
 from sampo.schemas.landscape import LandscapeConfiguration
@@ -193,6 +195,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     evaluation_start = time.time()
 
+    fitness_stats = FitnessStats()
     hof = tools.ParetoFront(similar=compare_individuals)
 
     # map to each individual fitness function
@@ -203,7 +206,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
 
-    hof.update(pop)
+    hof.update(pop); fitness_stats.update_history(pop, note="First Generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -215,27 +218,37 @@ def build_schedules_with_cache(wg: WorkGraph,
     new_generation_number = generation_number if not have_deadline else generation_number // 2
     new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
+    generation_update_params = itertools.cycle([
+        {"offsprings_type": "classical", "drop_fitness_duplicates": False, "note": "Genetic Update"},
+        {"offsprings_type": "only_crossover", "drop_fitness_duplicates": False, "note": "Only Crossover Update"},
+        {"offsprings_type": "only_mutations", "drop_fitness_duplicates": True, "note": "Only Mutations Update"},
+        {"offsprings_type": "elite_crossover", "drop_fitness_duplicates": False, "note": "Genetic Elite Update"},
+        {"offsprings_type": "elite+elite", "drop_fitness_duplicates": False, "note": "Elite+Elite Update"},
+        {"offsprings_type": "only_mutations_elite", "drop_fitness_duplicates": True, "note": "Only Mutations Elite Update"},
+    ])
+
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
 
+        current_generation_params = next(generation_update_params)
+
+        # create offsprings
         rand.shuffle(pop)
-
-        offspring = make_offspring(toolbox, pop, optimize_resources)
-
+        offspring = make_offspring(toolbox, pop, optimize_resources, rand, offsprings_type=current_generation_params["offsprings_type"])
+        # calculate fitness for offsprings
         evaluation_start = time.time()
-
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
-
+        evaluation_time += time.time() - evaluation_start
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = fit
 
-        evaluation_time += time.time() - evaluation_start
-
         # renewing population
+        if current_generation_params["drop_fitness_duplicates"]:
+            offspring = select_new_population_with_different_fitness(pop, offspring)
         pop += offspring
         pop = toolbox.select(pop)
-        hof.update(pop)
+        hof.update(pop); fitness_stats.update_history(pop, note=current_generation_params["note"])
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -282,7 +295,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         evaluation_time += time.time() - evaluation_start
 
-        hof.update(pop)
+        hof.update(pop); fitness_stats.update_history(pop, note="First Deadline Population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -305,7 +318,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
                 rand.shuffle(pop)
 
-                offspring = make_offspring(toolbox, pop, optimize_resources)
+                offspring = make_offspring(toolbox, pop, optimize_resources, rand)
 
                 evaluation_start = time.time()
 
@@ -326,7 +339,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 # renewing population
                 pop += offspring
                 pop = toolbox.select(pop)
-                hof.update(pop)
+                hof.update(pop); fitness_stats.update_history(pop, note="Genetic Deadline Update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -338,6 +351,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
+    fitness_stats.log_fitness_info()
 
     best_chromosomes = [chromosome for chromosome in hof]
 
@@ -355,19 +369,64 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
             or first.fitness == second.fitness)
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, offsprings_type) \
         -> list[Individual]:
-    offspring = []
 
-    for ind1, ind2 in zip(population[::2], population[1::2]):
-        # mate
-        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+    if offsprings_type in ["classical", "only_crossover"]:
+        offspring = []
+        for i1, i2 in zip(population[0::2], population[1::2]):
+            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+
+    elif offsprings_type == "elite_crossover":
+        elite_population_oversample = [
+            toolbox.copy_individual(i)
+            for i in rand.choices(
+                toolbox.select(population, k=len(population)//5),
+                k=len(population)
+            )
+        ]
+
+        offspring = []
+        for ind1, ind2 in zip(population, elite_population_oversample):
+            offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+
+    elif offsprings_type == "elite+elite":
+        n_elite = len(population)//5
+        if n_elite % 2 != 0:
+            n_elite += 1
+
+        elite_population = [toolbox.copy_individual(i) for i in toolbox.select(population, k=n_elite)]
+        rand.shuffle(elite_population)
+
+        offspring = []
+        for i1, i2 in zip(elite_population[0::2], elite_population[1::2]):
+            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+
+    elif offsprings_type == "only_mutations":
+        offspring = [toolbox.copy_individual(i) for i in population]
+    elif offsprings_type == "only_mutations_elite":
+        offspring = [
+            toolbox.copy_individual(i)
+            for i in rand.choices(
+                toolbox.select(population, k=len(population)//5),
+                k=len(population)
+            )
+        ]
+
+    else:
+        raise ValueError(f"Unknown offsprings_type: {offsprings_type}")
+
+
+    # apply mutations
+    # skip, if only crossover, exit early
+    if offsprings_type == "only_crossover":
+        return offspring
 
     for mutant in offspring:
-        if optimize_resources:
-            # resource borders mutation
-            toolbox.mutate_resource_borders(mutant)
-        # other mutation
+        # main mutations
         toolbox.mutate(mutant)
+        # resource borders mutation
+        if optimize_resources:
+            toolbox.mutate_resource_borders(mutant)
 
     return offspring

@@ -1,7 +1,9 @@
 import random
 from operator import attrgetter
-
 import numpy as np
+import pandas as pd
+import sklearn
+
 from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType
@@ -136,6 +138,86 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         is_multiobjective)
 
 
+class FitnessStats:
+    """
+    Class to track fitness and other stats for genetic algorithm
+    [experimental]
+    """
+
+    def __init__(self):
+        # [generation1, generation2, ...]
+        self.fitness_history = []
+        # comments about how this generation was created, optional
+        self.notes = []
+
+    def update_history(self, population, note=""):
+        fitness_values = [i.fitness.values for i in population]
+        self.fitness_history.append(fitness_values)
+        self.notes.append(note)
+
+    def get_median_fitness(self):
+        medians = [
+            np.median(fitness_values, axis=0)
+            for fitness_values in self.fitness_history
+        ]
+        medians = np.array(medians)
+        return medians
+
+    def get_uniqueness_scores(self):
+        """
+        Calculate uniqueness of fitness values in population
+        How many genomes with the same fitness are in the population
+        range: (0, 1], more = more fitness values are unique
+        """
+        uniqueness_scores = [
+            len(set(fitness_values)) / len(fitness_values)
+            for fitness_values in self.fitness_history
+        ]
+        # round values for readability
+        uniqueness_scores = [round(score, 4) for score in uniqueness_scores]
+        return uniqueness_scores
+
+    def get_generation_shifts(self):
+        generation_shifts = [0]
+        n_generations = len(self.fitness_history)
+        for i in range(1, n_generations):
+            old_fitness = self.fitness_history[i-1]
+            new_fitness = self.fitness_history[i]
+
+            n_fresh_fitness = 0
+            for f in new_fitness:
+                if f not in old_fitness:
+                    n_fresh_fitness += 1
+            ratio = n_fresh_fitness / len(new_fitness)
+            generation_shifts.append(ratio)
+
+        # round values for readability
+        generation_shifts = [round(score, 4) for score in generation_shifts]
+        return generation_shifts
+
+    def write_fitness_info(self, path=None):
+        if not path:
+            return
+        try:
+            iteration = [i for i, _ in enumerate(self.fitness_history)]
+            medians = self.get_median_fitness()
+            uniqueness_scores = self.get_uniqueness_scores()
+            generation_shifts = self.get_generation_shifts()
+
+            df = pd.DataFrame({
+                "iteration": iteration,
+                "notes": self.notes,
+                "uniqueness_scores": uniqueness_scores,
+                "generation_shifts": generation_shifts,
+            })
+            for i in range(medians.shape[1]):
+                df[f"median_{i}"] = medians[:, i]
+            df.to_csv(path, index=False)
+
+        except Exception as e:  # just in case
+            print(f"Error occured when trying to write fitness info: {repr(e)}")
+
+
 def select_new_population_with_different_fitness(population, offsprings):
     already_seen_fitness = [i.fitness.values for i in population]
     new_fitness_offsprings = []
@@ -144,3 +226,18 @@ def select_new_population_with_different_fitness(population, offsprings):
             new_fitness_offsprings.append(i)
             already_seen_fitness.append(i.fitness.values)
     return new_fitness_offsprings
+
+def get_cluster_based_pairs(fitness_values, rand, n_clusters=5):
+    df = pd.DataFrame(fitness_values)
+
+    cluster_model = sklearn.cluster.KMeans(n_clusters=n_clusters, random_state=1)
+    scaler = sklearn.preprocessing.StandardScaler()
+    clusters = cluster_model.fit_predict(scaler.fit_transform(df))
+    df["cluster"] = clusters
+    df["cluster_means"] = df["cluster"].map(
+        df.groupby("cluster").agg({0: "mean"}).squeeze().to_dict()
+    )
+
+    df["random"] = [rand.random() for _ in range(len(df))]
+    index = df.sort_values(["cluster_means", "random"]).index
+    return list(zip(index[0::2], index[1::2]))

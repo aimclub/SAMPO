@@ -173,7 +173,7 @@ class JSONSerializable(Serializable[dict[str,
     object from JSON format
     :param Serialize: structure of JSON input variable for descendants of the class
     :param ABC: helper class to create custom abstract classes
-    :param Generic[JS]: base class to make JSONSerializable as universal class, 
+    :param Generic[JS]: base class to make JSONSerializable as universal class,
     using user's types JS and it's descendants
     """
 
@@ -278,50 +278,23 @@ class AutoJSONSerializable(JSONSerializable[AJS], ABC):
     """
     serializer_extension: str = 'json'
 
-    _default_serializers_deserializers = {
-        'serializers':
-            {
-                str(np.ndarray): default_ndarray_serializer,
-                str(pd.DataFrame): default_dataframe_serializer,
-                str(np.int32): default_np_int_serializer,
-                str(np.int64): default_np_long_serializer,
-            },
-        'deserializer':
-            {
-                str(np.ndarray): default_ndarray_deserializer,
-                str(pd.DataFrame): default_dataframe_deserializer,
-                str(np.int32): default_np_int_deserializer,
-                str(np.int64): default_np_long_deserializer,
-            }
+    _default_serializers = {
+        str(np.ndarray): default_ndarray_serializer,
+        str(pd.DataFrame): default_dataframe_serializer,
+        str(np.int32): default_np_int_serializer,
+        str(np.int64): default_np_long_serializer,
     }
 
-    @classmethod
-    @property
-    def _default_serializers(cls) -> dict:
-        """
-        :param cls: current class (predecessors of parent class AutoJSONSerializable)
-        :return: dict: dictionary of serialization methods
-        """
-        return cls._default_serializers_deserializers['serializers']
+    _default_deserializers = {
+        str(np.ndarray): default_ndarray_deserializer,
+        str(pd.DataFrame): default_dataframe_deserializer,
+        str(np.int32): default_np_int_deserializer,
+        str(np.int64): default_np_long_deserializer,
+    }
 
-    @classmethod
-    @property
-    def _default_deserializers(cls):
-        """
-        :param cls: current class (predecessors of parent class AutoJSONSerializable)
-        :return: dictionary of deserialization methods
-        """
-        return cls._default_serializers_deserializers['deserializer']
-
-    @classmethod
-    @property
-    def ignored_fields(cls) -> list:
-        """
-        Return list of fields, which not be included to JSON representation (needed for client interface
-        and Draw Schedule system)
-        :return: list of fields
-        """
-        return []
+    # Return list of fields, which not be included to JSON representation
+    # (needed for client interfaceand Draw Schedule system)
+    ignored_fields = []
 
     def _serialize(self) -> dict[str,
                                  Union[

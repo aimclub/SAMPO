@@ -9,7 +9,12 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, FitnessStats, select_new_population_with_different_fitness, get_cluster_based_pairs
+from sampo.scheduler.genetic.utils import (
+    prepare_optimized_data_structures,
+    select_new_population_with_different_fitness,
+    get_cluster_based_pairs,
+    FitnessStats,
+)
 from sampo.scheduler.timeline.base import Timeline
 
 from sampo.schemas.contractor import Contractor
@@ -221,22 +226,16 @@ def build_schedules_with_cache(wg: WorkGraph,
     new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
     update_types = [
-        {"offsprings_type": "classical", "drop_fitness_duplicates": False, "note": "Genetic Update"},
-        {"offsprings_type": "crossover_inclusters_3", "drop_fitness_duplicates": False, "note": "Crossover Clusters [3] Update"},
-        {"offsprings_type": "crossover_inclusters_5", "drop_fitness_duplicates": False, "note": "Crossover Clusters [5] Update"},
-        {"offsprings_type": "only_mutations", "drop_fitness_duplicates": True, "note": "Only Mutations Update"},
-        {"offsprings_type": "elite_crossover", "drop_fitness_duplicates": False, "note": "Genetic Elite Update"},
-        {"offsprings_type": "crossover_inclusters_9", "drop_fitness_duplicates": False, "note": "Crossover Clusters [9] Update"},
-        {"offsprings_type": "only_mutations_elite", "drop_fitness_duplicates": True, "note": "Only Mutations Elite Update"},
-        {"offsprings_type": "crossover_inclusters_11", "drop_fitness_duplicates": False, "note": "Crossover Clusters [11] Update"},
-        {"offsprings_type": "only_mutations_elite_2", "drop_fitness_duplicates": True, "note": "Only Mutations Elite 2 Update"},
-        {"offsprings_type": "mutations_then_crossover", "drop_fitness_duplicates": False, "note": "Mutations Then Crossover Update"},
-        {"offsprings_type": "elite_elite", "drop_fitness_duplicates": False, "note": "Elite Elite Update"},
-        {"offsprings_type": "crossover_repeated", "drop_fitness_duplicates": False, "note": "Crossover Repeated Update"},
-        {"offsprings_type": "crossover_opposites", "drop_fitness_duplicates": False, "note": "Crossover Opposites Update"},
-        {"offsprings_type": "only_mutations_2", "drop_fitness_duplicates": True, "note": "Only Mutations 2 Update"},
+        {"offsprings_type": "classical", "change_order": True, "change_resources": False, "drop_fitness_duplicates": True, "note": "Classical Update +-"},
+        {"offsprings_type": "only_mutations_elite", "change_order": True, "change_resources": True, "drop_fitness_duplicates": True, "note": "Only Mutations Elite ++"},
+        {"offsprings_type": "crossover_inclusters_7", "change_order": True, "change_resources": False, "drop_fitness_duplicates": True, "note": "Crossover Clusters [7] +-"},
+        {"offsprings_type": "only_mutations_elite", "change_order": False, "change_resources": True, "drop_fitness_duplicates": True, "note": "Only Mutations Elite -+"},
+        {"offsprings_type": "crossover_inclusters_7", "change_order": True, "change_resources": True, "drop_fitness_duplicates": True, "note": "Crossover Clusters [7] ++"},
+        {"offsprings_type": "only_mutations_good", "change_order": True, "change_resources": False, "drop_fitness_duplicates": True, "note": "Only Mutations Good +-"},
+        {"offsprings_type": "crossover_inclusters_7", "change_order": False, "change_resources": True, "drop_fitness_duplicates": True, "note": "Crossover Clusters [7] -+"},
+        {"offsprings_type": "only_mutations_elite_twice", "change_order": True, "change_resources": False, "drop_fitness_duplicates": True, "note": "Only Mutations Elite Twice +-"}
     ]
-    rand.shuffle(update_types)
+    # rand.shuffle(update_types)
     generation_update_params = itertools.cycle(update_types)
 
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
@@ -247,7 +246,11 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         # create offsprings
         rand.shuffle(pop)
-        offspring = make_offspring(toolbox, pop, optimize_resources, rand, offsprings_type=current_generation_params["offsprings_type"])
+        offspring = make_offspring(toolbox, pop, optimize_resources, rand,
+            offsprings_type=current_generation_params["offsprings_type"],
+            change_order=current_generation_params["change_order"],
+            change_resources=current_generation_params["change_resources"]
+        )
         # calculate fitness for offsprings
         evaluation_start = time.time()
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
@@ -381,156 +384,174 @@ def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
             or first.fitness == second.fitness)
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, offsprings_type) \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, offsprings_type="classical", change_order=True, change_resources=True) \
         -> list[Individual]:
 
 
     if offsprings_type == "classical":
         offspring = []
         for i1, i2 in zip(population[0::2], population[1::2]):
-            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+            offspring.extend(toolbox.mate(i1, i2, optimize_resources, change_order=change_order, change_resources=change_resources))
 
-    elif offsprings_type == "crossover_opposites":
-        population_sorted = [
-            toolbox.copy_individual(i)
-            for i in sorted(population, key=lambda x: x.fitness.values)
-        ]
-        offspring = []
-        for i1, i2 in zip(population_sorted, reversed(population_sorted)):
-            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+    # elif offsprings_type == "crossover_opposites":
+    #     population_sorted = [
+    #         toolbox.copy_individual(i)
+    #         for i in sorted(population, key=lambda x: x.fitness.values)
+    #     ]
+    #     offspring = []
+    #     for i1, i2 in zip(population_sorted, reversed(population_sorted)):
+    #         offspring.extend(toolbox.mate(i1, i2, optimize_resources))
 
-    elif offsprings_type == "crossover_repeated":
-        offspring = [toolbox.copy_individual(i) for i in population]
-        for _ in range(3):
-            rand.shuffle(offspring)
-            next_offspring = []
-            for i1, i2 in zip(offspring[0::2], offspring[1::2]):
-                next_offspring.extend(toolbox.mate(i1, i2, optimize_resources))
-            offspring = [toolbox.copy_individual(i) for i in next_offspring]
+    # elif offsprings_type == "crossover_repeated":
+    #     offspring = [toolbox.copy_individual(i) for i in population]
+    #     for _ in range(2):
+    #         rand.shuffle(offspring)
+    #         next_offspring = []
+    #         for i1, i2 in zip(offspring[0::2], offspring[1::2]):
+    #             next_offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+    #         offspring = [toolbox.copy_individual(i) for i in next_offspring]
+
+    # elif offsprings_type == "crossover_repeated_noreshuffle":
+    #     offspring = [toolbox.copy_individual(i) for i in population]
+    #     rand.shuffle(offspring)
+    #     for _ in range(2):
+    #         next_offspring = []
+    #         for i1, i2 in zip(offspring[0::2], offspring[1::2]):
+    #             next_offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+    #         offspring = [toolbox.copy_individual(i) for i in next_offspring]
 
     elif offsprings_type == "crossover_inclusters_3":
         pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=3)
         population_copied = [toolbox.copy_individual(i) for i in population]
         offspring = []
         for i1_index, i2_index in pairs:
-            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
+            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources, change_order=change_order, change_resources=change_resources))
 
     elif offsprings_type == "crossover_inclusters_5":
         pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=5)
         population_copied = [toolbox.copy_individual(i) for i in population]
         offspring = []
         for i1_index, i2_index in pairs:
-            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
+            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources, change_order=change_order, change_resources=change_resources))
+
+    elif offsprings_type == "crossover_inclusters_7":
+        pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=7)
+        population_copied = [toolbox.copy_individual(i) for i in population]
+        offspring = []
+        for i1_index, i2_index in pairs:
+            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources, change_order=change_order, change_resources=change_resources))
+
+    elif offsprings_type == "crossover_inclusters_8":
+        pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=8)
+        population_copied = [toolbox.copy_individual(i) for i in population]
+        offspring = []
+        for i1_index, i2_index in pairs:
+            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources, change_order=change_order, change_resources=change_resources))
 
     elif offsprings_type == "crossover_inclusters_9":
         pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=9)
         population_copied = [toolbox.copy_individual(i) for i in population]
         offspring = []
         for i1_index, i2_index in pairs:
-            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
+            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources, change_order=change_order, change_resources=change_resources))
 
-    elif offsprings_type == "crossover_inclusters_11":
-        pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand, n_clusters=11)
-        population_copied = [toolbox.copy_individual(i) for i in population]
-        offspring = []
-        for i1_index, i2_index in pairs:
-            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
+    # elif offsprings_type == "inclusters_repeated":
+    #     pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand)
+    #     population_copied = [toolbox.copy_individual(i) for i in population]
+    #     offspring = []
+    #     for i1_index, i2_index in pairs:
+    #         offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
 
-    elif offsprings_type == "inclusters_repeated":
-        pairs = get_cluster_based_pairs([i.fitness.values for i in population], rand)
-        population_copied = [toolbox.copy_individual(i) for i in population]
-        offspring = []
-        for i1_index, i2_index in pairs:
-            offspring.extend(toolbox.mate(population_copied[i1_index], population_copied[i2_index], optimize_resources))
+    #     for _ in range(2):
+    #         next_offspring = []
+    #         for i1, i2 in zip(offspring[0::2], offspring[1::2]):
+    #             next_offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+    #         offspring = [toolbox.copy_individual(i) for i in next_offspring]
 
-        for _ in range(2):
-            next_offspring = []
-            for i1, i2 in zip(offspring[0::2], offspring[1::2]):
-                next_offspring.extend(toolbox.mate(i1, i2, optimize_resources))
-            offspring = [toolbox.copy_individual(i) for i in next_offspring]
+    # elif offsprings_type == "elite_crossover":
+    #     elite_population_oversample = [
+    #         toolbox.copy_individual(i)
+    #         for i in rand.choices(
+    #             toolbox.select(population, k=len(population)//5),
+    #             k=len(population)
+    #         )
+    #     ]
+    #     offspring = []
+    #     for i1, i2 in zip(population[0::2], elite_population_oversample[1::2]):
+    #         offspring.extend(toolbox.mate(i1, i2, optimize_resources))
 
-    elif offsprings_type == "elite_crossover":
-        elite_population_oversample = [
-            toolbox.copy_individual(i)
-            for i in rand.choices(
-                toolbox.select(population, k=len(population)//5),
-                k=len(population)
-            )
-        ]
+    # elif offsprings_type == "elite_elite_clusters":
+    #     n_elite = len(population)//5
+    #     if n_elite % 2 != 0:
+    #         n_elite += 1
 
-        offspring = []
-        for ind1, ind2 in zip(population, elite_population_oversample):
-            offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+    #     elite_population = toolbox.select(population, k=n_elite)
+    #     rand.shuffle(elite_population)
 
-    elif offsprings_type == "elite_elite":
-        n_elite = len(population)//5
-        if n_elite % 2 != 0:
-            n_elite += 1
+    #     offspring = []
+    #     pairs = get_cluster_based_pairs([i.fitness.values for i in elite_population], rand, n_clusters=5)
+    #     for i1_index, i2_index in pairs:
+    #         i1 = toolbox.copy_individual(elite_population[i1_index])
+    #         i2 = toolbox.copy_individual(elite_population[i2_index])
+    #         offspring.extend(toolbox.mate(i1, i2, optimize_resources))
 
-        elite_population = [toolbox.copy_individual(i) for i in toolbox.select(population, k=n_elite)]
-        rand.shuffle(elite_population)
-
-        offspring = []
-        for i1, i2 in zip(elite_population[0::2], elite_population[1::2]):
-            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
-
-    elif offsprings_type == "only_mutations":
+    elif offsprings_type in ("only_mutations", "only_mutations_twice", "only_mutations_thrice"):
         offspring = [toolbox.copy_individual(i) for i in population]
-    elif offsprings_type == "only_mutations_elite":
+
+    elif offsprings_type in ("only_mutations_elite", "only_mutations_elite_twice"):
         offspring = [
             toolbox.copy_individual(i)
             for i in rand.choices(
-                toolbox.select(population, k=len(population)//5),
+                toolbox.select(population, k=len(population)//4),
                 k=len(population)
             )
         ]
-    elif offsprings_type == "only_mutations_elite_2":
+
+    elif offsprings_type in ("only_mutations_good", "only_mutations_good_twice"):
         offspring = [
             toolbox.copy_individual(i)
             for i in rand.choices(
-                toolbox.select(population, k=len(population)//10),
+                toolbox.select(population, k=len(population)//2),
                 k=len(population)
             )
         ]
-    elif offsprings_type == "only_mutations_2":
-        offspring = [toolbox.copy_individual(i) for i in population]
 
-    elif offsprings_type == "mutations_then_crossover":
-        mutants = [toolbox.copy_individual(i) for i in population]
+    # elif offsprings_type == "only_mutations_edges":
+    #     n_elite = len(population)//2
+    #     elite_population = toolbox.select(population, k=n_elite)
+    #     selected = get_best_by_criteria_solutions([i.fitness.values for i in elite_population])
+    #     offspring = [toolbox.copy_individual(elite_population[i]) for i in selected]
 
-        # apply mutations
-        for mutant in mutants:
-            # main mutations
-            toolbox.mutate(mutant)
-            # resource borders mutation
-            if optimize_resources:
-                toolbox.mutate_resource_borders(mutant)
 
-        rand.shuffle(mutants)
-        offspring = []
-        for i1, i2 in zip(mutants[0::2], mutants[1::2]):
-            offspring.extend(toolbox.mate(i1, i2, optimize_resources))
-        return offspring
+    # elif offsprings_type == "mutations_then_crossover":
+    #     mutants = [toolbox.copy_individual(i) for i in population]
+
+    #     # apply mutations
+    #     for mutant in mutants:
+    #         # main mutations
+    #         toolbox.mutate(mutant)
+    #         # resource borders mutation
+    #         if optimize_resources:
+    #             toolbox.mutate_resource_borders(mutant)
+
+    #     rand.shuffle(mutants)
+    #     offspring = []
+    #     for i1, i2 in zip(mutants[0::2], mutants[1::2]):
+    #         offspring.extend(toolbox.mate(i1, i2, optimize_resources))
+    #     return offspring
 
     else:
         raise ValueError(f"Unknown offsprings_type: {offsprings_type}")
 
 
-    # apply mutations
-    for mutant in offspring:
-        # main mutations
-        toolbox.mutate(mutant)
-        # resource borders mutation
-        if optimize_resources:
-            toolbox.mutate_resource_borders(mutant)
-
-    if offsprings_type == "only_mutations_2":
+    n_mutation_applications = ({"only_mutations_twice": 2, "only_mutations_elite_twice": 2, "only_mutations_good_twice": 2}).get(offsprings_type, 1)
+    for _ in range(n_mutation_applications):
         # apply mutations
         for mutant in offspring:
             # main mutations
-            toolbox.mutate(mutant)
+            toolbox.mutate(mutant, change_order=change_order, change_resources=change_resources)
             # resource borders mutation
-            if optimize_resources:
+            if optimize_resources and change_resources:
                 toolbox.mutate_resource_borders(mutant)
 
     return offspring

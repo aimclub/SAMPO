@@ -500,6 +500,8 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
 
             mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i])
 
+    mate_parts(order1[cur_priority_group_start:], order2[cur_priority_group_start:])
+
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
@@ -607,6 +609,10 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
 
             cur_priority = priorities[order[i]]
             cur_priority_group_start = i
+
+    mutate_scheduling_order_core(order[cur_priority_group_start:],
+                                 mutpb_for_priority_group,
+                                 rand, parents, children)
 
     return ind
 
@@ -726,7 +732,7 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
 
 
 def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
-         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) \
+         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray, change_order=True, change_resources=True) \
         -> tuple[Individual, Individual]:
     """
     Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
@@ -741,8 +747,15 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
 
     :return: two mated individuals
     """
-    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True)
-    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    if change_order and change_resources:
+        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True)
+        child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    elif change_order and (not change_resources):
+        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True)
+    elif (not change_order) and change_resources:
+        child1, child2 = mate_resources(ind1, ind2, rand, optimize_resources, toolbox, copy=True)
+    else:
+        raise Exception("""No crossovers were performed""")
     # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
@@ -752,7 +765,7 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
 def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,
            parents: dict[int, set[int]], children: dict[int, set[int]], statuses_available: int,
            priorities: np.ndarray, order_mutpb: float, res_mutpb: float, zone_mutpb: float,
-           rand: random.Random) -> Individual:
+           rand: random.Random, change_order=True, change_resources=True) -> Individual:
     """
     Combined mutation function of mutation for order, mutation for resources and mutation for zones.
 
@@ -768,8 +781,15 @@ def mutate(ind: Individual, resources_border: np.ndarray, contractors_available:
 
     :return: mutated individual
     """
-    mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available)
+    if change_order and change_resources:
+        mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
+        mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available)
+    elif change_order and (not change_resources):
+        mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
+    elif (not change_order) and change_resources:
+        mutant = mutate_resources(ind, res_mutpb, rand, resources_border, contractors_available)
+    else:
+        raise Exception("""No mutations were performed""")
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 

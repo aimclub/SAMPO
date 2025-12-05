@@ -122,7 +122,8 @@ def build_schedules(wg: WorkGraph,
                                       rand, spec, weights, pop, landscape, fitness_object,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
-                                      deadline, only_lft_initialization, is_multiobjective)[0]
+                                      deadline, only_lft_initialization, is_multiobjective, 
+                                      fitness_raw_path, fitness_stats_path)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,

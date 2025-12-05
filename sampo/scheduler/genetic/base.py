@@ -56,7 +56,9 @@ class GeneticScheduler(Scheduler):
                  # for optimization on one criteria set False
                  is_multiobjective: bool = False,
                  # for experiments with classic RCPSP formulation (initialize population with LFT)
-                 only_lft_initialization: bool = False):
+                 only_lft_initialization: bool = False,
+                 fitness_raw_path: str | None = None,
+                 fitness_stats_path: str | None = None):
         super().__init__(scheduler_type=scheduler_type,
                          resource_optimizer=resource_optimizer,
                          work_estimator=work_estimator)
@@ -75,6 +77,8 @@ class GeneticScheduler(Scheduler):
         self._is_multiobjective = is_multiobjective
         self._weights = weights
         self._only_lft_initialization = only_lft_initialization
+        self.fitness_raw_path = fitness_raw_path
+        self.fitness_stats_path = fitness_stats_path
 
         self._time_border = None
         self._max_plateau_steps = None
@@ -248,7 +252,9 @@ class GeneticScheduler(Scheduler):
                                                 self._optimize_resources,
                                                 deadline,
                                                 self._only_lft_initialization,
-                                                self._is_multiobjective)
+                                                self._is_multiobjective,
+                                                self.fitness_raw_path,
+                                                self.fitness_stats_path)
         return new_pop
 
     def schedule_with_cache(self,
@@ -303,7 +309,9 @@ class GeneticScheduler(Scheduler):
                                     self._optimize_resources,
                                     deadline,
                                     self._only_lft_initialization,
-                                    self._is_multiobjective)
+                                    self._is_multiobjective,
+                                    self.fitness_raw_path,
+                                    self.fitness_stats_path)
         schedules = [
             (Schedule.from_scheduled_works(scheduled_works.values(), wg), schedule_start_time, timeline, order_nodes)
             for scheduled_works, schedule_start_time, timeline, order_nodes in schedules]

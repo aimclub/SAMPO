@@ -9,6 +9,7 @@ from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
 from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
+from sampo.scheduler.genetic.utils import FitnessHistory
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -112,14 +113,16 @@ def build_schedules(wg: WorkGraph,
                     optimize_resources: bool = False,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
-                    is_multiobjective: bool = False) \
+                    is_multiobjective: bool = False
+                    fitness_raw_path: str | None = None,
+                    fitness_stats_path: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
                                       mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                       rand, spec, weights, pop, landscape, fitness_object,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
-                                      deadline, only_lft_initialization, is_multiobjective)[0]
+                                      deadline, only_lft_initialization, is_multiobjective, fitness_raw_path, fitness_stats_path)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -146,7 +149,9 @@ def build_schedules_with_cache(wg: WorkGraph,
                                optimize_resources: bool = False,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
-                               is_multiobjective: bool = False) \
+                               is_multiobjective: bool = False,
+                               fitness_raw_path: str | None = None,
+                               fitness_stats_path: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
@@ -193,6 +198,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     evaluation_start = time.time()
 
+    fitness_history = FitnessHistory()
     hof = tools.ParetoFront(similar=compare_individuals)
 
     # map to each individual fitness function
@@ -203,7 +209,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
 
-    hof.update(pop)
+    hof.update(pop); fitness_history.update_history(pop, note="first generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -235,7 +241,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         # renewing population
         pop += offspring
         pop = toolbox.select(pop)
-        hof.update(pop)
+        hof.update(pop); fitness_history.update_history(pop, note="genetic update")
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -282,7 +288,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         evaluation_time += time.time() - evaluation_start
 
-        hof.update(pop)
+        hof.update(pop); fitness_history.update_history(pop, note="first deadline population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -326,7 +332,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 # renewing population
                 pop += offspring
                 pop = toolbox.select(pop)
-                hof.update(pop)
+                hof.update(pop); fitness_history.update_history(pop, note="genetic deadline update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -338,6 +344,9 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
+    # save fitness history
+    fitness_history.write_fitness_raw(path=fitness_raw_path)
+    fitness_history.write_fitness_stats(path=fitness_stats_path)
 
     best_chromosomes = [chromosome for chromosome in hof]
 

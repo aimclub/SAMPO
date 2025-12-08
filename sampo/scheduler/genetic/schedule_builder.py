@@ -114,8 +114,7 @@ def build_schedules(wg: WorkGraph,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False,
-                    fitness_raw_path: str | None = None,
-                    fitness_stats_path: str | None = None) \
+                    fitness_history_save_path: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
                                       mutpb_order, mutpb_res, mutpb_zones, init_schedules,
@@ -123,7 +122,7 @@ def build_schedules(wg: WorkGraph,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
                                       deadline, only_lft_initialization, is_multiobjective,
-                                      fitness_raw_path, fitness_stats_path)[0]
+                                      fitness_history_save_path)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -151,8 +150,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
                                is_multiobjective: bool = False,
-                               fitness_raw_path: str | None = None,
-                               fitness_stats_path: str | None = None) \
+                               fitness_history_save_path: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
@@ -210,7 +208,8 @@ def build_schedules_with_cache(wg: WorkGraph,
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
 
-    hof.update(pop); fitness_history.update_history(pop, note="first generation")
+    hof.update(pop)
+    fitness_history.update_history(pop, hof, comment="first generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -242,7 +241,8 @@ def build_schedules_with_cache(wg: WorkGraph,
         # renewing population
         pop += offspring
         pop = toolbox.select(pop)
-        hof.update(pop); fitness_history.update_history(pop, note="genetic update")
+        hof.update(pop)
+        fitness_history.update_history(pop, hof, comment="genetic update")
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -289,7 +289,8 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         evaluation_time += time.time() - evaluation_start
 
-        hof.update(pop); fitness_history.update_history(pop, note="first deadline population")
+        hof.update(pop)
+        fitness_history.update_history(pop, hof, comment="first deadline population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -333,7 +334,8 @@ def build_schedules_with_cache(wg: WorkGraph,
                 # renewing population
                 pop += offspring
                 pop = toolbox.select(pop)
-                hof.update(pop); fitness_history.update_history(pop, note="genetic deadline update")
+                hof.update(pop)
+                fitness_history.update_history(pop, hof, comment="genetic deadline update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -346,8 +348,8 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
     # save fitness history
-    fitness_history.write_fitness_raw(path=fitness_raw_path)
-    fitness_history.write_fitness_stats(path=fitness_stats_path)
+    if fitness_history_save_path:
+        fitness_history.save_fitness_history(path=fitness_history_save_path)
 
     best_chromosomes = [chromosome for chromosome in hof]
 

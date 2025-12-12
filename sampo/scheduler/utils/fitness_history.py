@@ -5,12 +5,12 @@ import numpy as np
 
 
 class FitnessHistory:
-    """Class to track fitness values during evolution"""
+    """Recording fitness values during evolution"""
 
     def __init__(self):
         self.history: list[dict[str, Any]] = []
 
-    def update_history(self, population: Iterable = [], pareto_front: Iterable = [], comment: str = ""):
+    def update(self, population: Iterable = [], pareto_front: Iterable = [], comment: str = ""):
         self.history.append({
             "population_fitness": [i.fitness.values for i in population],
 
@@ -23,7 +23,7 @@ class FitnessHistory:
             "comment": comment
         })
 
-    def save_fitness_history(self, path: str):
+    def save_to_json(self, path: str):
         """Save current fitness history to JSON file"""
         # JSON format is a bit more flexible
         try:
@@ -34,6 +34,7 @@ class FitnessHistory:
 
 
 class FitnessHistorySummary:
+    """Functions for creating summary of evolution"""
 
     def __init__(self, path: str):
         with open(path, "r") as json_file:
@@ -43,8 +44,9 @@ class FitnessHistorySummary:
         self.pareto_front_history = [generation["pareto_front_fitness"] for generation in history]
         self.comments = [generation["comment"] for generation in history]
 
-    def get_mean_fitness(self, only_pareto: bool = False):
-        """Average fitness in population for each objective and generation"""
+    def get_fitness_means(self, only_pareto: bool = False):
+        """Average fitness in population for each generation and objective"""
+        # mean might be better than median, outliers matter
         data = self.pareto_front_history if only_pareto else self.population_history
         return [
             np.mean(fitness_values, axis=0)

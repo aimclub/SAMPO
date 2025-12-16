@@ -209,7 +209,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         ind.fitness.values = fit
 
     hof.update(pop)
-    fitness_history.update(pop, hof, comment="first generation")
+    fitness_history.update(pop, hof, pop, comment="first generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -242,7 +242,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         pop += offspring
         pop = toolbox.select(pop)
         hof.update(pop)
-        fitness_history.update(pop, hof, comment="genetic update")
+        fitness_history.update(pop, hof, offspring, comment="genetic update")
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -290,7 +290,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         evaluation_time += time.time() - evaluation_start
 
         hof.update(pop)
-        fitness_history.update(pop, hof, comment="first deadline population")
+        fitness_history.update(pop, hof, pop, comment="first deadline population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -335,7 +335,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 pop += offspring
                 pop = toolbox.select(pop)
                 hof.update(pop)
-                fitness_history.update(pop, hof, comment="genetic deadline update")
+                fitness_history.update(pop, hof, offspring, comment="genetic deadline update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values

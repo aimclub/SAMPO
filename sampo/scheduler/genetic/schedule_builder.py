@@ -17,6 +17,7 @@ from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
+from sampo.scheduler.utils.fitness_history import FitnessHistory
 
 
 def create_toolbox(wg: WorkGraph,
@@ -112,14 +113,16 @@ def build_schedules(wg: WorkGraph,
                     optimize_resources: bool = False,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
-                    is_multiobjective: bool = False) \
+                    is_multiobjective: bool = False,
+                    save_history_to: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
                                       mutpb_order, mutpb_res, mutpb_zones, init_schedules,
                                       rand, spec, weights, pop, landscape, fitness_object,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
-                                      deadline, only_lft_initialization, is_multiobjective)[0]
+                                      deadline, only_lft_initialization, is_multiobjective,
+                                      save_history_to)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -146,7 +149,8 @@ def build_schedules_with_cache(wg: WorkGraph,
                                optimize_resources: bool = False,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
-                               is_multiobjective: bool = False) \
+                               is_multiobjective: bool = False,
+                               save_history_to: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
     Genetic algorithm.
@@ -194,6 +198,7 @@ def build_schedules_with_cache(wg: WorkGraph,
     evaluation_start = time.time()
 
     hof = tools.ParetoFront(similar=compare_individuals)
+    fitness_history = FitnessHistory()
 
     # map to each individual fitness function
     fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
@@ -204,6 +209,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         ind.fitness.values = fit
 
     hof.update(pop)
+    fitness_history.update(pop, hof, pop, comment="first generation")
     best_fitness = hof[0].fitness.values
 
     SAMPO.logger.info(f'First population evaluation took {evaluation_time * 1000} ms')
@@ -236,6 +242,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         pop += offspring
         pop = toolbox.select(pop)
         hof.update(pop)
+        fitness_history.update(pop, hof, offspring, comment="genetic update")
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -283,6 +290,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         evaluation_time += time.time() - evaluation_start
 
         hof.update(pop)
+        fitness_history.update(pop, hof, pop, comment="first deadline population")
 
         if best_fitness[0] <= deadline:
             # Optimizing resources
@@ -327,6 +335,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                 pop += offspring
                 pop = toolbox.select(pop)
                 hof.update(pop)
+                fitness_history.update(pop, hof, offspring, comment="genetic deadline update")
 
                 prev_best_fitness = best_fitness
                 best_fitness = hof[0].fitness.values
@@ -338,6 +347,9 @@ def build_schedules_with_cache(wg: WorkGraph,
     SAMPO.logger.info(f'Generations processing took {(time.time() - start) * 1000} ms')
     SAMPO.logger.info(f'Full genetic processing took {(time.time() - global_start) * 1000} ms')
     SAMPO.logger.info(f'Evaluation time: {evaluation_time * 1000}')
+    # save fitness history
+    if save_history_to:
+        fitness_history.save_to_json(path=save_history_to)
 
     best_chromosomes = [chromosome for chromosome in hof]
 

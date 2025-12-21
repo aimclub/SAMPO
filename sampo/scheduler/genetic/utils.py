@@ -2,6 +2,8 @@ import random
 from operator import attrgetter
 
 import numpy as np
+import pandas as pd
+import sklearn
 from deap.base import Toolbox
 
 from sampo.api.genetic_api import ChromosomeType
@@ -134,3 +136,31 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         sgs_type,
                         only_lft_initialization,
                         is_multiobjective)
+
+
+def get_only_new_fitness(old_population, candidates):
+    known_fitness = [i.fitness.values for i in old_population]
+    new_fitness_population = []
+    for i in candidates:
+        if i.fitness.values not in known_fitness:
+            new_fitness_population.append(i)
+            known_fitness.append(i.fitness.values)
+
+    return new_fitness_population
+
+
+def get_clustered_pairs(fitness_values, rand, n_clusters=7):
+    df = pd.DataFrame(fitness_values)
+    # create clusters
+    cluster_model = sklearn.cluster.KMeans(n_clusters=n_clusters, random_state=1234)
+    scaler = sklearn.preprocessing.StandardScaler()
+    df["cluster"] = cluster_model.fit_predict(scaler.fit_transform(df))
+    # sort clusters based on average value of first objective
+    df["mean_of_cluster"] = df["cluster"].map(
+        df.groupby("cluster").agg({0: "mean"}).squeeze().to_dict()
+    )
+
+    # create random pairs within clusters
+    df["random"] = [rand.random() for _ in range(len(df))]
+    index = df.sort_values(["mean_of_cluster", "random"]).index
+    return list(zip(index[0::2], index[1::2]))

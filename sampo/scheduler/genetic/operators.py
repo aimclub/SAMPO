@@ -464,7 +464,7 @@ def get_order_part(order: np.ndarray, other_order: np.ndarray) -> np.ndarray:
 
 
 def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Random,
-                          toolbox: Toolbox, priorities: np.ndarray, copy: bool = True) -> tuple[Individual, Individual]:
+                          toolbox: Toolbox, priorities: np.ndarray, copy: bool = True, use_one_point_cross=False) -> tuple[Individual, Individual]:
     """
     Two-Point crossover for order.
 
@@ -479,13 +479,15 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
     """
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
 
-    def mate_parts(part1, part2):
+    def mate_parts(part1, part2, use_one_point_cross=False):
         parent1 = part1.copy()
-
         min_mating_amount = len(part1) // 4
-
-        two_point_order_crossover(part1, part2, min_mating_amount, rand)
-        two_point_order_crossover(part2, parent1, min_mating_amount, rand)
+        if use_one_point_cross:
+            one_point_order_crossover(part1, part2, min_mating_amount, rand)
+            one_point_order_crossover(part2, parent1, min_mating_amount, rand)
+        else:
+            two_point_order_crossover(part1, part2, min_mating_amount, rand)
+            two_point_order_crossover(part2, parent1, min_mating_amount, rand)
 
     order1, order2 = child1[0], child2[0]
 
@@ -497,8 +499,8 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
     for i in range(len(order1)):
         if priorities[order1[i]] != cur_priority:
             cur_priority = priorities[order1[i]]
-
-            mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i])
+            mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i], use_one_point_cross=use_one_point_cross)
+    mate_parts(order1[cur_priority_group_start:], order2[cur_priority_group_start:], use_one_point_cross=use_one_point_cross)
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
@@ -527,6 +529,14 @@ def two_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_m
         # update mating part to received values
         child[crossover_head_point:-crossover_tail_point] = ind_new_part
 
+    return child
+
+
+def one_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_mating_amount: int, rand: random.Random):
+    crossover_point = rand.randint(min_mating_amount, 3 * min_mating_amount)
+    if crossover_point > 1:
+        ind_new_part = get_order_part(child[:crossover_point], other_parent)
+        child[crossover_point:] = ind_new_part
     return child
 
 
@@ -608,6 +618,9 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
             cur_priority = priorities[order[i]]
             cur_priority_group_start = i
 
+    mutate_scheduling_order_core(order[cur_priority_group_start:],
+                                 mutpb_for_priority_group,
+                                 rand, parents, children)
     return ind
 
 
@@ -643,6 +656,54 @@ def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
             # take maximum from borders of these contractors in two chromosomes to maintain validity
             # and update current child borders on received maximum
             child[2][contractors] = np.stack((child1[2][contractors], child2[2][contractors]), axis=0).max(axis=0)
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_resources_2(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1], child2[1]
+
+    num_workers = len(res1[0])
+    min_mating_amount = num_workers // 4
+    cxpoint = rand.randint(min_mating_amount, num_workers - min_mating_amount)
+    mate_positions = rand.sample(range(num_workers), cxpoint)
+
+    res1[:, mate_positions], res2[:, mate_positions] = res2[:, mate_positions], res1[:, mate_positions]
+
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = child1[1][i][-1]
+                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
+
+                contractor = child2[1][i][-1]
+                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_resources_3(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1], child2[1]
+
+    for i in range(len(res1)):
+        for j in range(len(res1[0])):
+            if rand.random() < 0.5:
+                res1[i][j], res2[i][j] = res2[i][j], res1[i][j]
+
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = child1[1][i][-1]
+                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
+
+                contractor = child2[1][i][-1]
+                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
@@ -726,7 +787,7 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
 
 
 def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
-         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) \
+         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray, only_swap_parts=False, use_mate_resources_2=False, use_mate_resources_3=False, use_one_point_cross=False) \
         -> tuple[Individual, Individual]:
     """
     Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
@@ -738,11 +799,24 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
     :param rand: the rand object used for randomized operations
     :param priorities: priorities
     :param toolbox: toolbox
+    :param only_swap_parts: if True, only swap order of jobs
 
     :return: two mated individuals
     """
-    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True)
-    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    if only_swap_parts:
+        child1 = toolbox.copy_individual(ind1)
+        child2 = toolbox.copy_individual(ind2)
+        # only swap order part between them
+        child1[0][:], child2[0][:] = child2[0][:], child2[0][:]
+        return toolbox.Individual(child1), toolbox.Individual(child2)
+
+    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, use_one_point_cross=use_one_point_cross)
+    if use_mate_resources_2:
+        child1, child2 = mate_resources_2(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    elif use_mate_resources_3:
+        child1, child2 = mate_resources_3(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    else:
+        child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
     # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 

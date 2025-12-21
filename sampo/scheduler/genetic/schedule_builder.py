@@ -8,7 +8,7 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, get_only_new_fitness, get_clustered_pairs
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -114,6 +114,8 @@ def build_schedules(wg: WorkGraph,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False,
+                    offspring_types_list: list[str] | None = None,
+                    eliminate_duplicates: bool = False,
                     save_history_to: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
@@ -122,7 +124,7 @@ def build_schedules(wg: WorkGraph,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
                                       deadline, only_lft_initialization, is_multiobjective,
-                                      save_history_to)[0]
+                                      offspring_types_list, eliminate_duplicates, save_history_to)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -150,6 +152,8 @@ def build_schedules_with_cache(wg: WorkGraph,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
                                is_multiobjective: bool = False,
+                               offspring_types_list: list[str] | None = None,
+                               eliminate_duplicates: bool = False,
                                save_history_to: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
@@ -221,28 +225,31 @@ def build_schedules_with_cache(wg: WorkGraph,
     new_generation_number = generation_number if not have_deadline else generation_number // 2
     new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
+    if offspring_types_list is None:
+        offspring_types_list = generation_number * ["classical"]
+    offspring_types_list = iter(offspring_types_list)
+
+
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
+        current_offspring_type = next(offspring_types_list)
 
         rand.shuffle(pop)
-
-        offspring = make_offspring(toolbox, pop, optimize_resources)
-
+        offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_offspring_type)
         evaluation_start = time.time()
-
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
-
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = fit
-
         evaluation_time += time.time() - evaluation_start
 
         # renewing population
+        if eliminate_duplicates:
+            offspring = get_only_new_fitness(pop, offspring)
         pop += offspring
         pop = toolbox.select(pop)
         hof.update(pop)
-        fitness_history.update(pop, hof, offspring, comment="genetic update")
+        fitness_history.update(pop, hof, offspring, comment=current_offspring_type)
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
@@ -313,7 +320,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
                 rand.shuffle(pop)
 
-                offspring = make_offspring(toolbox, pop, optimize_resources)
+                offspring = make_offspring(toolbox, pop, optimize_resources, rand)
 
                 evaluation_start = time.time()
 
@@ -362,24 +369,73 @@ def build_schedules_with_cache(wg: WorkGraph,
     return best_schedules, pop
 
 
-def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
-    return ((first[0] == second[0]).all() and (first[1] == second[1]).all() and (first[2] == second[2]).all()
-            or first.fitness == second.fitness)
-
-
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool) \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, offspring_type="classical") \
         -> list[Individual]:
-    offspring = []
+    n_mutations = 1
 
-    for ind1, ind2 in zip(population[::2], population[1::2]):
-        # mate
-        offspring.extend(toolbox.mate(ind1, ind2, optimize_resources))
+    if offspring_type.startswith("classical"):
+        only_swap_parts = int(offspring_type.split(":")[1]) == 1
+        use_mate_resources_2 = int(offspring_type.split(":")[1]) == 2
+        use_mate_resources_3 = int(offspring_type.split(":")[1]) == 3
+        use_one_point_cross = int(offspring_type.split(":")[2]) == 1
 
-    for mutant in offspring:
-        if optimize_resources:
+        offspring = []
+        for i1, i2 in zip(population[0::2], population[1::2]):
+            offspring.extend(toolbox.mate(i1, i2, optimize_resources,
+                only_swap_parts=only_swap_parts,
+                use_mate_resources_2=use_mate_resources_2,
+                use_mate_resources_3=use_mate_resources_3,
+                use_one_point_cross=use_one_point_cross))
+
+    elif offspring_type.startswith("clusters_crossover"):
+        only_swap_parts = int(offspring_type.split(":")[1]) == 1
+        use_mate_resources_2 = int(offspring_type.split(":")[1]) == 2
+        use_mate_resources_3 = int(offspring_type.split(":")[1]) == 3
+        use_one_point_cross = int(offspring_type.split(":")[2]) == 1
+        n_clusters = int(offspring_type.split(":")[3])
+
+        pairs = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters)
+        copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
+
+        offspring = []
+        for i1_index, i2_index in pairs:
+            offspring.extend(toolbox.mate(
+                copied_population[i1_index],
+                copied_population[i2_index],
+                optimize_resources,
+                only_swap_parts=only_swap_parts,
+                use_mate_resources_2=use_mate_resources_2,
+                use_mate_resources_3=use_mate_resources_3,
+                use_one_point_cross=use_one_point_cross
+            ))
+
+
+    elif offspring_type.startswith("only_mutations_half"):
+        n_mutations = int(offspring_type.split(":")[1])
+        better_half = toolbox.select(population, k=len(population)//2)
+        offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
+
+    else:
+        raise ValueError(f"Unknown offspring_type: {offspring_type}")
+
+
+    for _ in range(n_mutations):
+        # apply mutations
+        for mutant in offspring:
+            # main mutations
+            toolbox.mutate(mutant)
             # resource borders mutation
-            toolbox.mutate_resource_borders(mutant)
-        # other mutation
-        toolbox.mutate(mutant)
+            if optimize_resources:
+                toolbox.mutate_resource_borders(mutant)
 
     return offspring
+
+
+def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
+    """Decide if two individuals are 'similar enough' for the Pareto front"""
+    same_fitness = first.fitness == second.fitness
+    same_genomes = all(
+        (first[i] == second[i]).all()
+        for i in (0, 1, 2)
+    )
+    return same_fitness or same_genomes

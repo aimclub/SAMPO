@@ -149,18 +149,34 @@ def get_only_new_fitness(old_population, candidates):
     return new_fitness_population
 
 
-def get_clustered_pairs(fitness_values, rand, n_clusters=7):
+def get_clustered_pairs(fitness_values, rand, n_clusters=7, return_groups=2):
     df = pd.DataFrame(fitness_values)
     # create clusters
     cluster_model = sklearn.cluster.KMeans(n_clusters=n_clusters, random_state=1234)
     scaler = sklearn.preprocessing.StandardScaler()
     df["cluster"] = cluster_model.fit_predict(scaler.fit_transform(df))
     # sort clusters based on average value of first objective
-    df["mean_of_cluster"] = df["cluster"].map(
-        df.groupby("cluster").agg({0: "mean"}).squeeze().to_dict()
-    )
+    if n_clusters == 1:
+        df["mean_of_cluster"] = 1
+    else:
+        df["mean_of_cluster"] = df["cluster"].map(
+            df.groupby("cluster").agg({0: "mean"}).squeeze().to_dict()
+        )
 
     # create random pairs within clusters
     df["random"] = [rand.random() for _ in range(len(df))]
     index = df.sort_values(["mean_of_cluster", "random"]).index
-    return list(zip(index[0::2], index[1::2]))
+
+    if return_groups == 2:
+        return list(zip(index[0::2], index[1::2]))
+    else:
+        groups = []
+        while len(groups) < len(df):
+            try:
+                random_cluster = rand.randint(0, n_clusters-1)
+                g = rand.sample(list(df[df["cluster"] == random_cluster].index), return_groups)
+                groups.append(g)
+            except:
+                pass
+
+        return groups

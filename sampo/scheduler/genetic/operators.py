@@ -198,6 +198,9 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('select', selection, k=selection_size)
     # combined crossover
     toolbox.register('mate', mate, rand=rand, toolbox=toolbox, priorities=priorities)
+    toolbox.register('mate_multi_1', mate_multi_1, rand=rand, toolbox=toolbox, priorities=priorities)
+    toolbox.register('mate_multi_2', mate_multi_2, rand=rand, toolbox=toolbox, priorities=priorities)
+    toolbox.register('mate_multi_3', mate_multi_3, rand=rand, toolbox=toolbox, priorities=priorities)
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
@@ -690,10 +693,11 @@ def mate_resources_3(ind1: Individual, ind2: Individual, rand: random.Random,
 
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
     res1, res2 = child1[1], child2[1]
+    change_probability = rand.uniform(0.25, 0.75)
 
     for i in range(len(res1)):
         for j in range(len(res1[0])):
-            if rand.random() < 0.5:
+            if rand.random() < change_probability:
                 res1[i][j], res2[i][j] = res2[i][j], res1[i][j]
 
     if optimize_resources:
@@ -821,6 +825,71 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_multi_1(ind1, ind2, ind3, optimize_resources: bool,
+                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
+
+    resources = [ind1[1], ind2[1], ind3[1]]
+    new_resources = ind1[1].copy()
+
+    for i in range(len(new_resources)):
+        new_resources[i] = rand.choice(resources)[i]
+
+    ind = toolbox.copy_individual(ind1)
+    ind[1][:] = new_resources
+
+    res1 = ind1[1]
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = ind[1][i][-1]
+                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
+
+    return toolbox.Individual(ind)
+
+def mate_multi_2(ind1, ind2, ind3, optimize_resources: bool,
+                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
+
+    resources = [ind1[1], ind2[1], ind3[1]]
+    new_resources = ind1[1].copy()
+
+    for i in range(len(new_resources[0])):
+        new_resources[:, i] = rand.choice(resources)[:, i]
+
+    ind = toolbox.copy_individual(ind1)
+    ind[1][:] = new_resources
+
+    res1 = ind1[1]
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = ind[1][i][-1]
+                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
+
+    return toolbox.Individual(ind)
+
+def mate_multi_3(ind1, ind2, ind3, optimize_resources: bool,
+                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
+
+    resources = [ind1[1], ind2[1], ind3[1]]
+    new_resources = ind1[1].copy()
+
+    for i in range(len(new_resources)):
+        for j in range(len(new_resources[0])):
+            new_resources[i, j] = rand.choice(resources)[i, j]
+
+    ind = toolbox.copy_individual(ind1)
+    ind[1][:] = new_resources
+
+    res1 = ind1[1]
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = ind[1][i][-1]
+                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
+
+    return toolbox.Individual(ind)
 
 
 def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,

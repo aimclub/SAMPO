@@ -415,6 +415,30 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
         better_half = toolbox.select(population, k=len(population)//2)
         offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
 
+
+    elif offspring_type.startswith("clustered_multi_1"):
+        n_clusters = int(offspring_type.split(":")[1])
+        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
+        offspring = [
+            toolbox.mate_multi_1(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
+            for in1, in2, in3 in groups
+        ]
+    elif offspring_type.startswith("clustered_multi_2"):
+        n_clusters = int(offspring_type.split(":")[1])
+        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
+        offspring = [
+            toolbox.mate_multi_2(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
+            for in1, in2, in3 in groups
+        ]
+    elif offspring_type.startswith("clustered_multi_3"):
+        n_clusters = int(offspring_type.split(":")[1])
+        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
+        offspring = [
+            toolbox.mate_multi_3(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
+            for in1, in2, in3 in groups
+        ]
+
+
     else:
         raise ValueError(f"Unknown offspring_type: {offspring_type}")
 

@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pandas as pd
 from itertools import pairwise
 from typing import Any, Iterable
 from sampo.base import SAMPO
@@ -45,14 +46,17 @@ class FitnessHistory:
 class FitnessHistorySummary:
     """Functions for creating summary of evolution"""
 
-    def __init__(self, path: str):
-        with open(path, "r") as json_file:
-            history = json.load(json_file)
-
+    def __init__(self, history: list[dict]):
         self.population_history = [generation["population_fitness"] for generation in history]
         self.pareto_front_history = [generation["pareto_front_fitness"] for generation in history]
         self.offsprings_history = [generation["offsprings_fitness"] for generation in history]
         self.comments = [generation["comment"] for generation in history]
+
+    @classmethod
+    def load_json(cls, path: str):
+        with open(path, "r") as json_file:
+            history = json.load(json_file)
+        return cls(history)
 
     # is the mean fitness of population improving?
     # mean might be better than median, outliers matter
@@ -100,3 +104,23 @@ class FitnessHistorySummary:
             len(set(map(tuple, fitness_values))) / len(fitness_values)
             for fitness_values in data
         ]
+
+    # --
+    # --
+    def get_best_performing_types(self, top_k=10, last_gen=100):
+        df = pd.DataFrame(dict(
+            population_shifts=self.get_generation_shifts(),
+            comments=self.comments[1:]
+        ))
+
+        best_performing = (
+            df
+            .tail(last_gen)
+            .groupby("comments")
+            .agg({"population_shifts": "mean"})
+            .squeeze()
+            .sort_values(ascending=False)
+            .head(top_k)
+        )
+
+        return np.array(best_performing.index.values), np.array(best_performing.values)

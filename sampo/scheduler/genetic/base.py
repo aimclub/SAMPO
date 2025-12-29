@@ -59,8 +59,6 @@ class GeneticScheduler(Scheduler):
                  only_lft_initialization: bool = False,
                  # how to update each generation
                  offspring_types_list: list[str] | None = None,
-                 # ignore offspring if genome with the same fitness exists
-                 eliminate_duplicates: bool = False,
                  # where to save history of fitness values
                  # saving instead of returning to avoid breaking modules
                  save_history_to: str | None = None):
@@ -83,7 +81,6 @@ class GeneticScheduler(Scheduler):
         self._weights = weights
         self._only_lft_initialization = only_lft_initialization
         self.offspring_types_list = offspring_types_list
-        self.eliminate_duplicates = eliminate_duplicates
         self.save_history_to = save_history_to
 
         self._time_border = None
@@ -260,7 +257,6 @@ class GeneticScheduler(Scheduler):
                                                 self._only_lft_initialization,
                                                 self._is_multiobjective,
                                                 self.offspring_types_list,
-                                                self.eliminate_duplicates,
                                                 self.save_history_to)
         return new_pop
 
@@ -318,7 +314,6 @@ class GeneticScheduler(Scheduler):
                                     self._only_lft_initialization,
                                     self._is_multiobjective,
                                     self.offspring_types_list,
-                                    self.eliminate_duplicates,
                                     self.save_history_to)
         schedules = [
             (Schedule.from_scheduled_works(scheduled_works.values(), wg), schedule_start_time, timeline, order_nodes)

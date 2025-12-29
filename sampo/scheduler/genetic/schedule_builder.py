@@ -17,7 +17,7 @@ from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.scheduler.utils.fitness_history import FitnessHistory
+from sampo.scheduler.utils.fitness_history import FitnessHistory, FitnessHistorySummary
 
 
 def create_toolbox(wg: WorkGraph,
@@ -115,7 +115,6 @@ def build_schedules(wg: WorkGraph,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False,
                     offspring_types_list: list[str] | None = None,
-                    eliminate_duplicates: bool = False,
                     save_history_to: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
@@ -124,7 +123,7 @@ def build_schedules(wg: WorkGraph,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
                                       deadline, only_lft_initialization, is_multiobjective,
-                                      offspring_types_list, eliminate_duplicates, save_history_to)[0]
+                                      offspring_types_list, save_history_to)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -153,7 +152,6 @@ def build_schedules_with_cache(wg: WorkGraph,
                                only_lft_initialization: bool = False,
                                is_multiobjective: bool = False,
                                offspring_types_list: list[str] | None = None,
-                               eliminate_duplicates: bool = False,
                                save_history_to: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
@@ -225,15 +223,73 @@ def build_schedules_with_cache(wg: WorkGraph,
     new_generation_number = generation_number if not have_deadline else generation_number // 2
     new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
-    if offspring_types_list is None:
-        offspring_types_list = generation_number * ["classical"]
-    offspring_types_list = iter(offspring_types_list)
+    # if offspring_types_list is None:
+    #     offspring_types_list = generation_number * ["classical"]
+    # offspring_types_list = iter(offspring_types_list)
+
+
+    offspring_types_all = [
+        "classical:0:0",
+        "classical:1:0",
+        "classical:2:0",
+        "classical:3:0",
+
+        "classical:0:1",
+        "classical:1:1",
+        "classical:2:1",
+        "classical:3:1",
+
+        "clusters_crossover:0:0:7",
+        "clusters_crossover:1:0:7",
+        "clusters_crossover:2:0:7",
+        "clusters_crossover:3:0:7",
+
+        "clusters_crossover:0:1:7",
+        "clusters_crossover:1:1:7",
+        "clusters_crossover:2:1:7",
+        "clusters_crossover:3:1:7",
+
+        "clusters_crossover:0:0:14",
+        "clusters_crossover:1:0:14",
+        "clusters_crossover:2:0:14",
+        "clusters_crossover:3:0:14",
+
+        "clusters_crossover:0:1:14",
+        "clusters_crossover:1:1:14",
+        "clusters_crossover:2:1:14",
+        "clusters_crossover:3:1:14",
+
+        "only_mutations_half_1:1",
+        "only_mutations_half_2:1",
+        "only_mutations_half_3:1",
+        "only_mutations_half_4:1",
+        "only_mutations_half_5:1",
+        "only_mutations_half_6:1",
+        "only_mutations_half_7:1",
+        "only_mutations_half_8:1",
+    ]
+    offspring_types_first_half = []
+    while len(offspring_types_first_half) < 100:
+        offspring_types_first_half.extend(
+            rand.sample(offspring_types_all, k=len(offspring_types_all))
+        )
+    offspring_types_first_half_iter = iter(offspring_types_first_half)
 
 
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
-        current_offspring_type = next(offspring_types_list)
+
+        if generation <= 100:
+            current_offspring_type = next(offspring_types_first_half_iter)
+        elif generation == 101:
+            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=10, last_gen=100)
+            best_perf_sample = rand.choices(best_perf, k=100, weights=perf_weights)
+            best_perf_iter = iter(best_perf_sample)
+            current_offspring_type = next(best_perf_iter)
+        else:
+            current_offspring_type = next(best_perf_iter)
+
 
         rand.shuffle(pop)
         offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_offspring_type)
@@ -244,8 +300,7 @@ def build_schedules_with_cache(wg: WorkGraph,
         evaluation_time += time.time() - evaluation_start
 
         # renewing population
-        if eliminate_duplicates:
-            offspring = get_only_new_fitness(pop, offspring)
+        offspring = get_only_new_fitness(pop, offspring)
         pop += offspring
         pop = toolbox.select(pop)
         hof.update(pop)

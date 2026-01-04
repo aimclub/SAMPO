@@ -198,9 +198,6 @@ def init_toolbox(wg: WorkGraph,
     toolbox.register('select', selection, k=selection_size)
     # combined crossover
     toolbox.register('mate', mate, rand=rand, toolbox=toolbox, priorities=priorities)
-    toolbox.register('mate_multi_1', mate_multi_1, rand=rand, toolbox=toolbox, priorities=priorities)
-    toolbox.register('mate_multi_2', mate_multi_2, rand=rand, toolbox=toolbox, priorities=priorities)
-    toolbox.register('mate_multi_3', mate_multi_3, rand=rand, toolbox=toolbox, priorities=priorities)
     # combined mutation
     toolbox.register('mutate', mutate, order_mutpb=mut_order_pb, res_mutpb=mut_res_pb, zone_mutpb=mut_zone_pb,
                      rand=rand, parents=parents, children=children, resources_border=resources_border,
@@ -237,6 +234,7 @@ def init_toolbox(wg: WorkGraph,
                      contractor2index=contractor2index, index2zone=index2zone,
                      landscape=landscape, sgs_type=sgs_type)
     toolbox.register('copy_individual', copy_individual, toolbox=toolbox)
+    toolbox.register('expand_resources', expand_resources, resources_border=resources_border, toolbox=toolbox)
 
     return toolbox
 
@@ -380,6 +378,23 @@ def generate_chromosome(wg: WorkGraph,
         chromosome = randomized_init()
 
     return chromosome
+
+
+def expand_resources(population, resources_border, toolbox):
+    resources_shape = resources_border[0].shape
+    offspring = []
+    for ind_id, ind in enumerate(population):
+        new_ind = toolbox.copy_individual(ind)
+
+        for i in range(resources_shape[1]):
+            for j in range(resources_shape[0]):
+                min_ = resources_border[0][j][i]
+                max_ = resources_border[1][j][i]
+                new_ind[1][i, j] = np.floor(np.linspace(min_, max_+1, len(population)+1))[ind_id]
+
+        offspring.append(new_ind)
+
+    return offspring
 
 
 def select_new_population(population: list[Individual], k: int) -> list[Individual]:
@@ -791,7 +806,7 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
 
 
 def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
-         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray, only_swap_parts=False, use_mate_resources_2=False, use_mate_resources_3=False, use_one_point_cross=False) \
+         rand: random.Random, toolbox: Toolbox, priorities: np.ndarray, order_crossover, resources_crossover) \
         -> tuple[Individual, Individual]:
     """
     Combined crossover function of Two-Point crossover for order, One-Point crossover for resources
@@ -807,89 +822,29 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
 
     :return: two mated individuals
     """
-    if only_swap_parts:
+    if (order_crossover == "swap_parts") or (resources_crossover == "swap_parts"):
         child1 = toolbox.copy_individual(ind1)
         child2 = toolbox.copy_individual(ind2)
         # only swap order part between them
         child1[0][:], child2[0][:] = child2[0][:], child2[0][:]
         return toolbox.Individual(child1), toolbox.Individual(child2)
 
+    use_one_point_cross = order_crossover == "one_point"
     child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, use_one_point_cross=use_one_point_cross)
-    if use_mate_resources_2:
+
+    if resources_crossover == "by_worker":
         child1, child2 = mate_resources_2(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif use_mate_resources_3:
+    elif "shuffle":
         child1, child2 = mate_resources_3(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    else:
+    elif resources_crossover == "by_work":
         child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    else:
+        raise Exception(f"Unknown mating type for resources: {resources_crossover}")
+
     # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
-
-
-def mate_multi_1(ind1, ind2, ind3, optimize_resources: bool,
-                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
-
-    resources = [ind1[1], ind2[1], ind3[1]]
-    new_resources = ind1[1].copy()
-
-    for i in range(len(new_resources)):
-        new_resources[i] = rand.choice(resources)[i]
-
-    ind = toolbox.copy_individual(ind1)
-    ind[1][:] = new_resources
-
-    res1 = ind1[1]
-    if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = ind[1][i][-1]
-                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
-
-    return toolbox.Individual(ind)
-
-def mate_multi_2(ind1, ind2, ind3, optimize_resources: bool,
-                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
-
-    resources = [ind1[1], ind2[1], ind3[1]]
-    new_resources = ind1[1].copy()
-
-    for i in range(len(new_resources[0])):
-        new_resources[:, i] = rand.choice(resources)[:, i]
-
-    ind = toolbox.copy_individual(ind1)
-    ind[1][:] = new_resources
-
-    res1 = ind1[1]
-    if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = ind[1][i][-1]
-                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
-
-    return toolbox.Individual(ind)
-
-def mate_multi_3(ind1, ind2, ind3, optimize_resources: bool,
-                 rand: random.Random, toolbox: Toolbox, priorities: np.ndarray) -> Individual:
-
-    resources = [ind1[1], ind2[1], ind3[1]]
-    new_resources = ind1[1].copy()
-
-    for i in range(len(new_resources)):
-        for j in range(len(new_resources[0])):
-            new_resources[i, j] = rand.choice(resources)[i, j]
-
-    ind = toolbox.copy_individual(ind1)
-    ind[1][:] = new_resources
-
-    res1 = ind1[1]
-    if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = ind[1][i][-1]
-                ind[2][contractor][j] = max(ind[2][contractor][j], ind[1][i][j])
-
-    return toolbox.Individual(ind)
 
 
 def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,

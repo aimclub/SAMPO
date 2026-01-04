@@ -228,52 +228,8 @@ def build_schedules_with_cache(wg: WorkGraph,
     # offspring_types_list = iter(offspring_types_list)
 
 
-    offspring_types_all = [
-        "classical:0:0",
-        "classical:1:0",
-        "classical:2:0",
-        "classical:3:0",
 
-        "classical:0:1",
-        "classical:1:1",
-        "classical:2:1",
-        "classical:3:1",
-
-        "clusters_crossover:0:0:7",
-        "clusters_crossover:1:0:7",
-        "clusters_crossover:2:0:7",
-        "clusters_crossover:3:0:7",
-
-        "clusters_crossover:0:1:7",
-        "clusters_crossover:1:1:7",
-        "clusters_crossover:2:1:7",
-        "clusters_crossover:3:1:7",
-
-        "clusters_crossover:0:0:14",
-        "clusters_crossover:1:0:14",
-        "clusters_crossover:2:0:14",
-        "clusters_crossover:3:0:14",
-
-        "clusters_crossover:0:1:14",
-        "clusters_crossover:1:1:14",
-        "clusters_crossover:2:1:14",
-        "clusters_crossover:3:1:14",
-
-        "only_mutations_half_1:1",
-        "only_mutations_half_2:1",
-        "only_mutations_half_3:1",
-        "only_mutations_half_4:1",
-        "only_mutations_half_5:1",
-        "only_mutations_half_6:1",
-        "only_mutations_half_7:1",
-        "only_mutations_half_8:1",
-    ]
-    offspring_types_first_half = []
-    while len(offspring_types_first_half) < 100:
-        offspring_types_first_half.extend(
-            rand.sample(offspring_types_all, k=len(offspring_types_all))
-        )
-    offspring_types_first_half_iter = iter(offspring_types_first_half)
+    off_iter = iter(offspring_types_list)
 
 
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
@@ -281,14 +237,10 @@ def build_schedules_with_cache(wg: WorkGraph,
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
 
         if generation <= 100:
-            current_offspring_type = next(offspring_types_first_half_iter)
-        elif generation == 101:
-            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=10, last_gen=100)
-            best_perf_sample = rand.choices(best_perf, k=100, weights=perf_weights)
-            best_perf_iter = iter(best_perf_sample)
-            current_offspring_type = next(best_perf_iter)
+            current_offspring_type = next(off_iter)
         else:
-            current_offspring_type = next(best_perf_iter)
+            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=15, last_gen=50)
+            current_offspring_type = rand.choices(best_perf, k=1)[0]
 
 
         rand.shuffle(pop)
@@ -424,80 +376,49 @@ def build_schedules_with_cache(wg: WorkGraph,
     return best_schedules, pop
 
 
-def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, offspring_type="classical") \
+def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, mating_type=None) \
         -> list[Individual]:
-    n_mutations = 1
 
-    if offspring_type.startswith("classical"):
-        only_swap_parts = int(offspring_type.split(":")[1]) == 1
-        use_mate_resources_2 = int(offspring_type.split(":")[1]) == 2
-        use_mate_resources_3 = int(offspring_type.split(":")[1]) == 3
-        use_one_point_cross = int(offspring_type.split(":")[2]) == 1
+    if mating_type is None:
+        pairing_type, order_crossover, resources_crossover, n_mutations = ("random_pairs", "two_point", "by_work", 1)
+    else:
+        pairing_type, order_crossover, resources_crossover, n_mutations = mating_type
 
-        offspring = []
-        for i1, i2 in zip(population[0::2], population[1::2]):
-            offspring.extend(toolbox.mate(i1, i2, optimize_resources,
-                only_swap_parts=only_swap_parts,
-                use_mate_resources_2=use_mate_resources_2,
-                use_mate_resources_3=use_mate_resources_3,
-                use_one_point_cross=use_one_point_cross))
-
-    elif offspring_type.startswith("clusters_crossover"):
-        only_swap_parts = int(offspring_type.split(":")[1]) == 1
-        use_mate_resources_2 = int(offspring_type.split(":")[1]) == 2
-        use_mate_resources_3 = int(offspring_type.split(":")[1]) == 3
-        use_one_point_cross = int(offspring_type.split(":")[2]) == 1
-        n_clusters = int(offspring_type.split(":")[3])
-
+    # create pairs for mating
+    if pairing_type == "random_pairs":
+        index = list(range(len(population)))
+        pairs = zip(index[0::2], index[1::2])
+    elif pairing_type.startswith("phenotype_clusters_pairs"):
+        n_clusters = int(pairing_type.split(":")[1])
         pairs = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters)
-        copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
+    elif pairing_type == "no_pairs":
+        pairs = None
+    else:
+        raise Exception(f"Unknown pairing type: {pairing_type}")
 
+    # mate
+
+    # only mutations, so apply to better half
+    if order_crossover == "skip" and resources_crossover == "skip":
+        better_half = toolbox.select(population, k=len(population)//2)
+        offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
+
+    elif resources_crossover == "expand_resources":
+        offspring = toolbox.expand_resources(population)
+
+    else:
+        copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
         offspring = []
         for i1_index, i2_index in pairs:
             offspring.extend(toolbox.mate(
                 copied_population[i1_index],
                 copied_population[i2_index],
                 optimize_resources,
-                only_swap_parts=only_swap_parts,
-                use_mate_resources_2=use_mate_resources_2,
-                use_mate_resources_3=use_mate_resources_3,
-                use_one_point_cross=use_one_point_cross
+                order_crossover=order_crossover,
+                resources_crossover=resources_crossover
             ))
 
-
-    elif offspring_type.startswith("only_mutations_half"):
-        n_mutations = int(offspring_type.split(":")[1])
-        better_half = toolbox.select(population, k=len(population)//2)
-        offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
-
-
-    elif offspring_type.startswith("clustered_multi_1"):
-        n_clusters = int(offspring_type.split(":")[1])
-        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
-        offspring = [
-            toolbox.mate_multi_1(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
-            for in1, in2, in3 in groups
-        ]
-    elif offspring_type.startswith("clustered_multi_2"):
-        n_clusters = int(offspring_type.split(":")[1])
-        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
-        offspring = [
-            toolbox.mate_multi_2(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
-            for in1, in2, in3 in groups
-        ]
-    elif offspring_type.startswith("clustered_multi_3"):
-        n_clusters = int(offspring_type.split(":")[1])
-        groups = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters, return_groups=3)
-        offspring = [
-            toolbox.mate_multi_3(population[in1], population[in2], population[in3], optimize_resources=optimize_resources)
-            for in1, in2, in3 in groups
-        ]
-
-
-    else:
-        raise ValueError(f"Unknown offspring_type: {offspring_type}")
-
-
+    # mutations stage
     for _ in range(n_mutations):
         # apply mutations
         for mutant in offspring:

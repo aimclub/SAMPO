@@ -234,7 +234,6 @@ def init_toolbox(wg: WorkGraph,
                      contractor2index=contractor2index, index2zone=index2zone,
                      landscape=landscape, sgs_type=sgs_type)
     toolbox.register('copy_individual', copy_individual, toolbox=toolbox)
-    toolbox.register('expand_resources', expand_resources, resources_border=resources_border, toolbox=toolbox)
 
     return toolbox
 
@@ -378,23 +377,6 @@ def generate_chromosome(wg: WorkGraph,
         chromosome = randomized_init()
 
     return chromosome
-
-
-def expand_resources(population, resources_border, toolbox):
-    resources_shape = resources_border[0].shape
-    offspring = []
-    for ind_id, ind in enumerate(population):
-        new_ind = toolbox.copy_individual(ind)
-
-        for i in range(resources_shape[1]):
-            for j in range(resources_shape[0]):
-                min_ = resources_border[0][j][i]
-                max_ = resources_border[1][j][i]
-                new_ind[1][i, j] = np.floor(np.linspace(min_, max_+1, len(population)+1))[ind_id]
-
-        offspring.append(new_ind)
-
-    return offspring
 
 
 def select_new_population(population: list[Individual], k: int) -> list[Individual]:
@@ -727,6 +709,49 @@ def mate_resources_3(ind1: Individual, ind2: Individual, rand: random.Random,
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
+def mate_resources_4(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1].copy(), child2[1].copy()
+    change_weight = rand.uniform(0.25, 0.75)
+
+    child1[1][:] = (res1 * change_weight + res2 * (1-change_weight)).round().astype(res1.dtype)
+    child2[1][:] = (res2 * change_weight + res1 * (1-change_weight)).round().astype(res1.dtype)
+
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = child1[1][i][-1]
+                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
+
+                contractor = child2[1][i][-1]
+                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_resources_5(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1].copy(), child2[1].copy()
+
+    child1[1][:] = np.max([res1, res2], axis=0)
+    child2[1][:] = np.min([res1, res2], axis=0)
+
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = child1[1][i][-1]
+                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
+
+                contractor = child2[1][i][-1]
+                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
 def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
                      resources_border: np.ndarray,
                      contractors_available: np.ndarray) -> Individual:
@@ -829,15 +854,29 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
         child1[0][:], child2[0][:] = child2[0][:], child2[0][:]
         return toolbox.Individual(child1), toolbox.Individual(child2)
 
-    use_one_point_cross = order_crossover == "one_point"
-    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, use_one_point_cross=use_one_point_cross)
+    if order_crossover == "skip":
+        child1 = toolbox.copy_individual(ind1)
+        child2 = toolbox.copy_individual(ind2)
+    else:
+        use_one_point_cross = (order_crossover == "one_point")
+        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, use_one_point_cross=use_one_point_cross)
 
-    if resources_crossover == "by_worker":
+
+
+    if resources_crossover == "skip":
+        pass
+    elif resources_crossover == "by_worker":
         child1, child2 = mate_resources_2(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif "shuffle":
+    elif resources_crossover == "shuffle":
         child1, child2 = mate_resources_3(child1, child2, rand, optimize_resources, toolbox, copy=False)
     elif resources_crossover == "by_work":
         child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    elif resources_crossover == "weighted":
+        child1, child2 = mate_resources_4(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    elif resources_crossover == "min_max":
+        child1, child2 = mate_resources_5(child1, child2, rand, optimize_resources, toolbox, copy=False)
+
+
     else:
         raise Exception(f"Unknown mating type for resources: {resources_crossover}")
 
@@ -927,18 +966,26 @@ def mutate_resource_borders(ind: Individual, mutpb: float, rand: random.Random,
 
 def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_indexes: np.ndarray,
                   low_borders: np.ndarray, up_borders: np.ndarray, masks: np.ndarray, mut_part: int,
-                  rand: random.Random) -> None:
+                  rand: random.Random, p_monotonic=0.2) -> None:
     """
     Changes numeric values in m x n part of chromosome.
     This function is needed to make mutation for resources and resource borders.
     """
+    direction_type = rand.choices(("random", "monotonic_decrease", "monotonic_increase"), k=1, weights=(1-p_monotonic, p_monotonic/2, p_monotonic/2))[0]
+
     for row_index, l_borders, u_borders, row_mask in zip(row_indexes, low_borders, up_borders, masks):
         cur_row = chromosome_part[row_index]
         for col_index, current_amount, l_border, u_border in zip(col_indexes[row_mask], cur_row[:mut_part][row_mask],
                                                                  l_borders[row_mask], u_borders[row_mask]):
             # range new potential amount except current amount
-            choices = np.concatenate((np.arange(l_border, current_amount),
-                                      np.arange(current_amount + 1, u_border + 1)))
+            if (direction_type == "monotonic_increase") and current_amount != u_border:
+                choices = np.arange(current_amount + 1, u_border + 1)
+            elif (direction_type == "monotonic_decrease") and current_amount != l_border:
+                choices = np.arange(l_border, current_amount)
+            else:
+                choices = np.concatenate((np.arange(l_border, current_amount),
+                                          np.arange(current_amount + 1, u_border + 1)))
+
             # set weights to potential amounts based on their distance from the current one
             weights = 1 / np.abs(choices - current_amount)
             cur_row[col_index] = rand.choices(choices, weights=weights)[0]

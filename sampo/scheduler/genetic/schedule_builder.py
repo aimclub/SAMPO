@@ -236,11 +236,11 @@ def build_schedules_with_cache(wg: WorkGraph,
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
 
-        if generation <= 100:
+        if generation <= 50:
             current_offspring_type = next(off_iter)
         else:
             best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=15, last_gen=50)
-            current_offspring_type = rand.choices(best_perf, k=1)[0]
+            current_offspring_type = rand.choices(best_perf, k=1, weights=perf_weights)[0]
 
 
         rand.shuffle(pop)
@@ -402,10 +402,6 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
     if order_crossover == "skip" and resources_crossover == "skip":
         better_half = toolbox.select(population, k=len(population)//2)
         offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
-
-    elif resources_crossover == "expand_resources":
-        offspring = toolbox.expand_resources(population)
-
     else:
         copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
         offspring = []

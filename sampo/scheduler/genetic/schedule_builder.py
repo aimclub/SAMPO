@@ -209,6 +209,7 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
+        ind.age = 0
 
     hof.update(pop)
     fitness_history.update(pop, hof, pop, comment="first generation")
@@ -235,13 +236,27 @@ def build_schedules_with_cache(wg: WorkGraph,
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
+        # check
+        if not all(toolbox.validate(i) for i in pop):
+            raise Exception("Invalid chromosome found in the population")
 
-        if generation <= 50:
+        if generation <= 100:
             current_offspring_type = next(off_iter)
-        else:
-            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=15, last_gen=50)
-            current_offspring_type = rand.choices(best_perf, k=1, weights=perf_weights)[0]
+        elif generation == 101:
+            top_k = 20
+            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=top_k, last_gen=100)
+            best_perf = list(best_perf)
+            print(best_perf)
+            print(perf_weights)
+            best_mating_types_oversampled = []
+            for _ in range(100):
+                best_mating_types_oversampled.extend(rand.sample(best_perf, top_k))
 
+            best_mating_types_oversampled_iter = iter(best_mating_types_oversampled)
+            current_offspring_type = next(best_mating_types_oversampled_iter)
+
+        else:
+            current_offspring_type = next(best_mating_types_oversampled_iter)
 
         rand.shuffle(pop)
         offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_offspring_type)
@@ -249,11 +264,14 @@ def build_schedules_with_cache(wg: WorkGraph,
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = fit
+            ind.age = 0
         evaluation_time += time.time() - evaluation_start
 
         # renewing population
         offspring = get_only_new_fitness(pop, offspring)
         pop += offspring
+        pop = [ind for ind in pop if ind.age < 25]
+        print(len(pop))
         pop = toolbox.select(pop)
         hof.update(pop)
         fitness_history.update(pop, hof, offspring, comment=current_offspring_type)
@@ -261,6 +279,9 @@ def build_schedules_with_cache(wg: WorkGraph,
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
         plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
+        for ind in pop:
+            ind.age += 1
+        print(sorted([ind.age for ind in pop]))
 
         if have_deadline and best_fitness[0] <= deadline:
             if all([ind.fitness.values[0] <= deadline for ind in pop]):
@@ -380,9 +401,9 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
         -> list[Individual]:
 
     if mating_type is None:
-        pairing_type, order_crossover, resources_crossover, n_mutations = ("random_pairs", "two_point", "by_work", 1)
+        pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = ("random_pairs", "two_point", "by_work", 1, "classic")
     else:
-        pairing_type, order_crossover, resources_crossover, n_mutations = mating_type
+        pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = mating_type
 
     # create pairs for mating
     if pairing_type == "random_pairs":
@@ -391,7 +412,7 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
     elif pairing_type.startswith("phenotype_clusters_pairs"):
         n_clusters = int(pairing_type.split(":")[1])
         pairs = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters)
-    elif pairing_type == "no_pairs":
+    elif pairing_type == "no_pairs_1" or pairing_type == "no_pairs_2":
         pairs = None
     else:
         raise Exception(f"Unknown pairing type: {pairing_type}")
@@ -399,9 +420,25 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
     # mate
 
     # only mutations, so apply to better half
-    if order_crossover == "skip" and resources_crossover == "skip":
+    if order_crossover == "skip" and resources_crossover == "skip" and pairing_type == "no_pairs_2":
         better_half = toolbox.select(population, k=len(population)//2)
         offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
+
+    elif order_crossover == "skip" and resources_crossover == "skip" and pairing_type == "no_pairs_1":
+        offspring = [toolbox.copy_individual(i) for i in population]
+
+    elif order_crossover == "one_or_two_point":
+        copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
+        offspring = []
+        for i1_index, i2_index in pairs:
+            order_crossover_2 = rand.choice(["one_point", "two_point"])
+            offspring.extend(toolbox.mate(
+                copied_population[i1_index],
+                copied_population[i2_index],
+                optimize_resources,
+                order_crossover=order_crossover_2,
+                resources_crossover=resources_crossover
+            ))
     else:
         copied_population = [toolbox.copy_individual(i) for i in population]  # copy, just in case
         offspring = []
@@ -419,10 +456,10 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
         # apply mutations
         for mutant in offspring:
             # main mutations
-            toolbox.mutate(mutant)
+            toolbox.mutate(mutant, mutation_type=mutation_type)
             # resource borders mutation
             if optimize_resources:
-                toolbox.mutate_resource_borders(mutant)
+                toolbox.mutate_resource_borders(mutant, mutation_type=mutation_type)
 
     return offspring
 

@@ -166,17 +166,11 @@ def get_clustered_pairs(fitness_values, rand, n_clusters=7, return_groups=2):
     # create random pairs within clusters
     df["random"] = [rand.random() for _ in range(len(df))]
     index = df.sort_values(["mean_of_cluster", "random"]).index
+    return list(zip(index[0::2], index[1::2]))
 
-    if return_groups == 2:
-        return list(zip(index[0::2], index[1::2]))
-    else:
-        groups = []
-        while len(groups) < len(df):
-            try:
-                random_cluster = rand.randint(0, n_clusters-1)
-                g = rand.sample(list(df[df["cluster"] == random_cluster].index), return_groups)
-                groups.append(g)
-            except:
-                pass
-
-        return groups
+    # if return_groups == 2:
+    # else:
+    #     return list(zip(
+    #         rand.choices(list(df[df["cluster"] == 0].index), k=len(fitness_values)//2),
+    #         rand.choices(list(df[df["cluster"] == 1].index), k=len(fitness_values)//2)
+    #     ))

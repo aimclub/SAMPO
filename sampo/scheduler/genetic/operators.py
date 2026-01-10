@@ -464,7 +464,7 @@ def get_order_part(order: np.ndarray, other_order: np.ndarray) -> np.ndarray:
 
 
 def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Random,
-                          toolbox: Toolbox, priorities: np.ndarray, copy: bool = True, use_one_point_cross=False) -> tuple[Individual, Individual]:
+                          toolbox: Toolbox, priorities: np.ndarray, copy: bool = True, order_crossover="two_point") -> tuple[Individual, Individual]:
     """
     Two-Point crossover for order.
 
@@ -479,15 +479,18 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
     """
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
 
-    def mate_parts(part1, part2, use_one_point_cross=False):
+    def mate_parts(part1, part2, order_crossover="two_point"):
         parent1 = part1.copy()
         min_mating_amount = len(part1) // 4
-        if use_one_point_cross:
+        if order_crossover == "one_point":
             one_point_order_crossover(part1, part2, min_mating_amount, rand)
             one_point_order_crossover(part2, parent1, min_mating_amount, rand)
-        else:
+        elif order_crossover == "two_point":
             two_point_order_crossover(part1, part2, min_mating_amount, rand)
             two_point_order_crossover(part2, parent1, min_mating_amount, rand)
+        elif order_crossover == "shuffle":
+            shuffle_order(part1, part2, min_mating_amount, rand)
+            shuffle_order(part2, parent1, min_mating_amount, rand)
 
     order1, order2 = child1[0], child2[0]
 
@@ -499,8 +502,8 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
     for i in range(len(order1)):
         if priorities[order1[i]] != cur_priority:
             cur_priority = priorities[order1[i]]
-            mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i], use_one_point_cross=use_one_point_cross)
-    mate_parts(order1[cur_priority_group_start:], order2[cur_priority_group_start:], use_one_point_cross=use_one_point_cross)
+            mate_parts(order1[cur_priority_group_start:i], order2[cur_priority_group_start:i], order_crossover=order_crossover)
+    mate_parts(order1[cur_priority_group_start:], order2[cur_priority_group_start:], order_crossover=order_crossover)
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
@@ -537,6 +540,26 @@ def one_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_m
     if crossover_point > 1:
         ind_new_part = get_order_part(child[:crossover_point], other_parent)
         child[crossover_point:] = ind_new_part
+    return child
+
+
+def shuffle_order(child: np.ndarray, other_parent: np.ndarray, min_mating_amount: int, rand: random.Random):
+    mating_amount = rand.uniform(0.25, 0.75)
+
+    def _find_first_new(array, old_values):
+        for value in array:
+            if value not in old_values:
+                return value
+
+    result = []
+    while len(result) < len(child):
+        if rand.random() < mating_amount:
+            next_to_add = _find_first_new(child, result)
+        else:
+            next_to_add = _find_first_new(other_parent, result)
+        result.append(next_to_add)
+
+    child[:] = result
     return child
 
 
@@ -752,9 +775,48 @@ def mate_resources_5(ind1: Individual, ind2: Individual, rand: random.Random,
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
+def mate_resources_6(ind1: Individual, ind2: Individual, rand: random.Random,
+                   optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+    """
+    One-Point crossover for resources.
+
+    :param ind1: first individual
+    :param ind2: second individual
+    :param optimize_resources: if True resource borders should be changed after mating
+    :param rand: the rand object used for randomized operations
+    :param copy: if True individuals will be copied before mating so as not to change them
+    :param toolbox: toolbox
+
+    :return: two mated individuals
+    """
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+
+    res1, res2 = child1[1], child2[1]
+    num_works = len(res1)
+    min_mating_amount = num_works // 4
+
+    cxpoint = rand.randint(min_mating_amount, num_works - min_mating_amount)
+    mate_positions_1 = [work_id for i, work_id in enumerate(child1[0]) if i > cxpoint]
+    mate_positions_2 = [work_id for i, work_id in enumerate(child2[0]) if i > cxpoint]
+
+    res1[mate_positions_1], res2[mate_positions_2] = res2[mate_positions_1], res1[mate_positions_2]
+
+    if optimize_resources:
+        for i in range(len(res1)):
+            for j in range(len(res1[0])-1):
+                contractor = child1[1][i][-1]
+                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
+
+                contractor = child2[1][i][-1]
+                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
 def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
                      resources_border: np.ndarray,
-                     contractors_available: np.ndarray) -> Individual:
+                     contractors_available: np.ndarray,
+                     mutation_type="classic") -> Individual:
     """
     Mutation function for resources.
     It changes selected numbers of workers in random work in a certain interval for this work.
@@ -825,7 +887,7 @@ def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
 
     # make mutation of resources
     mutate_values(res, works_indexes[mask], res_indexes, res_low_borders[mask],
-                  res_up_borders[mask], masks[mask], -1, rand)
+                  res_up_borders[mask], masks[mask], -1, rand, mutation_type)
 
     return ind
 
@@ -858,24 +920,24 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
         child1 = toolbox.copy_individual(ind1)
         child2 = toolbox.copy_individual(ind2)
     else:
-        use_one_point_cross = (order_crossover == "one_point")
-        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, use_one_point_cross=use_one_point_cross)
+        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, order_crossover=order_crossover)
 
 
 
     if resources_crossover == "skip":
         pass
+    elif resources_crossover == "by_work":
+        child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
     elif resources_crossover == "by_worker":
         child1, child2 = mate_resources_2(child1, child2, rand, optimize_resources, toolbox, copy=False)
     elif resources_crossover == "shuffle":
         child1, child2 = mate_resources_3(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "by_work":
-        child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
     elif resources_crossover == "weighted":
         child1, child2 = mate_resources_4(child1, child2, rand, optimize_resources, toolbox, copy=False)
     elif resources_crossover == "min_max":
         child1, child2 = mate_resources_5(child1, child2, rand, optimize_resources, toolbox, copy=False)
-
+    elif resources_crossover == "by_order":
+        child1, child2 = mate_resources_6(child1, child2, rand, optimize_resources, toolbox, copy=False)
 
     else:
         raise Exception(f"Unknown mating type for resources: {resources_crossover}")
@@ -889,7 +951,7 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
 def mutate(ind: Individual, resources_border: np.ndarray, contractors_available: np.ndarray,
            parents: dict[int, set[int]], children: dict[int, set[int]], statuses_available: int,
            priorities: np.ndarray, order_mutpb: float, res_mutpb: float, zone_mutpb: float,
-           rand: random.Random) -> Individual:
+           rand: random.Random, mutation_type="classical") -> Individual:
     """
     Combined mutation function of mutation for order, mutation for resources and mutation for zones.
 
@@ -906,7 +968,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, contractors_available:
     :return: mutated individual
     """
     mutant = mutate_scheduling_order(ind, order_mutpb, rand, priorities, parents, children)
-    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available)
+    mutant = mutate_resources(mutant, res_mutpb, rand, resources_border, contractors_available, mutation_type)
     # TODO Make better mutation for zones and uncomment this
     # mutant = mutate_for_zones(mutant, statuses_available, zone_mutpb, rand)
 
@@ -914,7 +976,7 @@ def mutate(ind: Individual, resources_border: np.ndarray, contractors_available:
 
 
 def mutate_resource_borders(ind: Individual, mutpb: float, rand: random.Random,
-                            contractor_borders: np.ndarray) -> Individual:
+                            contractor_borders: np.ndarray, mutation_type="classic") -> Individual:
     """
     Mutation function for contractors' resource borders.
 
@@ -959,32 +1021,45 @@ def mutate_resource_borders(ind: Individual, mutpb: float, rand: random.Random,
     # make mutation of resource borders
     mutate_values(borders, contractors[mask], res_indexes,
                   contractor_low_borders[mask], contractor_up_borders[mask],
-                  masks[mask], len(res_indexes), rand)
+                  masks[mask], len(res_indexes), rand, mutation_type)
 
     return ind
 
 
 def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_indexes: np.ndarray,
                   low_borders: np.ndarray, up_borders: np.ndarray, masks: np.ndarray, mut_part: int,
-                  rand: random.Random, p_monotonic=0.2) -> None:
+                  rand: random.Random, mutation_type="classic") -> None:
     """
     Changes numeric values in m x n part of chromosome.
     This function is needed to make mutation for resources and resource borders.
     """
-    direction_type = rand.choices(("random", "monotonic_decrease", "monotonic_increase"), k=1, weights=(1-p_monotonic, p_monotonic/2, p_monotonic/2))[0]
+    if mutation_type == "resources_monotonic":
+        r_mutation_type = rand.choice(["monotonic_increase", "monotonic_decrease"])
+    else:
+        r_mutation_type = "classic"
 
     for row_index, l_borders, u_borders, row_mask in zip(row_indexes, low_borders, up_borders, masks):
         cur_row = chromosome_part[row_index]
         for col_index, current_amount, l_border, u_border in zip(col_indexes[row_mask], cur_row[:mut_part][row_mask],
                                                                  l_borders[row_mask], u_borders[row_mask]):
             # range new potential amount except current amount
-            if (direction_type == "monotonic_increase") and current_amount != u_border:
+            if mutation_type == "inverse_resources":
+                inversed_resource = u_border - (current_amount - l_border)
+                if inversed_resource == current_amount:
+                    choices = np.concatenate((np.arange(l_border, current_amount),
+                                              np.arange(current_amount + 1, u_border + 1)))
+                else:
+                    choices = np.array([inversed_resource])
+
+            elif (r_mutation_type == "monotonic_increase") and current_amount != u_border:
                 choices = np.arange(current_amount + 1, u_border + 1)
-            elif (direction_type == "monotonic_decrease") and current_amount != l_border:
+            elif (r_mutation_type == "monotonic_decrease") and current_amount != l_border:
                 choices = np.arange(l_border, current_amount)
-            else:
+            elif r_mutation_type == "classic" or (current_amount == u_border or current_amount == l_border):
                 choices = np.concatenate((np.arange(l_border, current_amount),
                                           np.arange(current_amount + 1, u_border + 1)))
+            else:
+                raise Exception(f"Unknown mutation type: {mutation_type}")
 
             # set weights to potential amounts based on their distance from the current one
             weights = 1 / np.abs(choices - current_amount)
@@ -1041,3 +1116,20 @@ def mutate_for_zones(ind: Individual, mutpb: float, rand: random.Random, statuse
         zones[mask] = new_zones
 
     return ind
+
+
+
+
+
+
+class PairingTypes:
+    pass
+
+class OrderCrossoverTypes:
+    pass
+
+class ResourcesCrossoverTypes:
+    pass
+
+class MutationTypes:
+    pass

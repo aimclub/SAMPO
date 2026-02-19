@@ -28,6 +28,8 @@ class FitnessHistory:
             "population_fitness": [i.fitness.values for i in population],
             "pareto_front_fitness": [i.fitness.values for i in pareto_front],
             "offsprings_fitness": [i.fitness.values for i in offsprings],
+            "population_age": [getattr(i, "age", -1) for i in population],
+            "pareto_front_age": [getattr(i, "age", -1) for i in pareto_front],
             "comment": comment
         })
 
@@ -50,6 +52,8 @@ class FitnessHistorySummary:
         self.population_history = [generation["population_fitness"] for generation in history]
         self.pareto_front_history = [generation["pareto_front_fitness"] for generation in history]
         self.offsprings_history = [generation["offsprings_fitness"] for generation in history]
+        self.population_age = [generation.get("population_age") for generation in history]
+        self.pareto_front_age = [generation.get("pareto_front_age") for generation in history]
         self.comments = [generation["comment"] for generation in history]
 
     @classmethod
@@ -72,6 +76,16 @@ class FitnessHistorySummary:
         return [
             np.mean(fitness_values, axis=0)
             for fitness_values in data
+        ]
+
+    # --
+    # --
+    def get_age_means(self, only_pareto: bool = False):
+        """Average age for population"""
+        data = self.pareto_front_age if only_pareto else self.population_age
+        return [
+            np.mean(age_values, axis=0)
+            for age_values in data
         ]
 
     # be careful if selection method is not truncation selection

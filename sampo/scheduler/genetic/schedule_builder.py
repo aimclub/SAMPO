@@ -8,7 +8,7 @@ from sampo.api.genetic_api import Individual
 from sampo.base import SAMPO
 from sampo.scheduler.genetic.converter import convert_schedule_to_chromosome, ScheduleGenerationScheme
 from sampo.scheduler.genetic.operators import init_toolbox, ChromosomeType, FitnessFunction, TimeFitness
-from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, get_only_new_fitness, get_clustered_pairs
+from sampo.scheduler.genetic.utils import prepare_optimized_data_structures, get_pairs, get_only_new_fitness, increment_and_check_age, GenerationSettingsManager
 from sampo.scheduler.timeline.base import Timeline
 from sampo.schemas.contractor import Contractor
 from sampo.schemas.graph import GraphNode, WorkGraph
@@ -17,7 +17,7 @@ from sampo.schemas.schedule import ScheduleWorkDict, Schedule
 from sampo.schemas.schedule_spec import ScheduleSpec
 from sampo.schemas.time import Time
 from sampo.schemas.time_estimator import WorkTimeEstimator, DefaultWorkEstimator
-from sampo.scheduler.utils.fitness_history import FitnessHistory, FitnessHistorySummary
+from sampo.scheduler.utils.fitness_history import FitnessHistory
 
 
 def create_toolbox(wg: WorkGraph,
@@ -114,7 +114,7 @@ def build_schedules(wg: WorkGraph,
                     deadline: Time | None = None,
                     only_lft_initialization: bool = False,
                     is_multiobjective: bool = False,
-                    offspring_types_list: list[str] | None = None,
+                    settings_for_each_generation: list[str] | None = None,
                     save_history_to: str | None = None) \
         -> list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]]:
     return build_schedules_with_cache(wg, contractors, population_size, generation_number,
@@ -123,7 +123,7 @@ def build_schedules(wg: WorkGraph,
                                       fitness_weights, work_estimator, sgs_type, assigned_parent_time,
                                       timeline, time_border, max_plateau_steps, optimize_resources,
                                       deadline, only_lft_initialization, is_multiobjective,
-                                      offspring_types_list, save_history_to)[0]
+                                      settings_for_each_generation, save_history_to)[0]
 
 
 def build_schedules_with_cache(wg: WorkGraph,
@@ -151,7 +151,7 @@ def build_schedules_with_cache(wg: WorkGraph,
                                deadline: Time | None = None,
                                only_lft_initialization: bool = False,
                                is_multiobjective: bool = False,
-                               offspring_types_list: list[str] | None = None,
+                               settings_for_each_generation: list[str] | None = None,
                                save_history_to: str | None = None) \
         -> tuple[list[tuple[ScheduleWorkDict, Time, Timeline, list[GraphNode]]], list[ChromosomeType]]:
     """
@@ -197,10 +197,13 @@ def build_schedules_with_cache(wg: WorkGraph,
     else:
         pop = [toolbox.Individual(chromosome) for chromosome in pop]
 
-    evaluation_start = time.time()
 
     hof = tools.ParetoFront(similar=compare_individuals)
     fitness_history = FitnessHistory()
+    settings_manager = GenerationSettingsManager(settings_for_each_generation)
+
+
+    evaluation_start = time.time()
 
     # map to each individual fitness function
     fitness = SAMPO.backend.compute_chromosomes(fitness_f, pop)
@@ -209,7 +212,6 @@ def build_schedules_with_cache(wg: WorkGraph,
 
     for ind, fit in zip(pop, fitness):
         ind.fitness.values = fit
-        ind.age = 0
 
     hof.update(pop)
     fitness_history.update(pop, hof, pop, comment="first generation")
@@ -224,64 +226,45 @@ def build_schedules_with_cache(wg: WorkGraph,
     new_generation_number = generation_number if not have_deadline else generation_number // 2
     new_max_plateau_steps = max_plateau_steps if max_plateau_steps is not None else new_generation_number
 
-    # if offspring_types_list is None:
-    #     offspring_types_list = generation_number * ["classical"]
-    # offspring_types_list = iter(offspring_types_list)
-
-
-
-    off_iter = iter(offspring_types_list)
-
 
     while generation <= new_generation_number and plateau_steps < new_max_plateau_steps \
             and (time_border is None or time.time() - global_start < time_border):
         SAMPO.logger.info(f'-- Generation {generation}, population={len(pop)}, best fitness={best_fitness} --')
-        # check
+
+        # check if we broke something
         if not all(toolbox.validate(i) for i in pop):
             raise Exception("Invalid chromosome found in the population")
 
-        if generation <= 100:
-            current_offspring_type = next(off_iter)
-        elif generation == 101:
-            top_k = 20
-            best_perf, perf_weights = FitnessHistorySummary(fitness_history.history).get_best_performing_types(top_k=top_k, last_gen=100)
-            best_perf = list(best_perf)
-            print(best_perf)
-            print(perf_weights)
-            best_mating_types_oversampled = []
-            for _ in range(100):
-                best_mating_types_oversampled.extend(rand.sample(best_perf, top_k))
-
-            best_mating_types_oversampled_iter = iter(best_mating_types_oversampled)
-            current_offspring_type = next(best_mating_types_oversampled_iter)
-
-        else:
-            current_offspring_type = next(best_mating_types_oversampled_iter)
+        current_generation_settings = settings_manager.get_next_settings(fitness_history.history)
+        print(current_generation_settings)
 
         rand.shuffle(pop)
-        offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_offspring_type)
+        offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_generation_settings)
         evaluation_start = time.time()
         offspring_fitness = SAMPO.backend.compute_chromosomes(fitness_f, offspring)
         for ind, fit in zip(offspring, offspring_fitness):
             ind.fitness.values = fit
-            ind.age = 0
         evaluation_time += time.time() - evaluation_start
 
         # renewing population
-        offspring = get_only_new_fitness(pop, offspring)
+
+        use_pre_selection = True
+        if use_pre_selection:
+            offspring = get_only_new_fitness(pop, offspring)
+
         pop += offspring
-        pop = [ind for ind in pop if ind.age < 25]
-        print(len(pop))
+
+        # update age
+        MAX_AGE = 25
+        pop = increment_and_check_age(pop, max_age=MAX_AGE)
+
         pop = toolbox.select(pop)
         hof.update(pop)
-        fitness_history.update(pop, hof, offspring, comment=current_offspring_type)
+        fitness_history.update(pop, hof, offspring, comment=current_generation_settings)
 
         prev_best_fitness = best_fitness
         best_fitness = hof[0].fitness.values
         plateau_steps = plateau_steps + 1 if best_fitness == prev_best_fitness else 0
-        for ind in pop:
-            ind.age += 1
-        print(sorted([ind.age for ind in pop]))
 
         if have_deadline and best_fitness[0] <= deadline:
             if all([ind.fitness.values[0] <= deadline for ind in pop]):
@@ -400,22 +383,10 @@ def build_schedules_with_cache(wg: WorkGraph,
 def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, mating_type=None) \
         -> list[Individual]:
 
-    if mating_type is None:
-        pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = ("random_pairs", "two_point", "by_work", 1, "classic")
-    else:
-        pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = mating_type
+    pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = mating_type
 
     # create pairs for mating
-    if pairing_type == "random_pairs":
-        index = list(range(len(population)))
-        pairs = zip(index[0::2], index[1::2])
-    elif pairing_type.startswith("phenotype_clusters_pairs"):
-        n_clusters = int(pairing_type.split(":")[1])
-        pairs = get_clustered_pairs([i.fitness.values for i in population], rand, n_clusters=n_clusters)
-    elif pairing_type == "no_pairs_1" or pairing_type == "no_pairs_2":
-        pairs = None
-    else:
-        raise Exception(f"Unknown pairing type: {pairing_type}")
+    pairs = get_pairs(pairing_type, population, rand)
 
     # mate
 
@@ -463,12 +434,12 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
 
     return offspring
 
-
 def compare_individuals(first: ChromosomeType, second: ChromosomeType) -> bool:
     """Decide if two individuals are 'similar enough' for the Pareto front"""
-    same_fitness = first.fitness == second.fitness
-    same_genomes = all(
+    same_phenotype = first.fitness == second.fitness
+    parts_ids_to_compare = (0, 1, 2)
+    same_genotype = all(
         (first[i] == second[i]).all()
-        for i in (0, 1, 2)
+        for i in parts_ids_to_compare
     )
-    return same_fitness or same_genomes
+    return same_phenotype or same_genotype

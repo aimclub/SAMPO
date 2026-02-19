@@ -3,6 +3,7 @@ import random
 from copy import deepcopy
 from operator import attrgetter
 from typing import Callable, Iterable
+from enum import Enum, auto
 
 import numpy as np
 from deap import base, tools
@@ -138,6 +139,22 @@ class TimeAndResourcesFitness(FitnessFunction):
         if schedule is None:
             return Time.inf().value, Time.inf().value
         return schedule.execution_time.value, resources_peaks_sum(schedule, self._resources_names)
+
+
+class TimeAndCostFitness(FitnessFunction):
+    """
+    Bi-objective fitness function of finish time and sum of resources peaks.
+    """
+
+    def __init__(self, resources_names: Iterable[str] | None = None):
+        self._resources_names = list(resources_names) if resources_names is not None else None
+
+    def evaluate(self, chromosome: ChromosomeType, evaluator: Callable[[ChromosomeType], Schedule]) \
+            -> tuple[int, int]:
+        schedule = evaluator(chromosome)
+        if schedule is None:
+            return Time.inf().value, Time.inf().value
+        return schedule.execution_time.value, resources_costs_sum(schedule, self._resources_names)
 
 
 def init_toolbox(wg: WorkGraph,
@@ -479,18 +496,34 @@ def mate_scheduling_order(ind1: Individual, ind2: Individual, rand: random.Rando
     """
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
 
-    def mate_parts(part1, part2, order_crossover="two_point"):
+    if order_crossover == OrderCrossovers.SKIP:
+        child1 = toolbox.copy_individual(ind1)
+        child2 = toolbox.copy_individual(ind2)
+        return child1, child2
+
+    # elif order_crossover == OrderCrossovers.SWAP:
+    #     child1 = toolbox.copy_individual(ind1)
+    #     child2 = toolbox.copy_individual(ind2)
+    #     # only swap order part between them
+    #     child1[0][:], child2[0][:] = child2[0][:], child1[0][:]
+    #     return toolbox.Individual(child1), toolbox.Individual(child2)
+
+    def mate_parts(part1, part2, order_crossover=OrderCrossovers.TWO_POINT):
         parent1 = part1.copy()
         min_mating_amount = len(part1) // 4
-        if order_crossover == "one_point":
-            one_point_order_crossover(part1, part2, min_mating_amount, rand)
-            one_point_order_crossover(part2, parent1, min_mating_amount, rand)
-        elif order_crossover == "two_point":
-            two_point_order_crossover(part1, part2, min_mating_amount, rand)
-            two_point_order_crossover(part2, parent1, min_mating_amount, rand)
-        elif order_crossover == "shuffle":
-            shuffle_order(part1, part2, min_mating_amount, rand)
-            shuffle_order(part2, parent1, min_mating_amount, rand)
+
+        name_to_order_crossover = {
+            OrderCrossovers.ONE_POINT: one_point_order_crossover,
+            OrderCrossovers.TWO_POINT: two_point_order_crossover,
+            OrderCrossovers.THREE_POINT: three_point_order_crossover
+        }
+        if order_crossover not in name_to_order_crossover:
+            raise Exception(f"Unknown order crossover type: {order_crossover}")
+
+        crossover_function = name_to_order_crossover[order_crossover]
+        crossover_function(part1, part2, min_mating_amount, rand)
+        crossover_function(part2, parent1, min_mating_amount, rand)
+
 
     order1, order2 = child1[0], child2[0]
 
@@ -540,6 +573,31 @@ def one_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_m
     if crossover_point > 1:
         ind_new_part = get_order_part(child[:crossover_point], other_parent)
         child[crossover_point:] = ind_new_part
+    return child
+
+
+def three_point_order_crossover(child: np.ndarray, other_parent: np.ndarray, min_mating_amount: int, rand: random.Random):
+    """
+    if child is '-' and other is '=', p is crossover points, then
+    [[----------==========----------==========]]
+               p1        p2        p3
+    """
+    offset = min_mating_amount // 3  # 3 because then overall inheritance is within [25%-75%]
+    crossover_point_1 = 1 * min_mating_amount + rand.randint(-offset, offset)
+    crossover_point_2 = 2 * min_mating_amount + rand.randint(-offset, offset)
+    crossover_point_3 = 3 * min_mating_amount + rand.randint(-offset, offset)
+
+    result = -np.ones(len(child))
+
+    result[:crossover_point_1] = child[:crossover_point_1]
+    result[crossover_point_1:crossover_point_2] = get_order_part(result[:crossover_point_1], other_parent)[:crossover_point_2-crossover_point_1]
+    result[crossover_point_2:crossover_point_3] = get_order_part(result[:crossover_point_2], child)[:crossover_point_3-crossover_point_2]
+    result[crossover_point_3:] = get_order_part(result[:crossover_point_3], other_parent)
+
+    if not (result >= 0).all():
+        raise Exception('3-point crossover contains error')
+
+    child[:] = result[:]
     return child
 
 
@@ -647,7 +705,7 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
     return ind
 
 
-def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
+def mate_resources_1(ind1: Individual, ind2: Individual, rand: random.Random,
                    optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     One-Point crossover for resources.
@@ -683,13 +741,28 @@ def mate_resources(ind1: Individual, ind2: Individual, rand: random.Random,
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
+def get_checked_contractor_limits_part(resource_part, contractor_part):
+    n_works = resource_part.shape[0]
+    n_workers = resource_part.shape[1] - 1
+
+    for work_id in range(n_works):
+        for worker_id in range(n_workers):
+
+            contractor = resource_part[work_id, -1]
+            contractor_part[contractor, worker_id] = max(
+                contractor_part[contractor, worker_id],
+                resource_part[work_id, worker_id]
+            )
+    return contractor_part
+
+
 def mate_resources_2(ind1: Individual, ind2: Individual, rand: random.Random,
                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
 
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
     res1, res2 = child1[1], child2[1]
 
-    num_workers = len(res1[0])
+    num_workers = len(res1[1]) - 1
     min_mating_amount = num_workers // 4
     cxpoint = rand.randint(min_mating_amount, num_workers - min_mating_amount)
     mate_positions = rand.sample(range(num_workers), cxpoint)
@@ -697,13 +770,8 @@ def mate_resources_2(ind1: Individual, ind2: Individual, rand: random.Random,
     res1[:, mate_positions], res2[:, mate_positions] = res2[:, mate_positions], res1[:, mate_positions]
 
     if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = child1[1][i][-1]
-                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
-
-                contractor = child2[1][i][-1]
-                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
@@ -714,42 +782,52 @@ def mate_resources_3(ind1: Individual, ind2: Individual, rand: random.Random,
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
     res1, res2 = child1[1], child2[1]
     change_probability = rand.uniform(0.25, 0.75)
+    n_works, n_workers = res1.shape
 
-    for i in range(len(res1)):
-        for j in range(len(res1[0])):
+    for i in range(n_works):
+        for j in range(n_workers):
             if rand.random() < change_probability:
-                res1[i][j], res2[i][j] = res2[i][j], res1[i][j]
+                res1[i, j], res2[i, j] = res2[i, j], res1[i, j]
 
     if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = child1[1][i][-1]
-                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
-
-                contractor = child2[1][i][-1]
-                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
+def mate_resources_7(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1], child2[1]
+    change_probability = rand.uniform(0.01, 0.05)
+    n_works, n_workers = res1.shape
+
+    for i in range(n_works):
+        for j in range(n_workers):
+            if rand.random() < change_probability:
+                res1[i, j], res2[i, j] = res2[i, j], res1[i, j]
+
+    if optimize_resources:
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
 
 def mate_resources_4(ind1: Individual, ind2: Individual, rand: random.Random,
                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
 
     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
     res1, res2 = child1[1].copy(), child2[1].copy()
+    data_type = res1.dtype
     change_weight = rand.uniform(0.25, 0.75)
 
-    child1[1][:] = (res1 * change_weight + res2 * (1-change_weight)).round().astype(res1.dtype)
-    child2[1][:] = (res2 * change_weight + res1 * (1-change_weight)).round().astype(res1.dtype)
+    child1[1][:] = (res1 * change_weight + res2 * (1-change_weight)).round().astype(data_type)
+    child2[1][:] = (res2 * change_weight + res1 * (1-change_weight)).round().astype(data_type)
 
     if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = child1[1][i][-1]
-                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
-
-                contractor = child2[1][i][-1]
-                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
@@ -764,19 +842,14 @@ def mate_resources_5(ind1: Individual, ind2: Individual, rand: random.Random,
     child2[1][:] = np.min([res1, res2], axis=0)
 
     if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = child1[1][i][-1]
-                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
-
-                contractor = child2[1][i][-1]
-                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 
 def mate_resources_6(ind1: Individual, ind2: Individual, rand: random.Random,
-                   optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     One-Point crossover for resources.
 
@@ -802,15 +875,32 @@ def mate_resources_6(ind1: Individual, ind2: Individual, rand: random.Random,
     res1[mate_positions_1], res2[mate_positions_2] = res2[mate_positions_1], res1[mate_positions_2]
 
     if optimize_resources:
-        for i in range(len(res1)):
-            for j in range(len(res1[0])-1):
-                contractor = child1[1][i][-1]
-                child1[2][contractor][j] = max(child1[2][contractor][j], child1[1][i][j])
-
-                contractor = child2[1][i][-1]
-                child2[2][contractor][j] = max(child2[2][contractor][j], child2[1][i][j])
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False, resources_crossover=None):
+    if resources_crossover == ResourcesCrossovers.SKIP:
+        return child1, child2
+
+    # send this to enum
+    name_to_crossover_function = {
+        ResourcesCrossovers.BY_WORK: mate_resources_1,
+        ResourcesCrossovers.BY_WORKER: mate_resources_2,
+        ResourcesCrossovers.SHUFFLE: mate_resources_3,
+        ResourcesCrossovers.WEIGHTED: mate_resources_4,
+        ResourcesCrossovers.MIN_MAX: mate_resources_5,
+        ResourcesCrossovers.BY_ORDER: mate_resources_6
+    }
+    if resources_crossover not in name_to_crossover_function:
+        raise Exception(f"Unknown mating type for resources: {resources_crossover}")
+
+
+    crossover_function = name_to_crossover_function[resources_crossover]
+    child1, child2 = crossover_function(child1, child2, rand, optimize_resources, toolbox, copy=False)
+    return child1, child2
 
 
 def mutate_resources(ind: Individual, mutpb: float, rand: random.Random,
@@ -905,42 +995,12 @@ def mate(ind1: Individual, ind2: Individual, optimize_resources: bool,
     :param rand: the rand object used for randomized operations
     :param priorities: priorities
     :param toolbox: toolbox
-    :param only_swap_parts: if True, only swap order of jobs
 
     :return: two mated individuals
     """
-    if (order_crossover == "swap_parts") or (resources_crossover == "swap_parts"):
-        child1 = toolbox.copy_individual(ind1)
-        child2 = toolbox.copy_individual(ind2)
-        # only swap order part between them
-        child1[0][:], child2[0][:] = child2[0][:], child2[0][:]
-        return toolbox.Individual(child1), toolbox.Individual(child2)
 
-    if order_crossover == "skip":
-        child1 = toolbox.copy_individual(ind1)
-        child2 = toolbox.copy_individual(ind2)
-    else:
-        child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, order_crossover=order_crossover)
-
-
-
-    if resources_crossover == "skip":
-        pass
-    elif resources_crossover == "by_work":
-        child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "by_worker":
-        child1, child2 = mate_resources_2(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "shuffle":
-        child1, child2 = mate_resources_3(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "weighted":
-        child1, child2 = mate_resources_4(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "min_max":
-        child1, child2 = mate_resources_5(child1, child2, rand, optimize_resources, toolbox, copy=False)
-    elif resources_crossover == "by_order":
-        child1, child2 = mate_resources_6(child1, child2, rand, optimize_resources, toolbox, copy=False)
-
-    else:
-        raise Exception(f"Unknown mating type for resources: {resources_crossover}")
+    child1, child2 = mate_scheduling_order(ind1, ind2, rand, toolbox, priorities, copy=True, order_crossover=order_crossover)
+    child1, child2 = mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False, resources_crossover=resources_crossover)
 
     # TODO Make better crossover for zones and uncomment this
     # child1, child2 = mate_for_zones(child1, child2, rand, copy=False)
@@ -1043,15 +1103,7 @@ def mutate_values(chromosome_part: np.ndarray, row_indexes: np.ndarray, col_inde
         for col_index, current_amount, l_border, u_border in zip(col_indexes[row_mask], cur_row[:mut_part][row_mask],
                                                                  l_borders[row_mask], u_borders[row_mask]):
             # range new potential amount except current amount
-            if mutation_type == "inverse_resources":
-                inversed_resource = u_border - (current_amount - l_border)
-                if inversed_resource == current_amount:
-                    choices = np.concatenate((np.arange(l_border, current_amount),
-                                              np.arange(current_amount + 1, u_border + 1)))
-                else:
-                    choices = np.array([inversed_resource])
-
-            elif (r_mutation_type == "monotonic_increase") and current_amount != u_border:
+            if (r_mutation_type == "monotonic_increase") and current_amount != u_border:
                 choices = np.arange(current_amount + 1, u_border + 1)
             elif (r_mutation_type == "monotonic_decrease") and current_amount != l_border:
                 choices = np.arange(l_border, current_amount)
@@ -1118,18 +1170,24 @@ def mutate_for_zones(ind: Individual, mutpb: float, rand: random.Random, statuse
     return ind
 
 
+class OrderCrossovers:
+    SKIP = "SKIP"        # not performing order crossover (for only mutations)
+    ONE_POINT = "ONE_POINT"  # fill works after the point from second parent
+    TWO_POINT = "TWO_POINT"   # fill works between two points from second parent
+    THREE_POINT = "THREE_POINT"
+    # SHUFFLE = "SHUFFLE"     # for each choice, flip a coin to get next work from first or second parent
+    # SWAP = "SWAP"  # swap order parts between two parents
 
+class ResourcesCrossovers:
+    SKIP = "SKIP"            # not performing resource crossover (for only mutations)
+    BY_WORK = "BY_WORK"      # shuffle works (preserves rows)
+    BY_WORKER = "BY_WORKER"  # shuffle workers (preserves columns)
+    SHUFFLE = "SHUFFLE"      # shuffle works and workers (preserves nothing)
+    WEIGHTED = "WEIGHTED"    # get weighted average between first and second parent
+    MIN_MAX = "MIN_MAX"      # first child gets max of resources from parents, second gets min
+    BY_ORDER = "BY_ORDER"    # shuffle works (preserves rows), but also based on order in activity list
 
-
-
-class PairingTypes:
-    pass
-
-class OrderCrossoverTypes:
-    pass
-
-class ResourcesCrossoverTypes:
-    pass
-
-class MutationTypes:
-    pass
+# class MutationTypes:
+#     SKIP = "SKIP"                                # not performing mutations (for only crossover with small changes)
+#     CLASSIC = "CLASSIC"                          # classical mutations
+#     RESOURCES_MONOTONIC = "RESOURCES_MONOTONIC"  # only increase or only decrease values for all resources

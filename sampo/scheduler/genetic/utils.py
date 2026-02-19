@@ -1,5 +1,7 @@
 import random
 from operator import attrgetter
+from enum import Enum, auto
+from itertools import cycle
 
 import numpy as np
 import pandas as pd
@@ -12,6 +14,8 @@ from sampo.scheduler.genetic.operators import init_toolbox
 from sampo.scheduler.utils import get_worker_contractor_pool, get_head_nodes_with_connections_mappings
 from sampo.schemas import WorkGraph, Contractor, Schedule, GraphNode, LandscapeConfiguration, WorkTimeEstimator, Time
 from sampo.schemas.schedule_spec import ScheduleSpec
+
+from sampo.scheduler.utils.fitness_history import FitnessHistorySummary
 
 
 def init_chromosomes_f(wg: WorkGraph,
@@ -138,18 +142,51 @@ def create_toolbox_using_cached_chromosomes(wg: WorkGraph,
                         is_multiobjective)
 
 
-def get_only_new_fitness(old_population, candidates):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def increment_and_check_age(population, max_age):
+    for i in population:
+        i.increment_age()
+
+    if max_age is not None:
+        new_population = [
+            i for i in population
+            if not i.age > max_age
+        ]
+
+    n_removed = len(population) - len(new_population)
+    print(f"{n_removed} genomes were removed due to age limit")
+    return new_population
+
+
+def get_only_new_fitness(old_population, offsprings):
     known_fitness = [i.fitness.values for i in old_population]
     new_fitness_population = []
-    for i in candidates:
+    for i in offsprings:
         if i.fitness.values not in known_fitness:
             new_fitness_population.append(i)
             known_fitness.append(i.fitness.values)
 
+    n_removed = len(offsprings) - len(new_fitness_population)
+    print(f"{n_removed} genomes were removed due to same phenotype")
     return new_fitness_population
 
 
-def get_clustered_pairs(fitness_values, rand, n_clusters=7, return_groups=2):
+
+def get_clustered_pairs(n_clusters, fitness_values, rand):
     df = pd.DataFrame(fitness_values)
     # create clusters
     cluster_model = sklearn.cluster.KMeans(n_clusters=n_clusters, random_state=1234)
@@ -168,9 +205,63 @@ def get_clustered_pairs(fitness_values, rand, n_clusters=7, return_groups=2):
     index = df.sort_values(["mean_of_cluster", "random"]).index
     return list(zip(index[0::2], index[1::2]))
 
-    # if return_groups == 2:
-    # else:
-    #     return list(zip(
-    #         rand.choices(list(df[df["cluster"] == 0].index), k=len(fitness_values)//2),
-    #         rand.choices(list(df[df["cluster"] == 1].index), k=len(fitness_values)//2)
-    #     ))
+
+class PairingTypes:
+    NULL = "NULL"                # no pairs needed (for applying only mutations)
+    RANDOM = "RANDOM"              # create random pairs from population
+    PHENOTYPE_CLUSTERS = "PHENOTYPE_CLUSTERS"  # create clusters of fitness values, then create random pairs inside clusters
+
+def get_pairs(pairing_params, population, rand):
+    pairing_type, *pairing_params = pairing_params
+
+    if pairing_type == PairingTypes.NULL:
+        pairs = None
+
+    elif pairing_type == PairingTypes.RANDOM:
+        index = list(range(len(population)))
+        pairs = zip(index[0::2], index[1::2])
+
+    elif pairing_type == PairingTypes.PHENOTYPE_CLUSTERS:
+        n_clusters = pairing_params[0]
+        fitness_values = [i.fitness.values for i in population]
+        pairs = get_clustered_pairs(n_clusters, fitness_values, rand)
+
+    else:
+        raise Exception(f"Unknown pairing type: {pairing_type}")
+
+    return pairs
+
+
+
+
+class AdaptiveSteps:
+    NULL = "NULL"      # not adaptive
+    GET_BEST = "GET_BEST"  # (re)calculate best performing mating types, shuffle them, and get next one
+    GET_NEXT = "GET_NEXT"  # get next mating type from previously calculated best types
+
+
+class GenerationSettingsManager:
+
+    def __init__(self, settings_for_each_generation):
+        self.settings_for_each_generation = settings_for_each_generation
+        self.settings_iterator = iter(settings_for_each_generation)
+        self.best_settings_iterator = None
+
+    def get_next_settings(self, history=None):
+        settings = next(self.settings_iterator)
+
+        if settings == AdaptiveSteps.GET_NEXT:
+            return next(self.best_settings_iterator)
+
+        elif settings == AdaptiveSteps.GET_BEST:
+            self.set_best_settings(history)
+            return next(self.best_settings_iterator)
+
+        else:
+            return settings
+
+    def set_best_settings(self, history):
+        top_k = 20
+        last_gen = 100
+        best_perf, perf_weights = FitnessHistorySummary(history).get_best_performing_types(top_k=top_k, last_gen=last_gen)
+        self.best_settings_iterator = cycle(list(best_perf))

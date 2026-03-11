@@ -60,19 +60,20 @@ def merge_split_stages(task_df: pd.DataFrame) -> pd.Series:
     :return: pd.Series with the full information about the task
     """
 
-    def get_stage_num(name: str):
-        split_name = name.split(STAGE_SEP)
+    def get_stage_num(model_name: dict):
+        split_name = model_name['granular_name'].split(STAGE_SEP)
         return int(split_name[-1]) if len(split_name) > 1 else -1
 
     if len(task_df) > 1:
         df = task_df.copy()
-        df['stage_num'] = df['granular_name'].apply(get_stage_num)
+        df['stage_num'] = df['model_name'].apply(get_stage_num)
         df = df.sort_values(by='stage_num')
         df = df.reset_index(drop=True)
 
         df = df.iloc[-1:].reset_index(drop=True)
-        for column in ['task_id', 'task_name', 'granular_name']:
+        for column in ['task_id', 'task_name']:
             df.loc[0, column] = df.loc[0, column].split(STAGE_SEP)[0]  # fix task id and name
+        df.loc[0, 'model_name'] = df.loc[0, 'model_name']['granular_name'].split(STAGE_SEP)[0]  # fix task model name
 
         # sum up volumes through all stages
         df.loc[0, 'volume'] = sum(task_df.loc[:, 'volume'])

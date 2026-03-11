@@ -173,7 +173,9 @@ def preprocess_graph_df(frame: pd.DataFrame,
     def map_activity(row):
         model_name_dict = eval(row['model_name'])
         if 'granular_name' not in model_name_dict:
-            model_name_dict['granular_name'] = name_mapper[row['activity_name']]
+            model_name_dict['granular_name'] = row['activity_name']
+        if name_mapper:
+            model_name_dict = name_mapper[model_name_dict]
         return str(model_name_dict)
 
     frame['model_name'] = frame[['activity_name', 'model_name']].apply(map_activity, axis=1)
@@ -264,7 +266,7 @@ def build_work_graph(frame: pd.DataFrame, resource_names: list[str], work_estima
         group = row['group'] if 'group' in frame.columns else 'main project'
         priority = row['priority'] if 'priority' in frame.columns else 1
 
-        work_unit = WorkUnit(row['activity_id'], row['model_name'], reqs, group=group,
+        work_unit = WorkUnit(row['activity_id'], eval(row['model_name']), reqs, group=group,
                              description=description, volume=row['volume'],
                              is_service_unit=is_service_unit, display_name=row['activity_name_original'],
                              zone_reqs=zone_reqs, priority=priority)

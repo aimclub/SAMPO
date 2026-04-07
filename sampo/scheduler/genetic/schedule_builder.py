@@ -52,8 +52,8 @@ def create_toolbox(wg: WorkGraph,
          if schedule is not None else None
          for name, (schedule, order, chromosome_spec, importance) in init_schedules.items()}
 
-    if verbose:
-        print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
+    # if verbose:
+    #     print(f'Genetic optimizing took {(time.time() - start) * 1000} ms')
 
     return init_toolbox(wg,
                         contractors,
@@ -236,7 +236,7 @@ def build_schedules_with_cache(wg: WorkGraph,
             raise Exception("Invalid chromosome found in the population")
 
         current_generation_settings = settings_manager.get_next_settings(fitness_history.history)
-        print(current_generation_settings)
+        # print(current_generation_settings)
 
         rand.shuffle(pop)
         offspring = make_offspring(toolbox, pop, optimize_resources, rand, current_generation_settings)
@@ -248,15 +248,17 @@ def build_schedules_with_cache(wg: WorkGraph,
 
         # renewing population
 
-        use_pre_selection = True
+        use_pre_selection = False
         if use_pre_selection:
             offspring = get_only_new_fitness(pop, offspring)
 
         pop += offspring
 
         # update age
+        check_age = False
         MAX_AGE = 25
-        pop = increment_and_check_age(pop, max_age=MAX_AGE)
+        if check_age:
+            pop = increment_and_check_age(pop, max_age=MAX_AGE)
 
         pop = toolbox.select(pop)
         hof.update(pop)
@@ -383,7 +385,9 @@ def build_schedules_with_cache(wg: WorkGraph,
 def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_resources: bool, rand, mating_type=None) \
         -> list[Individual]:
 
-    pairing_type, order_crossover, resources_crossover, n_mutations, mutation_type = mating_type
+    mating_type, mutation_type = mating_type
+    pairing_type, order_crossover, resources_crossover = mating_type
+    mutation_type, n_mutations = mutation_type
 
     # create pairs for mating
     pairs = get_pairs(pairing_type, population, rand)
@@ -391,7 +395,8 @@ def make_offspring(toolbox: Toolbox, population: list[ChromosomeType], optimize_
     # mate
 
     # only mutations, so apply to better half
-    if order_crossover == "skip" and resources_crossover == "skip" and pairing_type == "no_pairs_2":
+    if order_crossover == "SKIP" and resources_crossover == "SKIP": #and pairing_type == "no_pairs_2":
+        # print("selecting half of population")
         better_half = toolbox.select(population, k=len(population)//2)
         offspring = [toolbox.copy_individual(i) for i in better_half] + [toolbox.copy_individual(i) for i in better_half]
 

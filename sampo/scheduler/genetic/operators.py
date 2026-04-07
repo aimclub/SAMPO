@@ -706,7 +706,7 @@ def mutate_scheduling_order(ind: Individual, mutpb: float, rand: random.Random, 
 
 
 def mate_resources_1(ind1: Individual, ind2: Individual, rand: random.Random,
-                   optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
     """
     One-Point crossover for resources.
 
@@ -795,24 +795,24 @@ def mate_resources_3(ind1: Individual, ind2: Individual, rand: random.Random,
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
-def mate_resources_7(ind1: Individual, ind2: Individual, rand: random.Random,
-                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+# def mate_resources_7(ind1: Individual, ind2: Individual, rand: random.Random,
+#                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
 
-    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
-    res1, res2 = child1[1], child2[1]
-    change_probability = rand.uniform(0.01, 0.05)
-    n_works, n_workers = res1.shape
+#     child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+#     res1, res2 = child1[1], child2[1]
+#     change_probability = rand.uniform(0.01, 0.05)
+#     n_works, n_workers = res1.shape
 
-    for i in range(n_works):
-        for j in range(n_workers):
-            if rand.random() < change_probability:
-                res1[i, j], res2[i, j] = res2[i, j], res1[i, j]
+#     for i in range(n_works):
+#         for j in range(n_workers):
+#             if rand.random() < change_probability:
+#                 res1[i, j], res2[i, j] = res2[i, j], res1[i, j]
 
-    if optimize_resources:
-        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
-        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
+#     if optimize_resources:
+#         child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+#         child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
 
-    return toolbox.Individual(child1), toolbox.Individual(child2)
+#     return toolbox.Individual(child1), toolbox.Individual(child2)
 
 def mate_resources_4(ind1: Individual, ind2: Individual, rand: random.Random,
                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
@@ -831,6 +831,35 @@ def mate_resources_4(ind1: Individual, ind2: Individual, rand: random.Random,
 
     return toolbox.Individual(child1), toolbox.Individual(child2)
 
+def mate_resources_34(ind1: Individual, ind2: Individual, rand: random.Random,
+                     optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1].copy(), child2[1].copy()
+    data_type = res1.dtype
+    n_works, n_workers = res1.shape
+
+    p_do_weights = rand.uniform(0.25, 0.75)
+    change_weight = rand.uniform(0.25, 0.75)
+
+    w1 = (res1 * change_weight + res2 * (1-change_weight)).round().astype(data_type)
+    w2 = (res2 * change_weight + res1 * (1-change_weight)).round().astype(data_type)
+
+    for i in range(n_works):
+        for j in range(n_workers):
+            if rand.random() < p_do_weights:
+                res1[i, j], res2[i, j] = w1[i, j], w2[i, j]
+            else:
+                if rand.random() < change_weight:
+                    res1[i, j], res2[i, j] = res2[i, j], res1[i, j]
+
+    if optimize_resources:
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
 
 def mate_resources_5(ind1: Individual, ind2: Individual, rand: random.Random,
                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
@@ -840,6 +869,59 @@ def mate_resources_5(ind1: Individual, ind2: Individual, rand: random.Random,
 
     child1[1][:] = np.max([res1, res2], axis=0)
     child2[1][:] = np.min([res1, res2], axis=0)
+
+    if optimize_resources:
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+
+def mate_resources_51(ind1: Individual, ind2: Individual, rand: random.Random,
+                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1].copy(), child2[1].copy()
+    n_works, n_workers = res1.shape
+    p_change = rand.uniform(0.25, 0.75)
+
+    max_values = np.max([res1, res2], axis=0)
+    min_values = np.min([res1, res2], axis=0)
+
+    for i in range(n_works):
+        if rand.random() < p_change:
+            child1[1][i, :] = max_values[i, :]
+            child2[1][i, :] = min_values[i, :]
+        else:
+            child1[1][i, :] = min_values[i, :]
+            child2[1][i, :] = max_values[i, :]
+
+
+    if optimize_resources:
+        child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
+        child2[2] = get_checked_contractor_limits_part(child2[1], child2[2])
+
+    return toolbox.Individual(child1), toolbox.Individual(child2)
+
+def mate_resources_52(ind1: Individual, ind2: Individual, rand: random.Random,
+                      optimize_resources: bool, toolbox: Toolbox, copy: bool = True) -> tuple[Individual, Individual]:
+
+    child1, child2 = (toolbox.copy_individual(ind1), toolbox.copy_individual(ind2)) if copy else (ind1, ind2)
+    res1, res2 = child1[1].copy(), child2[1].copy()
+    n_works, n_workers = res1.shape
+    p_change = rand.uniform(0.25, 0.75)
+
+    max_values = np.max([res1, res2], axis=0)
+    min_values = np.min([res1, res2], axis=0)
+
+    for j in range(n_workers):
+        if rand.random() < p_change:
+            child1[1][:, j] = max_values[:, j]
+            child2[1][:, j] = min_values[:, j]
+        else:
+            child1[1][:, j] = min_values[:, j]
+            child2[1][:, j] = max_values[:, j]
+
 
     if optimize_resources:
         child1[2] = get_checked_contractor_limits_part(child1[1], child1[2])
@@ -892,7 +974,11 @@ def mate_resources(child1, child2, rand, optimize_resources, toolbox, copy=False
         ResourcesCrossovers.SHUFFLE: mate_resources_3,
         ResourcesCrossovers.WEIGHTED: mate_resources_4,
         ResourcesCrossovers.MIN_MAX: mate_resources_5,
-        ResourcesCrossovers.BY_ORDER: mate_resources_6
+        ResourcesCrossovers.BY_ORDER: mate_resources_6,
+
+        ResourcesCrossovers.WEIGHTED_AND_SHUFFLE: mate_resources_34,
+        ResourcesCrossovers.MIN_MAX_BY_WORK: mate_resources_51,
+        ResourcesCrossovers.MIN_MAX_BY_WORKER: mate_resources_52
     }
     if resources_crossover not in name_to_crossover_function:
         raise Exception(f"Unknown mating type for resources: {resources_crossover}")
@@ -1186,6 +1272,9 @@ class ResourcesCrossovers:
     WEIGHTED = "WEIGHTED"    # get weighted average between first and second parent
     MIN_MAX = "MIN_MAX"      # first child gets max of resources from parents, second gets min
     BY_ORDER = "BY_ORDER"    # shuffle works (preserves rows), but also based on order in activity list
+    WEIGHTED_AND_SHUFFLE = "WEIGHTED_AND_SHUFFLE"
+    MIN_MAX_BY_WORK = "MIN_MAX_BY_WORK"
+    MIN_MAX_BY_WORKER = "MIN_MAX_BY_WORKER"
 
 # class MutationTypes:
 #     SKIP = "SKIP"                                # not performing mutations (for only crossover with small changes)

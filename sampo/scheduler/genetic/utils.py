@@ -168,7 +168,7 @@ def increment_and_check_age(population, max_age):
         ]
 
     n_removed = len(population) - len(new_population)
-    print(f"{n_removed} genomes were removed due to age limit")
+    # print(f"{n_removed} genomes were removed due to age limit")
     return new_population
 
 
@@ -181,7 +181,7 @@ def get_only_new_fitness(old_population, offsprings):
             known_fitness.append(i.fitness.values)
 
     n_removed = len(offsprings) - len(new_fitness_population)
-    print(f"{n_removed} genomes were removed due to same phenotype")
+    # print(f"{n_removed} genomes were removed due to same phenotype")
     return new_fitness_population
 
 
@@ -211,8 +211,7 @@ class PairingTypes:
     RANDOM = "RANDOM"              # create random pairs from population
     PHENOTYPE_CLUSTERS = "PHENOTYPE_CLUSTERS"  # create clusters of fitness values, then create random pairs inside clusters
 
-def get_pairs(pairing_params, population, rand):
-    pairing_type, *pairing_params = pairing_params
+def get_pairs(pairing_type, population, rand):
 
     if pairing_type == PairingTypes.NULL:
         pairs = None
@@ -222,7 +221,7 @@ def get_pairs(pairing_params, population, rand):
         pairs = zip(index[0::2], index[1::2])
 
     elif pairing_type == PairingTypes.PHENOTYPE_CLUSTERS:
-        n_clusters = pairing_params[0]
+        n_clusters = 8
         fitness_values = [i.fitness.values for i in population]
         pairs = get_clustered_pairs(n_clusters, fitness_values, rand)
 

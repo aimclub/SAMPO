@@ -41,6 +41,7 @@ class Individual(list):
     def __init__(self, individual_fitness_constructor: Callable[[], base.Fitness], chromosome: ChromosomeType):
         super().__init__(chromosome)
         self.fitness = individual_fitness_constructor()
+        self.age = 0
 
     @staticmethod
     def prepare(individual_fitness_constructor: Callable[[], base.Fitness]) -> Callable[[ChromosomeType], list]:
@@ -49,3 +50,5 @@ class Individual(list):
         """
         return partial(Individual, individual_fitness_constructor)
 
+    def increment_age(self):
+        self.age += 1
